@@ -73,7 +73,6 @@ void error(const char *format, ...) {
     va_start(args, format);
     verror(format, args);
     va_end(args);
-
 }
 
 void load_rom(zx::spectrum_48 &mach, const char *filename) {
@@ -104,4 +103,10 @@ void load_rom(zx::spectrum_48 &mach, const char *filename) {
 int main() {
     zx::spectrum_48 mach;
     load_rom(mach, "/usr/share/spectrum-roms/48.rom");
+
+    while(mach.get_ticks() < 4) {
+        std::printf("%5u %04x\n", static_cast<unsigned>(mach.get_ticks()),
+                    static_cast<unsigned>(mach.get_pc()));
+        mach.step();
+    }
 }
