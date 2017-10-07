@@ -1,4 +1,10 @@
 
+# Prerequsites.
+addons:
+  apt:
+    packages:
+      - spectrum-roms
+
 # Enable C++ support.
 language: cpp
 
