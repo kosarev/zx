@@ -7,12 +7,18 @@
     Published under the MIT license.
 */
 
-#include "z80/z80.h"
+#include <cerrno>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
-namespace zx {
+#include "z80/z80.h"
 
 using z80::least_u8;
 using z80::fast_u16;
+
+namespace zx {
 
 class spectrum_48 : public z80::instructions_decoder<spectrum_48>,
                     public z80::processor<spectrum_48> {
@@ -42,6 +48,60 @@ private:
 
 }  // namespace zx
 
+namespace {
+
+#if defined(__GNUC__) || defined(__clang__)
+# define LIKE_PRINTF(format, args) \
+      __attribute__((__format__(__printf__, format, args)))
+#else
+# define LIKE_PRINTF(format, args) /* nothing */
+#endif
+
+const char program_name[] = "zx";
+
+[[noreturn]] LIKE_PRINTF(1, 0)
+void verror(const char *format, va_list args) {
+    std::fprintf(stderr, "%s: ", program_name);
+    std::vfprintf(stderr, format, args);
+    std::fprintf(stderr, "\n");
+    exit(EXIT_FAILURE);
+}
+
+[[noreturn]] LIKE_PRINTF(1, 2)
+void error(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    verror(format, args);
+    va_end(args);
+
+}
+
+void load_rom(zx::spectrum_48 &mach, const char *filename) {
+    FILE *f = std::fopen(filename, "rb");
+    if(!f)
+        error("cannot open ROM file '%s': %s",
+              filename, std::strerror(errno));
+    static const std::size_t rom_size = 16384;  // 16K
+    least_u8 rom[rom_size + 1];
+    std::size_t read_size = std::fread(rom, /* size= */ 1, rom_size + 1, f);
+    if(ferror(f))
+        error("cannot read ROM file '%s': %s",
+              filename, std::strerror(errno));
+    if(read_size < rom_size)
+        error("ROM file '%s' is too short", filename);
+    if(read_size > rom_size)
+        error("ROM file '%s' is too large", filename);
+    if(std::fclose(f) != 0)
+        error("cannot close ROM file '%s': %s",
+              filename, std::strerror(errno));
+
+    for(fast_u16 i = 0; i != rom_size; ++i)
+        mach.at(i) = rom[i];
+}
+
+}  // anonymous namespace
+
 int main() {
     zx::spectrum_48 mach;
+    load_rom(mach, "/usr/share/spectrum-roms/48.rom");
 }
