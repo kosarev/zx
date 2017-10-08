@@ -34,7 +34,7 @@ public:
 
     ticks_type get_ticks() const { return ticks; }
 
-    least_u8 &at(fast_u16 addr) {
+    least_u8 &on_access(fast_u16 addr) {
         assert(addr < image_size);
         return image[addr];
     }
@@ -95,7 +95,7 @@ void load_rom(zx::spectrum_48 &mach, const char *filename) {
               filename, std::strerror(errno));
 
     for(fast_u16 i = 0; i != rom_size; ++i)
-        mach.at(i) = rom[i];
+        mach.on_access(i) = rom[i];
 }
 
 }  // anonymous namespace
@@ -104,7 +104,7 @@ int main() {
     zx::spectrum_48 mach;
     load_rom(mach, "/usr/share/spectrum-roms/48.rom");
 
-    while(mach.get_ticks() < 4) {
+    while(mach.get_ticks() < 8) {
         std::printf("%5u %04x\n", static_cast<unsigned>(mach.get_ticks()),
                     static_cast<unsigned>(mach.get_pc()));
         mach.step();
