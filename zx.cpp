@@ -20,10 +20,9 @@ using z80::fast_u16;
 
 namespace zx {
 
-class spectrum_48 : public z80::instructions_decoder<spectrum_48>,
-                    public z80::processor<spectrum_48> {
+class spectrum_48 : public z80::processor<spectrum_48> {
 public:
-    typedef processor<spectrum_48> processor;
+    typedef processor<spectrum_48> base;
     typedef uint_fast32_t ticks_type;
 
     spectrum_48()
@@ -104,9 +103,12 @@ int main() {
     zx::spectrum_48 mach;
     load_rom(mach, "/usr/share/spectrum-roms/48.rom");
 
-    while(mach.get_ticks() < 8) {
-        std::printf("%5u %04x\n", static_cast<unsigned>(mach.get_ticks()),
-                    static_cast<unsigned>(mach.get_pc()));
+    while(mach.get_ticks() < 10000000) {
+        std::fprintf(stderr,
+                     "%5u %04x\n", static_cast<unsigned>(mach.get_ticks()),
+                     static_cast<unsigned>(mach.get_pc()));
+        std::fflush(stderr);
         mach.step();
     }
+    std::fprintf(stderr, "%5u\n", static_cast<unsigned>(mach.get_ticks()));
 }
