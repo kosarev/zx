@@ -144,7 +144,7 @@ public:
     typedef M machine;
 
     x11_emulator(machine &mach)
-        : mach(mach), display(nullptr), pixels(nullptr)
+        : mach(mach), pixels(nullptr), display(nullptr), image(nullptr), gc()
     {}
 
     void create(int argc, const char *argv[]) {
@@ -180,22 +180,31 @@ public:
         ::XSelectInput(display, window, KeyReleaseMask | ButtonReleaseMask);
         ::XMapWindow(display, window);
 
-        ::XImage *image = ::XCreateImage(
+        image = ::XCreateImage(
             display, DefaultVisual(display, DefaultScreen(display)),
             /* depth= */ 24, ZPixmap, /* offset= */ 0,
             reinterpret_cast<char*>(pixels), window_width, window_height,
             /* line_pad= */ 8, /* bytes_per_line= */ 0);
         (void) image;  // TODO
 
-        ::GC gc = ::XCreateGC(display, window, 0, nullptr);
-        (void) gc;  // TODO
+        gc = ::XCreateGC(display, window, 0, nullptr);
 
-        /* set protocol for the WM_DELETE_WINDOW message */
+        // Set protocol for the WM_DELETE_WINDOW message.
         ::Atom wm_protocols_atom = ::XInternAtom(display, "WM_PROTOCOLS", False);
         ::Atom wm_delete_window_atom = ::XInternAtom(display, "WM_DELETE_WINDOW",
                                                      False);
         if((wm_protocols_atom != None) && (wm_delete_window_atom != None))
             ::XSetWMProtocols(display, window, &wm_delete_window_atom, 1);
+    }
+
+    void destroy() {
+        ::XFreeGC(display, gc);
+        ::XFlush(display);
+
+        // Also releases the pixels.
+        XDestroyImage(image);
+
+        ::XCloseDisplay(display);
     }
 
 private:
@@ -207,8 +216,10 @@ private:
     static const std::size_t pixels_size = sizeof(pixel_type) * num_of_pixels;
 
     machine &mach;
-    Display *display;
     pixel_type *pixels;
+    Display *display;
+    ::XImage *image;
+    ::GC gc;
 };
 
 }  // namespace zx
@@ -232,5 +243,7 @@ int main(int argc, const char *argv[]) {
     zx::x11_emulator<zx::spectrum_48> emu(mach);
     emu.create(argc, argv);
 
-    for(;;);
+    ::usleep(1000000);
+
+    emu.destroy();
 }
