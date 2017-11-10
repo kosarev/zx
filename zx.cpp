@@ -108,6 +108,10 @@ public:
 
     void load_rom(const char *filename);
 
+protected:
+    static const unsigned frame_width = 256;
+    static const unsigned frame_height = 192;
+
 private:
     ticks_type ticks;
 
@@ -141,6 +145,8 @@ void spectrum_48::load_rom(const char *filename) {
 template<typename M>
 class x11_emulator : public M {
 public:
+    typedef M base;
+
     x11_emulator()
         : pixels(nullptr), display(nullptr), window(), image(nullptr), gc()
     {}
@@ -217,8 +223,8 @@ private:
                     window_width, window_height);
     }
 
-    static const unsigned window_width = 256;
-    static const unsigned window_height = 192;
+    static const unsigned window_width = base::frame_width;
+    static const unsigned window_height = base::frame_height;
 
     typedef uint32_t pixel_type;
     static const std::size_t num_of_pixels = window_width * window_height;
