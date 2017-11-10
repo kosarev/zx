@@ -55,6 +55,10 @@ append_if(WERROR_FLAG "-Werror" CMAKE_CXX_FLAGS)
 append_if(ERROR_LIMIT_FLAG "-ferror-limit=1" CMAKE_CXX_FLAGS)
 append_if(G_FLAG "-g" CMAKE_CXX_FLAGS)
 
+find_package(X11 REQUIRED)
+link_libraries(${X11_LIBRARIES})
+include_directories(${X11_INCLUDE_DIR})
+
 add_executable(zx zx.cpp)
 
-add_test(running zx)
+add_test(running zx test)
