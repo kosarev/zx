@@ -139,12 +139,10 @@ void spectrum_48::load_rom(const char *filename) {
 }
 
 template<typename M>
-class x11_emulator {
+class x11_emulator : public M {
 public:
-    typedef M machine;
-
-    x11_emulator(machine &mach)
-        : mach(mach), pixels(nullptr), display(nullptr), image(nullptr), gc()
+    x11_emulator()
+        : pixels(nullptr), display(nullptr), window(), image(nullptr), gc()
     {}
 
     void create(int argc, const char *argv[]) {
@@ -164,13 +162,13 @@ public:
         auto screen_height = static_cast<unsigned>(
             DisplayHeight(display, screen_number));
 
-        ::Window window = ::XCreateSimpleWindow(
+        window = ::XCreateSimpleWindow(
             display, RootWindow(display, screen_number),
             (screen_width - window_width) / 2,
             (screen_height - window_height) / 2,
             window_width, window_height, 0,
             BlackPixel(display, screen_number),
-            WhitePixel(display, screen_number));
+            BlackPixel(display, screen_number));
 
         ::set_window_manager_hints(
             display, "ivan@kosarev.info/ZXEmulatorWindowClass", argv, argc,
@@ -185,7 +183,6 @@ public:
             /* depth= */ 24, ZPixmap, /* offset= */ 0,
             reinterpret_cast<char*>(pixels), window_width, window_height,
             /* line_pad= */ 8, /* bytes_per_line= */ 0);
-        (void) image;  // TODO
 
         gc = ::XCreateGC(display, window, 0, nullptr);
 
@@ -207,7 +204,19 @@ public:
         ::XCloseDisplay(display);
     }
 
+    void process_frame() {
+        ::usleep(100000);
+
+        update_window();
+        // render_frame();
+    }
+
 private:
+    void update_window() {
+        ::XPutImage(display, window, gc, image, 0, 0, 0, 0,
+                    window_width, window_height);
+    }
+
     static const unsigned window_width = 256;
     static const unsigned window_height = 192;
 
@@ -215,9 +224,9 @@ private:
     static const std::size_t num_of_pixels = window_width * window_height;
     static const std::size_t pixels_size = sizeof(pixel_type) * num_of_pixels;
 
-    machine &mach;
     pixel_type *pixels;
     Display *display;
+    ::Window window;
     ::XImage *image;
     ::GC gc;
 };
@@ -225,10 +234,10 @@ private:
 }  // namespace zx
 
 int main(int argc, const char *argv[]) {
-    zx::spectrum_48 mach;
-    mach.load_rom("/usr/share/spectrum-roms/48.rom");
-
     if(argc == 2 && std::strcmp(argv[1], "test") == 0) {
+        zx::spectrum_48 mach;
+        mach.load_rom("/usr/share/spectrum-roms/48.rom");
+
         while(mach.get_ticks() < 1000) {
             std::fprintf(stderr,
                          "%5u %04x\n", static_cast<unsigned>(mach.get_ticks()),
@@ -240,10 +249,12 @@ int main(int argc, const char *argv[]) {
         return EXIT_SUCCESS;
     }
 
-    zx::x11_emulator<zx::spectrum_48> emu(mach);
+    zx::x11_emulator<zx::spectrum_48> emu;
+    emu.load_rom("/usr/share/spectrum-roms/48.rom");
     emu.create(argc, argv);
 
-    ::usleep(1000000);
+    for(unsigned i = 0; i < 10; ++i)
+        emu.process_frame();
 
     emu.destroy();
 }
