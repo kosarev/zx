@@ -71,40 +71,6 @@ void error(const char *format, ...) {
     va_end(args);
 }
 
-void set_window_manager_hints(Display *display, const char *pclass,
-                              const char *argv[], int argc,
-                              Window window,
-                              unsigned width, unsigned height,
-                              const char *title, Pixmap pixmap) {
-    ::XTextProperty window_name, icon_name;
-    if(!::XStringListToTextProperty(const_cast<char**>(&title), 1,
-                                    &window_name) ||
-            !::XStringListToTextProperty(const_cast<char**>(&title), 1,
-                                         &icon_name))
-        error("not enough memory");
-
-    ::XSizeHints size_hints;
-    size_hints.flags = PPosition | PSize | PMinSize | PMaxSize;
-    size_hints.min_width = static_cast<int>(width);
-    size_hints.min_height = static_cast<int>(height);
-    size_hints.max_width = static_cast<int>(width);
-    size_hints.max_height = static_cast<int>(height);
-
-    ::XWMHints wm_hints;
-    wm_hints.flags = AllHints;
-    wm_hints.initial_state = NormalState;
-    wm_hints.input = True;
-    wm_hints.icon_pixmap = pixmap;
-
-    ::XClassHint class_hint;
-    class_hint.res_name = const_cast<char*>(argv[0]);
-    class_hint.res_class = const_cast<char*>(pclass);
-
-    ::XSetWMProperties(display, window, &window_name, &icon_name,
-                       const_cast<char**>(argv), argc,
-                       &size_hints, &wm_hints, &class_hint);
-}
-
 }  // anonymous namespace
 
 namespace zx {
@@ -314,10 +280,35 @@ public:
             BlackPixel(display, screen_number),
             BlackPixel(display, screen_number));
 
-        ::set_window_manager_hints(
-            display, "ivan@kosarev.info/ZXEmulatorWindowClass", argv, argc,
-            window, window_width, window_height,
-            "ZX Spectrum Emulator", 0);
+        ::XTextProperty window_name, icon_name;
+        const char *title = "ZX Spectrum Emulator";
+        if(!::XStringListToTextProperty(const_cast<char**>(&title), 1,
+                                        &window_name) ||
+                !::XStringListToTextProperty(const_cast<char**>(&title), 1,
+                                             &icon_name))
+            error("not enough memory");
+
+        ::XSizeHints size_hints;
+        size_hints.flags = PPosition | PSize | PMinSize | PMaxSize;
+        size_hints.min_width = static_cast<int>(window_width);
+        size_hints.min_height = static_cast<int>(window_height);
+        size_hints.max_width = static_cast<int>(window_width);
+        size_hints.max_height = static_cast<int>(window_height);
+
+        ::XWMHints wm_hints;
+        wm_hints.flags = AllHints;
+        wm_hints.initial_state = NormalState;
+        wm_hints.input = True;
+        wm_hints.icon_pixmap = 0;
+
+        const char pclass[] = "ivan@kosarev.info/ZXEmulatorWindowClass";
+        ::XClassHint class_hint;
+        class_hint.res_name = const_cast<char*>(argv[0]);
+        class_hint.res_class = const_cast<char*>(pclass);
+
+        ::XSetWMProperties(display, window, &window_name, &icon_name,
+                           const_cast<char**>(argv), argc,
+                           &size_hints, &wm_hints, &class_hint);
 
         ::XSelectInput(display, window, KeyReleaseMask | ButtonReleaseMask);
         ::XMapWindow(display, window);
