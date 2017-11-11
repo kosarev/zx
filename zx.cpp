@@ -205,7 +205,13 @@ protected:
         fast_u16 line_addr = 0x4000;
         for(; i != top_border_height + screen_height; ++i) {
             frame_chunk *line = frame_chunks[i];
-            unsigned j = chunks_per_border_width;
+
+            // Left border.
+            unsigned j = 0;
+            for(; j != chunks_per_border_width; ++j)
+                line[j] = white_chunk;
+
+            // Screen.
             fast_u16 addr = line_addr;
             for(; j != chunks_per_border_width + chunks_per_screen_line; ++j) {
                 fast_u8 b = on_access(addr);
@@ -221,6 +227,10 @@ protected:
                 line[j] = static_cast<frame_chunk>(c);
                 ++addr;
             }
+
+            // Right border.
+            for(; j != chunks_per_frame_line; ++j)
+                line[j] = white_chunk;
 
             // Move to next line.
             if(((line_addr += 0x0100) & 0x700) == 0) {
