@@ -25,6 +25,16 @@ using z80::fast_u16;
 
 namespace {
 
+template<typename T>
+constexpr T div_ceil(T a, T b) {
+    return (a + b - 1) / b;
+}
+
+template<typename T>
+constexpr bool is_multiple_of(T a, T b) {
+    return b != 0 && a % b == 0;
+}
+
 #if defined(__GNUC__) || defined(__clang__)
 # define LIKE_PRINTF(format, args) \
       __attribute__((__format__(__printf__, format, args)))
@@ -109,8 +119,46 @@ public:
     void load_rom(const char *filename);
 
 protected:
+    // Four bits per frame pixel in brightness:grb format.
+    static const unsigned bits_per_frame_pixel = 4;
+
+    static const unsigned brightness_bit = 3;
+    static const unsigned green_bit = 2;
+    static const unsigned red_bit = 1;
+    static const unsigned blue_bit = 0;
+
+    static const unsigned brightness_mask = 1u << brightness_bit;
+    static const unsigned green_mask = 1u << green_bit;
+    static const unsigned red_mask = 1u << red_bit;
+    static const unsigned blue_mask = 1u << blue_bit;
+
+    // Eight frame pixels per chunk. The leftmost pixel occupies the most
+    // significant bits.
+    static const unsigned frame_pixels_per_chunk = 8;
+
+    // The type of frame chunks.
+    static const unsigned frame_chunk_width = 32;
+    static_assert(
+        bits_per_frame_pixel * frame_pixels_per_chunk <= frame_chunk_width,
+        "The frame chunk width is too small!");
+    typedef uint_least32_t frame_chunk;
+
+    // The dimensions of the viewable area.
     static const unsigned frame_width = 256;
     static const unsigned frame_height = 192;
+
+    // We dedicate a whole number of chunks for every line to benefit from
+    // aligned memory accesses.
+    static const unsigned frame_chunks_per_line =
+        div_ceil(frame_width, frame_pixels_per_chunk);
+
+    frame_chunk frame_chunks[frame_height][frame_chunks_per_line];
+
+    void render_frame() {
+        for(auto &line : frame_chunks)
+            for(auto &chunk : line)
+                chunk = 0x77777777;
+    }
 
 private:
     ticks_type ticks;
@@ -145,16 +193,18 @@ void spectrum_48::load_rom(const char *filename) {
 template<typename M>
 class x11_emulator : public M {
 public:
-    typedef M base;
+    typedef M machine;
 
     x11_emulator()
-        : pixels(nullptr), display(nullptr), window(), image(nullptr), gc()
+        : window_pixels(nullptr), display(nullptr), window(), image(nullptr),
+          gc()
     {}
 
     void create(int argc, const char *argv[]) {
-        assert(!pixels);
-        pixels = static_cast<pixel_type*>(std::malloc(pixels_size));
-        if(!pixels)
+        assert(!window_pixels);
+        window_pixels = static_cast<window_pixels_type*>(
+            std::malloc(sizeof(window_pixels_type)));
+        if(!window_pixels)
             error("not enough memory");
 
         assert(!display);
@@ -187,7 +237,8 @@ public:
         image = ::XCreateImage(
             display, DefaultVisual(display, DefaultScreen(display)),
             /* depth= */ 24, ZPixmap, /* offset= */ 0,
-            reinterpret_cast<char*>(pixels), window_width, window_height,
+            reinterpret_cast<char*>(window_pixels),
+            window_width, window_height,
             /* line_pad= */ 8, /* bytes_per_line= */ 0);
 
         gc = ::XCreateGC(display, window, 0, nullptr);
@@ -214,23 +265,59 @@ public:
         ::usleep(100000);
 
         update_window();
-        // render_frame();
+        render_frame();
     }
 
 private:
+    static const auto window_width = machine::frame_width;
+    static const auto window_height = machine::frame_height;
+
+    typedef uint32_t window_pixel;
+    typedef window_pixel window_pixels_type[window_height][window_width];
+
     void update_window() {
         ::XPutImage(display, window, gc, image, 0, 0, 0, 0,
                     window_width, window_height);
     }
 
-    static const unsigned window_width = base::frame_width;
-    static const unsigned window_height = base::frame_height;
+    window_pixel translate_color(unsigned c) {
+        uint_fast32_t r = 0;
+        r |= (c & machine::red_mask)   << (16 - machine::red_bit);
+        r |= (c & machine::green_mask) << (8 - machine::green_bit);
+        r |= (c & machine::blue_mask)  << (0 - machine::blue_bit);
 
-    typedef uint32_t pixel_type;
-    static const std::size_t num_of_pixels = window_width * window_height;
-    static const std::size_t pixels_size = sizeof(pixel_type) * num_of_pixels;
+        r *= (c & machine::brightness_mask) ? 0xff : 0xcc;
 
-    pixel_type *pixels;
+        return static_cast<window_pixel>(r);
+    }
+
+    void render_frame() {
+        machine::render_frame();
+
+        static_assert(is_multiple_of(window_width,
+                                     machine::frame_pixels_per_chunk),
+                      "Fractional number of chunks per line is not supported!");
+        static_assert(machine::bits_per_frame_pixel == 4,
+                      "Unsupported frame pixel format!");
+        static_assert(machine::frame_pixels_per_chunk == 8,
+                      "Unsupported frame chunk format!");
+        window_pixel *pixels = **window_pixels;
+        std::size_t p = 0;
+        for(const auto &frame_line : machine::frame_chunks) {
+            for(auto chunk : frame_line) {
+                pixels[p++] = translate_color((chunk >> 28) & 0xf);
+                pixels[p++] = translate_color((chunk >> 24) & 0xf);
+                pixels[p++] = translate_color((chunk >> 20) & 0xf);
+                pixels[p++] = translate_color((chunk >> 16) & 0xf);
+                pixels[p++] = translate_color((chunk >> 12) & 0xf);
+                pixels[p++] = translate_color((chunk >>  8) & 0xf);
+                pixels[p++] = translate_color((chunk >>  4) & 0xf);
+                pixels[p++] = translate_color((chunk >>  0) & 0xf);
+            }
+        }
+    }
+
+    window_pixels_type *window_pixels;
     Display *display;
     ::Window window;
     ::XImage *image;
