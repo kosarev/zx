@@ -189,11 +189,19 @@ protected:
         static_assert(frame_pixels_per_chunk == 8,
                       "Unsupported frame chunk format!");
 
-        uint_fast32_t black = 0;
-        uint_fast32_t white = red_mask | green_mask | blue_mask;
+        const unsigned black = 0;
+        const unsigned white = red_mask | green_mask | blue_mask;
+        const frame_chunk white_chunk = 0x11111111 * white;
+
+        // Render the top border area.
+        unsigned i = 0;
+        for(; i != top_border_height; ++i) {
+            frame_chunk *line = frame_chunks[i];
+            for(unsigned j = 0; j != chunks_per_frame_line; ++j)
+                line[j] = white_chunk;
+        }
 
         // Render the screen area.
-        unsigned i = top_border_height;
         fast_u16 line_addr = 0x4000;
         for(; i != top_border_height + screen_height; ++i) {
             frame_chunk *line = frame_chunks[i];
@@ -219,6 +227,13 @@ protected:
                 line_addr += 0x20;
                 line_addr -= (line_addr & 0xff) < 0x20 ? 0x100 : 0x800;
             }
+        }
+
+        // Render the bottom border area.
+        for(; i != frame_height; ++i) {
+            frame_chunk *line = frame_chunks[i];
+            for(unsigned j = 0; j != chunks_per_frame_line; ++j)
+                line[j] = white_chunk;
         }
     }
 
