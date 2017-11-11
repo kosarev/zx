@@ -213,7 +213,13 @@ protected:
         }
     }
 
-protected:
+    void execute_frame() {
+        const ticks_type ticks_per_frame = 69888;
+        while(ticks < ticks_per_frame)
+            step();
+        ticks -= ticks_per_frame;
+    }
+
     ticks_type ticks;
 
 private:
@@ -343,16 +349,13 @@ public:
     void process_frame() {
         ::usleep(20000);
 
-        // Draw previously rendered frame.
+        // Draw the previously rendered frame.
         update_window();
 
-        // Execute some instructions.
-        // TODO: Know exactly how many ticks to perform.
-        while(machine::ticks < 70000)
-            machine::step();
-        machine::ticks -= 70000;
+        // Execute instructions for the next frame.
+        machine::execute_frame();
 
-        // Render next frame.
+        // Render the next frame.
         render_frame();
     }
 
