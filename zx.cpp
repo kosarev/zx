@@ -21,6 +21,7 @@
 #include "z80/z80.h"
 
 using z80::least_u8;
+using z80::fast_u8;
 using z80::fast_u16;
 
 namespace {
@@ -104,8 +105,13 @@ public:
     typedef uint_fast32_t ticks_type;
 
     spectrum_48()
-        : ticks(0)
-    {}
+            : ticks(0) {
+        uint_fast32_t rnd = 0xde347a01;
+        for(auto &cell : image) {
+            cell = static_cast<least_u8>(rnd);
+            rnd = (rnd * 0x74392cef) ^ (rnd >> 16);
+        }
+    }
 
     void tick(unsigned t) { ticks += t; }
 
@@ -155,14 +161,40 @@ protected:
     frame_chunk frame_chunks[frame_height][frame_chunks_per_line];
 
     void render_frame() {
-        for(auto &line : frame_chunks)
-            for(auto &chunk : line)
-                chunk = 0x77777777;
+        static_assert(bits_per_frame_pixel == 4,
+                      "Unsupported frame pixel format!");
+        static_assert(frame_pixels_per_chunk == 8,
+                      "Unsupported frame chunk format!");
+        fast_u16 line_addr = 0x4000;
+        for(auto &line : frame_chunks) {
+            fast_u16 addr = line_addr;
+            for(auto &chunk : line) {
+                fast_u8 b = on_access(addr);
+                uint_fast32_t c = 0;
+                c |= (b & 0x80) ? 0 : 0x7; c <<= 4;
+                c |= (b & 0x40) ? 0 : 0x7; c <<= 4;
+                c |= (b & 0x20) ? 0 : 0x7; c <<= 4;
+                c |= (b & 0x10) ? 0 : 0x7; c <<= 4;
+                c |= (b & 0x08) ? 0 : 0x7; c <<= 4;
+                c |= (b & 0x04) ? 0 : 0x7; c <<= 4;
+                c |= (b & 0x02) ? 0 : 0x7; c <<= 4;
+                c |= (b & 0x01) ? 0 : 0x7;
+                chunk = static_cast<frame_chunk>(c);
+                ++addr;
+            }
+
+            // Move to next line.
+            if(((line_addr += 0x0100) & 0x700) == 0) {
+                line_addr += 0x20;
+                line_addr -= (line_addr & 0xff) < 0x20 ? 0x100 : 0x800;
+            }
+        }
     }
 
-private:
+protected:
     ticks_type ticks;
 
+private:
     static const z80::size_type image_size = 0x10000;  // 64K bytes.
     least_u8 image[image_size];
 };
@@ -262,9 +294,18 @@ public:
     }
 
     void process_frame() {
-        ::usleep(100000);
+        ::usleep(20000);
 
+        // Draw previously rendered frame.
         update_window();
+
+        // Execute some instructions.
+        // TODO: Know exactly how many ticks to perform.
+        while(machine::ticks < 70000)
+            machine::step();
+        machine::ticks -= 70000;
+
+        // Render next frame.
         render_frame();
     }
 
@@ -286,6 +327,7 @@ private:
         r |= (c & machine::green_mask) << (8 - machine::green_bit);
         r |= (c & machine::blue_mask)  << (0 - machine::blue_bit);
 
+        // TODO: Use the real coefficients.
         r *= (c & machine::brightness_mask) ? 0xff : 0xcc;
 
         return static_cast<window_pixel>(r);
@@ -346,7 +388,7 @@ int main(int argc, const char *argv[]) {
     emu.load_rom("/usr/share/spectrum-roms/48.rom");
     emu.create(argc, argv);
 
-    for(unsigned i = 0; i < 10; ++i)
+    for(unsigned i = 0; i < 300; ++i)
         emu.process_frame();
 
     emu.destroy();
