@@ -36,6 +36,16 @@ constexpr bool is_multiple_of(T a, T b) {
     return b != 0 && a % b == 0;
 }
 
+template<typename T>
+T non_constexpr() {
+    return T();
+}
+
+template<typename T>
+constexpr T div_exact(T a, T b) {
+    return a % b == 0 ? a / b : non_constexpr<T>();
+}
+
 #if defined(__GNUC__) || defined(__clang__)
 # define LIKE_PRINTF(format, args) \
       __attribute__((__format__(__printf__, format, args)))
@@ -150,27 +160,46 @@ protected:
     typedef uint_least32_t frame_chunk;
 
     // The dimensions of the viewable area.
-    static const unsigned frame_width = 256;
-    static const unsigned frame_height = 192;
+    // TODO: Support the NTSC geometry.
+    static const unsigned screen_width = 256;
+    static const unsigned screen_height = 192;
+    static const unsigned border_width = 48;
+    static const unsigned top_border_height = 48;
+    static const unsigned bottom_border_height = 40;
 
-    // We dedicate a whole number of chunks for every line to benefit from
-    // aligned memory accesses.
-    static const unsigned frame_chunks_per_line =
-        div_ceil(frame_width, frame_pixels_per_chunk);
+    static const unsigned frame_width =
+        border_width + screen_width + border_width;
+    static const unsigned frame_height =
+        top_border_height + screen_height + bottom_border_height;
 
-    frame_chunk frame_chunks[frame_height][frame_chunks_per_line];
+    // We want screen, border and frame widths be multiples of chunk widths to
+    // simplify the processing code and to benefit from aligned memory accesses.
+    static const unsigned chunks_per_border_width =
+        div_exact(border_width, frame_pixels_per_chunk);
+    static const unsigned chunks_per_screen_line =
+        div_exact(screen_width, frame_pixels_per_chunk);
+    static const unsigned chunks_per_frame_line =
+        div_exact(frame_width, frame_pixels_per_chunk);
+
+    frame_chunk frame_chunks[frame_height][chunks_per_frame_line];
 
     void render_frame() {
         static_assert(bits_per_frame_pixel == 4,
                       "Unsupported frame pixel format!");
         static_assert(frame_pixels_per_chunk == 8,
                       "Unsupported frame chunk format!");
+
         uint_fast32_t black = 0;
         uint_fast32_t white = red_mask | green_mask | blue_mask;
+
+        // Render the screen area.
+        unsigned i = top_border_height;
         fast_u16 line_addr = 0x4000;
-        for(auto &line : frame_chunks) {
+        for(; i != top_border_height + screen_height; ++i) {
+            frame_chunk *line = frame_chunks[i];
+            unsigned j = chunks_per_border_width;
             fast_u16 addr = line_addr;
-            for(auto &chunk : line) {
+            for(; j != chunks_per_border_width + chunks_per_screen_line; ++j) {
                 fast_u8 b = on_access(addr);
                 uint_fast32_t c = 0;
                 c |= (b & 0x80) ? black : white; c <<= 4;
@@ -181,7 +210,7 @@ protected:
                 c |= (b & 0x04) ? black : white; c <<= 4;
                 c |= (b & 0x02) ? black : white; c <<= 4;
                 c |= (b & 0x01) ? black : white;
-                chunk = static_cast<frame_chunk>(c);
+                line[j] = static_cast<frame_chunk>(c);
                 ++addr;
             }
 
