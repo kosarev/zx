@@ -310,8 +310,9 @@ public:
     }
 
 private:
-    static const auto window_width = machine::frame_width;
-    static const auto window_height = machine::frame_height;
+    static const unsigned window_scale = 2;
+    static const auto window_width = machine::frame_width * window_scale;
+    static const auto window_height = machine::frame_height * window_scale;
 
     typedef uint32_t window_pixel;
     typedef window_pixel window_pixels_type[window_height][window_width];
@@ -336,6 +337,7 @@ private:
     void render_frame() {
         machine::render_frame();
 
+        static_assert(window_scale == 2, "Unsupported window scale!");
         static_assert(is_multiple_of(window_width,
                                      machine::frame_pixels_per_chunk),
                       "Fractional number of chunks per line is not supported!");
@@ -346,16 +348,39 @@ private:
         window_pixel *pixels = **window_pixels;
         std::size_t p = 0;
         for(const auto &frame_line : machine::frame_chunks) {
+            window_pixel *line = &pixels[p];
             for(auto chunk : frame_line) {
-                pixels[p++] = translate_color((chunk >> 28) & 0xf);
-                pixels[p++] = translate_color((chunk >> 24) & 0xf);
-                pixels[p++] = translate_color((chunk >> 20) & 0xf);
-                pixels[p++] = translate_color((chunk >> 16) & 0xf);
-                pixels[p++] = translate_color((chunk >> 12) & 0xf);
-                pixels[p++] = translate_color((chunk >>  8) & 0xf);
-                pixels[p++] = translate_color((chunk >>  4) & 0xf);
-                pixels[p++] = translate_color((chunk >>  0) & 0xf);
+                window_pixel c;
+                c = translate_color((chunk >> 28) & 0xf);
+                pixels[p++] = c;
+                pixels[p++] = c;
+                c = translate_color((chunk >> 24) & 0xf);
+                pixels[p++] = c;
+                pixels[p++] = c;
+                c = translate_color((chunk >> 20) & 0xf);
+                pixels[p++] = c;
+                pixels[p++] = c;
+                c = translate_color((chunk >> 16) & 0xf);
+                pixels[p++] = c;
+                pixels[p++] = c;
+                c = translate_color((chunk >> 12) & 0xf);
+                pixels[p++] = c;
+                pixels[p++] = c;
+                c = translate_color((chunk >>  8) & 0xf);
+                pixels[p++] = c;
+                pixels[p++] = c;
+                c = translate_color((chunk >>  4) & 0xf);
+                pixels[p++] = c;
+                pixels[p++] = c;
+                c = translate_color((chunk >>  0) & 0xf);
+                pixels[p++] = c;
+                pixels[p++] = c;
             }
+
+            // Duplicate the last line.
+            std::memcpy(line + window_width, line,
+                        sizeof(window_pixel[window_width]));
+            p += window_width;
         }
     }
 
