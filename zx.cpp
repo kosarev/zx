@@ -165,20 +165,22 @@ protected:
                       "Unsupported frame pixel format!");
         static_assert(frame_pixels_per_chunk == 8,
                       "Unsupported frame chunk format!");
+        uint_fast32_t black = 0;
+        uint_fast32_t white = red_mask | green_mask | blue_mask;
         fast_u16 line_addr = 0x4000;
         for(auto &line : frame_chunks) {
             fast_u16 addr = line_addr;
             for(auto &chunk : line) {
                 fast_u8 b = on_access(addr);
                 uint_fast32_t c = 0;
-                c |= (b & 0x80) ? 0 : 0x7; c <<= 4;
-                c |= (b & 0x40) ? 0 : 0x7; c <<= 4;
-                c |= (b & 0x20) ? 0 : 0x7; c <<= 4;
-                c |= (b & 0x10) ? 0 : 0x7; c <<= 4;
-                c |= (b & 0x08) ? 0 : 0x7; c <<= 4;
-                c |= (b & 0x04) ? 0 : 0x7; c <<= 4;
-                c |= (b & 0x02) ? 0 : 0x7; c <<= 4;
-                c |= (b & 0x01) ? 0 : 0x7;
+                c |= (b & 0x80) ? black : white; c <<= 4;
+                c |= (b & 0x40) ? black : white; c <<= 4;
+                c |= (b & 0x20) ? black : white; c <<= 4;
+                c |= (b & 0x10) ? black : white; c <<= 4;
+                c |= (b & 0x08) ? black : white; c <<= 4;
+                c |= (b & 0x04) ? black : white; c <<= 4;
+                c |= (b & 0x02) ? black : white; c <<= 4;
+                c |= (b & 0x01) ? black : white;
                 chunk = static_cast<frame_chunk>(c);
                 ++addr;
             }
