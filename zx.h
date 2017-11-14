@@ -199,7 +199,6 @@ public:
         }
     }
 
-protected:
     void execute_frame() {
         const ticks_type ticks_per_frame = 69888;
         while(ticks < ticks_per_frame)
@@ -207,6 +206,7 @@ protected:
         ticks -= ticks_per_frame;
     }
 
+protected:
     pixel_type translate_color(unsigned c) {
         uint_fast32_t r = 0;
         r |= (c & red_mask)   << (16 - red_bit);

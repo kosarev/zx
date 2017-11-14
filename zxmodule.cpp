@@ -58,6 +58,11 @@ static PyObject *get_frame_pixels(PyObject *self, PyObject *args) {
                                    PyBUF_READ);
 }
 
+PyObject *execute_frame(PyObject *self, PyObject *args) {
+    cast_emulator(self).execute_frame();
+    Py_RETURN_NONE;
+}
+
 PyMethodDef methods[] = {
     {"get_memory", get_memory, METH_NOARGS,
      "Return a MemoryView object that exposes the memory of the simulated "
@@ -68,6 +73,8 @@ PyMethodDef methods[] = {
     {"get_frame_pixels", get_frame_pixels, METH_NOARGS,
      "Convert rendered frame into an internally allocated array of RGB24 pixels "
      "and return a MemoryView object that exposes that array."},
+    {"execute_frame", execute_frame, METH_NOARGS,
+     "Execute instructions that correspond to a single frame."},
     { nullptr }  // Sentinel.
 };
 

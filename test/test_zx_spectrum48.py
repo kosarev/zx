@@ -47,5 +47,16 @@ class test_get_frame_pixels(unittest.TestCase):
         assert len(pixels) == 394240
 
 
+class test_execute_frame(unittest.TestCase):
+    def runTest(self):
+        import zx
+        mach = zx.Spectrum48()
+
+        mem = mach.get_memory()
+        mem[0:2] = bytearray([0x18, 0x100 - 2])  # jr $
+
+        mach.execute_frame()
+
+
 if __name__ == '__main__':
     unittest.main()

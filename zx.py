@@ -9,7 +9,7 @@
     Published under the MIT license.
 '''
 
-import cairo, gi, zx
+import cairo, gi, time, zx
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
@@ -46,6 +46,11 @@ class emulator(Gtk.Window):
 
         self.emulator = zx.Spectrum48()
 
+        self.memory = self.emulator.get_memory()
+
+        rom_filename = '/usr/share/spectrum-roms/48.rom'
+        self.memory[0:0x4000] = open(rom_filename, 'rb').read()
+
     def on_done(self, widget, context):
         self.done = True
 
@@ -64,6 +69,8 @@ class emulator(Gtk.Window):
             pixels = self.emulator.get_frame_pixels()
             self.frame_data[:] = pixels
             self.area.queue_draw()
+            self.emulator.execute_frame()
+            time.sleep(1 / 50)
 
 
 def main():
