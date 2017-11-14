@@ -38,7 +38,8 @@ static PyTypeObject Spectrum48_type = {
     0,                          // tp_getattro
     0,                          // tp_setattro
     0,                          // tp_as_buffer
-    Py_TPFLAGS_DEFAULT,         // tp_flags
+    Py_TPFLAGS_DEFAULT |        // tp_flags
+         Py_TPFLAGS_BASETYPE,
     "ZX Spectrum 48K Emulator", // tp_doc
     0,                          // tp_traverse
     0,                          // tp_clear
