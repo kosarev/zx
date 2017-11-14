@@ -38,10 +38,23 @@ PyObject *get_memory(PyObject *self, PyObject *args) {
                                    sizeof(memory), PyBUF_WRITE);
 }
 
+PyObject *render_frame(PyObject *self, PyObject *args) {
+    auto &emulator = cast_emulator(self);
+    emulator.render_frame();
+
+    const auto &frame_chunks = emulator.get_frame_chunks();
+    return PyMemoryView_FromMemory(
+        const_cast<char*>(reinterpret_cast<const char*>(&frame_chunks)),
+        sizeof(frame_chunks), PyBUF_READ);
+}
+
 PyMethodDef methods[] = {
     {"get_memory", get_memory, METH_NOARGS,
-     "Return a MemoryView object that expose the memory of the simulated "
+     "Return a MemoryView object that exposes the memory of the simulated "
      "machine."},
+    {"render_frame", render_frame, METH_NOARGS,
+     "Render current frame and return a MemoryView object that exposes a "
+     "buffer that contains rendered data."},
     { nullptr }  // Sentinel.
 };
 

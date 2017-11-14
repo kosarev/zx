@@ -30,5 +30,13 @@ class test_get_memory(unittest.TestCase):
         assert mem[0] == 0x02, mem[0]
 
 
+class test_render_frame(unittest.TestCase):
+    def runTest(self):
+        import zx
+        mach = zx.Spectrum48()
+        data = mach.render_frame()
+        assert len(data) == 49280
+
+
 if __name__ == '__main__':
     unittest.main()

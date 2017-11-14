@@ -53,7 +53,6 @@ public:
 
     memory_image_type &get_memory() { return memory_image; }
 
-protected:
     // Four bits per frame pixel in brightness:grb format.
     static const unsigned bits_per_frame_pixel = 4;
 
@@ -100,7 +99,9 @@ protected:
     static const unsigned chunks_per_frame_line =
         div_exact(frame_width, frame_pixels_per_chunk);
 
-    frame_chunk frame_chunks[frame_height][chunks_per_frame_line];
+    typedef frame_chunk frame_chunks_type[frame_height][chunks_per_frame_line];
+
+    const frame_chunks_type &get_frame_chunks() { return frame_chunks; }
 
     void render_frame() {
         static_assert(bits_per_frame_pixel == 4,
@@ -166,6 +167,7 @@ protected:
         }
     }
 
+protected:
     void execute_frame() {
         const ticks_type ticks_per_frame = 69888;
         while(ticks < ticks_per_frame)
@@ -176,6 +178,7 @@ protected:
     ticks_type ticks;
 
 private:
+    frame_chunks_type frame_chunks;
     memory_image_type memory_image;
 };
 
