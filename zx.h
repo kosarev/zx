@@ -25,6 +25,11 @@ constexpr T div_exact(T a, T b) {
     return a % b == 0 ? a / b : non_constexpr<T>();
 }
 
+template<typename T>
+constexpr bool is_multiple_of(T a, T b) {
+    return b != 0 && a % b == 0;
+}
+
 class spectrum48 : public z80::processor<spectrum48> {
 public:
     typedef processor<spectrum48> base;
@@ -167,12 +172,51 @@ public:
         }
     }
 
+    typedef uint_least32_t pixel_type;
+    typedef pixel_type pixels_buffer_type[frame_height][frame_width];
+    static const std::size_t pixels_buffer_size = sizeof(pixels_buffer_type);
+
+    void get_frame_pixels(pixels_buffer_type &buffer) {
+        static_assert(is_multiple_of(frame_width, frame_pixels_per_chunk),
+                      "Fractional number of chunks per line is not supported!");
+        static_assert(bits_per_frame_pixel == 4,
+                      "Unsupported frame pixel format!");
+        static_assert(frame_pixels_per_chunk == 8,
+                      "Unsupported frame chunk format!");
+        pixel_type *pixels = *buffer;
+        std::size_t p = 0;
+        for(const auto &frame_line : frame_chunks) {
+            for(auto chunk : frame_line) {
+                pixels[p++] = translate_color((chunk >> 28) & 0xf);
+                pixels[p++] = translate_color((chunk >> 24) & 0xf);
+                pixels[p++] = translate_color((chunk >> 20) & 0xf);
+                pixels[p++] = translate_color((chunk >> 16) & 0xf);
+                pixels[p++] = translate_color((chunk >> 12) & 0xf);
+                pixels[p++] = translate_color((chunk >>  8) & 0xf);
+                pixels[p++] = translate_color((chunk >>  4) & 0xf);
+                pixels[p++] = translate_color((chunk >>  0) & 0xf);
+            }
+        }
+    }
+
 protected:
     void execute_frame() {
         const ticks_type ticks_per_frame = 69888;
         while(ticks < ticks_per_frame)
             step();
         ticks -= ticks_per_frame;
+    }
+
+    pixel_type translate_color(unsigned c) {
+        uint_fast32_t r = 0;
+        r |= (c & red_mask)   << (16 - red_bit);
+        r |= (c & green_mask) << (8 - green_bit);
+        r |= (c & blue_mask)  << (0 - blue_bit);
+
+        // TODO: Use the real coefficients.
+        r *= (c & brightness_mask) ? 0xff : 0xcc;
+
+        return static_cast<pixel_type>(r);
     }
 
     ticks_type ticks;

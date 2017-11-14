@@ -203,18 +203,6 @@ private:
                     window_width, window_height);
     }
 
-    window_pixel translate_color(unsigned c) {
-        uint_fast32_t r = 0;
-        r |= (c & machine::red_mask)   << (16 - machine::red_bit);
-        r |= (c & machine::green_mask) << (8 - machine::green_bit);
-        r |= (c & machine::blue_mask)  << (0 - machine::blue_bit);
-
-        // TODO: Use the real coefficients.
-        r *= (c & machine::brightness_mask) ? 0xff : 0xcc;
-
-        return static_cast<window_pixel>(r);
-    }
-
     void render_frame() {
         machine::render_frame();
 

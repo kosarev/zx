@@ -22,6 +22,7 @@ typedef zx::spectrum48 emulator_type;
 struct object_instance {
     PyObject_HEAD
     emulator_type emulator;
+    emulator_type::pixels_buffer_type pixels;
 };
 
 static inline object_instance *cast_object(PyObject *p) {
@@ -48,6 +49,15 @@ PyObject *render_frame(PyObject *self, PyObject *args) {
         sizeof(frame_chunks), PyBUF_READ);
 }
 
+static PyObject *get_frame_pixels(PyObject *self, PyObject *args) {
+    auto &object = *cast_object(self);
+    auto &emulator = object.emulator;
+    emulator.get_frame_pixels(object.pixels);
+    return PyMemoryView_FromMemory(reinterpret_cast<char*>(object.pixels),
+                                   emulator_type::pixels_buffer_size,
+                                   PyBUF_READ);
+}
+
 PyMethodDef methods[] = {
     {"get_memory", get_memory, METH_NOARGS,
      "Return a MemoryView object that exposes the memory of the simulated "
@@ -55,6 +65,9 @@ PyMethodDef methods[] = {
     {"render_frame", render_frame, METH_NOARGS,
      "Render current frame and return a MemoryView object that exposes a "
      "buffer that contains rendered data."},
+    {"get_frame_pixels", get_frame_pixels, METH_NOARGS,
+     "Convert rendered frame into an internally allocated array of RGB24 pixels "
+     "and return a MemoryView object that exposes that array."},
     { nullptr }  // Sentinel.
 };
 
@@ -66,12 +79,14 @@ PyObject *object_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     if(!self)
       return nullptr;
 
-    ::new(&self->emulator) zx::spectrum48();
+    auto &emulator = self->emulator;
+    ::new(&emulator) zx::spectrum48();
     return &self->ob_base;
 }
 
 void object_dealloc(PyObject *self) {
-    cast_emulator(self).~spectrum48();
+    auto &object = *cast_object(self);
+    object.emulator.~spectrum48();
     Py_TYPE(self)->tp_free(self);
 }
 

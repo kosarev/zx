@@ -38,5 +38,14 @@ class test_render_frame(unittest.TestCase):
         assert len(data) == 49280
 
 
+class test_get_frame_pixels(unittest.TestCase):
+    def runTest(self):
+        import zx
+        mach = zx.Spectrum48()
+        mach.render_frame()
+        pixels = mach.get_frame_pixels()
+        assert len(pixels) == 394240
+
+
 if __name__ == '__main__':
     unittest.main()
