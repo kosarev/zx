@@ -17,17 +17,39 @@ namespace {
 
 namespace Spectrum48 {
 
+typedef zx::spectrum48 emulator_type;
+
 struct object_instance {
     PyObject_HEAD
-    zx::spectrum48 emulator;
+    emulator_type emulator;
+};
+
+static inline object_instance *cast_object(PyObject *p) {
+    return reinterpret_cast<object_instance*>(p);
+}
+
+static inline emulator_type &cast_emulator(PyObject *p) {
+    return cast_object(p)->emulator;
+}
+
+PyObject *get_memory(PyObject *self, PyObject *args) {
+    auto &memory = cast_emulator(self).get_memory();
+    return PyMemoryView_FromMemory(reinterpret_cast<char*>(memory),
+                                   sizeof(memory), PyBUF_WRITE);
+}
+
+PyMethodDef methods[] = {
+    {"get_memory", get_memory, METH_NOARGS,
+     "Return a MemoryView object that expose the memory of the simulated "
+     "machine."},
+    { nullptr }  // Sentinel.
 };
 
 PyObject *object_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     if(!PyArg_ParseTuple(args, ":Spectrum48.__new__"))
         return nullptr;
 
-    auto *self = reinterpret_cast<object_instance*>(
-        type->tp_alloc(type, /* nitems= */ 0));
+    auto *self = cast_object(type->tp_alloc(type, /* nitems= */ 0));
     if(!self)
       return nullptr;
 
@@ -36,7 +58,7 @@ PyObject *object_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 }
 
 void object_dealloc(PyObject *self) {
-    reinterpret_cast<object_instance&>(*self).emulator.~spectrum48();
+    cast_emulator(self).~spectrum48();
     Py_TYPE(self)->tp_free(self);
 }
 
@@ -69,7 +91,7 @@ static PyTypeObject type_object = {
     0,                          // tp_weaklistoffset
     0,                          // tp_iter
     0,                          // tp_iternext
-    0,                          // tp_methods
+    methods,                    // tp_methods
     nullptr,                    // tp_members
     0,                          // tp_getset
     0,                          // tp_base

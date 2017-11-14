@@ -33,7 +33,7 @@ public:
     spectrum48()
             : ticks(0) {
         uint_fast32_t rnd = 0xde347a01;
-        for(auto &cell : image) {
+        for(auto &cell : memory_image) {
             cell = static_cast<least_u8>(rnd);
             rnd = (rnd * 0x74392cef) ^ (rnd >> 16);
         }
@@ -45,8 +45,13 @@ public:
 
     least_u8 &on_access(fast_u16 addr) {
         assert(addr < image_size);
-        return image[addr];
+        return memory_image[addr];
     }
+
+    static const z80::size_type memory_image_size = 0x10000;  // 64K bytes.
+    typedef least_u8 memory_image_type[memory_image_size];
+
+    memory_image_type &get_memory() { return memory_image; }
 
 protected:
     // Four bits per frame pixel in brightness:grb format.
@@ -171,8 +176,7 @@ protected:
     ticks_type ticks;
 
 private:
-    static const z80::size_type image_size = 0x10000;  // 64K bytes.
-    least_u8 image[image_size];
+    memory_image_type memory_image;
 };
 
 }  // namespace zx

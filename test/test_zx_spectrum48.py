@@ -19,5 +19,16 @@ class test_derive(unittest.TestCase):
         del mach
 
 
+class test_get_memory(unittest.TestCase):
+    def runTest(self):
+        import zx
+        mach = zx.Spectrum48()
+        mem = mach.get_memory()
+        assert len(mem) == 0x10000
+        assert mem[0] == 0x01, mem[0]
+        mem[0] += 1
+        assert mem[0] == 0x02, mem[0]
+
+
 if __name__ == '__main__':
     unittest.main()
