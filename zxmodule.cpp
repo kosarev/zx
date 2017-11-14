@@ -9,19 +9,30 @@
 
 #include <Python.h>
 
-struct spectrum48_state {
-    int dummy;
-};
+#include <new>
+
+#include "zx.h"
 
 struct Spectrum48_object {
     PyObject_HEAD
-    spectrum48_state state;
+    zx::spectrum48 emulator;
 };
+
+static PyObject *Spectrum48_new(PyTypeObject *type, PyObject *args,
+                                PyObject *kwds) {
+    auto *self = reinterpret_cast<Spectrum48_object*>(
+        type->tp_alloc(type, /* nitems= */ 0));
+    if(!self)
+      return nullptr;
+
+    ::new(&self->emulator) zx::spectrum48();
+    return &self->ob_base;
+}
 
 static PyTypeObject Spectrum48_type = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
     "zx.Spectrum48",            // tp_name
-    sizeof(Spectrum48_object),  // tp_size
+    sizeof(Spectrum48_object),  // tp_basicsize
     0,                          // tp_itemsize
     0,                          // tp_dealloc
     0,                          // tp_print
@@ -57,7 +68,7 @@ static PyTypeObject Spectrum48_type = {
     0,                          // tp_dictoffset
     0,                          // tp_init
     0,                          // tp_alloc
-    PyType_GenericNew,          // tp_new
+    Spectrum48_new,             // tp_new
     0,                          // tp_free
     0,                          // tp_is_gc
     0,                          // tp_bases

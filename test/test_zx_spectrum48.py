@@ -14,6 +14,7 @@ class test_derive(unittest.TestCase):
         import zx
         class speccy(zx.Spectrum48):
             pass
+        mach = speccy()
 
 
 if __name__ == '__main__':
