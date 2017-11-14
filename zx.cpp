@@ -75,12 +75,12 @@ void error(const char *format, ...) {
 
 namespace zx {
 
-class spectrum_48 : public z80::processor<spectrum_48> {
+class spectrum48 : public z80::processor<spectrum48> {
 public:
-    typedef processor<spectrum_48> base;
+    typedef processor<spectrum48> base;
     typedef uint_fast32_t ticks_type;
 
-    spectrum_48()
+    spectrum48()
             : ticks(0) {
         uint_fast32_t rnd = 0xde347a01;
         for(auto &cell : image) {
@@ -227,7 +227,7 @@ private:
     least_u8 image[image_size];
 };
 
-void spectrum_48::load_rom(const char *filename) {
+void spectrum48::load_rom(const char *filename) {
     FILE *f = std::fopen(filename, "rb");
     if(!f)
         error("cannot open ROM file '%s': %s",
@@ -445,7 +445,7 @@ private:
 
 int main(int argc, const char *argv[]) {
     if(argc == 2 && std::strcmp(argv[1], "test") == 0) {
-        zx::spectrum_48 mach;
+        zx::spectrum48 mach;
         mach.load_rom("/usr/share/spectrum-roms/48.rom");
 
         while(mach.get_ticks() < 1000) {
@@ -459,7 +459,7 @@ int main(int argc, const char *argv[]) {
         return EXIT_SUCCESS;
     }
 
-    zx::x11_emulator<zx::spectrum_48> emu;
+    zx::x11_emulator<zx::spectrum48> emu;
     emu.load_rom("/usr/share/spectrum-roms/48.rom");
     emu.create(argc, argv);
 
