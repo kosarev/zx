@@ -23,7 +23,7 @@ class emulator(Gtk.Window):
 
         self.done = False
 
-        self.scale = 3
+        self.scale = 2
 
         self.area = Gtk.DrawingArea()
         self.area.connect("draw", self.on_draw_area)
