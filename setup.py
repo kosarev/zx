@@ -8,6 +8,7 @@ from setuptools import Extension, setup
 
 ZX_MAJOR_VERSION = 0
 ZX_MINOR_VERSION = 1
+ZX_PATCH_VERSION = 0
 
 
 # Work around the problem with the warning about '-Wstrict-prototypes'.
@@ -24,8 +25,9 @@ for var in ['OPT']:
 
 zx_module = Extension(
     name='zx',
-    define_macros=[('MAJOR_VERSION', '%d' % ZX_MAJOR_VERSION),
-                   ('MINOR_VERSION', '%d' % ZX_MINOR_VERSION)],
+    define_macros=[('ZX_MAJOR_VERSION', '%d' % ZX_MAJOR_VERSION),
+                   ('ZX_MINOR_VERSION', '%d' % ZX_MINOR_VERSION),
+                   ('ZX_PATCH_VERSION', '%d' % ZX_PATCH_VERSION)],
     extra_compile_args=['-std=c++11', '-Wall', '-fno-exceptions', '-fno-rtti'],
     sources=['zxmodule.cpp'],
     language='c++')
@@ -34,7 +36,8 @@ zx_module = Extension(
 # TODO: Update the URL once we have a published documentation.
 # TODO: Do we have a name for the emulator?
 setup(name='zx',
-      version='%d.%d' % (ZX_MAJOR_VERSION, ZX_MINOR_VERSION),
+      version='%d.%d.%d' % (ZX_MAJOR_VERSION, ZX_MINOR_VERSION,
+                            ZX_PATCH_VERSION),
       description='ZX Spectrum emulator',
       # TODO: long_description=...
       author='Ivan Kosarev',
