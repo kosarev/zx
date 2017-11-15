@@ -8,6 +8,7 @@
 */
 
 #include <cerrno>
+#include <cstdarg>
 #include <cstring>
 
 #include <X11/Xlib.h>
