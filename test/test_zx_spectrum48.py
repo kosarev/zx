@@ -61,7 +61,14 @@ class test_execute_frame(unittest.TestCase):
 class test_keyboard(unittest.TestCase):
     def runTest(self):
         import zx
-        print(zx.KEYBOARD)
+        info = zx.KEYS_INFO
+        assert info['3']['number'] == 2
+        assert info['N']['halfrow_number'] == 7
+        assert info['H']['pos_in_halfrow'] == 0
+        assert info['C']['is_leftside'] == True
+        assert info['E']['is_rightside'] == False
+        assert info['R']['address_line'] == 10
+        assert info['5']['port_bit'] == 4
 
 
 if __name__ == '__main__':
