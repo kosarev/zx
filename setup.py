@@ -23,13 +23,13 @@ for var in ['OPT']:
     config_vars[var] = ' '.join(opts)
 
 
-zx_module = Extension(
-    name='zx',
+zx_emulator_module = Extension(
+    name='zx.emulator',
     define_macros=[('ZX_MAJOR_VERSION', '%d' % ZX_MAJOR_VERSION),
                    ('ZX_MINOR_VERSION', '%d' % ZX_MINOR_VERSION),
                    ('ZX_PATCH_VERSION', '%d' % ZX_PATCH_VERSION)],
     extra_compile_args=['-std=c++11', '-Wall', '-fno-exceptions', '-fno-rtti'],
-    sources=['zxmodule.cpp'],
+    sources=['zx-emulator-module.cpp'],
     language='c++')
 
 
@@ -38,12 +38,12 @@ zx_module = Extension(
 setup(name='zx',
       version='%d.%d.%d' % (ZX_MAJOR_VERSION, ZX_MINOR_VERSION,
                             ZX_PATCH_VERSION),
-      description='ZX Spectrum emulator',
+      description='ZX Spectrum Emulator',
       # TODO: long_description=...
       author='Ivan Kosarev',
       author_email='ivan@kosarev.info',
       url='https://github.com/kosarev/zx/',
-      ext_modules=[zx_module],
+      ext_modules=[zx_emulator_module],
       classifiers=[
           'Development Status :: 1 - Planning',
           'Environment :: X11 Applications :: GTK',

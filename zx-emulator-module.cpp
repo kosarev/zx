@@ -1,5 +1,5 @@
 
-/*  PyZX - Python bindings for the ZX Spectrum Emulator.
+/*  ZX Spectrum Emulation Module for Python.
 
     Copyright (C) 2017 Ivan Kosarev.
     ivan@kosarev.info
@@ -99,7 +99,7 @@ void object_dealloc(PyObject *self) {
 
 static PyTypeObject type_object = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
-    "zx.Spectrum48",            // tp_name
+    "zx.emulator.Spectrum48",   // tp_name
     sizeof(object_instance),    // tp_basicsize
     0,                          // tp_itemsize
     object_dealloc,             // tp_dealloc
@@ -117,8 +117,8 @@ static PyTypeObject type_object = {
     0,                          // tp_getattro
     0,                          // tp_setattro
     0,                          // tp_as_buffer
-    Py_TPFLAGS_DEFAULT |        // tp_flags
-         Py_TPFLAGS_BASETYPE,
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+                                // tp_flags
     "ZX Spectrum 48K Emulator", // tp_doc
     0,                          // tp_traverse
     0,                          // tp_clear
@@ -151,10 +151,11 @@ static PyTypeObject type_object = {
 
 }  // namespace Spectrum48
 
-static PyModuleDef zx_module = {
+static PyModuleDef zx_emulator_module = {
     PyModuleDef_HEAD_INIT,      // m_base
-    "zx",                       // m_name
-    "ZX Spectrum Emulator",     // m_doc
+    "zx.emulator",              // m_name
+    "ZX Spectrum Emulation Module",
+                                // m_doc
     -1,                         // m_size
     nullptr,                    // m_methods
     nullptr,                    // m_slots
@@ -165,8 +166,8 @@ static PyModuleDef zx_module = {
 
 }  // anonymous namespace
 
-extern "C" PyMODINIT_FUNC PyInit_zx(void) {
-    PyObject *m = PyModule_Create(&zx_module);
+extern "C" PyMODINIT_FUNC PyInit_emulator(void) {
+    PyObject *m = PyModule_Create(&zx_emulator_module);
     if(!m)
         return nullptr;
 

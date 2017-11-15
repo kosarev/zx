@@ -1,4 +1,5 @@
 build
+dist
 zx.egg-info
-zx.cpython-*
+zx/emulator.cpython-*
 test/__pycache__
