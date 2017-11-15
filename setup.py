@@ -8,7 +8,7 @@ from setuptools import Extension, setup
 
 ZX_MAJOR_VERSION = 0
 ZX_MINOR_VERSION = 1
-ZX_PATCH_VERSION = 0
+ZX_PATCH_VERSION = 1
 
 
 # Work around the problem with the warning about '-Wstrict-prototypes'.
