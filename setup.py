@@ -44,6 +44,7 @@ setup(name='zx',
       author_email='ivan@kosarev.info',
       url='https://github.com/kosarev/zx/',
       ext_modules=[zx_emulator_module],
+      packages=['zx'],
       classifiers=[
           'Development Status :: 1 - Planning',
           'Environment :: X11 Applications :: GTK',

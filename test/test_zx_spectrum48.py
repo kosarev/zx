@@ -58,5 +58,11 @@ class test_execute_frame(unittest.TestCase):
         mach.execute_frame()
 
 
+class test_keyboard(unittest.TestCase):
+    def runTest(self):
+        import zx
+        print(zx.KEYBOARD)
+
+
 if __name__ == '__main__':
     unittest.main()
