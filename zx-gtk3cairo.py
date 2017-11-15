@@ -9,7 +9,7 @@
     Published under the MIT license.
 '''
 
-import cairo, gi, time, zx
+import cairo, gi, time, zx.emulator
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
@@ -44,7 +44,7 @@ class emulator(Gtk.Window):
         self.pattern = cairo.SurfacePattern(self.frame)
         self.pattern.set_filter(cairo.FILTER_NEAREST)
 
-        self.emulator = zx.Spectrum48()
+        self.emulator = zx.emulator.Spectrum48()
 
         self.memory = self.emulator.get_memory()
 
