@@ -49,7 +49,7 @@ public:
     ticks_type get_ticks() const { return ticks; }
 
     least_u8 &on_access(fast_u16 addr) {
-        assert(addr < image_size);
+        assert(addr < memory_image_size);
         return memory_image[addr];
     }
 
