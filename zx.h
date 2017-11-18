@@ -36,7 +36,7 @@ public:
     typedef uint_fast32_t ticks_type;
 
     spectrum48()
-            : ticks(0) {
+            : ticks_count(0) {
         uint_fast32_t rnd = 0xde347a01;
         for(auto &cell : memory_image) {
             cell = static_cast<least_u8>(rnd);
@@ -44,13 +44,23 @@ public:
         }
     }
 
-    void tick(unsigned t) { ticks += t; }
+    void tick(unsigned t) { ticks_count += t; }
 
-    ticks_type get_ticks() const { return ticks; }
+    ticks_type get_ticks() const { return ticks_count; }
 
-    least_u8 &on_access(fast_u16 addr) {
+    fast_u8 on_read_access(fast_u16 addr) {
         assert(addr < memory_image_size);
         return memory_image[addr];
+    }
+
+    void on_write_access(fast_u16 addr, fast_u8 n) {
+        assert(addr < memory_image_size);
+        memory_image[addr] = static_cast<least_u8>(n);
+    }
+
+    void on_write_cycle(fast_u16 addr, fast_u8 n, unsigned ticks) {
+        assert(addr >= 0x4000);  // TODO
+        base::on_write_cycle(addr, n, ticks);
     }
 
     static const z80::size_type memory_image_size = 0x10000;  // 64K bytes.
@@ -139,7 +149,7 @@ public:
             // Screen.
             fast_u16 addr = line_addr;
             for(; j != chunks_per_border_width + chunks_per_screen_line; ++j) {
-                fast_u8 b = on_access(addr);
+                fast_u8 b = on_read_access(addr);
                 uint_fast32_t c = 0;
                 c |= (b & 0x80) ? black : white; c <<= 4;
                 c |= (b & 0x40) ? black : white; c <<= 4;
@@ -200,10 +210,16 @@ public:
     }
 
     void execute_frame() {
-        const ticks_type ticks_per_frame = 69888;
-        while(ticks < ticks_per_frame)
+        const ticks_type ticks_per_active_int = 32;
+        while(ticks_count < ticks_per_active_int) {
+            handle_active_int();
             step();
-        ticks -= ticks_per_frame;
+        }
+
+        const ticks_type ticks_per_frame = 69888;
+        while(ticks_count < ticks_per_frame)
+            step();
+        ticks_count -= ticks_per_frame;
     }
 
 protected:
@@ -219,7 +235,7 @@ protected:
         return static_cast<pixel_type>(r);
     }
 
-    ticks_type ticks;
+    ticks_type ticks_count;
 
 private:
     frame_chunks_type frame_chunks;

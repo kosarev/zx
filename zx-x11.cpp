@@ -188,7 +188,7 @@ public:
                   filename, std::strerror(errno));
 
         for(fast_u16 i = 0; i != rom_size; ++i)
-            machine::on_access(i) = rom[i];
+            machine::on_write_access(i, rom[i]);
     }
 
 private:
