@@ -77,7 +77,7 @@ public:
             return;
 
         unsigned ticks_since_new_ula_cycle = ticks_since_new_line % 8;
-        unsigned delay = ticks_since_new_line == 7 ?
+        unsigned delay = ticks_since_new_ula_cycle == 7 ?
             0 : 6 - ticks_since_new_ula_cycle;
         tick(delay);
     }
