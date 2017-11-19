@@ -147,6 +147,12 @@ public:
         handle_contention_tick(addr_bus_value);
     }
 
+    fast_u8 on_input_cycle(fast_u16 addr) {
+        z80::unused(addr);
+        tick(4);
+        return 0xbf;
+    }
+
     static const z80::size_type memory_image_size = 0x10000;  // 64K bytes.
     typedef least_u8 memory_image_type[memory_image_size];
 
