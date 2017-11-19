@@ -36,7 +36,7 @@ public:
     typedef uint_fast32_t ticks_type;
 
     spectrum48()
-            : ticks_since_int(0) {
+            : ticks_since_int(0), addr_bus_value(0) {
         uint_fast32_t rnd = 0xde347a01;
         for(auto &cell : memory_image) {
             cell = static_cast<least_u8>(rnd);
@@ -96,6 +96,55 @@ public:
         assert(addr >= 0x4000);  // TODO
         handle_memory_contention(addr);
         processor::on_write_cycle(addr, n, ticks);
+    }
+
+    void handle_contention_tick(fast_u16 addr) {
+        handle_memory_contention(addr);
+        tick(1);
+    }
+
+    fast_u8 on_4t_read_cycle(fast_u16 addr) {
+        fast_u8 n = on_read_cycle(addr, /* ticks= */ 3);
+        handle_contention_tick(addr);
+        return n;
+    }
+
+    fast_u8 on_5t_read_cycle(fast_u16 addr) {
+        fast_u8 n = on_read_cycle(addr, /* ticks= */ 3);
+        handle_contention_tick(addr);
+        handle_contention_tick(addr);
+        return n;
+    }
+
+    void on_5t_write_cycle(fast_u16 addr, fast_u8 n) {
+        on_write_cycle(addr, n, /* ticks= */ 3);
+        handle_contention_tick(addr);
+        handle_contention_tick(addr);
+    }
+
+    void on_set_addr_bus(fast_u16 addr) {
+        addr_bus_value = addr;
+    }
+
+    void on_3t_exec_cycle() {
+        handle_contention_tick(addr_bus_value);
+        handle_contention_tick(addr_bus_value);
+        handle_contention_tick(addr_bus_value);
+    }
+
+    void on_4t_exec_cycle() {
+        handle_contention_tick(addr_bus_value);
+        handle_contention_tick(addr_bus_value);
+        handle_contention_tick(addr_bus_value);
+        handle_contention_tick(addr_bus_value);
+    }
+
+    void on_5t_exec_cycle() {
+        handle_contention_tick(addr_bus_value);
+        handle_contention_tick(addr_bus_value);
+        handle_contention_tick(addr_bus_value);
+        handle_contention_tick(addr_bus_value);
+        handle_contention_tick(addr_bus_value);
     }
 
     static const z80::size_type memory_image_size = 0x10000;  // 64K bytes.
@@ -271,6 +320,7 @@ protected:
     }
 
     ticks_type ticks_since_int;
+    fast_u16 addr_bus_value;
 
 private:
     frame_chunks_type frame_chunks;
