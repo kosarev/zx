@@ -94,8 +94,9 @@ public:
     }
 
     void on_write_cycle(fast_u16 addr, fast_u8 n, unsigned ticks) {
-        assert(addr >= 0x4000);  // TODO
-        handle_memory_contention(addr);
+        // TODO
+        if(addr >= 0x4000)
+            handle_memory_contention(addr);
         processor::on_write_cycle(addr, n, ticks);
     }
 
