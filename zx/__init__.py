@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 
-from .keyboard import KEYS_INFO
+from ._keyboard import KEYS_INFO
