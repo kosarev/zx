@@ -221,7 +221,6 @@ public:
             port &= ~(1 << bit_no);
         else
             port |= (1 << bit_no);
-        std::printf("%u %u\n", port_no, bit_no);
     }
 
     void handle_keyboard_events() {
