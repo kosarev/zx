@@ -32,11 +32,11 @@ constexpr bool is_multiple_of(T a, T b) {
 
 class spectrum48 : public z80::processor<spectrum48> {
 public:
-    typedef processor<spectrum48> base;
+    typedef processor<spectrum48> processor;
     typedef uint_fast32_t ticks_type;
 
     spectrum48()
-            : ticks_count(0) {
+            : ticks_since_int(0) {
         uint_fast32_t rnd = 0xde347a01;
         for(auto &cell : memory_image) {
             cell = static_cast<least_u8>(rnd);
@@ -44,9 +44,9 @@ public:
         }
     }
 
-    void tick(unsigned t) { ticks_count += t; }
+    void tick(unsigned t) { ticks_since_int += t; }
 
-    ticks_type get_ticks() const { return ticks_count; }
+    ticks_type get_ticks() const { return ticks_since_int; }
 
     fast_u8 on_read_access(fast_u16 addr) {
         assert(addr < memory_image_size);
@@ -58,9 +58,44 @@ public:
         memory_image[addr] = static_cast<least_u8>(n);
     }
 
+    void handle_memory_contention(fast_u16 addr) {
+        if(addr < 0x4000 || addr >= 0x8000)
+            return;
+
+        const ticks_type cont_base = 14335;
+        if(ticks_since_int < cont_base)
+            return;
+
+        const ticks_type ticks_per_line = 224;
+        if(ticks_since_int >= cont_base + screen_height * ticks_per_line)
+            return;
+
+        unsigned ticks_since_new_line =
+            (ticks_since_int - cont_base) % ticks_per_line;
+        const unsigned pixels_per_tick = 2;
+        if(ticks_since_new_line >= screen_width / pixels_per_tick)
+            return;
+
+        unsigned ticks_since_new_ula_cycle = ticks_since_new_line % 8;
+        unsigned delay = ticks_since_new_line == 7 ?
+            0 : 6 - ticks_since_new_ula_cycle;
+        tick(delay);
+    }
+
+    fast_u8 on_fetch_cycle(fast_u16 addr) {
+        handle_memory_contention(addr);
+        return processor::on_fetch_cycle(addr);
+    }
+
+    fast_u8 on_read_cycle(fast_u16 addr, unsigned ticks) {
+        handle_memory_contention(addr);
+        return processor::on_read_cycle(addr, ticks);
+    }
+
     void on_write_cycle(fast_u16 addr, fast_u8 n, unsigned ticks) {
         assert(addr >= 0x4000);  // TODO
-        base::on_write_cycle(addr, n, ticks);
+        handle_memory_contention(addr);
+        processor::on_write_cycle(addr, n, ticks);
     }
 
     static const z80::size_type memory_image_size = 0x10000;  // 64K bytes.
@@ -211,15 +246,15 @@ public:
 
     void execute_frame() {
         const ticks_type ticks_per_active_int = 32;
-        while(ticks_count < ticks_per_active_int) {
+        while(ticks_since_int < ticks_per_active_int) {
             handle_active_int();
             step();
         }
 
         const ticks_type ticks_per_frame = 69888;
-        while(ticks_count < ticks_per_frame)
+        while(ticks_since_int < ticks_per_frame)
             step();
-        ticks_count -= ticks_per_frame;
+        ticks_since_int -= ticks_per_frame;
     }
 
 protected:
@@ -235,7 +270,7 @@ protected:
         return static_cast<pixel_type>(r);
     }
 
-    ticks_type ticks_count;
+    ticks_type ticks_since_int;
 
 private:
     frame_chunks_type frame_chunks;
