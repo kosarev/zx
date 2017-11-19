@@ -37,7 +37,8 @@ public:
 
     spectrum48()
             : ticks_since_int(0), addr_bus_value(0),
-              keyboard_state{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff} {
+              keyboard_state{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+              border_color(0) {
         uint_fast32_t rnd = 0xde347a01;
         for(auto &cell : memory_image) {
             cell = static_cast<least_u8>(rnd);
@@ -167,6 +168,13 @@ public:
         return n;
     }
 
+    void on_output_cycle(fast_u16 addr, fast_u8 n) {
+        if((addr & 0xff) != 0xfe)
+            return;
+
+        border_color = n & 0x7;
+    }
+
     static const unsigned num_of_keyboard_ports = 8;
     typedef least_u8 keyboard_state_type[num_of_keyboard_ports];
 
@@ -235,14 +243,15 @@ public:
 
         const unsigned black = 0;
         const unsigned white = red_mask | green_mask | blue_mask;
-        const frame_chunk white_chunk = 0x11111111 * white;
+
+        frame_chunk border_chunk = 0x11111111 * border_color;
 
         // Render the top border area.
         unsigned i = 0;
         for(; i != top_border_height; ++i) {
             frame_chunk *line = frame_chunks[i];
             for(unsigned j = 0; j != chunks_per_frame_line; ++j)
-                line[j] = white_chunk;
+                line[j] = border_chunk;
         }
 
         // Render the screen area.
@@ -253,7 +262,7 @@ public:
             // Left border.
             unsigned j = 0;
             for(; j != chunks_per_border_width; ++j)
-                line[j] = white_chunk;
+                line[j] = border_chunk;
 
             // Screen.
             fast_u16 addr = line_addr;
@@ -274,7 +283,7 @@ public:
 
             // Right border.
             for(; j != chunks_per_frame_line; ++j)
-                line[j] = white_chunk;
+                line[j] = border_chunk;
 
             // Move to next line.
             if(((line_addr += 0x0100) & 0x700) == 0) {
@@ -287,7 +296,7 @@ public:
         for(; i != frame_height; ++i) {
             frame_chunk *line = frame_chunks[i];
             for(unsigned j = 0; j != chunks_per_frame_line; ++j)
-                line[j] = white_chunk;
+                line[j] = border_chunk;
         }
     }
 
@@ -347,6 +356,7 @@ protected:
     ticks_type ticks_since_int;
     fast_u16 addr_bus_value;
     keyboard_state_type keyboard_state;
+    unsigned border_color;
 
 private:
     frame_chunks_type frame_chunks;
