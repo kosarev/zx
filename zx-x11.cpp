@@ -15,6 +15,7 @@
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
 #include <X11/Xatom.h>
+#include <X11/XKBlib.h>
 
 #include "zx.h"
 
@@ -66,7 +67,7 @@ public:
 
     x11_emulator()
         : window_pixels(nullptr), display(nullptr), window(), image(nullptr),
-          gc()
+          gc(), done(false)
     {}
 
     void create(int argc, const char *argv[]) {
@@ -125,7 +126,7 @@ public:
                            const_cast<char**>(argv), argc,
                            &size_hints, &wm_hints, &class_hint);
 
-        ::XSelectInput(display, window, KeyReleaseMask | ButtonReleaseMask);
+        ::XSelectInput(display, window, KeyPressMask | KeyReleaseMask);
         ::XMapWindow(display, window);
 
         image = ::XCreateImage(
@@ -139,7 +140,7 @@ public:
 
         // Set protocol for the WM_DELETE_WINDOW message.
         ::Atom wm_protocols_atom = ::XInternAtom(display, "WM_PROTOCOLS", False);
-        ::Atom wm_delete_window_atom = ::XInternAtom(display, "WM_DELETE_WINDOW",
+        wm_delete_window_atom = ::XInternAtom(display, "WM_DELETE_WINDOW",
                                                      False);
         if((wm_protocols_atom != None) && (wm_delete_window_atom != None))
             ::XSetWMProtocols(display, window, &wm_delete_window_atom, 1);
@@ -155,7 +156,108 @@ public:
         ::XCloseDisplay(display);
     }
 
-    void process_frame() {
+    unsigned translate_spectrum_key(::KeySym key) {
+        switch(key)  {
+        // 1st line.
+        case XK_1: return spectrum_key_1;
+        case XK_2: return spectrum_key_2;
+        case XK_3: return spectrum_key_3;
+        case XK_4: return spectrum_key_4;
+        case XK_5: return spectrum_key_5;
+        case XK_6: return spectrum_key_6;
+        case XK_7: return spectrum_key_7;
+        case XK_8: return spectrum_key_8;
+        case XK_9: return spectrum_key_9;
+        case XK_0: return spectrum_key_0;
+
+        // 2nd line.
+        case XK_q: return spectrum_key_q;
+        case XK_w: return spectrum_key_w;
+        case XK_e: return spectrum_key_e;
+        case XK_r: return spectrum_key_r;
+        case XK_t: return spectrum_key_t;
+        case XK_y: return spectrum_key_y;
+        case XK_u: return spectrum_key_u;
+        case XK_i: return spectrum_key_i;
+        case XK_o: return spectrum_key_o;
+        case XK_p: return spectrum_key_p;
+
+        // 3rd line.
+        case XK_a: return spectrum_key_a;
+        case XK_s: return spectrum_key_s;
+        case XK_d: return spectrum_key_d;
+        case XK_f: return spectrum_key_f;
+        case XK_g: return spectrum_key_g;
+        case XK_h: return spectrum_key_h;
+        case XK_j: return spectrum_key_j;
+        case XK_k: return spectrum_key_k;
+        case XK_l: return spectrum_key_l;
+        case XK_Return: return spectrum_key_enter;
+
+        // 4th line.
+        case XK_Shift_L: return spectrum_key_caps_shift;
+        case XK_z: return spectrum_key_z;
+        case XK_x: return spectrum_key_x;
+        case XK_c: return spectrum_key_c;
+        case XK_v: return spectrum_key_v;
+        case XK_b: return spectrum_key_b;
+        case XK_n: return spectrum_key_n;
+        case XK_m: return spectrum_key_m;
+        case XK_Shift_R: return spectrum_key_symbol_shift;
+        case XK_space: return spectrum_key_break_space;
+        }
+        return 0;
+    }
+
+    void handle_spectrum_key(unsigned key, bool pressed) {
+        unsigned port_no = (key & 0xf);
+        assert(port_no >= 8 && port_no <= 15);
+
+        unsigned bit_no = (key >> 4);
+        assert(bit_no >= 0 && bit_no <= 4);
+
+        least_u8 &port = machine::keyboard_state[port_no - 8];
+        if(pressed)
+            port &= ~(1 << bit_no);
+        else
+            port |= (1 << bit_no);
+        std::printf("%u %u\n", port_no, bit_no);
+    }
+
+    void handle_keyboard_events() {
+        ::XEvent event;
+        if(!XCheckMaskEvent(display, KeyPressMask | KeyReleaseMask, &event))
+            return;
+
+        bool pressed = (event.type == KeyPress);
+        auto key_code = static_cast<::KeyCode>(event.xkey.keycode);
+        ::KeySym key = ::XkbKeycodeToKeysym(display, key_code,
+                                            /* group= */ 0, /* level= */ 0);
+
+        if(pressed && key == XK_F10) {
+            done = true;
+            return;
+        }
+
+        if(unsigned spectrum_key = translate_spectrum_key(key))
+            handle_spectrum_key(spectrum_key, pressed);
+    }
+
+    void handle_events() {
+        // Check if the Close Button on the window caption is pressed.
+        ::XEvent event;
+        if(::XCheckTypedWindowEvent(display, window, ClientMessage, &event)) {
+            if(static_cast<::Atom>(event.xclient.data.l[0]) ==
+                   wm_delete_window_atom) {
+                done = true;
+                return;
+            }
+        }
+
+        handle_keyboard_events();
+    }
+
+    bool process_frame() {
         ::usleep(20000);
 
         // Draw the previously rendered frame.
@@ -166,6 +268,11 @@ public:
 
         // Render the next frame.
         render_frame();
+
+        // Handle events of the windowing system.
+        handle_events();
+
+        return !done;
     }
 
     void load_rom(const char *filename) {
@@ -198,6 +305,55 @@ private:
     typedef typename machine::pixel_type window_pixel;
     typedef typename machine::pixels_buffer_type window_pixels_type;
 
+    // Keyboard codes.
+    // 1st line.
+    static const unsigned spectrum_key_1 = 0x0b;
+    static const unsigned spectrum_key_2 = 0x1b;
+    static const unsigned spectrum_key_3 = 0x2b;
+    static const unsigned spectrum_key_4 = 0x3b;
+    static const unsigned spectrum_key_5 = 0x4b;
+    static const unsigned spectrum_key_6 = 0x4c;
+    static const unsigned spectrum_key_7 = 0x3c;
+    static const unsigned spectrum_key_8 = 0x2c;
+    static const unsigned spectrum_key_9 = 0x1c;
+    static const unsigned spectrum_key_0 = 0x0c;
+
+    // 2nd line.
+    static const unsigned spectrum_key_q = 0x0a;
+    static const unsigned spectrum_key_w = 0x1a;
+    static const unsigned spectrum_key_e = 0x2a;
+    static const unsigned spectrum_key_r = 0x3a;
+    static const unsigned spectrum_key_t = 0x4a;
+    static const unsigned spectrum_key_y = 0x4d;
+    static const unsigned spectrum_key_u = 0x3d;
+    static const unsigned spectrum_key_i = 0x2d;
+    static const unsigned spectrum_key_o = 0x1d;
+    static const unsigned spectrum_key_p = 0x0d;
+
+    // 3rd line.
+    static const unsigned spectrum_key_a = 0x09;
+    static const unsigned spectrum_key_s = 0x19;
+    static const unsigned spectrum_key_d = 0x29;
+    static const unsigned spectrum_key_f = 0x39;
+    static const unsigned spectrum_key_g = 0x49;
+    static const unsigned spectrum_key_h = 0x4e;
+    static const unsigned spectrum_key_j = 0x3e;
+    static const unsigned spectrum_key_k = 0x2e;
+    static const unsigned spectrum_key_l = 0x1e;
+    static const unsigned spectrum_key_enter = 0x0e;
+
+    // 4th line.
+    static const unsigned spectrum_key_caps_shift = 0x08;
+    static const unsigned spectrum_key_z = 0x18;
+    static const unsigned spectrum_key_x = 0x28;
+    static const unsigned spectrum_key_c = 0x38;
+    static const unsigned spectrum_key_v = 0x48;
+    static const unsigned spectrum_key_b = 0x4f;
+    static const unsigned spectrum_key_n = 0x3f;
+    static const unsigned spectrum_key_m = 0x2f;
+    static const unsigned spectrum_key_symbol_shift = 0x1f;
+    static const unsigned spectrum_key_break_space = 0x0f;
+
     void update_window() {
         ::XPutImage(display, window, gc, image, 0, 0, 0, 0,
                     window_width, window_height);
@@ -213,6 +369,9 @@ private:
     ::Window window;
     ::XImage *image;
     ::GC gc;
+    ::Atom wm_delete_window_atom;
+
+    bool done;
 };
 
 }  // anonymous namespace
@@ -235,8 +394,7 @@ int main(int argc, const char *argv[]) {
 
     emu.create(argc, argv);
 
-    for(unsigned i = 0; i < 300; ++i)
-        emu.process_frame();
+    while(emu.process_frame()) {}
 
     emu.destroy();
 }
