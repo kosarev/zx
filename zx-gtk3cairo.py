@@ -48,9 +48,6 @@ class emulator(Gtk.Window):
 
         self.memory = self.emulator.get_memory()
 
-        rom_filename = '/usr/share/spectrum-roms/48.rom'
-        self.memory[0:0x4000] = open(rom_filename, 'rb').read()
-
     def on_done(self, widget, context):
         self.done = True
 
