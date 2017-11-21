@@ -25,9 +25,9 @@ class test_get_memory(unittest.TestCase):
         mach = zx.Spectrum48()
         mem = mach.get_memory()
         assert len(mem) == 0x10000
-        assert mem[0] == 0x01, mem[0]
+        assert mem[0] == 0xf3, '0x%x' % mem[0]
         mem[0] += 1
-        assert mem[0] == 0x02, mem[0]
+        assert mem[0] == 0xf4, '0x%x' % mem[0]
 
 
 class test_render_frame(unittest.TestCase):

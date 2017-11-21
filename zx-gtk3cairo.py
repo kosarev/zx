@@ -63,8 +63,7 @@ class emulator(Gtk.Window):
             while Gtk.events_pending():
                 Gtk.main_iteration()
             self.emulator.render_frame()
-            pixels = self.emulator.get_frame_pixels()
-            self.frame_data[:] = pixels
+            self.frame_data[:] = self.emulator.get_frame_pixels()
             self.area.queue_draw()
             self.emulator.execute_frame()
             time.sleep(1 / 50)
@@ -76,4 +75,6 @@ def main():
 
 
 if __name__ == "__main__":
+    # import cProfile
+    # cProfile.run('main()')
     main()
