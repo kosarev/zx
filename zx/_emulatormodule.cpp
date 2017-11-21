@@ -79,7 +79,7 @@ PyMethodDef methods[] = {
 };
 
 PyObject *object_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
-    if(!PyArg_ParseTuple(args, ":Spectrum48.__new__"))
+    if(!PyArg_ParseTuple(args, ":Spectrum48Base.__new__"))
         return nullptr;
 
     auto *self = cast_object(type->tp_alloc(type, /* nitems= */ 0));
@@ -99,7 +99,8 @@ void object_dealloc(PyObject *self) {
 
 static PyTypeObject type_object = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
-    "zx.emulator.Spectrum48",   // tp_name
+    "zx._emulator.Spectrum48Base",
+                                // tp_name
     sizeof(object_instance),    // tp_basicsize
     0,                          // tp_itemsize
     object_dealloc,             // tp_dealloc
@@ -151,9 +152,9 @@ static PyTypeObject type_object = {
 
 }  // namespace Spectrum48
 
-static PyModuleDef zx_emulator_module = {
+static PyModuleDef module = {
     PyModuleDef_HEAD_INIT,      // m_base
-    "zx.emulator",              // m_name
+    "zx._emulator",             // m_name
     "ZX Spectrum Emulation Module",
                                 // m_doc
     -1,                         // m_size
@@ -166,8 +167,8 @@ static PyModuleDef zx_emulator_module = {
 
 }  // anonymous namespace
 
-extern "C" PyMODINIT_FUNC PyInit_emulator(void) {
-    PyObject *m = PyModule_Create(&zx_emulator_module);
+extern "C" PyMODINIT_FUNC PyInit__emulator(void) {
+    PyObject *m = PyModule_Create(&module);
     if(!m)
         return nullptr;
 
@@ -176,7 +177,7 @@ extern "C" PyMODINIT_FUNC PyInit_emulator(void) {
     Py_INCREF(&Spectrum48::type_object);
 
     // TODO: Check the returning value.
-    PyModule_AddObject(m, "Spectrum48",
+    PyModule_AddObject(m, "Spectrum48Base",
                        &Spectrum48::type_object.ob_base.ob_base);
     return m;
 }

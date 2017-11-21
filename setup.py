@@ -24,12 +24,12 @@ for var in ['OPT']:
 
 
 zx_emulator_module = Extension(
-    name='zx.emulator',
+    name='zx._emulator',
     define_macros=[('ZX_MAJOR_VERSION', '%d' % ZX_MAJOR_VERSION),
                    ('ZX_MINOR_VERSION', '%d' % ZX_MINOR_VERSION),
                    ('ZX_PATCH_VERSION', '%d' % ZX_PATCH_VERSION)],
     extra_compile_args=['-std=c++11', '-Wall', '-fno-exceptions', '-fno-rtti'],
-    sources=['zx/zx-emulator-module.cpp'],
+    sources=['zx/_emulatormodule.cpp'],
     language='c++')
 
 
