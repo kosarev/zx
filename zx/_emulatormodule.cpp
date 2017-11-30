@@ -15,13 +15,28 @@
 
 namespace {
 
+using zx::fast_u16;
+
 namespace Spectrum48 {
 
 typedef zx::spectrum48 emulator_type;
 
+struct emulator_state {
+    fast_u16 bc;
+
+    void retrieve(const emulator_type &emulator) {
+        bc = emulator.get_bc();
+    }
+
+    void install(emulator_type &emulator) {
+        emulator.set_bc(bc);
+    }
+};
+
 struct object_instance {
     PyObject_HEAD
     emulator_type emulator;
+    emulator_state state;
     emulator_type::pixels_buffer_type pixels;
 };
 
@@ -31,6 +46,12 @@ static inline object_instance *cast_object(PyObject *p) {
 
 static inline emulator_type &cast_emulator(PyObject *p) {
     return cast_object(p)->emulator;
+}
+
+PyObject *get_state(PyObject *self, PyObject *args) {
+    auto &state = cast_object(self)->state;
+    return PyMemoryView_FromMemory(reinterpret_cast<char*>(&state),
+                                   sizeof(state), PyBUF_WRITE);
 }
 
 PyObject *get_memory(PyObject *self, PyObject *args) {
@@ -59,11 +80,18 @@ static PyObject *get_frame_pixels(PyObject *self, PyObject *args) {
 }
 
 PyObject *execute_frame(PyObject *self, PyObject *args) {
-    cast_emulator(self).execute_frame();
+    auto &object = *cast_object(self);
+    auto &emulator = object.emulator;
+    object.state.install(emulator);
+    emulator.execute_frame();
+    object.state.retrieve(emulator);
     Py_RETURN_NONE;
 }
 
 PyMethodDef methods[] = {
+    {"get_state", get_state, METH_NOARGS,
+     "Return a MemoryView object that exposes the internal state of the "
+     "simulated machine."},
     {"get_memory", get_memory, METH_NOARGS,
      "Return a MemoryView object that exposes the memory of the simulated "
      "machine."},
@@ -88,6 +116,7 @@ PyObject *object_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
     auto &emulator = self->emulator;
     ::new(&emulator) zx::spectrum48();
+    self->state.retrieve(emulator);
     return &self->ob_base;
 }
 
