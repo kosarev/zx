@@ -19,37 +19,61 @@ using zx::fast_u16;
 
 namespace Spectrum48 {
 
-typedef zx::spectrum48 emulator_type;
-
-struct emulator_state {
+struct machine_state {
     fast_u16 bc;
+};
 
-    void retrieve(const emulator_type &emulator) {
-        bc = emulator.get_bc();
+class machine_emulator : public zx::spectrum48 {
+public:
+    typedef zx::spectrum48 base;
+
+    machine_emulator() {
+        retrieve_state();
     }
 
-    void install(emulator_type &emulator) {
-        emulator.set_bc(bc);
+    machine_state &get_machine_state() {
+        return state;
     }
+
+    void retrieve_state() {
+        state.bc = get_bc();
+    }
+
+    void install_state() {
+        set_bc(state.bc);
+    }
+
+    pixels_buffer_type &get_frame_pixels() {
+        base::get_frame_pixels(pixels);
+        return pixels;
+    }
+
+    void execute_frame() {
+        install_state();
+        base::execute_frame();
+        retrieve_state();
+    }
+
+private:
+    machine_state state;
+    pixels_buffer_type pixels;
 };
 
 struct object_instance {
     PyObject_HEAD
-    emulator_type emulator;
-    emulator_state state;
-    emulator_type::pixels_buffer_type pixels;
+    machine_emulator emulator;
 };
 
 static inline object_instance *cast_object(PyObject *p) {
     return reinterpret_cast<object_instance*>(p);
 }
 
-static inline emulator_type &cast_emulator(PyObject *p) {
+static inline machine_emulator &cast_emulator(PyObject *p) {
     return cast_object(p)->emulator;
 }
 
 PyObject *get_state(PyObject *self, PyObject *args) {
-    auto &state = cast_object(self)->state;
+    auto &state = cast_emulator(self).get_machine_state();
     return PyMemoryView_FromMemory(reinterpret_cast<char*>(&state),
                                    sizeof(state), PyBUF_WRITE);
 }
@@ -71,20 +95,13 @@ PyObject *render_frame(PyObject *self, PyObject *args) {
 }
 
 static PyObject *get_frame_pixels(PyObject *self, PyObject *args) {
-    auto &object = *cast_object(self);
-    auto &emulator = object.emulator;
-    emulator.get_frame_pixels(object.pixels);
-    return PyMemoryView_FromMemory(reinterpret_cast<char*>(object.pixels),
-                                   emulator_type::pixels_buffer_size,
-                                   PyBUF_READ);
+    auto &pixels = cast_emulator(self).get_frame_pixels();
+    return PyMemoryView_FromMemory(reinterpret_cast<char*>(pixels),
+                                   sizeof(pixels), PyBUF_READ);
 }
 
 PyObject *execute_frame(PyObject *self, PyObject *args) {
-    auto &object = *cast_object(self);
-    auto &emulator = object.emulator;
-    object.state.install(emulator);
-    emulator.execute_frame();
-    object.state.retrieve(emulator);
+    cast_emulator(self).execute_frame();
     Py_RETURN_NONE;
 }
 
@@ -116,7 +133,6 @@ PyObject *object_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
     auto &emulator = self->emulator;
     ::new(&emulator) zx::spectrum48();
-    self->state.retrieve(emulator);
     return &self->ob_base;
 }
 
