@@ -36,15 +36,15 @@ public:
     typedef uint_fast32_t ticks_type;
 
     spectrum48()
-            : ticks_since_int(0), addr_bus_value(0),
-              keyboard_state{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-              border_color(0) {
+            : ticks_since_int(0), addr_bus_value(0), border_color(0) {
         uint_fast32_t rnd = 0xde347a01;
         for(auto &cell : memory_image) {
             cell = static_cast<least_u8>(rnd);
             rnd = (rnd * 0x74392cef) ^ (rnd >> 16);
         }
     }
+
+    virtual ~spectrum48();
 
     void tick(unsigned t) { ticks_since_int += t; }
 
@@ -95,9 +95,8 @@ public:
     }
 
     void on_write_cycle(fast_u16 addr, fast_u8 n, unsigned ticks) {
-        // TODO
-        if(addr >= 0x4000)
-            handle_memory_contention(addr);
+        assert(addr >= 0x4000);  // TODO
+        handle_memory_contention(addr);
         processor::on_write_cycle(addr, n, ticks);
     }
 
@@ -150,23 +149,7 @@ public:
         handle_contention_tick(addr_bus_value);
     }
 
-    fast_u8 on_input_cycle(fast_u16 addr) {
-        tick(4);
-
-        fast_u8 n = 0xbf;  // TODO
-        if(!(addr & 1)) {
-            // Scan keyboard.
-            if(!(addr & (1u << 8))) n &= keyboard_state[0];
-            if(!(addr & (1u << 9))) n &= keyboard_state[1];
-            if(!(addr & (1u << 10))) n &= keyboard_state[2];
-            if(!(addr & (1u << 11))) n &= keyboard_state[3];
-            if(!(addr & (1u << 12))) n &= keyboard_state[4];
-            if(!(addr & (1u << 13))) n &= keyboard_state[5];
-            if(!(addr & (1u << 14))) n &= keyboard_state[6];
-            if(!(addr & (1u << 15))) n &= keyboard_state[7];
-        }
-        return n;
-    }
+    virtual fast_u8 on_input(fast_u16 addr);
 
     void on_output_cycle(fast_u16 addr, fast_u8 n) {
         if((addr & 0xff) != 0xfe)
@@ -174,11 +157,6 @@ public:
 
         border_color = n & 0x7;
     }
-
-    static const unsigned num_of_keyboard_ports = 8;
-    typedef least_u8 keyboard_state_type[num_of_keyboard_ports];
-
-    keyboard_state_type &get_keyboard_state() { return keyboard_state; }
 
     static const z80::size_type memory_image_size = 0x10000;  // 64K bytes.
     typedef least_u8 memory_image_type[memory_image_size];
@@ -355,7 +333,6 @@ protected:
 
     ticks_type ticks_since_int;
     fast_u16 addr_bus_value;
-    keyboard_state_type keyboard_state;
     unsigned border_color;
 
 private:

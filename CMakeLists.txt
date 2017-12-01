@@ -59,6 +59,6 @@ find_package(X11 REQUIRED)
 link_libraries(${X11_LIBRARIES})
 include_directories(${X11_INCLUDE_DIR})
 
-add_executable(zx-x11 zx-x11.cpp)
+add_executable(zx-x11 zx.cpp zx-x11.cpp)
 
 add_test(running zx-x11 test)

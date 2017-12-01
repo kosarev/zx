@@ -30,7 +30,7 @@ zx_emulator_module = Extension(
                    ('ZX_PATCH_VERSION', '%d' % ZX_PATCH_VERSION)],
     extra_compile_args=['-std=c++11', '-Wall', '-fno-exceptions', '-fno-rtti',
                         '-O3'],
-    sources=['zx/_emulatormodule.cpp'],
+    sources=['zx.cpp', 'zx/_emulatormodule.cpp'],
     language='c++')
 
 

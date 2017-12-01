@@ -67,7 +67,8 @@ public:
 
     x11_emulator()
         : window_pixels(nullptr), display(nullptr), window(), image(nullptr),
-          gc(), done(false)
+          gc(), done(false),
+          keyboard_state{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
     {}
 
     void create(int argc, const char *argv[]) {
@@ -216,7 +217,7 @@ public:
         unsigned bit_no = (key >> 4);
         assert(bit_no >= 0 && bit_no <= 4);
 
-        least_u8 &port = machine::keyboard_state[port_no - 8];
+        least_u8 &port = keyboard_state[port_no - 8];
         if(pressed)
             port &= ~(1 << bit_no);
         else
@@ -353,6 +354,22 @@ private:
     static const unsigned spectrum_key_symbol_shift = 0x1f;
     static const unsigned spectrum_key_break_space = 0x0f;
 
+    fast_u8 on_input(fast_u16 addr) override {
+        fast_u8 n = 0xbf;  // TODO
+        if(!(addr & 1)) {
+            // Scan keyboard.
+            if(!(addr & (1u << 8))) n &= keyboard_state[0];
+            if(!(addr & (1u << 9))) n &= keyboard_state[1];
+            if(!(addr & (1u << 10))) n &= keyboard_state[2];
+            if(!(addr & (1u << 11))) n &= keyboard_state[3];
+            if(!(addr & (1u << 12))) n &= keyboard_state[4];
+            if(!(addr & (1u << 13))) n &= keyboard_state[5];
+            if(!(addr & (1u << 14))) n &= keyboard_state[6];
+            if(!(addr & (1u << 15))) n &= keyboard_state[7];
+        }
+        return n;
+    }
+
     void update_window() {
         ::XPutImage(display, window, gc, image, 0, 0, 0, 0,
                     window_width, window_height);
@@ -371,6 +388,10 @@ private:
     ::Atom wm_delete_window_atom;
 
     bool done;
+
+    static const unsigned num_of_keyboard_ports = 8;
+    typedef least_u8 keyboard_state_type[num_of_keyboard_ports];
+    keyboard_state_type keyboard_state;
 };
 
 }  // anonymous namespace
