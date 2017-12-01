@@ -15,7 +15,23 @@
 
 namespace {
 
+using z80::unreachable;
+using zx::fast_u8;
 using zx::fast_u16;
+
+class decref_guard {
+public:
+    decref_guard(PyObject *object)
+        : object(object)
+    {}
+
+    ~decref_guard() {
+        Py_XDECREF(object);
+    }
+
+private:
+    PyObject *object;
+};
 
 namespace Spectrum48 {
 
@@ -54,9 +70,38 @@ public:
         retrieve_state();
     }
 
+    PyObject *set_on_input_callback(PyObject *callback) {
+        PyObject *old_callback = on_input_callback;
+        on_input_callback = callback;
+        return old_callback;
+    }
+
+protected:
+    fast_u8 on_input(fast_u16 addr) override {
+        if(!on_input_callback)
+            return 0xbf;
+
+        PyObject *arg = Py_BuildValue("(i)", addr);
+        decref_guard arg_guard(arg);
+
+        PyObject *result = PyObject_CallObject(on_input_callback, arg);
+        decref_guard result_guard(result);
+
+        if(!result)
+            unreachable("On-input handler raised an error.");  // TODO
+
+        if(!PyLong_Check(result)) {
+            PyErr_SetString(PyExc_TypeError, "port address must be integer");
+            abort();  // TODO: Support handlers that raise errors.
+        }
+
+        return z80::mask8(PyLong_AsUnsignedLong(result));
+    }
+
 private:
     machine_state state;
     pixels_buffer_type pixels;
+    PyObject *on_input_callback = nullptr;
 };
 
 struct object_instance {
@@ -100,6 +145,24 @@ static PyObject *get_frame_pixels(PyObject *self, PyObject *args) {
                                    sizeof(pixels), PyBUF_READ);
 }
 
+static PyObject *set_on_input_callback(PyObject *self, PyObject *args) {
+    PyObject *new_callback;
+    if(!PyArg_ParseTuple(args, "O:set_callback", &new_callback))
+        return nullptr;
+
+    if(!PyCallable_Check(new_callback)) {
+        PyErr_SetString(PyExc_TypeError, "parameter must be callable");
+        return nullptr;
+    }
+
+    auto &emulator = cast_emulator(self);
+    PyObject *old_callback = emulator.set_on_input_callback(new_callback);
+    Py_XINCREF(new_callback);
+    Py_XDECREF(old_callback);
+    Py_RETURN_NONE;
+}
+
+
 PyObject *execute_frame(PyObject *self, PyObject *args) {
     cast_emulator(self).execute_frame();
     Py_RETURN_NONE;
@@ -118,6 +181,8 @@ PyMethodDef methods[] = {
     {"get_frame_pixels", get_frame_pixels, METH_NOARGS,
      "Convert rendered frame into an internally allocated array of RGB24 pixels "
      "and return a MemoryView object that exposes that array."},
+    {"set_on_input_callback", set_on_input_callback, METH_VARARGS,
+     "Set a callback function handling reading from ports."},
     {"execute_frame", execute_frame, METH_NOARGS,
      "Execute instructions that correspond to a single frame."},
     { nullptr }  // Sentinel.
@@ -132,7 +197,7 @@ PyObject *object_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
       return nullptr;
 
     auto &emulator = self->emulator;
-    ::new(&emulator) zx::spectrum48();
+    ::new(&emulator) machine_emulator();
     return &self->ob_base;
 }
 
