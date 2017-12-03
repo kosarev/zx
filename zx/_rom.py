@@ -11,5 +11,5 @@ def load_image(name):
         return f.read()
 
 
-def get_spectrum48_rom_image():
-    return load_image('48')
+def get_rom_image(machine_kind):
+    return load_image(machine_kind)
