@@ -114,8 +114,8 @@ def parse_z80_snapshot(image):
     if int_mode not in [0, 1, 2]:
         raise zx.Error('Invalid interrupt mode %d.' % int_mode)
 
-    processor_state = {
-        'id': 'processor_state',
+    processor_snapshot = {
+        'id': 'processor_snapshot',
         'bc': v1_header['bc'],
         'de': v1_header['de'],
         'hl': v1_header['hl'],
@@ -135,7 +135,7 @@ def parse_z80_snapshot(image):
 
     snapshot = {
         'id': 'snapshot',
-        'processor_state': processor_state,
+        'processor_snapshot': processor_snapshot,
         'border_color': (flags1 >> 1) & 0x7 }
 
     # Determine machine kind.

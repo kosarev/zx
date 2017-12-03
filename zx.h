@@ -11,9 +11,11 @@
 
 namespace zx {
 
-using z80::least_u8;
 using z80::fast_u8;
 using z80::fast_u16;
+using z80::least_u8;
+using z80::least_u16;
+using z80::unreachable;
 
 template<typename T>
 T non_constexpr() {

@@ -15,9 +15,11 @@
 
 namespace {
 
-using z80::unreachable;
 using zx::fast_u8;
 using zx::fast_u16;
+using zx::least_u8;
+using zx::least_u16;
+using zx::unreachable;
 
 class decref_guard {
 public:
@@ -35,8 +37,27 @@ private:
 
 namespace Spectrum48 {
 
-struct machine_state {
-    fast_u16 bc;
+struct __attribute__((packed)) machine_state {
+    least_u16 bc;
+    least_u16 de;
+    least_u16 hl;
+    least_u16 af;
+    least_u16 ix;
+    least_u16 iy;
+
+    least_u16 alt_bc;
+    least_u16 alt_de;
+    least_u16 alt_hl;
+    least_u16 alt_af;
+
+    least_u16 pc;
+    least_u16 sp;
+    least_u16 ir;
+    least_u16 memptr;
+
+    least_u8 iff1;
+    least_u8 iff2;
+    least_u8 int_mode;
 };
 
 class machine_emulator : public zx::spectrum48 {
@@ -53,10 +74,48 @@ public:
 
     void retrieve_state() {
         state.bc = get_bc();
+        state.de = get_de();
+        state.hl = get_hl();
+        state.af = get_af();
+        state.ix = get_ix();
+        state.iy = get_iy();
+
+        state.alt_bc = get_alt_bc();
+        state.alt_de = get_alt_de();
+        state.alt_hl = get_alt_hl();
+        state.alt_af = get_alt_af();
+
+        state.pc = get_pc();
+        state.sp = get_sp();
+        state.ir = get_ir();
+        state.memptr = get_memptr();
+
+        state.iff1 = get_iff1() ? 1 : 0;
+        state.iff2 = get_iff2() ? 1 : 0;
+        state.int_mode = get_int_mode();
     }
 
     void install_state() {
         set_bc(state.bc);
+        set_de(state.de);
+        set_hl(state.hl);
+        set_af(state.af);
+        set_ix(state.ix);
+        set_iy(state.iy);
+
+        set_alt_bc(state.alt_bc);
+        set_alt_de(state.alt_de);
+        set_alt_hl(state.alt_hl);
+        set_alt_af(state.alt_af);
+
+        set_pc(state.pc);
+        set_sp(state.sp);
+        set_ir(state.ir);
+        set_memptr(state.memptr);
+
+        set_iff1(state.iff1);
+        set_iff2(state.iff2);
+        set_int_mode(state.int_mode);
     }
 
     pixels_buffer_type &get_frame_pixels() {
@@ -117,7 +176,7 @@ static inline machine_emulator &cast_emulator(PyObject *p) {
     return cast_object(p)->emulator;
 }
 
-PyObject *get_state(PyObject *self, PyObject *args) {
+PyObject *get_state_image(PyObject *self, PyObject *args) {
     auto &state = cast_emulator(self).get_machine_state();
     return PyMemoryView_FromMemory(reinterpret_cast<char*>(&state),
                                    sizeof(state), PyBUF_WRITE);
@@ -169,7 +228,7 @@ PyObject *execute_frame(PyObject *self, PyObject *args) {
 }
 
 PyMethodDef methods[] = {
-    {"get_state", get_state, METH_NOARGS,
+    {"get_state_image", get_state_image, METH_NOARGS,
      "Return a MemoryView object that exposes the internal state of the "
      "simulated machine."},
     {"get_memory", get_memory, METH_NOARGS,

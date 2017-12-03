@@ -45,7 +45,7 @@ class emulator(Gtk.Window):
         self.pattern.set_filter(cairo.FILTER_NEAREST)
 
         self.emulator = zx.Spectrum48()
-        self.state = self.emulator.get_state()
+        self.processor_state = self.emulator.get_processor_state()
 
         self.keyboard_state = [0xff] * 8
         self.keys = {'RETURN': zx.KEYS_INFO['ENTER'],
@@ -131,7 +131,7 @@ class emulator(Gtk.Window):
             self.frame_data[:] = self.emulator.get_frame_pixels()
             self.area.queue_draw()
             self.emulator.execute_frame()
-            # print(self.state[0] + self.state[1] * 0x100)
+            # print(self.processor_state.get_bc())
             time.sleep(1 / 50)
 
 
