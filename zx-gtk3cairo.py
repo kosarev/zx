@@ -120,6 +120,10 @@ class emulator(Gtk.Window):
 
         return n
 
+    def load_snapshot(self, filename):
+        with open(filename, 'rb') as f:
+            print(zx.parse_z80_snapshot(f.read()))
+
     def main(self):
         while not self.done:
             while Gtk.events_pending():
@@ -134,6 +138,7 @@ class emulator(Gtk.Window):
 
 def main():
     app = emulator()
+    # app.load_snapshot('../x.z80')
     app.main()
 
 
