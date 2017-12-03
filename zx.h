@@ -62,10 +62,7 @@ public:
         memory_image[addr] = static_cast<least_u8>(n);
     }
 
-    void handle_memory_contention(fast_u16 addr) {
-        if(addr < 0x4000 || addr >= 0x8000)
-            return;
-
+    void handle_contention() {
         const ticks_type cont_base = 14335;
         if(ticks_since_int < cont_base)
             return;
@@ -84,6 +81,11 @@ public:
         unsigned delay = ticks_since_new_ula_cycle == 7 ?
             0 : 6 - ticks_since_new_ula_cycle;
         tick(delay);
+    }
+
+    void handle_memory_contention(fast_u16 addr) {
+        if(addr >= 0x4000 || addr < 0x8000)
+            handle_contention();
     }
 
     fast_u8 on_fetch_cycle(fast_u16 addr) {
@@ -126,6 +128,48 @@ public:
         handle_contention_tick(addr);
     }
 
+    void handle_port_contention(fast_u16 addr) {
+        if(addr < 0x4000 || addr >= 0x8000)  {
+            if((addr & 1) == 0) {
+                tick(1);
+                handle_contention();
+                tick(3);
+            } else {
+                tick(4);
+            }
+        } else {
+            if((addr & 1) == 0) {
+                handle_contention();
+                tick(1);
+                handle_contention();
+                tick(3);
+            } else {
+                handle_contention();
+                tick(1);
+                handle_contention();
+                tick(1);
+                handle_contention();
+                tick(1);
+                handle_contention();
+                tick(1);
+            }
+        }
+    }
+
+    fast_u8 on_input_cycle(fast_u16 addr) {
+        handle_port_contention(addr);
+        return on_input(addr);
+    }
+
+    virtual fast_u8 on_input(fast_u16 addr);
+
+    void on_output_cycle(fast_u16 addr, fast_u8 n) {
+        if((addr & 0xff) == 0xfe)
+            border_color = n & 0x7;
+
+        handle_port_contention(addr);
+    }
+
     void on_set_addr_bus(fast_u16 addr) {
         addr_bus_value = addr;
     }
@@ -149,15 +193,6 @@ public:
         handle_contention_tick(addr_bus_value);
         handle_contention_tick(addr_bus_value);
         handle_contention_tick(addr_bus_value);
-    }
-
-    virtual fast_u8 on_input(fast_u16 addr);
-
-    void on_output_cycle(fast_u16 addr, fast_u8 n) {
-        if((addr & 0xff) != 0xfe)
-            return;
-
-        border_color = n & 0x7;
     }
 
     static const z80::size_type memory_image_size = 0x10000;  // 64K bytes.
