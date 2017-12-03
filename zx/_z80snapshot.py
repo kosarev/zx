@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-import struct
-
-
-class ZXError(Exception):
-    """Basic exception for the whole ZX module."""
+import struct, zx
 
 
 MASK16 = 0xffff
@@ -27,12 +23,12 @@ class BinaryParser(object):
         field_size = struct.calcsize(field_format)
         field_image = self.image[self.pos:self.pos + field_size]
         if len(field_image) < field_size:
-            raise ZXError('Binary image is too short.')
+            raise zx.Error('Binary image is too short.')
 
         field_value = struct.unpack(field_format, field_image)
         if len(field_value) == 1:
             field_value = field_value[0]
-        print(field_size, self.pos, field_id, '=', field_value)
+        # print(field_size, self.pos, field_id, '=', field_value)
         self.pos += field_size
         return field_value
 
@@ -97,8 +93,8 @@ def parse_z80_snapshot(image):
         additional_header_length = parser.parse_field(
             '<H', 'additional_header_length')
         if additional_header_length < 23:
-            raise ZXError('Additional header is too short: %d bytes.' %
-                              additional_header_length)
+            raise zx.Error('Additional header is too short: %d bytes.' %
+                               additional_header_length)
 
         v2_header = parser.parse([
             ('pc', '<H'), ('hardware_mode', 'B'), ('misc1', 'B'),
@@ -116,7 +112,7 @@ def parse_z80_snapshot(image):
     flags2 = v1_header['flags2']
     int_mode = flags2 & 0x3
     if int_mode not in [0, 1, 2]:
-        raise ZXError('Invalid interrupt mode %d.' % int_mode)
+        raise zx.Error('Invalid interrupt mode %d.' % int_mode)
 
     processor_state = {
         'id': 'processor_state',
@@ -138,7 +134,7 @@ def parse_z80_snapshot(image):
         'int_mode': int_mode }
 
     snapshot = {
-        'id': 'machine_state',
+        'id': 'snapshot',
         'processor_state': processor_state,
         'border_color': (flags1 >> 1) & 0x7 }
 

@@ -46,7 +46,6 @@ class emulator(Gtk.Window):
 
         self.emulator = zx.Spectrum48()
         self.state = self.emulator.get_state()
-        self.memory = self.emulator.get_memory()
 
         self.keyboard_state = [0xff] * 8
         self.keys = {'RETURN': zx.KEYS_INFO['ENTER'],
@@ -122,7 +121,7 @@ class emulator(Gtk.Window):
 
     def load_snapshot(self, filename):
         with open(filename, 'rb') as f:
-            print(zx.parse_z80_snapshot(f.read()))
+            self.emulator.install_snapshot(zx.parse_z80_snapshot(f.read()))
 
     def main(self):
         while not self.done:
