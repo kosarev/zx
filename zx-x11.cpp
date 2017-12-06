@@ -218,10 +218,11 @@ public:
         assert(bit_no >= 0 && bit_no <= 4);
 
         least_u8 &port = keyboard_state[port_no - 8];
+        fast_u8 mask = 1u << bit_no;
         if(pressed)
-            port &= ~(1 << bit_no);
+            port = static_cast<least_u8>(port & ~mask);
         else
-            port |= (1 << bit_no);
+            port = static_cast<least_u8>(port | mask);
     }
 
     void handle_keyboard_events() {
