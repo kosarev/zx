@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 
-import struct, zx
+from ._binaryparser import BinaryParser
+import zx
 
 
 MASK16 = 0xffff
@@ -9,39 +10,6 @@ MASK16 = 0xffff
 
 def make16(hi, lo):
     return ((hi << 8) | lo) & MASK16
-
-
-class BinaryParser(object):
-    def __init__(self, image):
-        self.image = image
-        self.pos = 0
-
-    def is_eof(self):
-        return self.pos >= len(self.image)
-
-    def parse_field(self, field_format, field_id):
-        field_size = struct.calcsize(field_format)
-        field_image = self.image[self.pos:self.pos + field_size]
-        if len(field_image) < field_size:
-            raise zx.Error('Binary image is too short.')
-
-        field_value = struct.unpack(field_format, field_image)
-        if len(field_value) == 1:
-            field_value = field_value[0]
-        # print(field_size, self.pos, field_id, '=', field_value)
-        self.pos += field_size
-        return field_value
-
-    def parse(self, format):
-        res = dict()
-        for field_id, field_format in format:
-            res[field_id] = self.parse_field(field_format, field_id)
-        return res
-
-    def extract_block(self, size):
-        begin = self.pos
-        self.pos += size
-        return self.image[begin:self.pos]
 
 
 def uncompress_data(compressed_image, size):
@@ -168,7 +136,5 @@ def parse_z80_snapshot(image):
             page_no = page['page_no']
             page_addr = page_addrs[page_no]
             memory.append((page_addr, page['image']))
-
-    # assert parser.is_eof()  # , len(parser.extract_rest())  # , parser.extract_rest()
 
     return snapshot

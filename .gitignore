@@ -5,3 +5,4 @@ zx/__pycache__
 zx/_emulator.cpython-*
 test/__pycache__
 *.z80
+*.rzx

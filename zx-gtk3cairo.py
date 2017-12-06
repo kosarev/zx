@@ -123,6 +123,11 @@ class emulator(Gtk.Window):
         with open(filename, 'rb') as f:
             self.emulator.install_snapshot(zx.parse_z80_snapshot(f.read()))
 
+    def load_input_recording(self, filename):
+        with open(filename, 'rb') as f:
+            # print(zx.parse_rzx(f.read()))
+            zx.parse_rzx(f.read())
+
     def main(self):
         while not self.done:
             while Gtk.events_pending():
@@ -138,6 +143,7 @@ class emulator(Gtk.Window):
 def main():
     app = emulator()
     # app.load_snapshot('../x.z80')
+    # app.load_input_recording('../x.rzx')
     app.main()
 
 
