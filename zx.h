@@ -71,7 +71,7 @@ public:
         if(ticks_since_int >= cont_base + screen_height * ticks_per_line)
             return;
 
-        unsigned ticks_since_new_line =
+        ticks_type ticks_since_new_line =
             (ticks_since_int - cont_base) % ticks_per_line;
         const unsigned pixels_per_tick = 2;
         if(ticks_since_new_line >= screen_width / pixels_per_tick)
