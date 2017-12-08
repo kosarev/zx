@@ -151,7 +151,7 @@ protected:
         if(!result) {
             stop();
         } else if(!PyLong_Check(result)) {
-            PyErr_SetString(PyExc_TypeError, "port address must be integer");
+            PyErr_SetString(PyExc_TypeError, "returning value must be integer");
             stop();
         } else {
             n = z80::mask8(PyLong_AsUnsignedLong(result));
