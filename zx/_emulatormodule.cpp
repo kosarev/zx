@@ -146,15 +146,18 @@ protected:
         PyObject *result = PyObject_CallObject(on_input_callback, arg);
         decref_guard result_guard(result);
 
-        if(!result)
-            unreachable("On-input handler raised an error.");  // TODO
+        fast_u8 n = 0xff;
 
-        if(!PyLong_Check(result)) {
+        if(!result) {
+            stop();
+        } else if(!PyLong_Check(result)) {
             PyErr_SetString(PyExc_TypeError, "port address must be integer");
-            abort();  // TODO: Support handlers that raise errors.
+            stop();
+        } else {
+            n = z80::mask8(PyLong_AsUnsignedLong(result));
         }
 
-        return z80::mask8(PyLong_AsUnsignedLong(result));
+        return n;
     }
 
 private:
@@ -223,7 +226,10 @@ static PyObject *set_on_input_callback(PyObject *self, PyObject *args) {
 
 
 PyObject *execute_frame(PyObject *self, PyObject *args) {
-    cast_emulator(self).execute_frame();
+    auto &emulator = cast_emulator(self);
+    emulator.execute_frame();
+    if(PyErr_Occurred())
+        return nullptr;
     Py_RETURN_NONE;
 }
 

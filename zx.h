@@ -48,6 +48,10 @@ public:
 
     virtual ~spectrum48();
 
+    bool is_stopped() const { return stopped; }
+
+    void stop() { stopped = true; }
+
     void tick(unsigned t) { ticks_since_int += t; }
 
     ticks_type get_ticks() const { return ticks_since_int; }
@@ -343,16 +347,20 @@ public:
     }
 
     void execute_frame() {
+        stopped = false;
+
         const ticks_type ticks_per_active_int = 32;
-        while(ticks_since_int < ticks_per_active_int) {
+        while(!is_stopped() && ticks_since_int < ticks_per_active_int) {
             handle_active_int();
             step();
         }
 
         const ticks_type ticks_per_frame = 69888;
-        while(ticks_since_int < ticks_per_frame)
+        while(!is_stopped() && ticks_since_int < ticks_per_frame)
             step();
-        ticks_since_int -= ticks_per_frame;
+
+        if(!is_stopped())
+            ticks_since_int -= ticks_per_frame;
     }
 
 protected:
@@ -368,6 +376,7 @@ protected:
         return static_cast<pixel_type>(r);
     }
 
+    bool stopped = false;
     ticks_type ticks_since_int;
     fast_u16 addr_bus_value;
     unsigned border_color;
