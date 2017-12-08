@@ -137,8 +137,9 @@ public:
 
 protected:
     fast_u8 on_input(fast_u16 addr) override {
+        const fast_u8 default_value = 0xbf;
         if(!on_input_callback)
-            return 0xbf;
+            return default_value;
 
         PyObject *arg = Py_BuildValue("(i)", addr);
         decref_guard arg_guard(arg);
@@ -146,18 +147,18 @@ protected:
         PyObject *result = PyObject_CallObject(on_input_callback, arg);
         decref_guard result_guard(result);
 
-        fast_u8 n = 0xff;
-
         if(!result) {
             stop();
-        } else if(!PyLong_Check(result)) {
-            PyErr_SetString(PyExc_TypeError, "returning value must be integer");
-            stop();
-        } else {
-            n = z80::mask8(PyLong_AsUnsignedLong(result));
+            return default_value;
         }
 
-        return n;
+        if(!PyLong_Check(result)) {
+            PyErr_SetString(PyExc_TypeError, "returning value must be integer");
+            stop();
+            return default_value;
+        }
+
+        return z80::mask8(PyLong_AsUnsignedLong(result));
     }
 
 private:
