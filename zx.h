@@ -37,6 +37,7 @@ constexpr bool is_multiple_of(T a, T b) {
 typedef fast_u32 events_mask;
 const events_mask no_events       = 0;
 const events_mask machine_stopped = 1u << 0;
+const events_mask end_of_frame    = 1u << 1;
 const events_mask custom_event    = 1u << 31;
 
 class spectrum48 : public z80::processor<spectrum48> {
@@ -353,7 +354,7 @@ public:
         }
     }
 
-    void execute_frame() {
+    events_mask execute_frame() {
         events = no_events;
 
         const ticks_type ticks_per_active_int = 32;
@@ -366,8 +367,12 @@ public:
         while(!events && ticks_since_int < ticks_per_frame)
             step();
 
-        if(!events)
+        if(ticks_since_int >= ticks_per_frame) {
             ticks_since_int -= ticks_per_frame;
+            events |= end_of_frame;
+        }
+
+        return events;
     }
 
 protected:
