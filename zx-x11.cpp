@@ -25,15 +25,19 @@ using z80::fast_u16;
 
 namespace {
 
+#if 0  // TODO: Unused.
 template<typename T>
 constexpr T div_ceil(T a, T b) {
     return (a + b - 1) / b;
 }
+#endif
 
+#if 0  // TODO: Unused.
 template<typename T>
 constexpr bool is_multiple_of(T a, T b) {
     return b != 0 && a % b == 0;
 }
+#endif
 
 #if defined(__GNUC__) || defined(__clang__)
 # define LIKE_PRINTF(format, args) \
