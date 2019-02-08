@@ -269,7 +269,7 @@ public:
         update_window();
 
         // Execute instructions for the next frame.
-        machine::execute_frame();
+        machine::execute_frame(/* ticks_limit= */ 100000);  // TODO
 
         // Render the next frame.
         render_frame();

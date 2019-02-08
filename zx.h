@@ -7,6 +7,8 @@
     Published under the MIT license.
 */
 
+#include <algorithm>
+
 #include "z80/z80.h"
 
 namespace zx {
@@ -354,17 +356,30 @@ public:
         }
     }
 
-    events_mask execute_frame() {
+    events_mask execute_frame(ticks_type ticks_limit) {
+        // Avoid potential overflows by limiting the maximum
+        // number of ticks to execute in this single call, which
+        // can't last longer than a frame.
+        const ticks_type ticks_per_frame = 69888;
+        ticks_type ticks_per_call = std::min(ticks_limit, ticks_per_frame);
+        ticks_type end_tick = ticks_since_int + ticks_per_call;
+
+        // Reset events.
         events = no_events;
 
+        // The active-int period needs special processing.
         const ticks_type ticks_per_active_int = 32;
-        while(!events && ticks_since_int < ticks_per_active_int) {
+        ticks_type end_active_int_tick =
+            std::min(end_tick, ticks_per_active_int);
+        while(!events && ticks_since_int < end_active_int_tick) {
             handle_active_int();
             step();
         }
 
-        const ticks_type ticks_per_frame = 69888;
-        while(!events && ticks_since_int < ticks_per_frame)
+        // Execute the rest of intructions in the frame.
+        ticks_type end_frame_tick =
+            std::min(end_tick, ticks_per_frame);
+        while(!events && ticks_since_int < end_frame_tick)
             step();
 
         if(ticks_since_int >= ticks_per_frame) {
