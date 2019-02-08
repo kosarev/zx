@@ -17,6 +17,8 @@ using z80::least_u8;
 using z80::least_u16;
 using z80::unreachable;
 
+typedef uint_fast32_t fast_u32;
+
 template<typename T>
 T non_constexpr() {
     return T();
@@ -31,6 +33,11 @@ template<typename T>
 constexpr bool is_multiple_of(T a, T b) {
     return b != 0 && a % b == 0;
 }
+
+typedef fast_u32 events_mask;
+const events_mask no_events       = 0;
+const events_mask machine_stopped = 1u << 0;
+const events_mask custom_event    = 1u << 31;
 
 class spectrum48 : public z80::processor<spectrum48> {
 public:
@@ -48,9 +55,9 @@ public:
 
     virtual ~spectrum48();
 
-    bool is_stopped() const { return stopped; }
+    events_mask get_events() const { return events; }
 
-    void stop() { stopped = true; }
+    void stop() { events |= machine_stopped; }
 
     void tick(unsigned t) { ticks_since_int += t; }
 
@@ -347,19 +354,19 @@ public:
     }
 
     void execute_frame() {
-        stopped = false;
+        events = no_events;
 
         const ticks_type ticks_per_active_int = 32;
-        while(!is_stopped() && ticks_since_int < ticks_per_active_int) {
+        while(!events && ticks_since_int < ticks_per_active_int) {
             handle_active_int();
             step();
         }
 
         const ticks_type ticks_per_frame = 69888;
-        while(!is_stopped() && ticks_since_int < ticks_per_frame)
+        while(!events && ticks_since_int < ticks_per_frame)
             step();
 
-        if(!is_stopped())
+        if(!events)
             ticks_since_int -= ticks_per_frame;
     }
 
@@ -376,7 +383,7 @@ protected:
         return static_cast<pixel_type>(r);
     }
 
-    bool stopped = false;
+    events_mask events = no_events;
     ticks_type ticks_since_int;
     fast_u16 addr_bus_value;
     unsigned border_color;
