@@ -37,7 +37,7 @@ private:
 
 namespace Spectrum48 {
 
-struct __attribute__((packed)) machine_state {
+struct __attribute__((packed)) processor_state {
     least_u16 bc;
     least_u16 de;
     least_u16 hl;
@@ -60,6 +60,10 @@ struct __attribute__((packed)) machine_state {
     least_u8 int_mode;
 };
 
+struct __attribute__((packed)) machine_state {
+    struct processor_state proc;
+};
+
 class machine_emulator : public zx::spectrum48 {
 public:
     typedef zx::spectrum48 base;
@@ -73,6 +77,34 @@ public:
     }
 
     void retrieve_state() {
+        state.proc = get_processor_state();
+    }
+
+    void install_state() {
+        set_processor_state(state.proc);
+    }
+
+    pixels_buffer_type &get_frame_pixels() {
+        base::get_frame_pixels(pixels);
+        return pixels;
+    }
+
+    void execute_frame() {
+        install_state();
+        base::execute_frame();
+        retrieve_state();
+    }
+
+    PyObject *set_on_input_callback(PyObject *callback) {
+        PyObject *old_callback = on_input_callback;
+        on_input_callback = callback;
+        return old_callback;
+    }
+
+protected:
+    processor_state get_processor_state() {
+        processor_state state;
+
         state.bc = get_bc();
         state.de = get_de();
         state.hl = get_hl();
@@ -93,9 +125,11 @@ public:
         state.iff1 = get_iff1() ? 1 : 0;
         state.iff2 = get_iff2() ? 1 : 0;
         state.int_mode = get_int_mode();
+
+        return state;
     }
 
-    void install_state() {
+    void set_processor_state(const processor_state &state) {
         set_bc(state.bc);
         set_de(state.de);
         set_hl(state.hl);
@@ -118,24 +152,6 @@ public:
         set_int_mode(state.int_mode);
     }
 
-    pixels_buffer_type &get_frame_pixels() {
-        base::get_frame_pixels(pixels);
-        return pixels;
-    }
-
-    void execute_frame() {
-        install_state();
-        base::execute_frame();
-        retrieve_state();
-    }
-
-    PyObject *set_on_input_callback(PyObject *callback) {
-        PyObject *old_callback = on_input_callback;
-        on_input_callback = callback;
-        return old_callback;
-    }
-
-protected:
     fast_u8 on_input(fast_u16 addr) override {
         const fast_u8 default_value = 0xbf;
         if(!on_input_callback)
