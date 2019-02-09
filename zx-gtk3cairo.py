@@ -144,6 +144,7 @@ def main():
     app = emulator()
     # app.load_snapshot('../x.z80')
     # app.load_input_recording('../x.rzx')
+    # app.emulator.get_machine_state().suppress_int()
     app.main()
 
 

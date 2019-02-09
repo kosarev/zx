@@ -63,6 +63,8 @@ struct __attribute__((packed)) processor_state {
 
 struct __attribute__((packed)) machine_state {
     struct processor_state proc;
+
+    least_u8 suppressed_int = false;
 };
 
 class machine_emulator : public zx::spectrum48 {
@@ -79,10 +81,12 @@ public:
 
     void retrieve_state() {
         state.proc = get_processor_state();
+        state.suppressed_int = suppressed_int;
     }
 
     void install_state() {
         set_processor_state(state.proc);
+        suppressed_int = state.suppressed_int;
     }
 
     pixels_buffer_type &get_frame_pixels() {
