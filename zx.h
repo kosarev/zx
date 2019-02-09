@@ -377,10 +377,12 @@ public:
         events = no_events;
 
         // The active-int period needs special processing.
-        const ticks_type ticks_per_active_int = 32;
-        while(!events && ticks_since_int < ticks_per_active_int) {
-            handle_active_int();
-            step();
+        if(!suppressed_int) {
+            const ticks_type ticks_per_active_int = 32;
+            while(!events && ticks_since_int < ticks_per_active_int) {
+                handle_active_int();
+                step();
+            }
         }
 
         // Execute the rest of intructions in the frame.
@@ -414,6 +416,10 @@ protected:
 
     fast_u16 addr_bus_value = 0;
     unsigned border_color = 0;
+
+    // True if interrupts shall not be initiated at the beginning
+    // of frames.
+    bool suppressed_int = false;
 
 private:
     frame_chunks_type frame_chunks;
