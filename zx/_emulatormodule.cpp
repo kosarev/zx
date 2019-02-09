@@ -20,6 +20,7 @@ using zx::fast_u16;
 using zx::least_u8;
 using zx::least_u16;
 using zx::unreachable;
+using zx::events_mask;
 
 class decref_guard {
 public:
@@ -94,10 +95,11 @@ public:
         return pixels;
     }
 
-    void run() {
+    events_mask run() {
         install_state();
-        base::run();
+        events_mask events = base::run();
         retrieve_state();
+        return events;
     }
 
     PyObject *set_on_input_callback(PyObject *callback) {
@@ -246,13 +248,12 @@ static PyObject *set_on_input_callback(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
-
 PyObject *run(PyObject *self, PyObject *args) {
     auto &emulator = cast_emulator(self);
-    emulator.run();
+    events_mask events = emulator.run();
     if(PyErr_Occurred())
         return nullptr;
-    Py_RETURN_NONE;
+    return Py_BuildValue("i", events);
 }
 
 PyMethodDef methods[] = {

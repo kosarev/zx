@@ -137,8 +137,7 @@ class emulator(Gtk.Window):
                 Gtk.main_iteration()
 
             events = self.emulator.run()
-            print(events)
-            end_of_frame = True
+            end_of_frame = (events & (1 << 1)) != 0
 
             if end_of_frame:
                 self.emulator.render_frame()
