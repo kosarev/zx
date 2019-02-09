@@ -125,7 +125,7 @@ public:
 
     void execute_frame() {
         install_state();
-        base::execute_frame(/* ticks_limit= */ 100000);  // TODO
+        base::execute_frame();
         retrieve_state();
     }
 

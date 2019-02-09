@@ -38,17 +38,17 @@ constexpr bool is_multiple_of(T a, T b) {
 
 typedef fast_u32 events_mask;
 const events_mask no_events       = 0;
-const events_mask machine_stopped = 1u << 0;
+const events_mask machine_stopped = 1u << 0;  // TODO: Eliminate.
 const events_mask end_of_frame    = 1u << 1;
+const events_mask ticks_limit_hit = 1u << 2;
 const events_mask custom_event    = 1u << 31;
 
 class spectrum48 : public z80::processor<spectrum48> {
 public:
     typedef processor<spectrum48> processor;
-    typedef uint_fast32_t ticks_type;
+    typedef fast_u32 ticks_type;
 
-    spectrum48()
-            : ticks_since_int(0), addr_bus_value(0), border_color(0) {
+    spectrum48() {
         uint_fast32_t rnd = 0xde347a01;
         for(auto &cell : memory_image) {
             cell = static_cast<least_u8>(rnd);
@@ -62,7 +62,19 @@ public:
 
     void stop() { events |= machine_stopped; }
 
-    void tick(unsigned t) { ticks_since_int += t; }
+    void tick(unsigned t) {
+        ticks_since_int += t;
+
+        // Handle stopping by hitting a specified number of ticks.
+        if(ticks_to_stop) {
+            if(ticks_to_stop > t) {
+                ticks_to_stop -= t;
+            } else {
+                ticks_to_stop = 0;
+                events |= ticks_limit_hit;
+            }
+        }
+    }
 
     ticks_type get_ticks() const { return ticks_since_int; }
 
@@ -356,36 +368,28 @@ public:
         }
     }
 
-    events_mask execute_frame(ticks_type ticks_limit) {
-        // Avoid potential overflows by limiting the maximum
-        // number of ticks to execute in this single call, which
-        // can't last longer than a frame.
+    events_mask execute_frame() {
+        // Normalize the ticks-since-int counter.
         const ticks_type ticks_per_frame = 69888;
-        ticks_type ticks_per_call = std::min(ticks_limit, ticks_per_frame);
-        ticks_type end_tick = ticks_since_int + ticks_per_call;
+        ticks_since_int %= ticks_per_frame;
 
         // Reset events.
         events = no_events;
 
         // The active-int period needs special processing.
         const ticks_type ticks_per_active_int = 32;
-        ticks_type end_active_int_tick =
-            std::min(end_tick, ticks_per_active_int);
-        while(!events && ticks_since_int < end_active_int_tick) {
+        while(!events && ticks_since_int < ticks_per_active_int) {
             handle_active_int();
             step();
         }
 
         // Execute the rest of intructions in the frame.
-        ticks_type end_frame_tick =
-            std::min(end_tick, ticks_per_frame);
-        while(!events && ticks_since_int < end_frame_tick)
+        while(!events && ticks_since_int < ticks_per_frame)
             step();
 
-        if(ticks_since_int >= ticks_per_frame) {
-            ticks_since_int -= ticks_per_frame;
+        // Signal end-of-frame, if it's the case.
+        if(ticks_since_int >= ticks_per_frame)
             events |= end_of_frame;
-        }
 
         return events;
     }
@@ -404,9 +408,12 @@ protected:
     }
 
     events_mask events = no_events;
-    ticks_type ticks_since_int;
-    fast_u16 addr_bus_value;
-    unsigned border_color;
+
+    ticks_type ticks_since_int = 0;
+    ticks_type ticks_to_stop = 0;  // Null means no limit.
+
+    fast_u16 addr_bus_value = 0;
+    unsigned border_color = 0;
 
 private:
     frame_chunks_type frame_chunks;
