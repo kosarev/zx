@@ -368,7 +368,7 @@ public:
         }
     }
 
-    events_mask execute_frame() {
+    events_mask run() {
         // Normalize the ticks-since-int counter.
         const ticks_type ticks_per_frame = 69888;
         ticks_since_int %= ticks_per_frame;

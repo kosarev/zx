@@ -94,9 +94,9 @@ public:
         return pixels;
     }
 
-    void execute_frame() {
+    void run() {
         install_state();
-        base::execute_frame();
+        base::run();
         retrieve_state();
     }
 
@@ -247,9 +247,9 @@ static PyObject *set_on_input_callback(PyObject *self, PyObject *args) {
 }
 
 
-PyObject *execute_frame(PyObject *self, PyObject *args) {
+PyObject *run(PyObject *self, PyObject *args) {
     auto &emulator = cast_emulator(self);
-    emulator.execute_frame();
+    emulator.run();
     if(PyErr_Occurred())
         return nullptr;
     Py_RETURN_NONE;
@@ -270,8 +270,8 @@ PyMethodDef methods[] = {
      "and return a MemoryView object that exposes that array."},
     {"set_on_input_callback", set_on_input_callback, METH_VARARGS,
      "Set a callback function handling reading from ports."},
-    {"execute_frame", execute_frame, METH_NOARGS,
-     "Execute instructions that correspond to a single frame."},
+    {"run", run, METH_NOARGS,
+     "Run emulator until one or several events are signaled."},
     { nullptr }  // Sentinel.
 };
 

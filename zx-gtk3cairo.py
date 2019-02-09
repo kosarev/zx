@@ -128,6 +128,25 @@ class emulator(Gtk.Window):
             # print(zx.parse_rzx(f.read()))
             zx.parse_rzx(f.read())
 
+    def play_input_recording(self, filename):
+        # app.load_input_recording(filename)
+        # self.emulator.get_machine_state().suppress_int()
+
+        while not self.done:
+            while Gtk.events_pending():
+                Gtk.main_iteration()
+
+            events = self.emulator.run()
+            print(events)
+            end_of_frame = True
+
+            if end_of_frame:
+                self.emulator.render_frame()
+                self.frame_data[:] = self.emulator.get_frame_pixels()
+                self.area.queue_draw()
+                # print(self.processor_state.get_bc())
+                time.sleep(1 / 50)
+
     def main(self):
         while not self.done:
             while Gtk.events_pending():
@@ -142,10 +161,11 @@ class emulator(Gtk.Window):
 
 def main():
     app = emulator()
+
     # app.load_snapshot('../x.z80')
-    # app.load_input_recording('../x.rzx')
-    # app.emulator.get_machine_state().suppress_int()
-    app.main()
+    # app.main()
+
+    app.play_input_recording('../x.rzx')
 
 
 if __name__ == "__main__":

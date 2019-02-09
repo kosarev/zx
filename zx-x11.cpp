@@ -269,7 +269,7 @@ public:
         update_window();
 
         // Execute instructions for the next frame.
-        machine::execute_frame();
+        machine::run();
 
         // Render the next frame.
         render_frame();
