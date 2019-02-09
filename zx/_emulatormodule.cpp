@@ -58,6 +58,7 @@ struct __attribute__((packed)) processor_state {
     least_u8 iff1;
     least_u8 iff2;
     least_u8 int_mode;
+    least_u8 reserved = 0;
 };
 
 struct __attribute__((packed)) machine_state {
