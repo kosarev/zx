@@ -22,6 +22,8 @@ using zx::least_u16;
 using zx::unreachable;
 using zx::events_mask;
 
+typedef uint_least32_t least_u32;
+
 class decref_guard {
 public:
     decref_guard(PyObject *object)
@@ -65,6 +67,7 @@ struct __attribute__((packed)) processor_state {
 struct __attribute__((packed)) machine_state {
     struct processor_state proc;
 
+    least_u32 fetches_to_stop = 0;
     least_u8 suppressed_int = false;
 };
 
@@ -82,11 +85,15 @@ public:
 
     void retrieve_state() {
         state.proc = get_processor_state();
+
+        state.fetches_to_stop = fetches_to_stop;
         state.suppressed_int = suppressed_int;
     }
 
     void install_state() {
         set_processor_state(state.proc);
+
+        fetches_to_stop = state.fetches_to_stop;
         suppressed_int = state.suppressed_int;
     }
 

@@ -130,16 +130,31 @@ class emulator(Gtk.Window):
 
     def play_input_recording(self, filename):
         # app.load_input_recording(filename)
-        # self.emulator.get_machine_state().suppress_int()
 
+        # Interrupts are supposed to be controlled by the
+        # recording.
+        machine_state = self.emulator.get_machine_state()
+        machine_state.suppress_int()
+
+        END_OF_FRAME      = 1 << 1
+        FETCHES_LIMIT_HIT = 1 << 3
+
+        set_fetches_limit = True
         while not self.done:
             while Gtk.events_pending():
                 Gtk.main_iteration()
 
-            events = self.emulator.run()
-            end_of_frame = (events & (1 << 1)) != 0
+            if set_fetches_limit:
+                machine_state.set_fetches_limit(100000)
+                set_fetches_limit = False
 
-            if end_of_frame:
+            events = self.emulator.run()
+            print(events)
+
+            if events & FETCHES_LIMIT_HIT:
+                set_fetches_limit = True
+
+            if events & END_OF_FRAME:
                 self.emulator.render_frame()
                 self.frame_data[:] = self.emulator.get_frame_pixels()
                 self.area.queue_draw()

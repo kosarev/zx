@@ -37,11 +37,12 @@ constexpr bool is_multiple_of(T a, T b) {
 }
 
 typedef fast_u32 events_mask;
-const events_mask no_events       = 0;
-const events_mask machine_stopped = 1u << 0;  // TODO: Eliminate.
-const events_mask end_of_frame    = 1u << 1;
-const events_mask ticks_limit_hit = 1u << 2;
-const events_mask custom_event    = 1u << 31;
+const events_mask no_events         = 0;
+const events_mask machine_stopped   = 1u << 0;  // TODO: Eliminate.
+const events_mask end_of_frame      = 1u << 1;
+const events_mask ticks_limit_hit   = 1u << 2;
+const events_mask fetches_limit_hit = 1u << 3;
+const events_mask custom_event      = 1u << 31;
 
 class spectrum48 : public z80::processor<spectrum48> {
 public:
@@ -115,6 +116,10 @@ public:
     }
 
     fast_u8 on_fetch_cycle(fast_u16 addr) {
+        // Handle stopping by hitting a specified number of fetches.
+        if(fetches_to_stop && --fetches_to_stop == 0)
+            events |= fetches_limit_hit;
+
         handle_memory_contention(addr);
         return processor::on_fetch_cycle(addr);
     }
@@ -412,7 +417,8 @@ protected:
     events_mask events = no_events;
 
     ticks_type ticks_since_int = 0;
-    ticks_type ticks_to_stop = 0;  // Null means no limit.
+    ticks_type ticks_to_stop = 0;    // Null means no limit.
+    ticks_type fetches_to_stop = 0;  // Null means no limit.
 
     fast_u16 addr_bus_value = 0;
     unsigned border_color = 0;

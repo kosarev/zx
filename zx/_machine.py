@@ -53,7 +53,8 @@ class ProcessorState(StateImage):
 class MachineState(StateImage):
     def __init__(self, image):
         fields = {
-            'suppressed_int': (32, 'B'),
+            'fetches_to_stop': (32, '<L'),
+            'suppressed_int':  (36, 'B'),
         }
         super().__init__(fields, image)
 
@@ -62,6 +63,9 @@ class MachineState(StateImage):
 
     def suppress_int(self, suppress=True):
         self.set('suppressed_int', int(suppress))
+
+    def set_fetches_limit(self, fetches_to_stop):
+        self.set('fetches_to_stop', fetches_to_stop)
 
 
 class Spectrum48(Spectrum48Base):
