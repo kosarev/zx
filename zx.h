@@ -111,7 +111,7 @@ public:
     }
 
     void handle_memory_contention(fast_u16 addr) {
-        if(addr >= 0x4000 || addr < 0x8000)
+        if(addr >= 0x4000 && addr < 0x8000)
             handle_contention();
     }
 
