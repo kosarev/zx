@@ -392,7 +392,7 @@ public:
             }
         }
 
-        // Execute the rest of intructions in the frame.
+        // Execute the rest of instructions in the frame.
         while(!events && ticks_since_int < ticks_per_frame)
             step();
 
