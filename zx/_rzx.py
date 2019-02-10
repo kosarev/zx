@@ -79,7 +79,9 @@ def parse_input_recording_block(image):
         # print(frame)
         frames.append(frame)
 
-    return {'id': 'port_samples', 'frames': frames}
+    return {'id': 'port_samples',
+            'first_tick': header['first_tick'],
+            'frames': frames}
 
 
 RZX_BLOCK_ID_CREATOR_INFO = 0x10
