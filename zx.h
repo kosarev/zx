@@ -115,13 +115,14 @@ public:
             handle_contention();
     }
 
-    fast_u8 on_fetch_cycle(fast_u16 addr) {
+    fast_u8 on_fetch_cycle(fast_u16 addr, bool m1 = true) {
         // Handle stopping by hitting a specified number of fetches.
-        if(fetches_to_stop && --fetches_to_stop == 0)
+        // TODO: Rename fetches_to_stop -> m1_fetches_to_stop.
+        if(m1 && fetches_to_stop && --fetches_to_stop == 0)
             events |= fetches_limit_hit;
 
         handle_memory_contention(addr);
-        return processor::on_fetch_cycle(addr);
+        return processor::on_fetch_cycle(addr, m1);
     }
 
     fast_u8 on_read_cycle(fast_u16 addr, unsigned ticks) {
