@@ -55,7 +55,7 @@ def parse_input_recording_block(image):
     recording_image = zlib.decompress(parser.extract_rest())
     recording_parser = BinaryParser(recording_image)
 
-    NUM_OF_SAMPLES_IN_IDLE_FRAME = 0xffff
+    NUM_OF_SAMPLES_IN_REPEATED_FRAME = 0xffff
     frames = []
     while not recording_parser.is_eof():
         recording_header = recording_parser.parse([
@@ -65,9 +65,12 @@ def parse_input_recording_block(image):
         num_of_samples = recording_header['num_of_port_samples']
         num_of_fetches = recording_header['num_of_fetches']
 
-        if num_of_samples == NUM_OF_SAMPLES_IN_IDLE_FRAME:
+        if num_of_samples == NUM_OF_SAMPLES_IN_REPEATED_FRAME:
+            # Note that only the input samples are repeated; the
+            # number of fetches is as specified in the new frame.
             assert frames  # TODO
-            frame = frames[-1]
+            prev_samples = frames[-1][1]
+            frame = (num_of_fetches, prev_samples)
         else:
             samples = recording_parser.extract_block(num_of_samples)
             samples = bytes(samples)
