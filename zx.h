@@ -125,12 +125,14 @@ public:
     }
 
     fast_u8 on_read_cycle(fast_u16 addr, unsigned ticks) {
+        assert(ticks == 3);
         handle_memory_contention(addr);
         return processor::on_read_cycle(addr, ticks);
     }
 
     void on_write_cycle(fast_u16 addr, fast_u8 n, unsigned ticks) {
         assert(addr >= 0x4000);  // TODO
+        assert(ticks == 3);
         handle_memory_contention(addr);
         processor::on_write_cycle(addr, n, ticks);
     }
