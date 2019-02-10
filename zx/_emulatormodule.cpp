@@ -275,7 +275,7 @@ PyObject *run(PyObject *self, PyObject *args) {
 
 PyObject *handle_active_int(PyObject *self, PyObject *args) {
     bool int_initiated = cast_emulator(self).handle_active_int();
-    return int_initiated ? Py_True : Py_False;
+    return PyBool_FromLong(int_initiated);
 }
 
 PyMethodDef methods[] = {
