@@ -126,40 +126,70 @@ class emulator(Gtk.Window):
     def load_input_recording(self, filename):
         with open(filename, 'rb') as f:
             # print(zx.parse_rzx(f.read()))
-            zx.parse_rzx(f.read())
+            return zx.parse_rzx(f.read())
 
-    def play_input_recording(self, filename):
-        # app.load_input_recording(filename)
-
+    def playback_input_recording(self, filename):
         # Interrupts are supposed to be controlled by the
         # recording.
         machine_state = self.emulator.get_machine_state()
         machine_state.suppress_int()
 
+        recording = self.load_input_recording(filename)
+        chunks = recording['chunks']
+
         END_OF_FRAME      = 1 << 1
         FETCHES_LIMIT_HIT = 1 << 3
 
-        set_fetches_limit = True
-        while not self.done:
-            while Gtk.events_pending():
-                Gtk.main_iteration()
+        # Process chunks in order.
+        for chunk in chunks:
+            if self.done:
+                break
 
-            if set_fetches_limit:
-                machine_state.set_fetches_limit(100000)
-                set_fetches_limit = False
+            if chunk['id'] == 'snapshot':
+                self.emulator.install_snapshot(chunk)
+                continue
 
-            events = self.emulator.run()
-            print(events)
+            if chunk['id'] != 'port_samples':
+                continue
 
-            if events & FETCHES_LIMIT_HIT:
-                set_fetches_limit = True
+            first_tick = chunk['first_tick']
+            machine_state.set_ticks_since_int(first_tick)
 
-            if events & END_OF_FRAME:
-                self.emulator.render_frame()
-                self.frame_data[:] = self.emulator.get_frame_pixels()
-                self.area.queue_draw()
-                # print(self.processor_state.get_bc())
-                time.sleep(1 / 50)
+            for num_of_fetches, samples in chunk['frames']:
+                if self.done:
+                    break
+
+                self.sample_i = 0
+                def on_input(addr):
+                    n = samples[self.sample_i]
+                    # TODO: print('read_port 0x%04x 0x%02x' % (addr, n), flush=True)
+                    self.sample_i += 1
+                    return n
+
+                self.emulator.set_on_input_callback(on_input)
+
+                # TODO: print(num_of_fetches, samples, flush=True)
+                machine_state.set_fetches_limit(num_of_fetches)
+
+                while not self.done:
+                    while Gtk.events_pending():
+                        Gtk.main_iteration()
+
+                    events = self.emulator.run()
+                    # TODO: print(events)
+
+                    if events & END_OF_FRAME:
+                        self.emulator.render_frame()
+                        self.frame_data[:] = self.emulator.get_frame_pixels()
+                        self.area.queue_draw()
+                        # print(self.processor_state.get_bc())
+                        time.sleep(1 / 50)
+
+                    if events & FETCHES_LIMIT_HIT:
+                        self.emulator.handle_active_int()
+                        break
+
+                assert self.sample_i == len(samples), (self.sample_i, samples)
 
     def main(self):
         while not self.done:
@@ -179,7 +209,7 @@ def main():
     # app.load_snapshot('../x.z80')
     # app.main()
 
-    app.play_input_recording('../x.rzx')
+    app.playback_input_recording('x.rzx')
 
 
 if __name__ == "__main__":
