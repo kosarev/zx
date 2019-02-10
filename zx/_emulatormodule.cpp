@@ -67,6 +67,7 @@ struct __attribute__((packed)) processor_state {
 struct __attribute__((packed)) machine_state {
     struct processor_state proc;
 
+    least_u32 ticks_since_int = 0;
     least_u32 fetches_to_stop = 0;
     least_u8 suppressed_int = false;
 };
@@ -86,6 +87,7 @@ public:
     void retrieve_state() {
         state.proc = get_processor_state();
 
+        state.ticks_since_int = ticks_since_int;
         state.fetches_to_stop = fetches_to_stop;
         state.suppressed_int = suppressed_int;
     }
@@ -93,6 +95,7 @@ public:
     void install_state() {
         set_processor_state(state.proc);
 
+        ticks_since_int = state.ticks_since_int;
         fetches_to_stop = state.fetches_to_stop;
         suppressed_int = state.suppressed_int;
     }
