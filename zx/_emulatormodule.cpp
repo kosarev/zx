@@ -112,6 +112,13 @@ public:
         return events;
     }
 
+    bool handle_active_int() {
+        install_state();
+        bool int_initiated = base::handle_active_int();
+        retrieve_state();
+        return int_initiated;
+    }
+
     PyObject *set_on_input_callback(PyObject *callback) {
         PyObject *old_callback = on_input_callback;
         on_input_callback = callback;
@@ -266,6 +273,11 @@ PyObject *run(PyObject *self, PyObject *args) {
     return Py_BuildValue("i", events);
 }
 
+PyObject *handle_active_int(PyObject *self, PyObject *args) {
+    bool int_initiated = cast_emulator(self).handle_active_int();
+    return int_initiated ? Py_True : Py_False;
+}
+
 PyMethodDef methods[] = {
     {"get_state_image", get_state_image, METH_NOARGS,
      "Return a MemoryView object that exposes the internal state of the "
@@ -283,6 +295,8 @@ PyMethodDef methods[] = {
      "Set a callback function handling reading from ports."},
     {"run", run, METH_NOARGS,
      "Run emulator until one or several events are signaled."},
+    {"handle_active_int", handle_active_int, METH_NOARGS,
+     "Attempts to initiate a masked interrupt."},
     { nullptr }  // Sentinel.
 };
 
