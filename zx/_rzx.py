@@ -22,7 +22,7 @@ def parse_snapshot_block(image):
 
     # TODO: Support other snapshot formats.
     filename_extension = header['filename_extension']
-    assert filename_extension == b'z80\x00', filename_extension
+    assert filename_extension in [b'z80\x00', b'Z80\x00'], filename_extension
 
     flags = header['flags']
     descriptor = bool(flags & 0x1)
