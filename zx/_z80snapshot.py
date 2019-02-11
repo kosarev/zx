@@ -125,7 +125,7 @@ def parse_z80_snapshot(image):
         compressed = (flags1 & 0x20) != 0
         assert 0  # TODO
     else:
-        assert machine_kind == 'ZX Spectrum 48K'  # TODO
+        assert machine_kind == 'ZX Spectrum 48K', machine_kind  # TODO
 
         page_addrs = {4: 0x8000, 5: 0xc000, 8: 0x4000}
 
