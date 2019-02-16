@@ -275,12 +275,8 @@ def run(filename):
 
     if filename is None:
         app.main()
-    elif filename.lower().endswith('.z80'):
-        app.run_file(filename)
-    elif filename.lower().endswith('.rzx'):
-        app.run_file(filename)
     else:
-        raise zx.Error('Unknown type of file %r.' % filename)
+        app.run_file(filename)
 
 
 def process_command_line(args):
