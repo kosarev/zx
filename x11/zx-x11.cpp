@@ -17,7 +17,7 @@
 #include <X11/Xatom.h>
 #include <X11/XKBlib.h>
 
-#include "zx.h"
+#include "../zx.h"
 
 using z80::least_u8;
 using z80::fast_u8;
