@@ -208,7 +208,6 @@ def main():
 
     # app.load_snapshot('../x.z80')
     # app.main()
-
     app.playback_input_recording('x.rzx')
 
 

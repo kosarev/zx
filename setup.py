@@ -49,12 +49,14 @@ setup(name='zx',
       ext_modules=[zx_emulator_module],
       packages=['zx'],
       install_requires=[
-          'cairo',
-          'gi',
-          'os',
-          'struct',
-          'time',
+          'pycairo',
+          'pygobject',
       ],
+      entry_points={
+          'console_scripts': [
+              'zx = zx:main',
+          ],
+      },
       classifiers=[
           'Development Status :: 1 - Planning',
           'Environment :: X11 Applications :: GTK',
