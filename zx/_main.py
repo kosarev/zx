@@ -222,15 +222,14 @@ def run(filename):
     app = emulator()
 
     if filename is None:
-        pass
+        app.main()
     elif filename.lower().endswith('.z80'):
         app.load_snapshot(filename)
+        app.main()
     elif filename.lower().endswith('.rzx'):
         app.playback_input_recording(filename)
     else:
         raise zx.Error('Unknown type of file %r.' % filename)
-
-    app.main()
 
 
 def process_command_line(args):
