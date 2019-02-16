@@ -125,10 +125,6 @@ class emulator(Gtk.Window):
 
         return n
 
-    def load_snapshot(self, filename):
-        with open(filename, 'rb') as f:
-            self.emulator.install_snapshot(zx.parse_z80_snapshot(f.read()))
-
     def load_input_recording(self, filename):
         with open(filename, 'rb') as f:
             # print(zx.parse_rzx(f.read()))
@@ -217,6 +213,22 @@ class emulator(Gtk.Window):
                 self.area.queue_draw()
                 time.sleep(1 / 50)
 
+    class FileFormat(object):
+        pass
+
+    class Z80Format(FileFormat):
+        def parse(self, image):
+            return zx.parse_z80_snapshot(image)
+
+    def run_file(self, filename):
+        with open(filename, 'rb') as f:
+            image = f.read()
+
+        format = self.Z80Format()
+        snapshot = format.parse(image)
+        self.emulator.install_snapshot(snapshot)
+        self.main()
+
 
 def run(filename):
     app = emulator()
@@ -224,8 +236,7 @@ def run(filename):
     if filename is None:
         app.main()
     elif filename.lower().endswith('.z80'):
-        app.load_snapshot(filename)
-        app.main()
+        app.run_file(filename)
     elif filename.lower().endswith('.rzx'):
         app.playback_input_recording(filename)
     else:
