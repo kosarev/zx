@@ -79,6 +79,11 @@ public:
 
     ticks_type get_ticks() const { return ticks_since_int; }
 
+    void set_memory_byte(fast_u16 addr, fast_u8 n) {
+        assert(addr < memory_image_size);
+        memory_image[addr] = static_cast<least_u8>(n);
+    }
+
     fast_u8 on_read_access(fast_u16 addr) {
         assert(addr < memory_image_size);
         return memory_image[addr];
@@ -86,11 +91,8 @@ public:
 
     void on_write_access(fast_u16 addr, fast_u8 n) {
         // Do not alter ROM.
-        if(addr < 0x4000)
-            return;
-
-        assert(addr < memory_image_size);
-        memory_image[addr] = static_cast<least_u8>(n);
+        if(addr >= 0x4000)
+            set_memory_byte(addr, n);
     }
 
     void handle_contention() {

@@ -300,7 +300,7 @@ public:
                   filename, std::strerror(errno));
 
         for(fast_u16 i = 0; i != rom_size; ++i)
-            machine::on_write_access(i, rom[i]);
+            machine::set_memory_byte(i, rom[i]);
     }
 
 private:
