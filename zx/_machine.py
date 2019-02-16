@@ -99,17 +99,17 @@ class Spectrum48(Spectrum48Base):
     def install_snapshot(self, snapshot):
         assert snapshot['id'] == 'snapshot'  # TODO
         # TODO: Reset this machine before installing the snapshot.
-        for id, field in snapshot.items():
-            if id == 'id':
+        for field, value in snapshot.items():
+            if field == 'id':
                 pass  # Already checked above.
-            elif id == 'machine_kind':
-                assert field == 'ZX Spectrum 48K'  # TODO
-            elif id == 'memory':
-                for addr, block in field:
+            elif field == 'machine_kind':
+                assert value == 'ZX Spectrum 48K'  # TODO
+            elif field == 'memory':
+                for addr, block in value:
                     self.memory[addr:addr + len(block)] = block
-            elif id == 'processor_snapshot':
-                self.install_processor_snapshot(field)
-            elif id == 'border_color':
+            elif field == 'processor_snapshot':
+                self.install_processor_snapshot(value)
+            elif field == 'border_color':
                 pass  # TODO
             else:
-                raise zx.Error("Unknown snapshot field '%s'." % id)
+                raise zx.Error("Unknown snapshot field '%s'." % field)
