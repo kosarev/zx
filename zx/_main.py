@@ -92,6 +92,9 @@ class emulator(Gtk.Window):
         if key_id in ['ESCAPE', 'F10']:
             self.done = True
             return
+        if key_id == 'F2':
+            # TODO: Let user choose the name.
+            self.save_snapshot('saved.z80')
 
         self.handle_spectrum_key(self.keys.get(key_id, None), pressed=True)
 
@@ -130,6 +133,12 @@ class emulator(Gtk.Window):
         with open(filename, 'rb') as f:
             # print(zx.parse_rzx(f.read()))
             return zx.parse_rzx(f.read())
+
+    def save_snapshot(self, filename):
+        with open(filename, 'wb') as f:
+            f.write(zx.make_z80_snapshot(self.processor_state,
+                                         self.emulator._machine_state,
+                                         self.emulator.memory[0x4000:]))
 
     def playback_input_recording(self, filename):
         # Interrupts are supposed to be controlled by the

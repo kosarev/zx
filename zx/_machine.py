@@ -26,28 +26,90 @@ class ProcessorState(StateImage):
             'bc': (0, '<H'),
             'de': (2, '<H'),
             'hl': (4, '<H'),
-            'af': (6, '<H'),
+            'af': (6, '<H'), 'f': (6, 'B'), 'a': (7, 'B'),
             'ix': (8, '<H'),
             'iy': (10, '<H'),
 
             'alt_bc': (12, '<H'),
             'alt_de': (14, '<H'),
             'alt_hl': (16, '<H'),
-            'alt_af': (18, '<H'),
+            'alt_af': (18, '<H'), 'alt_f': (18, 'B'), 'alt_a': (19, 'B'),
 
             'pc': (20, '<H'),
             'sp': (22, '<H'),
-            'ir': (24, '<H'),
+            'ir': (24, '<H'), 'r': (24, 'B'), 'i': (25, 'B'),
             'memptr': (26, '<H'),
 
             'iff1': (28, 'B'),
             'iff2': (29, 'B'),
             'int_mode': (30, 'B'),
+            'index_rp_kind': (31, 'B'),
         }
         super().__init__(fields, image)
 
     def get_bc(self):
         return self.get('bc')
+
+    def get_de(self):
+        return self.get('de')
+
+    def get_hl(self):
+        return self.get('hl')
+
+    def get_a(self):
+        return self.get('a')
+
+    def get_f(self):
+        return self.get('f')
+
+    def get_ix(self):
+        return self.get('ix')
+
+    def get_iy(self):
+        return self.get('iy')
+
+    def get_alt_bc(self):
+        return self.get('alt_bc')
+
+    def get_alt_de(self):
+        return self.get('alt_de')
+
+    def get_alt_hl(self):
+        return self.get('alt_hl')
+
+    def get_alt_a(self):
+        return self.get('alt_a')
+
+    def get_alt_f(self):
+        return self.get('alt_f')
+
+    def get_alt_af(self):
+        return self.get('alt_af')
+
+    def get_pc(self):
+        return self.get('pc')
+
+    def get_sp(self):
+        return self.get('sp')
+
+    def get_i(self):
+        return self.get('i')
+
+    def get_r_reg(self):
+        return self.get('r')
+
+    def get_iff1(self):
+        return self.get('iff1')
+
+    def get_iff2(self):
+        return self.get('iff2')
+
+    def get_int_mode(self):
+        return self.get('int_mode')
+
+    def get_index_rp_kind(self):
+        n = self.get('index_rp_kind')
+        return {0: 'hl', 1: 'ix', 2: 'iy'}[n]
 
 
 class MachineState(StateImage):
@@ -71,6 +133,9 @@ class MachineState(StateImage):
 
     def set_ticks_since_int(self, ticks):
         self.set('ticks_since_int', ticks)
+
+    def get_border_color(self):
+        return self.get('border_color')
 
     def set_border_color(self, color):
         self.set('border_color', color)

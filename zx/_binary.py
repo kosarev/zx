@@ -43,3 +43,18 @@ class BinaryParser(object):
         begin = self.pos
         self.pos += size
         return self.image[begin:self.pos]
+
+
+class BinaryWriter(object):
+    def __init__(self):
+        self._chunks = []
+
+    def write(self, chunk):
+        self._chunks.append(chunk)
+
+    def write_fields(self, fields):
+        for value, format in fields:
+            self.write(struct.pack(format, value))
+
+    def get_image(self):
+        return b''.join(self._chunks)

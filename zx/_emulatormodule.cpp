@@ -61,7 +61,7 @@ struct __attribute__((packed)) processor_state {
     least_u8 iff1;
     least_u8 iff2;
     least_u8 int_mode;
-    least_u8 reserved = 0;
+    least_u8 index_rp_kind;
 };
 
 struct __attribute__((packed)) machine_state {
@@ -152,6 +152,7 @@ protected:
         state.iff1 = get_iff1() ? 1 : 0;
         state.iff2 = get_iff2() ? 1 : 0;
         state.int_mode = get_int_mode();
+        state.index_rp_kind = static_cast<least_u8>(get_index_rp_kind());
 
         return state;
     }
@@ -177,6 +178,7 @@ protected:
         set_iff1(state.iff1);
         set_iff2(state.iff2);
         set_int_mode(state.int_mode);
+        set_index_rp_kind(static_cast<z80::index_regp>(state.index_rp_kind));
     }
 
     fast_u8 on_input(fast_u16 addr) override {

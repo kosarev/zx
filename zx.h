@@ -85,6 +85,10 @@ public:
     }
 
     void on_write_access(fast_u16 addr, fast_u8 n) {
+        // Do not alter ROM.
+        if(addr < 0x4000)
+            return;
+
         assert(addr < memory_image_size);
         memory_image[addr] = static_cast<least_u8>(n);
     }
@@ -132,7 +136,7 @@ public:
     }
 
     void on_write_cycle(fast_u16 addr, fast_u8 n, unsigned ticks) {
-        assert(addr >= 0x4000);  // TODO
+        // assert(addr >= 0x4000);  // TODO
         assert(ticks == 3);
         handle_memory_contention(addr);
         processor::on_write_cycle(addr, n, ticks);

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-from ._binaryparser import BinaryParser
+from ._binary import BinaryParser
 import zx
 
 
