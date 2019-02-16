@@ -70,6 +70,7 @@ struct __attribute__((packed)) machine_state {
     least_u32 ticks_since_int = 0;
     least_u32 fetches_to_stop = 0;
     least_u8 suppressed_int = false;
+    least_u8 border_color = 7;
 };
 
 class machine_emulator : public zx::spectrum48 {
@@ -90,6 +91,7 @@ public:
         state.ticks_since_int = ticks_since_int;
         state.fetches_to_stop = fetches_to_stop;
         state.suppressed_int = suppressed_int;
+        state.border_color = border_color;
     }
 
     void install_state() {
@@ -98,6 +100,7 @@ public:
         ticks_since_int = state.ticks_since_int;
         fetches_to_stop = state.fetches_to_stop;
         suppressed_int = state.suppressed_int;
+        border_color = state.border_color;
     }
 
     pixels_buffer_type &get_frame_pixels() {

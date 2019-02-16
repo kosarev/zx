@@ -56,6 +56,7 @@ class MachineState(StateImage):
             'ticks_since_int': (32, '<L'),
             'fetches_to_stop': (36, '<L'),
             'suppressed_int':  (40, 'B'),
+            'border_color':    (41, 'B'),
         }
         super().__init__(fields, image)
 
@@ -70,6 +71,9 @@ class MachineState(StateImage):
 
     def set_ticks_since_int(self, ticks):
         self.set('ticks_since_int', ticks)
+
+    def set_border_color(self, color):
+        self.set('border_color', color)
 
 
 class Spectrum48(Spectrum48Base):
@@ -110,6 +114,6 @@ class Spectrum48(Spectrum48Base):
             elif field == 'processor_snapshot':
                 self.install_processor_snapshot(value)
             elif field == 'border_color':
-                pass  # TODO
+                self._machine_state.set_border_color(value)
             else:
                 raise zx.Error("Unknown snapshot field '%s'." % field)
