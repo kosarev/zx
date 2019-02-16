@@ -55,7 +55,7 @@ class test_execute_frame(unittest.TestCase):
         mem = mach.get_memory()
         mem[0:2] = bytearray([0x18, 0x100 - 2])  # jr $
 
-        mach.execute_frame()
+        mach.run()
 
 
 class test_keyboard(unittest.TestCase):
