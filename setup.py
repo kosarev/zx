@@ -7,8 +7,8 @@ from setuptools import Extension, setup
 
 
 ZX_MAJOR_VERSION = 0
-ZX_MINOR_VERSION = 1
-ZX_PATCH_VERSION = 2
+ZX_MINOR_VERSION = 2
+ZX_PATCH_VERSION = 0
 
 
 # Work around the problem with the warning about '-Wstrict-prototypes'.
@@ -58,7 +58,7 @@ setup(name='zx',
           ],
       },
       classifiers=[
-          'Development Status :: 1 - Planning',
+          'Development Status :: 2 - Pre-Alpha',
           'Environment :: X11 Applications :: GTK',
           'Intended Audience :: Developers',
           'Intended Audience :: Education',
