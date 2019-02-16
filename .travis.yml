@@ -31,4 +31,4 @@ install:
 script:
   - mkdir build
   - cd build
-  - ${DEPS_DIR}/cmake/bin/cmake .. && make && make test
+  - ${DEPS_DIR}/cmake/bin/cmake ../x11 && make && make test
