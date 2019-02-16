@@ -26,14 +26,30 @@ class FileFormat(object):
     pass
 
 
+class SnapshotsFormat(FileFormat):
+    pass
+
+
 class Z80SnapshotFile(SnapshotFile):
     def __init__(self, snapshot):
         self._snapshot = snapshot
 
 
-class Z80Format(FileFormat):
+class Z80SnapshotsFormat(SnapshotsFormat):
     def parse(self, image):
-        return Z80SnapshotFile(zx.parse_z80_snapshot(image))
+        snapshot = zx.parse_z80_snapshot(image)
+        return Z80SnapshotFile(snapshot)
+
+
+class RZXFile(DataFile):
+    def __init__(self, recording):
+        self._recording = recording
+
+
+class RZXFilesFormat(FileFormat):
+    def parse(self, image):
+        recording = zx.parse_rzx(image)
+        return RZXFile(recording)
 
 
 class emulator(Gtk.Window):
@@ -147,24 +163,20 @@ class emulator(Gtk.Window):
 
         return n
 
-    def load_input_recording(self, filename):
-        with open(filename, 'rb') as f:
-            # print(zx.parse_rzx(f.read()))
-            return zx.parse_rzx(f.read())
-
     def save_snapshot(self, filename):
         with open(filename, 'wb') as f:
             f.write(zx.make_z80_snapshot(self.processor_state,
                                          self.emulator._machine_state,
                                          self.emulator.memory[0x4000:]))
 
-    def playback_input_recording(self, filename):
+    def playback_input_recording(self, file):
         # Interrupts are supposed to be controlled by the
         # recording.
         machine_state = self.emulator.get_machine_state()
         machine_state.suppress_int()
 
-        recording = self.load_input_recording(filename)
+        assert isinstance(file, RZXFile)
+        recording = file._recording
         chunks = recording['chunks']
 
         # Process chunks in order.
@@ -236,7 +248,10 @@ class emulator(Gtk.Window):
                 time.sleep(1 / 50)
 
     def detect_file_format(self, image, filename=None):
-        return Z80Format()
+        if image[:4] == b'RZX!':
+            return RZXFilesFormat()
+
+        return Z80SnapshotsFormat()
 
     def parse_file(self, filename):
         with open(filename, 'rb') as f:
@@ -251,6 +266,8 @@ class emulator(Gtk.Window):
         if isinstance(file, SnapshotFile):
             self.emulator.install_snapshot(file._snapshot)
             self.main()
+        elif isinstance(file, RZXFile):
+            self.playback_input_recording(file)
 
 
 def run(filename):
@@ -261,7 +278,7 @@ def run(filename):
     elif filename.lower().endswith('.z80'):
         app.run_file(filename)
     elif filename.lower().endswith('.rzx'):
-        app.playback_input_recording(filename)
+        app.run_file(filename)
     else:
         raise zx.Error('Unknown type of file %r.' % filename)
 
