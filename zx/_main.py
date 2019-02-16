@@ -9,12 +9,15 @@
     Published under the MIT license.
 '''
 
-import cairo, gi, time, zx
+import cairo, gi, sys, time, zx
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
 
 class emulator(Gtk.Window):
+    _END_OF_FRAME      = 1 << 1
+    _FETCHES_LIMIT_HIT = 1 << 3
+
     def __init__(self):
         super(emulator, self).__init__()
 
@@ -137,9 +140,6 @@ class emulator(Gtk.Window):
         recording = self.load_input_recording(filename)
         chunks = recording['chunks']
 
-        END_OF_FRAME      = 1 << 1
-        FETCHES_LIMIT_HIT = 1 << 3
-
         # Process chunks in order.
         for chunk in chunks:
             if self.done:
@@ -178,14 +178,14 @@ class emulator(Gtk.Window):
                     events = self.emulator.run()
                     # TODO: print(events)
 
-                    if events & END_OF_FRAME:
+                    if events & self._END_OF_FRAME:
                         self.emulator.render_frame()
                         self.frame_data[:] = self.emulator.get_frame_pixels()
                         self.area.queue_draw()
                         # print(self.processor_state.get_bc())
                         time.sleep(1 / 50)
 
-                    if events & FETCHES_LIMIT_HIT:
+                    if events & self._FETCHES_LIMIT_HIT:
                         self.emulator.handle_active_int()
                         break
 
@@ -195,20 +195,51 @@ class emulator(Gtk.Window):
         while not self.done:
             while Gtk.events_pending():
                 Gtk.main_iteration()
-            self.emulator.render_frame()
-            self.frame_data[:] = self.emulator.get_frame_pixels()
-            self.area.queue_draw()
-            self.emulator.execute_frame()
-            # print(self.processor_state.get_bc())
-            time.sleep(1 / 50)
+
+            events = self.emulator.run()
+            # TODO: print(events)
+
+            if events & self._FETCHES_LIMIT_HIT:
+                set_fetches_limit = True
+
+            if events & self._END_OF_FRAME:
+                self.emulator.render_frame()
+                self.frame_data[:] = self.emulator.get_frame_pixels()
+                self.area.queue_draw()
+                time.sleep(1 / 50)
+
+
+def run(filename):
+    app = emulator()
+
+    if filename is None:
+        pass
+    elif filename.lower().endswith('.z80'):
+        app.load_snapshot(filename)
+    elif filename.lower().endswith('.rzx'):
+        app.playback_input_recording(filename)
+    else:
+        raise zx.Error('Unknown type of file %r.' % filename)
+
+    app.main()
+
+
+def process_command_line(args):
+    filename = None
+    if args:
+        filename = args.pop(0)
+
+    if args:
+        raise zx.Error('Extra argument %r.' % args[0])
+
+    run(filename)
 
 
 def main():
-    app = emulator()
-
-    # app.load_snapshot('../x.z80')
-    # app.main()
-    app.playback_input_recording('x.rzx')
+    try:
+        process_command_line(sys.argv[1:])
+    except zx.Error as e:
+        print('zx: %s' % e.args)
 
 
 if __name__ == "__main__":
