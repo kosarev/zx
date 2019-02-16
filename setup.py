@@ -48,6 +48,13 @@ setup(name='zx',
       url='https://github.com/kosarev/zx/',
       ext_modules=[zx_emulator_module],
       packages=['zx'],
+      install_requires=[
+          'cairo',
+          'gi',
+          'os',
+          'struct',
+          'time',
+      ],
       classifiers=[
           'Development Status :: 1 - Planning',
           'Environment :: X11 Applications :: GTK',
