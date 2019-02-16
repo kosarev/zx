@@ -14,6 +14,28 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
 
+class DataFile(object):
+    pass
+
+
+class SnapshotFile(DataFile):
+    pass
+
+
+class FileFormat(object):
+    pass
+
+
+class Z80SnapshotFile(SnapshotFile):
+    def __init__(self, snapshot):
+        self._snapshot = snapshot
+
+
+class Z80Format(FileFormat):
+    def parse(self, image):
+        return Z80SnapshotFile(zx.parse_z80_snapshot(image))
+
+
 class emulator(Gtk.Window):
     _END_OF_FRAME      = 1 << 1
     _FETCHES_LIMIT_HIT = 1 << 3
@@ -213,21 +235,22 @@ class emulator(Gtk.Window):
                 self.area.queue_draw()
                 time.sleep(1 / 50)
 
-    class FileFormat(object):
-        pass
+    def detect_file_format(self, image, filename=None):
+        return Z80Format()
 
-    class Z80Format(FileFormat):
-        def parse(self, image):
-            return zx.parse_z80_snapshot(image)
-
-    def run_file(self, filename):
+    def parse_file(self, filename):
         with open(filename, 'rb') as f:
             image = f.read()
 
-        format = self.Z80Format()
-        snapshot = format.parse(image)
-        self.emulator.install_snapshot(snapshot)
-        self.main()
+        format = self.detect_file_format(image, filename)
+        return format.parse(image)
+
+    def run_file(self, filename):
+        file = self.parse_file(filename)
+
+        if isinstance(file, SnapshotFile):
+            self.emulator.install_snapshot(file._snapshot)
+            self.main()
 
 
 def run(filename):
