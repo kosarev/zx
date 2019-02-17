@@ -277,29 +277,39 @@ class emulator(Gtk.Window):
             self.playback_input_recording(file)
 
 
-def run(filename):
-    app = emulator()
-
-    if filename is None:
+def run(args):
+    if not args:
+        app = emulator()
         app.main()
     else:
+        filename = args.pop(0)
+        if args:
+            raise zx.Error('Extra argument %r.' % args[0])
+
+        app = emulator()
         app.run_file(filename)
 
 
-def process_command_line(args):
-    filename = None
-    if args:
-        filename = args.pop(0)
+def looks_like_filename(s):
+    return '.' in s
 
-    if args:
-        raise zx.Error('Extra argument %r.' % args[0])
 
-    run(filename)
+def handle_command_line(args):
+    if not args or looks_like_filename(args[0]):
+        run(args)
+        return
+
+    command = args[0]
+    if command == 'run':
+        run(args[1:])
+        return
+
+    raise zx.Error('Unknown command %r.' % command)
 
 
 def main():
     try:
-        process_command_line(sys.argv[1:])
+        handle_command_line(sys.argv[1:])
     except zx.Error as e:
         print('zx: %s' % e.args)
 
