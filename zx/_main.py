@@ -294,12 +294,25 @@ def looks_like_filename(s):
     return '.' in s
 
 
+def usage():
+    print('Usage:')
+    print('  zx [run] [<filename>]')
+    print('  zx help')
+    sys.exit()
+
+
 def handle_command_line(args):
     if not args or looks_like_filename(args[0]):
         run(args)
         return
 
     command = args[0]
+    if command in ['help', '-help', '--help',
+                   '-h', '-?',
+                   '/h', '/help']:
+        usage()
+        return
+
     if command == 'run':
         run(args[1:])
         return
