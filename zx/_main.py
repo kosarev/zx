@@ -31,14 +31,20 @@ class SnapshotsFormat(FileFormat):
 
 
 class Z80SnapshotFile(SnapshotFile):
-    def __init__(self, snapshot):
+    def __init__(self, image, snapshot):
+        # TODO: Remove when the new approach to handling files is in place.
+        self._image = image
+
         self._snapshot = snapshot
+
+    def dump(self):
+        print(self._image)
 
 
 class Z80SnapshotsFormat(SnapshotsFormat):
     def parse(self, image):
         snapshot = zx.parse_z80_snapshot(image)
-        return Z80SnapshotFile(snapshot)
+        return Z80SnapshotFile(image, snapshot)
 
 
 class RZXFile(DataFile):
