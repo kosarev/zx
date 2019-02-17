@@ -52,6 +52,28 @@ class RZXFilesFormat(FileFormat):
         return RZXFile(recording)
 
 
+def detect_file_format(image, filename_extension):
+    if filename_extension.lower() == '.z80':
+        return Z80SnapshotsFormat()
+
+    if image[:4] == b'RZX!':
+        return RZXFilesFormat()
+
+    return None
+
+
+def parse_file(filename):
+    with open(filename, 'rb') as f:
+        image = f.read()
+
+    base, ext = os.path.splitext(filename)
+    format = detect_file_format(image, ext)
+    if not format:
+        raise zx.Error('Cannot determine format of file %r.' % filename)
+
+    return format.parse(image)
+
+
 class emulator(Gtk.Window):
     _END_OF_FRAME      = 1 << 1
     _FETCHES_LIMIT_HIT = 1 << 3
@@ -247,26 +269,6 @@ class emulator(Gtk.Window):
                 self.area.queue_draw()
                 time.sleep(1 / 50)
 
-    def detect_file_format(self, image, filename_extension):
-        if filename_extension.lower() == '.z80':
-            return Z80SnapshotsFormat()
-
-        if image[:4] == b'RZX!':
-            return RZXFilesFormat()
-
-        return None
-
-    def parse_file(self, filename):
-        with open(filename, 'rb') as f:
-            image = f.read()
-
-        base, ext = os.path.splitext(filename)
-        format = self.detect_file_format(image, ext)
-        if not format:
-            raise zx.Error('Cannot determine format of file %r.' % filename)
-
-        return format.parse(image)
-
     def run_file(self, filename):
         file = self.parse_file(filename)
 
@@ -276,6 +278,10 @@ class emulator(Gtk.Window):
         elif isinstance(file, RZXFile):
             self.playback_input_recording(file)
 
+def handle_extra_arguments(args):
+    if args:
+        raise zx.Error('Extra argument %r.' % args[0])
+
 
 def run(args):
     if not args:
@@ -283,11 +289,21 @@ def run(args):
         app.main()
     else:
         filename = args.pop(0)
-        if args:
-            raise zx.Error('Extra argument %r.' % args[0])
+        handle_extra_arguments(args)
 
         app = emulator()
         app.run_file(filename)
+
+
+def dump(args):
+    if not args:
+        raise zx.Error('The file to dump is not specified.')
+
+    filename = args.pop(0)
+    handle_extra_arguments(args)
+
+    file = parse_file(filename)
+    file.dump()
 
 
 def looks_like_filename(s):
@@ -297,6 +313,7 @@ def looks_like_filename(s):
 def usage():
     print('Usage:')
     print('  zx [run] [<filename>]')
+    print('  zx dump <filename>')
     print('  zx help')
     sys.exit()
 
@@ -315,6 +332,10 @@ def handle_command_line(args):
 
     if command == 'run':
         run(args[1:])
+        return
+
+    if command == 'dump':
+        dump(args[1:])
         return
 
     raise zx.Error('Unknown command %r.' % command)
