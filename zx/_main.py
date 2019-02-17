@@ -9,7 +9,7 @@
     Published under the MIT license.
 '''
 
-import cairo, gi, sys, time, zx
+import cairo, gi, os, sys, time, zx
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
@@ -247,17 +247,24 @@ class emulator(Gtk.Window):
                 self.area.queue_draw()
                 time.sleep(1 / 50)
 
-    def detect_file_format(self, image, filename=None):
+    def detect_file_format(self, image, filename_extension):
+        if filename_extension.lower() == '.z80':
+            return Z80SnapshotsFormat()
+
         if image[:4] == b'RZX!':
             return RZXFilesFormat()
 
-        return Z80SnapshotsFormat()
+        return None
 
     def parse_file(self, filename):
         with open(filename, 'rb') as f:
             image = f.read()
 
-        format = self.detect_file_format(image, filename)
+        base, ext = os.path.splitext(filename)
+        format = self.detect_file_format(image, ext)
+        if not format:
+            raise zx.Error('Cannot determine format of file %r.' % filename)
+
         return format.parse(image)
 
     def run_file(self, filename):
