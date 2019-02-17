@@ -30,23 +30,6 @@ class SnapshotsFormat(FileFormat):
     pass
 
 
-class Z80SnapshotFile(SnapshotFile):
-    def __init__(self, image, snapshot):
-        # TODO: Remove when the new approach to handling files is in place.
-        self._image = image
-
-        self._snapshot = snapshot
-
-    def dump(self):
-        print(self._image)
-
-
-class Z80SnapshotsFormat(SnapshotsFormat):
-    def parse(self, image):
-        snapshot = zx.parse_z80_snapshot(image)
-        return Z80SnapshotFile(image, snapshot)
-
-
 class RZXFile(DataFile):
     def __init__(self, recording):
         self._recording = recording
@@ -60,7 +43,7 @@ class RZXFilesFormat(FileFormat):
 
 def detect_file_format(image, filename_extension):
     if filename_extension.lower() == '.z80':
-        return Z80SnapshotsFormat()
+        return zx.Z80SnapshotsFormat()
 
     if image[:4] == b'RZX!':
         return RZXFilesFormat()
@@ -276,7 +259,7 @@ class emulator(Gtk.Window):
                 time.sleep(1 / 50)
 
     def run_file(self, filename):
-        file = self.parse_file(filename)
+        file = parse_file(filename)
 
         if isinstance(file, SnapshotFile):
             self.emulator.install_snapshot(file._snapshot)
