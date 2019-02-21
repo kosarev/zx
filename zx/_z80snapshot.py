@@ -174,64 +174,60 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
         return Z80Snapshot(fields)
 
 
-
-
-# TODO: The processor state shall be part of the machine state.
-# TODO: The memory image shall be part of the machine state.
 # TODO: Rework to generate an internal representation of the
 #       format and then generate its binary version.
-def make_z80_snapshot(processor_state, machine_state, memory_image):
+def make_z80_snapshot(state):
     writer = BinaryWriter()
 
     # TODO: The z80 format cannot represent processor states in
     #       the middle of IX- and IY-prefixed instructions, so
     #       such situations need some additional processing.
     # TODO: Check for similar problems with other state attributes.
-    assert processor_state.get_index_rp_kind() == 'hl'
+    assert state.get_index_rp_kind() == 'hl'
 
     flags1 = 0
     flags2 = 0
 
     # Bit 7 of the stored R value is not signigicant and shall be taken from
     # bit 0 of flags1.
-    r = processor_state.get_r_reg()
+    r = state.get_r_reg()
     flags1 |= (r & 0x80) >> 7
     r &= 0x7f
 
-    border_color = machine_state.get_border_color()
+    border_color = state.get_border_color()
     assert 0 <= border_color <= 7
     flags1 |= border_color << 1
 
-    int_mode = processor_state.get_int_mode()
+    int_mode = state.get_int_mode()
     assert int_mode in [0, 1, 2]  # TODO
     flags2 |= int_mode
 
     # Write v1 header.
     # TODO: Support other versions.
     writer.write_fields([
-        (processor_state.get_a(), 'B'),
-        (processor_state.get_f(), 'B'),
-        (processor_state.get_bc(), '<H'),
-        (processor_state.get_hl(), '<H'),
-        (processor_state.get_pc(), '<H'),
-        (processor_state.get_sp(), '<H'),
-        (processor_state.get_i(), 'B'),
+        (state.get_a(), 'B'),
+        (state.get_f(), 'B'),
+        (state.get_bc(), '<H'),
+        (state.get_hl(), '<H'),
+        (state.get_pc(), '<H'),
+        (state.get_sp(), '<H'),
+        (state.get_i(), 'B'),
         (r, 'B'),
         (flags1, 'B'),
-        (processor_state.get_de(), '<H'),
-        (processor_state.get_alt_bc(), '<H'),
-        (processor_state.get_alt_de(), '<H'),
-        (processor_state.get_alt_hl(), '<H'),
-        (processor_state.get_alt_a(), 'B'),
-        (processor_state.get_alt_f(), 'B'),
-        (processor_state.get_iy(), '<H'),
-        (processor_state.get_ix(), '<H'),
-        (processor_state.get_iff1(), 'B'),
-        (processor_state.get_iff2(), 'B'),
+        (state.get_de(), '<H'),
+        (state.get_alt_bc(), '<H'),
+        (state.get_alt_de(), '<H'),
+        (state.get_alt_hl(), '<H'),
+        (state.get_alt_a(), 'B'),
+        (state.get_alt_f(), 'B'),
+        (state.get_iy(), '<H'),
+        (state.get_ix(), '<H'),
+        (state.get_iff1(), 'B'),
+        (state.get_iff2(), 'B'),
         (flags2, 'B')
     ])
 
     # Write memory snapshot.
-    writer.write(memory_image)
+    writer.write(state.get_memory_block(0x4000, size=48 * 1024))
 
     return writer.get_image()

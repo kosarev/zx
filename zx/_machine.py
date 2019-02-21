@@ -127,6 +127,9 @@ class MemoryState(object):
     def __init__(self, image):
         self._memory_image = image
 
+    def get_memory_block(self, addr, size):
+        return self._memory_image[addr:addr + size]
+
     def set_memory_block(self, addr, block):
         self._memory_image[addr:addr + len(block)] = block
 

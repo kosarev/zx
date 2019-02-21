@@ -201,9 +201,7 @@ class emulator(Gtk.Window):
 
     def save_snapshot(self, filename):
         with open(filename, 'wb') as f:
-            f.write(zx.make_z80_snapshot(self.processor_state,
-                                         self.emulator._state,
-                                         self.emulator.memory[0x4000:]))
+            f.write(zx.make_z80_snapshot(self.emulator))
 
     def playback_input_recording(self, file):
         # Interrupts are supposed to be controlled by the
