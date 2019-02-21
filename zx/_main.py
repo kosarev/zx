@@ -10,15 +10,40 @@
 '''
 
 import cairo, gi, os, sys, time, zx
+import collections
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
 
-class DataFile(object):
+class Data(object):
+    def __init__(self, fields):
+        self._fields = fields
+
+    def __init__(self, fields):
+        self._fields = fields
+
+    def __getitem__(self, id):
+        return self._fields[id]
+
+    def __repr__(self):
+        return repr(self._fields)
+
+    def __iter__(self):
+        for id in self._fields:
+            yield id
+
+    def items(self):
+        for field in self._fields.items():
+            yield field
+
+
+
+# TODO: Move to the z80 project.
+class ProcessorSnapshot(Data):
     pass
 
 
-class SnapshotFile(DataFile):
+class MachineSnapshot(Data):
     pass
 
 
@@ -30,7 +55,7 @@ class SnapshotsFormat(FileFormat):
     pass
 
 
-class RZXFile(DataFile):
+class RZXFile(Data):
     def __init__(self, recording):
         self._recording = recording
 
@@ -97,7 +122,7 @@ class emulator(Gtk.Window):
         self.pattern.set_filter(cairo.FILTER_NEAREST)
 
         self.emulator = zx.Spectrum48()
-        self.processor_state = self.emulator.get_processor_state()
+        self.processor_state = self.emulator  # TODO: Eliminate.
 
         self.keyboard_state = [0xff] * 8
         self.keys = {'RETURN': zx.KEYS_INFO['ENTER'],
@@ -177,13 +202,13 @@ class emulator(Gtk.Window):
     def save_snapshot(self, filename):
         with open(filename, 'wb') as f:
             f.write(zx.make_z80_snapshot(self.processor_state,
-                                         self.emulator._machine_state,
+                                         self.emulator._state,
                                          self.emulator.memory[0x4000:]))
 
     def playback_input_recording(self, file):
         # Interrupts are supposed to be controlled by the
         # recording.
-        machine_state = self.emulator.get_machine_state()
+        machine_state = self.emulator  # TODO: Eliminate.
         machine_state.suppress_int()
 
         assert isinstance(file, RZXFile)
@@ -195,7 +220,7 @@ class emulator(Gtk.Window):
             if self.done:
                 break
 
-            if chunk['id'] == 'snapshot':
+            if isinstance(chunk, MachineSnapshot):
                 self.emulator.install_snapshot(chunk)
                 continue
 
@@ -261,11 +286,14 @@ class emulator(Gtk.Window):
     def run_file(self, filename):
         file = parse_file(filename)
 
-        if isinstance(file, SnapshotFile):
-            self.emulator.install_snapshot(file._snapshot)
+        if isinstance(file, MachineSnapshot):
+            self.emulator.install_snapshot(file)
             self.main()
         elif isinstance(file, RZXFile):
             self.playback_input_recording(file)
+        else:
+            assert 0, "Unexpected type of file encountered."
+
 
 def handle_extra_arguments(args):
     if args:
@@ -292,7 +320,7 @@ def dump(args):
     handle_extra_arguments(args)
 
     file = parse_file(filename)
-    file.dump()
+    print(file)
 
 
 def looks_like_filename(s):

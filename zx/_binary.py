@@ -9,10 +9,19 @@ class BinaryParser(object):
         self.image = image
         self.pos = 0
 
+    def get_rest_size(self):
+        return len(self.image) - self.pos
+
     def is_eof(self):
-        return self.pos >= len(self.image)
+        return self.get_rest_size() == 0
+
+    def __bool__(self):
+        return not self.is_eof()
 
     def extract_block(self, size):
+        if size > self.get_rest_size():
+            raise zx.Error('Binary image is too short.')
+
         begin = self.pos
         self.pos += size
         return self.image[begin:self.pos]
@@ -20,29 +29,24 @@ class BinaryParser(object):
     def extract_rest(self):
         return self.extract_block(len(self.image) - self.pos)
 
-    def parse_field(self, field_format, field_id):
-        field_size = struct.calcsize(field_format)
-        field_image = self.image[self.pos:self.pos + field_size]
-        if len(field_image) < field_size:
-            raise zx.Error('Binary image is too short.')
-
-        field_value = struct.unpack(field_format, field_image)
-        if len(field_value) == 1:
-            field_value = field_value[0]
-        # print(field_size, self.pos, field_id, '=', field_value)
-        self.pos += field_size
-        return field_value
+    def parse_field(self, format, id):
+        size = struct.calcsize(format)
+        value = struct.unpack(format, self.extract_block(size))
+        if len(value) == 1:
+            value = value[0]
+        return value
 
     def parse(self, format):
         res = dict()
-        for field_id, field_format in format:
+        for field in format:
+            if isinstance(field, str):
+                field_format, field_id = field.split(':', maxsplit=1)
+            else:
+                # TODO: Remove this branch once all tuple formats
+                # are eliminated.
+                field_id, field_format = field
             res[field_id] = self.parse_field(field_format, field_id)
         return res
-
-    def extract_block(self, size):
-        begin = self.pos
-        self.pos += size
-        return self.image[begin:self.pos]
 
 
 class BinaryWriter(object):

@@ -20,10 +20,6 @@ def parse_snapshot_block(image):
                            ('filename_extension', '4s'),
                            ('uncompressed_length', '<L')])
 
-    # TODO: Support other snapshot formats.
-    filename_extension = header['filename_extension']
-    assert filename_extension in [b'z80\x00', b'Z80\x00'], filename_extension
-
     flags = header['flags']
     descriptor = bool(flags & 0x1)
     compressed = bool(flags & 0x2)
@@ -34,7 +30,11 @@ def parse_snapshot_block(image):
     import zlib
     snapshot_image = zlib.decompress(parser.extract_rest())
 
-    return zx.parse_z80_snapshot(snapshot_image)
+    # TODO: Support other snapshot formats.
+    filename_extension = header['filename_extension']
+    assert filename_extension in [b'z80\x00', b'Z80\x00'], filename_extension
+    format = zx.Z80SnapshotsFormat()
+    return format.parse(snapshot_image)
 
 
 def parse_input_recording_block(image):

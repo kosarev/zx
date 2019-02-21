@@ -2,159 +2,178 @@
 
 
 from ._binary import BinaryParser, BinaryWriter
+import collections
 import zx
 
 
 MASK16 = 0xffff
 
 
-class Z80SnapshotFile(zx.SnapshotFile):
-    def __init__(self, image, snapshot):
-        # TODO: Remove when the new approach to handling files is in place.
-        self._image = image
-
-        self._snapshot = snapshot
-
-    def dump(self):
-        print(self._image)
-
-
-class Z80SnapshotsFormat(zx.SnapshotsFormat):
-    def parse(self, image):
-        snapshot = zx.parse_z80_snapshot(image)
-        return Z80SnapshotFile(image, snapshot)
-
-
 def make16(hi, lo):
     return ((hi << 8) | lo) & MASK16
 
 
-def uncompress_data(compressed_image, size):
-    MARKER = 0xed
-    input = list(compressed_image)
-    output = []
-    while input:
-        if len(input) >= 4 and input[0] == MARKER and input[1] == MARKER:
-            count = input[2]
-            filler = input[3]
-            output.extend([filler] * count)
-            del input[0:4]
-        else:
-            output.append(input.pop(0))
-
-    # print(res)
-    assert len(output) == size, len(output)  # TODO
-    return output
+class UnifiedSnapshot(zx.MachineSnapshot):
+    pass
 
 
-def parse_memory_page(parser):
-    header = parser.parse([('compressed_length', '<H'),
-                           ('page_no', 'B')])
+_V1_FORMAT = '1.45'
+_V2_FORMAT = '2.x'
+_V3_FORMAT = '3.x'
 
-    compressed_length = header['compressed_length']
-    if compressed_length == 0xffff:
-        assert 0  # TODO: Support uncompressed blocks.
-    else:
-        compressed_image = parser.extract_block(compressed_length)
-        uncompressed_image = uncompress_data(compressed_image, size=0x4000)
+def _get_format_version(fields):
+    # TODO: Support v3 format.
+    if 'pc2' in fields:
+        return _V2_FORMAT
 
-    return {'page_no': header['page_no'], 'image': bytes(uncompressed_image)}
+    return _V1_FORMAT
 
 
-def parse_z80_snapshot(image):
-    # Parse headers.
-    parser = BinaryParser(image)
-    version = 1
-    v1_header = parser.parse([
-        ('a', 'B'), ('f', 'B'), ('bc', '<H'), ('hl', '<H'), ('pc', '<H'),
-        ('sp', '<H'), ('i', 'B'), ('r', 'B'), ('flags1', 'B'), ('de', '<H'),
-        ('alt_bc', '<H'), ('alt_de', '<H'), ('alt_hl', '<H'), ('alt_a', 'B'),
-        ('alt_f', 'B'), ('iy', '<H'), ('ix', '<H'), ('iff1', 'B'),
-        ('iff2', 'B'), ('flags2', 'B')])
+class Z80Snapshot(zx.MachineSnapshot):
+    _MEMORY_PAGE_ADDRS = {4: 0x8000, 5: 0xc000, 8: 0x4000}
 
-    additional_header_length = 0
-    if v1_header['pc'] == 0:
-        version = 2
-        additional_header_length = parser.parse_field(
-            '<H', 'additional_header_length')
-        if additional_header_length < 23:
-            raise zx.Error('Additional header is too short: %d bytes.' %
-                               additional_header_length)
+    def get_unified_snapshot(self):
+        # Bit 7 of the stored R value is not significant and
+        # shall be taken from bit 0 of flags1.
+        flags1 = self['flags1']
+        r = (self['r'] & 0x7f) | ((flags1 & 0x1) << 7)
 
-        v2_header = parser.parse([
-            ('pc', '<H'), ('hardware_mode', 'B'), ('misc1', 'B'),
-            ('misc2', 'B'), ('flags3', 'B'), ('port_fffd_value', 'B'),
-            ('sound_chip_registers', '16B')])
+        flags2 = self['flags2']
+        int_mode = flags2 & 0x3
+        if int_mode not in [0, 1, 2]:
+            raise zx.Error('Invalid interrupt mode %d.' % int_mode)
 
-    if additional_header_length > 23:
-        assert 0  # TODO: Support v3 headers.
+        format_version = _get_format_version(self._fields)
 
-    # Bit 7 of the stored R value is not signigicant and shall be taken from
-    # bit 0 of flags1.
-    flags1 = v1_header['flags1']
-    r = (v1_header['r'] & 0x7f) | ((flags1 & 0x1) << 7)
+        pc = self['pc'] if format_version == _V1_FORMAT else self['pc2']
 
-    flags2 = v1_header['flags2']
-    int_mode = flags2 & 0x3
-    if int_mode not in [0, 1, 2]:
-        raise zx.Error('Invalid interrupt mode %d.' % int_mode)
+        processor_fields = {
+            'bc': self['bc'],
+            'de': self['de'],
+            'hl': self['hl'],
+            'af': make16(self['a'], self['f']),
+            'ix': self['ix'],
+            'iy': self['iy'],
+            'alt_bc': self['alt_bc'],
+            'alt_de': self['alt_de'],
+            'alt_hl': self['alt_hl'],
+            'alt_af': make16(self['alt_a'], self['alt_f']),
+            'pc': pc,
+            'sp': self['sp'],
+            'ir': make16(self['i'], r),
+            'iff1': 0 if self['iff1'] == 0 else 1,
+            'iff2': 0 if self['iff2'] == 0 else 1,
+            'int_mode': int_mode }
 
-    processor_snapshot = {
-        'id': 'processor_snapshot',
-        'bc': v1_header['bc'],
-        'de': v1_header['de'],
-        'hl': v1_header['hl'],
-        'af': make16(v1_header['a'], v1_header['f']),
-        'ix': v1_header['ix'],
-        'iy': v1_header['iy'],
-        'alt_bc': v1_header['alt_bc'],
-        'alt_de': v1_header['alt_de'],
-        'alt_hl': v1_header['alt_hl'],
-        'alt_af': make16(v1_header['alt_a'], v1_header['alt_f']),
-        'pc': v1_header['pc'] if version < 2 else v2_header['pc'],
-        'sp': v1_header['sp'],
-        'ir': make16(v1_header['i'], r),
-        'iff1': 0 if v1_header['iff1'] == 0 else 1,
-        'iff2': 0 if v1_header['iff2'] == 0 else 1,
-        'int_mode': int_mode }
+        fields = {
+            'processor_snapshot': zx.ProcessorSnapshot(processor_fields),
+            'border_color': (flags1 >> 1) & 0x7 }
 
-    snapshot = {
-        'id': 'snapshot',
-        'processor_snapshot': processor_snapshot,
-        'border_color': (flags1 >> 1) & 0x7 }
-
-    # Determine machine kind.
-    machine_kind = None
-    if version == 1:
-        machine_kind = 'ZX Spectrum 48K'
-    elif version >= 2:
-        hardware_mode = v2_header['hardware_mode']
-        flags3 = v2_header['flags3']
-        flags3_bit7 = (flags3 & 0x80) >> 7
-        if hardware_mode == 0 and not flags3_bit7:
+        # Determine machine kind.
+        # TODO: Not used currently?
+        if format_version == _V1_FORMAT:
             machine_kind = 'ZX Spectrum 48K'
+        else:
+            hardware_mode = self['hardware_mode']
+            flags3 = self['flags3']
+            flags3_bit7 = (flags3 & 0x80) >> 7
+            if hardware_mode == 0 and not flags3_bit7:
+                machine_kind = 'ZX Spectrum 48K'
+            else:
+                assert 0  # TODO
 
-    if machine_kind:
-        snapshot['machine_kind'] = machine_kind
+        # Parse memory blocks.
+        if _get_format_version(self._fields) == _V1_FORMAT:
+            compressed = (flags1 & 0x20) != 0
+            assert 0  # TODO
+        else:
+            assert machine_kind == 'ZX Spectrum 48K', machine_kind  # TODO
+            memory_blocks = fields.setdefault('memory_blocks', [])
+            for block in self['memory_blocks']:
+                page_no = block['page_no']
+                image = block['image']
+                memory_blocks.append((self._MEMORY_PAGE_ADDRS[page_no], image))
 
-    # Parse memory blocks.
-    if version == 1:
-        compressed = (flags1 & 0x20) != 0
-        assert 0  # TODO
-    else:
-        assert machine_kind == 'ZX Spectrum 48K', machine_kind  # TODO
+        return UnifiedSnapshot(fields)
 
-        page_addrs = {4: 0x8000, 5: 0xc000, 8: 0x4000}
 
-        memory = []
-        snapshot['memory'] = memory
-        while not parser.is_eof():
-            page = parse_memory_page(parser)
-            page_no = page['page_no']
-            page_addr = page_addrs[page_no]
-            memory.append((page_addr, page['image']))
+class Z80SnapshotsFormat(zx.SnapshotsFormat):
+    _PRIMARY_HEADER = [
+        'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',
+        'B:flags1', '<H:de', '<H:alt_bc', '<H:alt_de', '<H:alt_hl',
+        'B:alt_a', 'B:alt_f', '<H:iy', '<H:ix', 'B:iff1', 'B:iff2', 'B:flags2']
 
-    return snapshot
+    _EXTRA_HEADERS_SIZE_FIELD = [
+        '<H:extra_headers_size']
+
+    _EXTRA_HEADER = [
+        '<H:pc2', 'B:hardware_mode', 'B:misc1', 'B:misc2', 'B:flags3',
+        'B:port_fffd_value', '16B:sound_chip_registers']
+
+    _MEMORY_BLOCK_HEADER = [
+        '<H:compressed_size', 'B:page_no']
+
+    _RAW_MEMORY_BLOCK_SIZE_VALUE = 0xffff
+
+    def _uncompress(self, compressed_image, uncompressed_size):
+        MARKER = 0xed
+        input = list(compressed_image)
+        output = []
+        while input:
+            if len(input) >= 4 and input[0] == MARKER and input[1] == MARKER:
+                count = input[2]
+                filler = input[3]
+                output.extend([filler] * count)
+                del input[0:4]
+            else:
+                output.append(input.pop(0))
+
+        if len(output) != uncompressed_size:
+            raise zx.Error('Corrupted compressed memory block.')
+
+        return bytes(output)
+
+    def _parse_memory_block(self, parser):
+        fields = parser.parse(self._MEMORY_BLOCK_HEADER)
+        compressed_size = fields['compressed_size']
+        if compressed_size == self._RAW_MEMORY_BLOCK_SIZE_VALUE:
+            assert 0  # TODO: Support non-compressed blocks.
+        else:
+            compressed_image = parser.extract_block(compressed_size)
+            raw_image = self._uncompress(compressed_image,
+                                         uncompressed_size=16 * 1024)
+        return collections.OrderedDict(page_no=fields['page_no'],
+                                       image=raw_image)
+
+    def parse(self, image):
+        # Parse headers.
+        parser = BinaryParser(image)
+        fields = collections.OrderedDict(id='z80_snapshot')
+        fields.update(parser.parse(self._PRIMARY_HEADER))
+
+        if fields['pc'] == 0:
+            fields.update(parser.parse(self._EXTRA_HEADERS_SIZE_FIELD))
+
+        if 'extra_headers_size' in fields:
+            extra_headers = parser.extract_block(fields['extra_headers_size'])
+            extra_parser = BinaryParser(extra_headers)
+            fields.update(extra_parser.parse(self._EXTRA_HEADER))
+
+            if extra_parser:
+                assert 0  # TODO: Support v3 headers.
+
+        # Parse memory blocks.
+        memory_blocks = fields.setdefault('memory_blocks', [])
+        if _get_format_version(fields) == _V1_FORMAT:
+            assert 0  # TODO: Support v1 memory blocks.
+        else:
+            while parser:
+                block = self._parse_memory_block(parser)
+                memory_blocks.append(block)
+
+        return Z80Snapshot(fields)
+
+
 
 
 # TODO: The processor state shall be part of the machine state.
