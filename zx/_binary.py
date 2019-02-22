@@ -53,12 +53,15 @@ class BinaryWriter(object):
     def __init__(self):
         self._chunks = []
 
-    def write(self, chunk):
-        self._chunks.append(chunk)
+    def write_block(self, block):
+        self._chunks.append(block)
 
-    def write_fields(self, fields):
-        for value, format in fields:
-            self.write(struct.pack(format, value))
+    def write(self, format, **values):
+        print(repr(format))
+        for field in format:
+            print(repr(field))
+            field_format, field_id = field.split(':', maxsplit=1)
+            self.write_block(struct.pack(field_format, values[field_id]))
 
     def get_image(self):
         return b''.join(self._chunks)

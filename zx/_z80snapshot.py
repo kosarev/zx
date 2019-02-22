@@ -177,8 +177,6 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
 # TODO: Rework to generate an internal representation of the
 #       format and then generate its binary version.
 def make_z80_snapshot(state):
-    writer = BinaryWriter()
-
     # TODO: The z80 format cannot represent processor states in
     #       the middle of IX- and IY-prefixed instructions, so
     #       such situations need some additional processing.
@@ -202,32 +200,26 @@ def make_z80_snapshot(state):
     assert int_mode in [0, 1, 2]  # TODO
     flags2 |= int_mode
 
+    _PRIMARY_HEADER = [
+        'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',
+        'B:flags1', '<H:de', '<H:alt_bc', '<H:alt_de', '<H:alt_hl',
+        'B:alt_a', 'B:alt_f', '<H:iy', '<H:ix', 'B:iff1', 'B:iff2', 'B:flags2']
+
     # Write v1 header.
     # TODO: Support other versions.
-    writer.write_fields([
-        (state.get_a(), 'B'),
-        (state.get_f(), 'B'),
-        (state.get_bc(), '<H'),
-        (state.get_hl(), '<H'),
-        (state.get_pc(), '<H'),
-        (state.get_sp(), '<H'),
-        (state.get_i(), 'B'),
-        (r, 'B'),
-        (flags1, 'B'),
-        (state.get_de(), '<H'),
-        (state.get_alt_bc(), '<H'),
-        (state.get_alt_de(), '<H'),
-        (state.get_alt_hl(), '<H'),
-        (state.get_alt_a(), 'B'),
-        (state.get_alt_f(), 'B'),
-        (state.get_iy(), '<H'),
-        (state.get_ix(), '<H'),
-        (state.get_iff1(), 'B'),
-        (state.get_iff2(), 'B'),
-        (flags2, 'B')
-    ])
+    writer = BinaryWriter()
+    writer.write(
+        _PRIMARY_HEADER,
+        a=state.get_a(), f=state.get_f(), bc=state.get_bc(), hl=state.get_hl(),
+        pc=state.get_pc(), sp=state.get_sp(), i=state.get_i(), r=r,
+        flags1=flags1, de=state.get_de(),
+        alt_bc=state.get_alt_bc(), alt_de=state.get_alt_de(),
+        alt_hl=state.get_alt_hl(),
+        alt_a=state.get_alt_a(), alt_f=state.get_alt_f(),
+        iy=state.get_iy(), ix=state.get_ix(),
+        iff1=state.get_iff1(), iff2=state.get_iff2(), flags2=flags2)
 
     # Write memory snapshot.
-    writer.write(state.get_memory_block(0x4000, size=48 * 1024))
+    writer.write_block(state.get_memory_block(0x4000, size=48 * 1024))
 
     return writer.get_image()
