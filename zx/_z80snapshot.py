@@ -173,53 +173,47 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
 
         return Z80Snapshot(fields)
 
+    # TODO: Rework to generate an internal representation of the
+    #       format and then generate its binary version.
+    def make(self, state):
+        # TODO: The z80 format cannot represent processor states in
+        #       the middle of IX- and IY-prefixed instructions, so
+        #       such situations need some additional processing.
+        # TODO: Check for similar problems with other state attributes.
+        assert state.get_index_rp_kind() == 'hl'
 
-# TODO: Rework to generate an internal representation of the
-#       format and then generate its binary version.
-def make_z80_snapshot(state):
-    # TODO: The z80 format cannot represent processor states in
-    #       the middle of IX- and IY-prefixed instructions, so
-    #       such situations need some additional processing.
-    # TODO: Check for similar problems with other state attributes.
-    assert state.get_index_rp_kind() == 'hl'
+        flags1 = 0
+        flags2 = 0
 
-    flags1 = 0
-    flags2 = 0
+        # Bit 7 of the stored R value is not signigicant and
+        # shall be taken from bit 0 of flags1.
+        r = state.get_r_reg()
+        flags1 |= (r & 0x80) >> 7
+        r &= 0x7f
 
-    # Bit 7 of the stored R value is not signigicant and shall be taken from
-    # bit 0 of flags1.
-    r = state.get_r_reg()
-    flags1 |= (r & 0x80) >> 7
-    r &= 0x7f
+        border_color = state.get_border_color()
+        assert 0 <= border_color <= 7
+        flags1 |= border_color << 1
 
-    border_color = state.get_border_color()
-    assert 0 <= border_color <= 7
-    flags1 |= border_color << 1
+        int_mode = state.get_int_mode()
+        assert int_mode in [0, 1, 2]  # TODO
+        flags2 |= int_mode
 
-    int_mode = state.get_int_mode()
-    assert int_mode in [0, 1, 2]  # TODO
-    flags2 |= int_mode
+        # Write v1 header.
+        # TODO: Support other versions.
+        writer = BinaryWriter()
+        writer.write(
+            self._PRIMARY_HEADER,
+            a=state.get_a(), f=state.get_f(), bc=state.get_bc(), hl=state.get_hl(),
+            pc=state.get_pc(), sp=state.get_sp(), i=state.get_i(), r=r,
+            flags1=flags1, de=state.get_de(),
+            alt_bc=state.get_alt_bc(), alt_de=state.get_alt_de(),
+            alt_hl=state.get_alt_hl(),
+            alt_a=state.get_alt_a(), alt_f=state.get_alt_f(),
+            iy=state.get_iy(), ix=state.get_ix(),
+            iff1=state.get_iff1(), iff2=state.get_iff2(), flags2=flags2)
 
-    _PRIMARY_HEADER = [
-        'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',
-        'B:flags1', '<H:de', '<H:alt_bc', '<H:alt_de', '<H:alt_hl',
-        'B:alt_a', 'B:alt_f', '<H:iy', '<H:ix', 'B:iff1', 'B:iff2', 'B:flags2']
+        # Write memory snapshot.
+        writer.write_block(state.get_memory_block(0x4000, size=48 * 1024))
 
-    # Write v1 header.
-    # TODO: Support other versions.
-    writer = BinaryWriter()
-    writer.write(
-        _PRIMARY_HEADER,
-        a=state.get_a(), f=state.get_f(), bc=state.get_bc(), hl=state.get_hl(),
-        pc=state.get_pc(), sp=state.get_sp(), i=state.get_i(), r=r,
-        flags1=flags1, de=state.get_de(),
-        alt_bc=state.get_alt_bc(), alt_de=state.get_alt_de(),
-        alt_hl=state.get_alt_hl(),
-        alt_a=state.get_alt_a(), alt_f=state.get_alt_f(),
-        iy=state.get_iy(), ix=state.get_ix(),
-        iff1=state.get_iff1(), iff2=state.get_iff2(), flags2=flags2)
-
-    # Write memory snapshot.
-    writer.write_block(state.get_memory_block(0x4000, size=48 * 1024))
-
-    return writer.get_image()
+        return writer.get_image()

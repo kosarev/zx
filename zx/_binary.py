@@ -57,9 +57,7 @@ class BinaryWriter(object):
         self._chunks.append(block)
 
     def write(self, format, **values):
-        print(repr(format))
         for field in format:
-            print(repr(field))
             field_format, field_id = field.split(':', maxsplit=1)
             self.write_block(struct.pack(field_format, values[field_id]))
 
