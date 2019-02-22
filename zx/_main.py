@@ -19,8 +19,8 @@ class Data(object):
     def __init__(self, fields):
         self._fields = fields
 
-    def __init__(self, fields):
-        self._fields = fields
+    def __contains__(self, id):
+        return id in self._fields
 
     def __getitem__(self, id):
         return self._fields[id]

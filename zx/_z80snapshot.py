@@ -82,13 +82,12 @@ class Z80Snapshot(zx.MachineSnapshot):
             else:
                 assert 0  # TODO
 
-        # Parse memory blocks.
-        if _get_format_version(self._fields) == _V1_FORMAT:
-            compressed = (flags1 & 0x20) != 0
-            assert 0  # TODO
+        # Handle memory blocks.
+        memory_blocks = fields.setdefault('memory_blocks', [])
+        if 'memory_snapshot' in self:
+            memory_blocks.append((0x4000, self['memory_snapshot']))
         else:
             assert machine_kind == 'ZX Spectrum 48K', machine_kind  # TODO
-            memory_blocks = fields.setdefault('memory_blocks', [])
             for block in self['memory_blocks']:
                 page_no = block['page_no']
                 image = block['image']
@@ -162,11 +161,19 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
             if extra_parser:
                 assert 0  # TODO: Support v3 headers.
 
-        # Parse memory blocks.
-        memory_blocks = fields.setdefault('memory_blocks', [])
+        # Parse memory snapshot.
         if _get_format_version(fields) == _V1_FORMAT:
-            assert 0  # TODO: Support v1 memory blocks.
+            compressed = (fields['flags1'] & 0x20) != 0
+            if not compressed:
+                if parser.get_rest_size() != 48 * 1024:
+                    raise zx.Error('The snapshot is too large.')
+                image = parser.extract_rest()
+            else:
+                assert 0  # TODO: Support compressed v1 memory snapshots.
+
+            fields['memory_snapshot'] = image
         else:
+            memory_blocks = fields.setdefault('memory_blocks', [])
             while parser:
                 block = self._parse_memory_block(parser)
                 memory_blocks.append(block)
