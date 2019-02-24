@@ -57,13 +57,11 @@ def parse_input_recording_block(image):
 
     assert not protected  # TODO: Support protected samples.
 
-    # TODO: Support non-compressed samples.
-    if not compressed:
-        raise zx.Error('Non-compressed RZX input samples are not supported yet.',
-                       id='non_compressed_rzx_samples')
+    recording_image = parser.extract_rest()
+    if compressed:
+        import zlib
+        recording_image = zlib.decompress(recording_image)
 
-    import zlib
-    recording_image = zlib.decompress(parser.extract_rest())
     recording_parser = BinaryParser(recording_image)
 
     NUM_OF_SAMPLES_IN_REPEATED_FRAME = 0xffff
