@@ -134,17 +134,14 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
         return bytes(output)
 
     def _parse_memory_block(self, parser):
+        BLOCK_SIZE = 16 * 1024
         fields = parser.parse(self._MEMORY_BLOCK_HEADER)
         compressed_size = fields['compressed_size']
         if compressed_size == self._RAW_MEMORY_BLOCK_SIZE_VALUE:
-            # TODO
-            raise zx.Error('Non-compressed memory blocks in Z80 snapshots are '
-                           'not supported yet.',
-                           id='non_compressed_z80_snapshot')
+            raw_image = parser.extract_block(BLOCK_SIZE)
         else:
             compressed_image = parser.extract_block(compressed_size)
-            raw_image = self._uncompress(compressed_image,
-                                         uncompressed_size=16 * 1024)
+            raw_image = self._uncompress(compressed_image, BLOCK_SIZE)
         return collections.OrderedDict(page_no=fields['page_no'],
                                        image=raw_image)
 
