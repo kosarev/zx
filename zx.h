@@ -198,7 +198,16 @@ public:
 
     fast_u8 on_input_cycle(fast_u16 addr) {
         handle_port_contention(addr);
-        return on_input(addr);
+        fast_u8 n = on_input(addr);
+
+#if TRACE
+        create_trace();
+        fprintf(trace_file, "read_port %04x %02x\n",
+                unsigned(addr), unsigned(n));
+        fflush(trace_file);
+#endif
+
+        return n;
     }
 
     virtual fast_u8 on_input(fast_u16 addr);
@@ -409,6 +418,69 @@ public:
 
         return events;
     }
+
+#if TRACE
+    FILE *trace_file = nullptr;
+
+    void create_trace() {
+        if(!trace_file)
+            trace_file = fopen("zx_trace", "w");
+    }
+
+    void trace() {
+        create_trace();
+
+        if(trace_file && get_index_rp_kind() == z80::index_regp::hl) {
+            fast_u16 pc = get_pc();
+            fprintf(trace_file,
+                    "PC:%04x AF:%04x BC:%04x DE:%04x HL:%04x IX:%04x IY:%04x SP:%04x MEMPTR:%04x IR:%04x %02x%02x%02x%02x%02x%02x%02x%02x\n",
+                    static_cast<unsigned>(pc),
+                    static_cast<unsigned>(get_af()),
+                    static_cast<unsigned>(get_bc()),
+                    static_cast<unsigned>(get_de()),
+                    static_cast<unsigned>(get_hl()),
+                    static_cast<unsigned>(get_ix()),
+                    static_cast<unsigned>(get_iy()),
+                    static_cast<unsigned>(get_sp()),
+                    static_cast<unsigned>(get_memptr()),
+                    static_cast<unsigned>(get_ir()),
+                    static_cast<unsigned>(on_read_access((pc + 0) & 0xffff)),
+                    static_cast<unsigned>(on_read_access((pc + 1) & 0xffff)),
+                    static_cast<unsigned>(on_read_access((pc + 2) & 0xffff)),
+                    static_cast<unsigned>(on_read_access((pc + 3) & 0xffff)),
+                    static_cast<unsigned>(on_read_access((pc + 4) & 0xffff)),
+                    static_cast<unsigned>(on_read_access((pc + 5) & 0xffff)),
+                    static_cast<unsigned>(on_read_access((pc + 6) & 0xffff)),
+                    static_cast<unsigned>(on_read_access((pc + 7) & 0xffff)));
+            fflush(trace_file);
+        }
+    }
+
+    void on_step() {
+        trace();
+        processor::on_step();
+    }
+
+    bool handle_active_int() {
+        trace();
+
+        fprintf(trace_file, "int() to consider\n");
+        fflush(trace_file);
+
+        bool int_initiated = processor::handle_active_int();
+        if(trace_file) {
+            if(int_initiated) {
+                fprintf(trace_file, "int() accepted\n");
+            } else {
+                // fprintf(trace_file, "int() skipped (int_disabled=%u, iff1=%u)\n",
+                //         is_int_disabled(), get_iff1());
+
+                fprintf(trace_file, "int() not accepted\n");
+            }
+        }
+        return int_initiated;
+    }
+#endif  // TRACE
 
 protected:
     pixel_type translate_color(unsigned c) {

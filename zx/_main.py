@@ -234,6 +234,7 @@ class emulator(Gtk.Window):
                 if self.done:
                     break
 
+                # print(num_of_fetches, samples)
                 self.sample_i = 0
                 def on_input(addr):
                     if self.sample_i >= len(samples):
