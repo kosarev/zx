@@ -85,8 +85,9 @@ def parse_input_recording_block(image):
             samples = bytes(samples)
             frame = (num_of_fetches, samples)
 
-        # print(frame)
-        frames.append(frame)
+        # Ignore empty frames.
+        if frame[0] != 0:
+            frames.append(frame)
 
     return {'id': 'port_samples',
             'first_tick': header['first_tick'],
