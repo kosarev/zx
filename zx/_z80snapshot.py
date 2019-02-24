@@ -131,6 +131,9 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
         'B:mgt_type', 'B:disciple_inhibit_button_status',
         'B:disciple_inhibit_flag']
 
+    _EXTRA_HEADER2b = [
+        'B:last_write_to_port_1ffd']
+
     _MEMORY_BLOCK_HEADER = [
         '<H:compressed_size', 'B:page_no']
 
@@ -182,6 +185,9 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
 
             if extra_parser:
                 fields.update(extra_parser.parse(self._EXTRA_HEADER2))
+
+            if extra_parser:
+                fields.update(extra_parser.parse(self._EXTRA_HEADER2b))
 
             if extra_parser:
                 raise zx.Error('Too many headers in Z80 snapshot.',
