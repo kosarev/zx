@@ -22,7 +22,9 @@ _V2_FORMAT = '2.x'
 _V3_FORMAT = '3.x'
 
 def _get_format_version(fields):
-    # TODO: Support v3 format.
+    if 'ticks_count_low' in fields:
+        return _V3_FORMAT
+
     if 'pc2' in fields:
         return _V2_FORMAT
 
@@ -65,9 +67,19 @@ class Z80Snapshot(zx.MachineSnapshot):
             'iff2': 0 if self['iff2'] == 0 else 1,
             'int_mode': int_mode }
 
+        ticks_per_frame = 69888  # TODO
+        quarter_tstates = ticks_per_frame // 4
+
+        ticks_high = self['ticks_count_high']
+        ticks_low = self['ticks_count_low']
+        ticks_since_int = (((ticks_high + 1) % 4 + 1) * quarter_tstates -
+                               (ticks_low + 1))
+
         fields = {
             'processor_snapshot': zx.ProcessorSnapshot(processor_fields),
-            'border_color': (flags1 >> 1) & 0x7 }
+            'border_color': (flags1 >> 1) & 0x7,
+            'ticks_since_int': ticks_since_int,
+        }
 
         # Determine machine kind.
         # TODO: Not used currently?
@@ -109,6 +121,14 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
     _EXTRA_HEADER = [
         '<H:pc2', 'B:hardware_mode', 'B:misc1', 'B:misc2', 'B:flags3',
         'B:port_fffd_value', '16B:sound_chip_registers']
+
+    _EXTRA_HEADER2 = [
+        '<H:ticks_count_low', 'B:ticks_count_high', 'B:spectator_flag',
+        'B:mgt_rom_paged', 'B:multiface_rom_paged',
+        'B:memory_at_0000_1fff_is_ram', 'B:memory_at_2000_3fff_is_ram',
+        '10B:keyboard_mappings', '10B:keyboard_mappings_keys',
+        'B:mgt_type', 'B:disciple_inhibit_button_status',
+        'B:disciple_inhibit_flag']
 
     _MEMORY_BLOCK_HEADER = [
         '<H:compressed_size', 'B:page_no']
@@ -160,9 +180,11 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
             fields.update(extra_parser.parse(self._EXTRA_HEADER))
 
             if extra_parser:
-                # TODO
-                raise zx.Error('Version 3.xx Z80 snapshots are not supported '
-                               'yet.', id='v3_z80_snapshot')
+                fields.update(extra_parser.parse(self._EXTRA_HEADER2))
+
+            if extra_parser:
+                raise zx.Error('Too many headers in Z80 snapshot.',
+                               id='too_many_z80_snapshot_headers')
 
         # Parse memory snapshot.
         if _get_format_version(fields) == _V1_FORMAT:
