@@ -70,16 +70,17 @@ class Z80Snapshot(zx.MachineSnapshot):
         ticks_per_frame = 69888  # TODO
         quarter_tstates = ticks_per_frame // 4
 
-        ticks_high = self['ticks_count_high']
-        ticks_low = self['ticks_count_low']
-        ticks_since_int = (((ticks_high + 1) % 4 + 1) * quarter_tstates -
-                               (ticks_low + 1))
-
         fields = {
             'processor_snapshot': zx.ProcessorSnapshot(processor_fields),
             'border_color': (flags1 >> 1) & 0x7,
-            'ticks_since_int': ticks_since_int,
         }
+
+        if 'ticks_count_high' in self:
+            ticks_high = self['ticks_count_high']
+            ticks_low = self['ticks_count_low']
+            ticks_since_int = (((ticks_high + 1) % 4 + 1) * quarter_tstates -
+                                   (ticks_low + 1))
+            fields['ticks_since_int'] = ticks_since_int
 
         # Determine machine kind.
         # TODO: Not used currently?
