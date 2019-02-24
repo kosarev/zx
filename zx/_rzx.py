@@ -24,15 +24,25 @@ def parse_snapshot_block(image):
     descriptor = bool(flags & 0x1)
     compressed = bool(flags & 0x2)
 
-    assert not descriptor  # TODO: Support snapshot descriptors.
-    assert compressed  # TODO: Support uncompressed snapshots.
+    # TODO: Support snapshot descriptors.
+    if descriptor:
+        raise zx.Error('RZX snapshot descriptors are not supported yet.',
+                       id='rzx_snapshot_descriptor')
+
+    # TODO: Support non-compressed snapshots.
+    if not compressed:
+        raise zx.Error('Non-compressed RZX snapshots are not supported yet.',
+                       id='non_compressed_rzx_snapshot')
 
     import zlib
     snapshot_image = zlib.decompress(parser.extract_rest())
 
     # TODO: Support other snapshot formats.
     filename_extension = header['filename_extension']
-    assert filename_extension in [b'z80\x00', b'Z80\x00'], filename_extension
+    if filename_extension not in [b'z80\x00', b'Z80\x00']:
+        raise zx.Error('Unknown RZX snapshot format %r.' % filename_extension,
+                       id='unknown_rzx_snapshot_format')
+
     format = zx.Z80SnapshotsFormat()
     return format.parse(snapshot_image)
 
@@ -110,7 +120,12 @@ def parse_block(parser):
 
     # Parse payload image.
     block_id = block['id']
+
     # TODO: Handle unknown blocks.
+    if block_id not in RZX_BLOCK_PARSERS:
+        raise zx.Error('Unsupported RZX block %r.' % block_id,
+                       id='unsupported_rzx_block')
+
     return RZX_BLOCK_PARSERS[block_id](payload_image)
 
 

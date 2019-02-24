@@ -80,7 +80,8 @@ class Z80Snapshot(zx.MachineSnapshot):
             if hardware_mode == 0 and not flags3_bit7:
                 machine_kind = 'ZX Spectrum 48K'
             else:
-                assert 0  # TODO
+                raise zx.Error('Unsupported type of emulated machine.',
+                               id='unsupported_machine')
 
         # Handle memory blocks.
         memory_blocks = fields.setdefault('memory_blocks', [])
@@ -136,7 +137,10 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
         fields = parser.parse(self._MEMORY_BLOCK_HEADER)
         compressed_size = fields['compressed_size']
         if compressed_size == self._RAW_MEMORY_BLOCK_SIZE_VALUE:
-            assert 0  # TODO: Support non-compressed blocks.
+            # TODO
+            raise zx.Error('Non-compressed memory blocks in Z80 snapshots are '
+                           'not supported yet.',
+                           id='non_compressed_z80_snapshot')
         else:
             compressed_image = parser.extract_block(compressed_size)
             raw_image = self._uncompress(compressed_image,
@@ -159,7 +163,9 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
             fields.update(extra_parser.parse(self._EXTRA_HEADER))
 
             if extra_parser:
-                assert 0  # TODO: Support v3 headers.
+                # TODO
+                raise zx.Error('Version 3.xx Z80 snapshots are not supported '
+                               'yet.', id='v3_z80_snapshot')
 
         # Parse memory snapshot.
         if _get_format_version(fields) == _V1_FORMAT:

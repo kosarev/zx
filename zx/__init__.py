@@ -10,3 +10,8 @@ from ._z80snapshot import Z80SnapshotsFormat
 
 class Error(Exception):
     """Basic exception for the whole ZX module."""
+    def __init__(self, reason, id=None):
+        super().__init__(reason)
+
+        if id:
+            self.id = id

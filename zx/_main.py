@@ -92,8 +92,10 @@ class emulator(Gtk.Window):
     _END_OF_FRAME      = 1 << 1
     _FETCHES_LIMIT_HIT = 1 << 3
 
-    def __init__(self):
+    def __init__(self, speed_factor=1.0):
         super(emulator, self).__init__()
+
+        self._speed_factor = speed_factor
 
         self.frame_width = 48 + 256 + 48
         self.frame_height = 48 + 192 + 40
@@ -234,6 +236,10 @@ class emulator(Gtk.Window):
 
                 self.sample_i = 0
                 def on_input(addr):
+                    if self.sample_i >= len(samples):
+                        raise zx.Error('Too few input samples.',
+                                       id='too_few_input_samples')
+
                     n = samples[self.sample_i]
                     # TODO: print('read_port 0x%04x 0x%02x' % (addr, n), flush=True)
                     self.sample_i += 1
@@ -256,13 +262,15 @@ class emulator(Gtk.Window):
                         self.frame_data[:] = self.emulator.get_frame_pixels()
                         self.area.queue_draw()
                         # print(self.processor_state.get_bc())
-                        time.sleep(1 / 50)
+                        time.sleep((1 / 50) * self._speed_factor)
 
                     if events & self._FETCHES_LIMIT_HIT:
                         self.emulator.handle_active_int()
                         break
 
-                assert self.sample_i == len(samples), (self.sample_i, samples)
+                if self.sample_i != len(samples):
+                    raise zx.Error('Too many input samples.',
+                                   id='too_many_input_samples')
 
     def main(self):
         while not self.done:
@@ -279,7 +287,7 @@ class emulator(Gtk.Window):
                 self.emulator.render_frame()
                 self.frame_data[:] = self.emulator.get_frame_pixels()
                 self.area.queue_draw()
-                time.sleep(1 / 50)
+                time.sleep((1 / 50) * self._speed_factor)
 
     def run_file(self, filename):
         file = parse_file(filename)
@@ -333,6 +341,30 @@ def usage():
     sys.exit()
 
 
+def test(args):
+    for filename in args:
+        print('%r' % filename)
+        def move(dest_dir):
+            os.makedirs(dest_dir, exist_ok=True)
+
+            dest_path = os.path.join(dest_dir, filename)
+            assert not os.path.exists(dest_path)  # TODO
+
+            os.rename(filename, dest_path)
+            print('%r moved to %r' % (filename, dest_dir))
+
+        app = emulator(speed_factor=0)
+        try:
+            app.run_file(filename)
+            if app.done:
+                break
+            move('passed')
+        except zx.Error as e:
+            move(e.id)
+
+        app.destroy()
+
+
 def handle_command_line(args):
     if not args or looks_like_filename(args[0]):
         run(args)
@@ -351,6 +383,12 @@ def handle_command_line(args):
 
     if command == 'dump':
         dump(args[1:])
+        return
+
+
+    # TODO: A hidden command for internal use.
+    if command == '__test':
+        test(args[1:])
         return
 
     raise zx.Error('Unknown command %r.' % command)
