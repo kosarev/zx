@@ -29,13 +29,10 @@ def parse_snapshot_block(image):
         raise zx.Error('RZX snapshot descriptors are not supported yet.',
                        id='rzx_snapshot_descriptor')
 
-    # TODO: Support non-compressed snapshots.
-    if not compressed:
-        raise zx.Error('Non-compressed RZX snapshots are not supported yet.',
-                       id='non_compressed_rzx_snapshot')
-
-    import zlib
-    snapshot_image = zlib.decompress(parser.extract_rest())
+    snapshot_image = parser.extract_rest()
+    if compressed:
+        import zlib
+        snapshot_image = zlib.decompress(snapshot_image)
 
     # TODO: Support other snapshot formats.
     filename_extension = header['filename_extension']
