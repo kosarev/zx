@@ -200,7 +200,7 @@ public:
         handle_port_contention(addr);
         fast_u8 n = on_input(addr);
 
-#if TRACE
+#if defined(TRACE) && TRACE
         create_trace();
         fprintf(trace_file, "read_port %04x %02x\n",
                 unsigned(addr), unsigned(n));
@@ -419,7 +419,7 @@ public:
         return events;
     }
 
-#if TRACE
+#if defined(TRACE) && TRACE
     FILE *trace_file = nullptr;
 
     void create_trace() {
