@@ -270,6 +270,14 @@ class emulator(Gtk.Window):
                         time.sleep((1 / 50) * self._speed_factor)
 
                     if events & self._FETCHES_LIMIT_HIT:
+                        # Some simulators, e.g., SPIN, may store an interrupt
+                        # point in the middle of a IX- or IY-prefixed
+                        # instruction, so we continue until such
+                        # instruction, if any, is completed.
+                        if machine_state.get_index_rp_kind() != 'hl':
+                            machine_state.set_fetches_limit(1)
+                            continue
+
                         self.emulator.handle_active_int()
                         break
 
