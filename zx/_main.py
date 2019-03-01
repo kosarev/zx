@@ -354,28 +354,35 @@ def usage():
     sys.exit()
 
 
+def test_file(filename):
+    print('%r' % filename)
+    def move(dest_dir):
+        os.makedirs(dest_dir, exist_ok=True)
+
+        dest_path = os.path.join(dest_dir, filename)
+        assert not os.path.exists(dest_path)  # TODO
+
+        os.rename(filename, dest_path)
+        print('%r moved to %r' % (filename, dest_dir))
+
+    app = emulator(speed_factor=0)
+    try:
+        app.run_file(filename)
+        if app.done:
+            return False
+        move('passed')
+    except zx.Error as e:
+        move(e.id)
+
+    app.destroy()
+
+    return True
+
+
 def test(args):
     for filename in args:
-        print('%r' % filename)
-        def move(dest_dir):
-            os.makedirs(dest_dir, exist_ok=True)
-
-            dest_path = os.path.join(dest_dir, filename)
-            assert not os.path.exists(dest_path)  # TODO
-
-            os.rename(filename, dest_path)
-            print('%r moved to %r' % (filename, dest_dir))
-
-        app = emulator(speed_factor=0)
-        try:
-            app.run_file(filename)
-            if app.done:
-                break
-            move('passed')
-        except zx.Error as e:
-            move(e.id)
-
-        app.destroy()
+        if not test_file(filename):
+            break
 
 
 def handle_command_line(args):
