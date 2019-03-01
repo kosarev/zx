@@ -477,10 +477,8 @@ public:
             if(int_initiated) {
                 fprintf(trace_file, "int() accepted\n");
             } else {
-                // fprintf(trace_file, "int() skipped (int_disabled=%u, iff1=%u)\n",
-                //         is_int_disabled(), get_iff1());
-
-                fprintf(trace_file, "int() not accepted\n");
+                fprintf(trace_file, "int() skipped (int_disabled=%u, iff1=%u)\n",
+                        is_int_disabled(), get_iff1());
             }
         }
         return int_initiated;
