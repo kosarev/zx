@@ -113,7 +113,10 @@ class emulator(Gtk.Window):
                     self.frame_height * self.scale)
         self.set_position(Gtk.WindowPosition.CENTER)
         self.connect("delete-event", self.on_done)
-        self.show_all()
+
+        # Don't even show the window on full throttle.
+        if self._speed_factor:
+            self.show_all()
 
         self.frame_size = self.frame_width * self.frame_height
         self.frame = cairo.ImageSurface(cairo.FORMAT_RGB24,
@@ -258,7 +261,7 @@ class emulator(Gtk.Window):
                     events = self.emulator.run()
                     # TODO: print(events)
 
-                    if events & self._END_OF_FRAME:
+                    if events & self._END_OF_FRAME and self._speed_factor:
                         self.emulator.render_frame()
                         self.frame_data[:] = self.emulator.get_frame_pixels()
                         self.area.queue_draw()
