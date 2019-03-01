@@ -244,6 +244,11 @@ public:
         handle_contention_tick(addr_bus_value);
     }
 
+    void disable_int_on_ei() {
+        if(!allow_int_after_ei)
+            processor::disable_int_on_ei();
+    }
+
     static const z80::size_type memory_image_size = 0x10000;  // 64K bytes.
     typedef least_u8 memory_image_type[memory_image_size];
 
@@ -507,6 +512,11 @@ protected:
     // True if interrupts shall not be initiated at the beginning
     // of frames.
     bool suppressed_int = false;
+
+    // True if interrupt can occur after EI instruction. Some
+    // emulators such as SPIN allow that, so we should be able to
+    // do the same to support RZX files produced by them.
+    bool allow_int_after_ei = false;
 
 private:
     frame_chunks_type frame_chunks;

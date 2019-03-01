@@ -143,7 +143,8 @@ class MachineState(ProcessorState, MemoryState):
         'ticks_since_int': (32, '<L'),
         'fetches_to_stop': (36, '<L'),
         'suppressed_int':  (40, 'B'),
-        'border_color':    (41, 'B'),
+        'allow_int_after_ei': (41, 'B'),
+        'border_color': (42, 'B'),
     }
 
     def __init__(self, machine_image, memory_image):
@@ -156,6 +157,9 @@ class MachineState(ProcessorState, MemoryState):
 
     def suppress_int(self, suppress=True):
         self.set('suppressed_int', int(suppress))
+
+    def allow_int_after_ei(self, allow=True):
+        self.set('allow_int_after_ei', int(allow))
 
     def set_fetches_limit(self, fetches_to_stop):
         self.set('fetches_to_stop', fetches_to_stop)
