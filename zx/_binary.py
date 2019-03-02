@@ -20,7 +20,8 @@ class BinaryParser(object):
 
     def extract_block(self, size):
         if size > self.get_rest_size():
-            raise zx.Error('Binary image is too short.')
+            raise zx.Error('Binary image is too short.',
+                           id='binary_image_too_short')
 
         begin = self.pos
         self.pos += size
