@@ -284,6 +284,7 @@ class emulator(Gtk.Window):
                 frame_state = machine_state.clone()
 
                 # TODO: For debug purposes.
+                frame_count += 1
                 if frame_count == -12820:
                     self._save_crash_rzx(recording, frame_state, chunk_i, frame_i)
                     assert 0
@@ -294,7 +295,10 @@ class emulator(Gtk.Window):
                 def on_input(addr):
                     if self.sample_i >= len(samples):
                         raise zx.Error(
-                            'Too few input samples at frame %d.' % frame_count,
+                            'Too few input samples at frame %d of %d. '
+                            'Given %d, used %d.' % (
+                                frame_count, len(chunk['frames']),
+                                len(samples), self.sample_i),
                             id='too_few_input_samples')
 
                     n = samples[self.sample_i]
@@ -336,10 +340,12 @@ class emulator(Gtk.Window):
 
                 if self.sample_i != len(samples):
                     raise zx.Error(
-                        'Too many input samples at frame %d.' % frame_count,
+                        'Too many input samples at frame %d of %d. '
+                        'Given %d, used %d.' % (
+                            frame_count, len(chunk['frames']),
+                            len(samples), self.sample_i),
                         id='too_many_input_samples')
 
-                frame_count += 1
 
     def main(self):
         while not self.done:
