@@ -115,7 +115,7 @@ class emulator(Gtk.Window):
         self.connect("delete-event", self.on_done)
 
         # Don't even show the window on full throttle.
-        if self._speed_factor:
+        if self._speed_factor is not None:
             self.show_all()
 
         self.frame_size = self.frame_width * self.frame_height
@@ -297,7 +297,8 @@ class emulator(Gtk.Window):
                     events = self.emulator.run()
                     # TODO: print(events)
 
-                    if events & self._END_OF_FRAME and self._speed_factor:
+                    if (events & self._END_OF_FRAME and
+                            self._speed_factor is not None):
                         self.emulator.render_frame()
                         self.frame_data[:] = self.emulator.get_frame_pixels()
                         self.area.queue_draw()
@@ -401,7 +402,7 @@ def test_file(filename):
         os.rename(filename, dest_path)
         print('%r moved to %r' % (filename, dest_dir))
 
-    app = emulator(speed_factor=0)
+    app = emulator(speed_factor=None)
     try:
         app.run_file(filename)
         if app.done:
@@ -421,6 +422,16 @@ def test(args):
             break
 
 
+def fastforward(args):
+    for filename in args:
+        app = emulator(speed_factor=0)
+        app.run_file(filename)
+        if app.done:
+            break
+
+        app.destroy()
+
+
 def handle_command_line(args):
     if not args or looks_like_filename(args[0]):
         run(args)
@@ -433,21 +444,19 @@ def handle_command_line(args):
         usage()
         return
 
-    if command == 'run':
-        run(args[1:])
-        return
+    COMMANDS = {
+        'run': run,
+        'dump': dump,
 
-    if command == 'dump':
-        dump(args[1:])
-        return
+        # TODO: Hidden commands for internal use.
+        '__test': test,
+        '__ff': fastforward,
+    }
 
+    if command not in COMMANDS:
+        raise zx.Error('Unknown command %r.' % command)
 
-    # TODO: A hidden command for internal use.
-    if command == '__test':
-        test(args[1:])
-        return
-
-    raise zx.Error('Unknown command %r.' % command)
+    COMMANDS[command](args[1:])
 
 
 def main():
