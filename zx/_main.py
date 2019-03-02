@@ -248,10 +248,21 @@ class emulator(Gtk.Window):
 
         assert isinstance(file, RZXFile)
         recording = file._recording
-        chunks = recording['chunks']
+
+        creator_info = self._find_recording_info_chunk(recording)
+
+        # SPIN v0.5 alters ROM to implement fast tape loading,
+        # but that affects recorded RZX files.
+        spin_v0p5_info = {'id': 'info',
+                          'creator': b'SPIN 0.5            ',
+                          'creator_major_version': 0,
+                          'creator_minor_version': 5 }
+        if creator_info == spin_v0p5_info:
+            machine_state.set_memory_block(0x1f47, b'\xf5')
 
         # Process chunks in order.
         frame_count = 0
+        chunks = recording['chunks']
         for chunk_i, chunk in enumerate(chunks):
             if self.done:
                 break
