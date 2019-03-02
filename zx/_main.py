@@ -404,8 +404,23 @@ def test_file(filename):
     def move(dest_dir):
         os.makedirs(dest_dir, exist_ok=True)
 
-        dest_path = os.path.join(dest_dir, filename)
-        assert not os.path.exists(dest_path)  # TODO
+        # Make sure the destination filename is unique.
+        dest_filename = filename
+        while True:
+            dest_path = os.path.join(dest_dir, dest_filename)
+            if not os.path.exists(dest_path):
+                break
+
+            dest_filename, ext = os.path.splitext(dest_filename)
+            dest_filename = dest_filename.rsplit('--', maxsplit=1)
+            if len(dest_filename) == 1:
+                dest_filename = dest_filename[0] + '--2'
+            else:
+                dest_filename = (dest_filename[0] + '--' +
+                                     str(int(dest_filename[1]) + 1))
+
+            dest_filename = dest_filename + ext
+
 
         os.rename(filename, dest_path)
         print('%r moved to %r' % (filename, dest_dir))
