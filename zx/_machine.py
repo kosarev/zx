@@ -152,6 +152,9 @@ class MachineState(ProcessorState, MemoryState):
         MemoryState.__init__(self, memory_image)
         self.define_fields(self._MACHINE_FIELDS)
 
+    def clone(self):
+        return MachineState(self._image[:], self._memory_image[:])
+
     def is_suppressed_int(self):
         return bool(self.get('suppressed_int'))
 

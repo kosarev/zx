@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-from ._binary import BinaryParser
+from ._binary import BinaryParser, BinaryWriter
 import zx
 
 
@@ -148,3 +148,58 @@ def parse_rzx(image):
         chunks.append(parse_block(parser))
 
     return {'id': 'input_recording', 'chunks': chunks}
+
+
+def make_rzx(recording):
+    assert recording['id'] == 'input_recording'
+
+    writer = BinaryWriter()
+    signature = b'RZX!'
+    major_revision = b'\x00'
+    minor_revision = b'\x0c'
+    flags = b'\x00\x00\x00\x00'
+    writer.write_block(signature + major_revision + minor_revision + flags)
+
+    for chunk in recording['chunks']:
+        chunk_writer = BinaryWriter()
+        id = chunk['id']
+        if id == 'info':
+            chunk_id = RZX_BLOCK_ID_CREATOR_INFO
+            chunk_writer.write(['20s:creator',
+                                '<H:creator_major_version',
+                                '<H:creator_minor_version'], **chunk)
+        elif id == 'snapshot':
+            chunk_id = RZX_BLOCK_ID_SNAPSHOT
+
+            image = chunk['image']
+            chunk_writer.write(['<L:flags', '4s:filename_extension',
+                                '<L:uncompressed_length'],
+                                flags=0,  # Non-descriptor. Not compressed.
+                                filename_extension=b'Z80\x00',
+                                uncompressed_length=len(image))
+            chunk_writer.write_block(image)
+        elif id == 'port_samples':
+            chunk_id = RZX_BLOCK_ID_INPUT_RECORDING
+
+            frames = chunk['frames']
+            chunk_writer.write(['<L:num_of_frames', 'B:reserved',
+                                '<L:first_tick', '<L:flags'],
+                               num_of_frames=len(frames), reserved=0,
+                               first_tick=0,  # TODO
+                               flags=0,  # Not protected. Not compressed.
+                              )
+
+            for num_of_fetches, samples in frames:
+                chunk_writer.write(['<H:num_of_fetches',
+                                    '<H:num_of_port_samples'],
+                                   num_of_fetches=num_of_fetches,
+                                   num_of_port_samples=len(samples))
+                chunk_writer.write_block(samples)
+        else:
+            assert 0, (id, list(chunk))  # TODO
+
+        writer.write(['B:id', '<L:size'],
+                      id=chunk_id, size=len(chunk_writer.get_image()) + 4 + 1)
+        writer.write_block(chunk_writer.get_image())
+
+    return writer.get_image()

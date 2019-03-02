@@ -208,6 +208,37 @@ class emulator(Gtk.Window):
         with open(filename, 'wb') as f:
             f.write(zx.Z80SnapshotsFormat().make(self.emulator))
 
+    def _find_recording_info_chunk(self, recording):
+        for chunk in recording['chunks']:
+            if chunk['id'] == 'info':
+                return chunk
+        assert 0  # TODO
+
+    def _save_crash_rzx(self, recording, state, chunk_i, frame_i):
+        snapshot = zx.Z80SnapshotsFormat().make(state)
+
+        crash_recording = {
+            'id': 'input_recording',
+            'chunks': [
+                self._find_recording_info_chunk(recording),
+                {
+                    'id': 'snapshot',
+                    'image': snapshot,
+                },
+                {
+                    'id': 'port_samples',
+                    'first_tick': 0,
+                    'frames': recording['chunks'][chunk_i]['frames'][frame_i:],
+                },
+            ],
+        }
+
+        with open('__crash.z80', 'wb') as f:
+            f.write(snapshot)
+
+        with open('__crash.rzx', 'wb') as f:
+            f.write(zx.make_rzx(crash_recording))
+
     def playback_input_recording(self, file):
         # Interrupts are supposed to be controlled by the
         # recording.
@@ -220,7 +251,7 @@ class emulator(Gtk.Window):
         chunks = recording['chunks']
 
         # Process chunks in order.
-        for chunk in chunks:
+        for chunk_i, chunk in enumerate(chunks):
             if self.done:
                 break
 
@@ -234,14 +265,18 @@ class emulator(Gtk.Window):
             first_tick = chunk['first_tick']
             machine_state.set_ticks_since_int(first_tick)
 
-            for num_of_fetches, samples in chunk['frames']:
+            for frame_i, frame in enumerate(chunk['frames']):
                 if self.done:
                     break
 
+                frame_state = machine_state.clone()
+
+                num_of_fetches, samples = frame
                 # print(num_of_fetches, samples)
                 self.sample_i = 0
                 def on_input(addr):
                     if self.sample_i >= len(samples):
+                        # self._save_crash_rzx(recording, frame_state, chunk_i, frame_i)
                         raise zx.Error('Too few input samples.',
                                        id='too_few_input_samples')
 
@@ -282,6 +317,7 @@ class emulator(Gtk.Window):
                         break
 
                 if self.sample_i != len(samples):
+                    # self._save_crash_rzx(recording, frame_state, chunk_i, frame_i)
                     raise zx.Error('Too many input samples.',
                                    id='too_many_input_samples')
 
