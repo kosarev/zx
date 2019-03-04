@@ -3,7 +3,7 @@
 
 ''' ZX Spectrum Emulator.
 
-    Copyright (C) 2017 Ivan Kosarev.
+    Copyright (C) 2017-2019 Ivan Kosarev.
     ivan@kosarev.info
 
     Published under the MIT license.
