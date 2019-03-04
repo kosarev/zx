@@ -6,13 +6,6 @@ import collections
 import zx
 
 
-MASK16 = 0xffff
-
-
-def make16(hi, lo):
-    return ((hi << 8) | lo) & MASK16
-
-
 class UnifiedSnapshot(zx.MachineSnapshot):
     pass
 
@@ -53,16 +46,16 @@ class Z80Snapshot(zx.MachineSnapshot):
             'bc': self['bc'],
             'de': self['de'],
             'hl': self['hl'],
-            'af': make16(self['a'], self['f']),
+            'af': zx.make16(hi=self['a'], lo=self['f']),
             'ix': self['ix'],
             'iy': self['iy'],
             'alt_bc': self['alt_bc'],
             'alt_de': self['alt_de'],
             'alt_hl': self['alt_hl'],
-            'alt_af': make16(self['alt_a'], self['alt_f']),
+            'alt_af': zx.make16(hi=self['alt_a'], lo=self['alt_f']),
             'pc': pc,
             'sp': self['sp'],
-            'ir': make16(self['i'], r),
+            'ir': zx.make16(hi=self['i'], lo=r),
             'iff1': 0 if self['iff1'] == 0 else 1,
             'iff2': 0 if self['iff2'] == 0 else 1,
             'int_mode': int_mode }

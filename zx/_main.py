@@ -319,7 +319,15 @@ class emulator(Gtk.Window):
                     # TODO: print(events)
 
                     if events & machine_state._BREAKPOINT_HIT:
-                        assert 0  # TODO
+                        # SPIN v0.5 skips executing instructions
+                        # of the bytes-saving ROM procedure in
+                        # fast save mode.
+                        if (creator_info == spin_v0p5_info and
+                                machine_state.get_pc() == 0x04d4):
+                            sp = machine_state.get_sp()
+                            ret_addr = machine_state.read16(sp)
+                            machine_state.set_sp(sp - 2)
+                            machine_state.set_pc(ret_addr)
 
                     if (events & machine_state._END_OF_FRAME and
                             self._speed_factor is not None):
