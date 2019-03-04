@@ -46,7 +46,7 @@ const events_mask custom_event      = 1u << 31;
 
 class spectrum48 : public z80::processor<spectrum48> {
 public:
-    typedef processor<spectrum48> processor;
+    typedef processor<spectrum48> base;
     typedef fast_u32 ticks_type;
 
     spectrum48() {
@@ -128,20 +128,20 @@ public:
             events |= fetches_limit_hit;
 
         handle_memory_contention(addr);
-        return processor::on_fetch_cycle(addr, m1);
+        return base::on_fetch_cycle(addr, m1);
     }
 
     fast_u8 on_read_cycle(fast_u16 addr, unsigned ticks) {
         assert(ticks == 3);
         handle_memory_contention(addr);
-        return processor::on_read_cycle(addr, ticks);
+        return base::on_read_cycle(addr, ticks);
     }
 
     void on_write_cycle(fast_u16 addr, fast_u8 n, unsigned ticks) {
         // assert(addr >= 0x4000);  // TODO
         assert(ticks == 3);
         handle_memory_contention(addr);
-        processor::on_write_cycle(addr, n, ticks);
+        base::on_write_cycle(addr, n, ticks);
     }
 
     void handle_contention_tick(fast_u16 addr) {
@@ -246,7 +246,7 @@ public:
 
     void disable_int_on_ei() {
         if(!allow_int_after_ei)
-            processor::disable_int_on_ei();
+            base::disable_int_on_ei();
     }
 
     static const z80::size_type memory_image_size = 0x10000;  // 64K bytes.
@@ -463,7 +463,7 @@ public:
 
     void on_step() {
         trace();
-        processor::on_step();
+        base::on_step();
     }
 
     bool handle_active_int() {
@@ -472,7 +472,7 @@ public:
         fprintf(trace_file, "int() to consider\n");
         fflush(trace_file);
 
-        bool int_initiated = processor::handle_active_int();
+        bool int_initiated = base::handle_active_int();
         if(trace_file) {
             if(int_initiated) {
                 fprintf(trace_file, "int() accepted\n");
