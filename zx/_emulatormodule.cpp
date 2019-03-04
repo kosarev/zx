@@ -256,6 +256,15 @@ static PyObject *get_frame_pixels(PyObject *self, PyObject *args) {
                                    sizeof(pixels), PyBUF_READ);
 }
 
+static PyObject *mark_addrs(PyObject *self, PyObject *args) {
+    unsigned addr, size, marks;
+    if(!PyArg_ParseTuple(args, "III", &addr, &size, &marks))
+        return nullptr;
+
+    cast_emulator(self).mark_addrs(addr, size, marks);
+    Py_RETURN_NONE;
+}
+
 static PyObject *set_on_input_callback(PyObject *self, PyObject *args) {
     PyObject *new_callback;
     if(!PyArg_ParseTuple(args, "O:set_callback", &new_callback))
@@ -299,6 +308,9 @@ PyMethodDef methods[] = {
     {"get_frame_pixels", get_frame_pixels, METH_NOARGS,
      "Convert rendered frame into an internally allocated array of RGB24 pixels "
      "and return a MemoryView object that exposes that array."},
+    {"mark_addrs", mark_addrs, METH_VARARGS,
+     "Mark a range of memory bytes as ones that require custom "
+     "processing on reading, writing or executing them."},
     {"set_on_input_callback", set_on_input_callback, METH_VARARGS,
      "Set a callback function handling reading from ports."},
     {"run", run, METH_NOARGS,

@@ -15,11 +15,12 @@ namespace zx {
 
 using z80::fast_u8;
 using z80::fast_u16;
+using z80::fast_u32;
 using z80::least_u8;
 using z80::least_u16;
 using z80::unreachable;
 
-typedef uint_fast32_t fast_u32;
+using z80::mask16;
 
 template<typename T>
 T non_constexpr() {
@@ -42,7 +43,12 @@ const events_mask machine_stopped   = 1u << 0;  // TODO: Eliminate.
 const events_mask end_of_frame      = 1u << 1;
 const events_mask ticks_limit_hit   = 1u << 2;
 const events_mask fetches_limit_hit = 1u << 3;
+const events_mask breakpoint_hit    = 1u << 4;
 const events_mask custom_event      = 1u << 31;
+
+typedef fast_u8 memory_marks;
+const memory_marks no_marks        = 0;
+const memory_marks breakpoint_mark = 1u << 0;
 
 class spectrum48 : public z80::processor<spectrum48> {
 public:
@@ -208,6 +214,31 @@ public:
 #endif
 
         return n;
+    }
+
+    bool is_marked_addr(fast_u16 addr, memory_marks marks) const {
+        return (memory_marks[mask16(addr)] & marks) != 0;
+    }
+
+    bool is_breakpoint_addr(fast_u16 addr) const {
+        return is_marked_addr(addr, breakpoint_mark);
+    }
+
+    void mark_addr(fast_u16 addr, memory_marks marks) {
+        memory_marks[mask16(addr)] |= marks;
+    }
+
+    void mark_addrs(fast_u16 addr, fast_u16 size, memory_marks marks) {
+        for(fast_u16 i = 0; i != size; ++i)
+            mark_addr(addr + i, marks);
+    }
+
+    void on_set_pc(fast_u16 pc) {
+        // Catch breakpoints.
+        if(is_breakpoint_addr(pc))
+            events |= breakpoint_hit;
+
+        base::on_set_pc(pc);
     }
 
     virtual fast_u8 on_input(fast_u16 addr);
@@ -519,6 +550,7 @@ protected:
 private:
     frame_chunks_type frame_chunks;
     memory_image_type memory_image;
+    least_u8 memory_marks[memory_image_size] = {};
 };
 
 }  // namespace zx

@@ -188,9 +188,22 @@ class MachineState(ProcessorState, MemoryState):
 
 
 class Spectrum48(Spectrum48Base, MachineState):
+    # Events.
+    _NO_EVENTS         = 0
+    _END_OF_FRAME      = 1 << 1
+    _FETCHES_LIMIT_HIT = 1 << 3
+    _BREAKPOINT_HIT    = 1 << 4
+
+    # Memory marks.
+    _NO_MARKS        = 0
+    _BREAKPOINT_MARK = 1 << 0
+
     def __init__(self):
         self.machine_kind = 'ZX Spectrum 48K'
         MachineState.__init__(self, self.get_state_image(), self.get_memory())
 
         # Install ROM.
         self.set_memory_block(0x0000, zx.get_rom_image(self.machine_kind))
+
+    def set_breakpoint(self, pc):
+        self.mark_addrs(pc, 1, self._BREAKPOINT_MARK)

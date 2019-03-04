@@ -89,9 +89,6 @@ def parse_file(filename):
 
 
 class emulator(Gtk.Window):
-    _END_OF_FRAME      = 1 << 1
-    _FETCHES_LIMIT_HIT = 1 << 3
-
     def __init__(self, speed_factor=1.0):
         super(emulator, self).__init__()
 
@@ -260,6 +257,9 @@ class emulator(Gtk.Window):
         if creator_info == spin_v0p5_info:
             machine_state.set_memory_block(0x1f47, b'\xf5')
 
+        # The bytes-saving ROM procedure needs special processing.
+        machine_state.set_breakpoint(0x04d4)
+
         # Process chunks in order.
         frame_count = 0
         chunks = recording['chunks']
@@ -318,7 +318,10 @@ class emulator(Gtk.Window):
                     events = self.emulator.run()
                     # TODO: print(events)
 
-                    if (events & self._END_OF_FRAME and
+                    if events & machine_state._BREAKPOINT_HIT:
+                        assert 0  # TODO
+
+                    if (events & machine_state._END_OF_FRAME and
                             self._speed_factor is not None):
                         self.emulator.render_frame()
                         self.frame_data[:] = self.emulator.get_frame_pixels()
@@ -326,7 +329,7 @@ class emulator(Gtk.Window):
                         # print(self.processor_state.get_bc())
                         time.sleep((1 / 50) * self._speed_factor)
 
-                    if events & self._FETCHES_LIMIT_HIT:
+                    if events & machine_state._FETCHES_LIMIT_HIT:
                         # Some simulators, e.g., SPIN, may store an interrupt
                         # point in the middle of a IX- or IY-prefixed
                         # instruction, so we continue until such
