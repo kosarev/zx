@@ -502,7 +502,7 @@ public:
     }
 
     FILE *get_trace_file() {
-        if(!trace_enabled)
+        if(!enable_trace)
             return nullptr;
 
         static FILE *trace = nullptr;
@@ -603,9 +603,9 @@ protected:
     // do the same to support RZX files produced by them.
     bool allow_int_after_ei = false;
 
-private:
-    bool trace_enabled = false;
+    bool enable_trace = false;
 
+private:
     frame_chunks_type frame_chunks;
     memory_image_type memory_image;
     least_u8 memory_marks[memory_image_size] = {};

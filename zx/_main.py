@@ -242,6 +242,7 @@ class emulator(Gtk.Window):
         machine_state = self.emulator  # TODO: Eliminate.
         machine_state.suppress_int()
         machine_state.allow_int_after_ei(True)
+        # machine_state.enable_trace()
 
         assert isinstance(file, RZXFile)
         recording = file._recording

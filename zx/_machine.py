@@ -157,6 +157,7 @@ class MachineState(ProcessorState, MemoryState):
         'suppressed_int':  (40, 'B'),
         'allow_int_after_ei': (41, 'B'),
         'border_color': (42, 'B'),
+        'enable_trace': (43, 'B'),
     }
 
     def __init__(self, machine_image, memory_image):
@@ -187,6 +188,9 @@ class MachineState(ProcessorState, MemoryState):
 
     def set_border_color(self, color):
         self.set('border_color', color)
+
+    def enable_trace(self, enable=True):
+        self.set('enable_trace', int(enable))
 
     def install_snapshot(self, snapshot):
         assert isinstance(snapshot, zx.MachineSnapshot)

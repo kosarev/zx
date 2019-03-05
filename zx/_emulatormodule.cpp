@@ -72,6 +72,7 @@ struct __attribute__((packed)) machine_state {
     least_u8 suppressed_int = false;
     least_u8 allow_int_after_ei = false;
     least_u8 border_color = 7;
+    least_u8 enable_trace = 0;
 };
 
 class machine_emulator : public zx::spectrum48 {
@@ -94,6 +95,7 @@ public:
         state.suppressed_int = suppressed_int;
         state.allow_int_after_ei = allow_int_after_ei;
         state.border_color = border_color;
+        state.enable_trace = enable_trace;
     }
 
     void install_state() {
@@ -104,6 +106,7 @@ public:
         suppressed_int = state.suppressed_int;
         allow_int_after_ei = state.allow_int_after_ei;
         border_color = state.border_color;
+        enable_trace = state.enable_trace;
     }
 
     pixels_buffer_type &get_frame_pixels() {
