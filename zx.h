@@ -252,12 +252,12 @@ public:
         handle_port_contention(addr);
         fast_u8 n = on_input(addr);
 
-#if defined(TRACE) && TRACE
-        create_trace();
-        fprintf(trace_file, "read_port %04x %02x\n",
-                unsigned(addr), unsigned(n));
-        fflush(trace_file);
-#endif
+        if(FILE *trace = get_trace_file()) {
+            std::fprintf(trace, "read_port %04x %02x\n",
+                         static_cast<unsigned>(addr),
+                         static_cast<unsigned>(n));
+            std::fflush(trace);
+        }
 
         return n;
     }
@@ -501,75 +501,76 @@ public:
         return events;
     }
 
-#if defined(TRACE) && TRACE
-    FILE *trace_file = nullptr;
+    FILE *get_trace_file() {
+        if(!trace_enabled)
+            return nullptr;
 
-    void create_trace() {
-        if(!trace_file)
-            trace_file = fopen("zx_trace", "w");
+        static FILE *trace = nullptr;
+        if(!trace)
+            trace = std::fopen("zx_trace", "w");
+
+        return trace;
     }
 
-    void trace() {
-        create_trace();
+    void trace_state() {
+        FILE *trace = get_trace_file();
+        if(!trace)
+            return;
 
-        if(trace_file && get_index_rp_kind() == z80::index_regp::hl) {
-            fast_u16 pc = get_pc();
-            bool new_rom_instr =
-                pc < 0x4000 && !is_marked_addr(pc, visited_instr_mark);
-            mark_addr(pc, visited_instr_mark);
+        if(get_index_rp_kind() != z80::index_regp::hl)
+            return;
 
-            disassembler disasm(pc, memory_image);
-            fprintf(trace_file,
-                    "PC:%04x AF:%04x BC:%04x DE:%04x HL:%04x IX:%04x IY:%04x "
-                    "SP:%04x MEMPTR:%04x IR:%04x iff1:%u "
-                    "%02x%02x%02x%02x%02x%02x%02x%02x %s%s\n",
-                    static_cast<unsigned>(pc),
-                    static_cast<unsigned>(get_af()),
-                    static_cast<unsigned>(get_bc()),
-                    static_cast<unsigned>(get_de()),
-                    static_cast<unsigned>(get_hl()),
-                    static_cast<unsigned>(get_ix()),
-                    static_cast<unsigned>(get_iy()),
-                    static_cast<unsigned>(get_sp()),
-                    static_cast<unsigned>(get_memptr()),
-                    static_cast<unsigned>(get_ir()),
-                    static_cast<unsigned>(get_iff1()),
-                    static_cast<unsigned>(on_read_access((pc + 0) & 0xffff)),
-                    static_cast<unsigned>(on_read_access((pc + 1) & 0xffff)),
-                    static_cast<unsigned>(on_read_access((pc + 2) & 0xffff)),
-                    static_cast<unsigned>(on_read_access((pc + 3) & 0xffff)),
-                    static_cast<unsigned>(on_read_access((pc + 4) & 0xffff)),
-                    static_cast<unsigned>(on_read_access((pc + 5) & 0xffff)),
-                    static_cast<unsigned>(on_read_access((pc + 6) & 0xffff)),
-                    static_cast<unsigned>(on_read_access((pc + 7) & 0xffff)),
-                    disasm.disassemble(), new_rom_instr ? " [new]" : "");
-            fflush(trace_file);
-        }
+        fast_u16 pc = get_pc();
+        bool new_rom_instr =
+            pc < 0x4000 && !is_marked_addr(pc, visited_instr_mark);
+        mark_addr(pc, visited_instr_mark);
+
+        disassembler disasm(pc, memory_image);
+        std::fprintf(trace,
+            "PC:%04x AF:%04x BC:%04x DE:%04x HL:%04x IX:%04x IY:%04x "
+            "SP:%04x MEMPTR:%04x IR:%04x iff1:%u "
+            "%02x%02x%02x%02x%02x%02x%02x%02x %s%s\n",
+            static_cast<unsigned>(pc),
+            static_cast<unsigned>(get_af()),
+            static_cast<unsigned>(get_bc()),
+            static_cast<unsigned>(get_de()),
+            static_cast<unsigned>(get_hl()),
+            static_cast<unsigned>(get_ix()),
+            static_cast<unsigned>(get_iy()),
+            static_cast<unsigned>(get_sp()),
+            static_cast<unsigned>(get_memptr()),
+            static_cast<unsigned>(get_ir()),
+            static_cast<unsigned>(get_iff1()),
+            static_cast<unsigned>(on_read_access((pc + 0) & 0xffff)),
+            static_cast<unsigned>(on_read_access((pc + 1) & 0xffff)),
+            static_cast<unsigned>(on_read_access((pc + 2) & 0xffff)),
+            static_cast<unsigned>(on_read_access((pc + 3) & 0xffff)),
+            static_cast<unsigned>(on_read_access((pc + 4) & 0xffff)),
+            static_cast<unsigned>(on_read_access((pc + 5) & 0xffff)),
+            static_cast<unsigned>(on_read_access((pc + 6) & 0xffff)),
+            static_cast<unsigned>(on_read_access((pc + 7) & 0xffff)),
+            disasm.disassemble(), new_rom_instr ? " [new]" : "");
+        std::fflush(trace);
     }
 
     void on_step() {
-        trace();
+        trace_state();
         base::on_step();
     }
 
     bool handle_active_int() {
-        trace();
-
-        fprintf(trace_file, "int() to consider\n");
-        fflush(trace_file);
-
         bool int_initiated = base::handle_active_int();
-        if(trace_file) {
+        if(FILE *trace = get_trace_file()) {
             if(int_initiated) {
-                fprintf(trace_file, "int() accepted\n");
+                std::fprintf(trace, "INT accepted\n");
             } else {
-                fprintf(trace_file, "int() skipped (int_disabled=%u, iff1=%u)\n",
-                        is_int_disabled(), get_iff1());
+                std::fprintf(trace, "INT ignored (int_disabled=%u, iff1=%u)\n",
+                             is_int_disabled(), get_iff1());
             }
+            std::fflush(trace);
         }
         return int_initiated;
     }
-#endif  // TRACE
 
 protected:
     pixel_type translate_color(unsigned c) {
@@ -603,6 +604,8 @@ protected:
     bool allow_int_after_ei = false;
 
 private:
+    bool trace_enabled = false;
+
     frame_chunks_type frame_chunks;
     memory_image_type memory_image;
     least_u8 memory_marks[memory_image_size] = {};
