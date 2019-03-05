@@ -327,7 +327,7 @@ class emulator(Gtk.Window):
                                 machine_state.get_pc() == 0x04d4):
                             sp = machine_state.get_sp()
                             ret_addr = machine_state.read16(sp)
-                            machine_state.set_sp(sp - 2)
+                            machine_state.set_sp(sp + 2)
                             machine_state.set_pc(ret_addr)
 
                     if (events & machine_state._END_OF_FRAME and
