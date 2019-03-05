@@ -195,8 +195,10 @@ protected:
         PyObject *arg = Py_BuildValue("(i)", addr);
         decref_guard arg_guard(arg);
 
+        retrieve_state();
         PyObject *result = PyObject_CallObject(on_input_callback, arg);
         decref_guard result_guard(result);
+        install_state();
 
         if(!result) {
             stop();
