@@ -322,7 +322,7 @@ public:
     }
 
     void disable_int_on_ei() {
-        if(!allow_int_after_ei)
+        if(!int_after_ei_allowed)
             base::disable_int_on_ei();
     }
 
@@ -482,7 +482,7 @@ public:
         events = no_events;
 
         // The active-int period needs special processing.
-        if(!suppressed_int) {
+        if(!int_suppressed) {
             const ticks_type ticks_per_active_int = 32;
             while(!events && ticks_since_int < ticks_per_active_int) {
                 handle_active_int();
@@ -502,7 +502,7 @@ public:
     }
 
     FILE *get_trace_file() {
-        if(!enable_trace)
+        if(!trace_enabled)
             return nullptr;
 
         static FILE *trace = nullptr;
@@ -596,14 +596,14 @@ protected:
 
     // True if interrupts shall not be initiated at the beginning
     // of frames.
-    bool suppressed_int = false;
+    bool int_suppressed = false;
 
     // True if interrupt can occur after EI instruction. Some
     // emulators such as SPIN allow that, so we should be able to
     // do the same to support RZX files produced by them.
-    bool allow_int_after_ei = false;
+    bool int_after_ei_allowed = false;
 
-    bool enable_trace = false;
+    bool trace_enabled = false;
 
 private:
     frame_chunks_type frame_chunks;

@@ -154,10 +154,10 @@ class MachineState(ProcessorState, MemoryState):
     _MACHINE_FIELDS = {
         'ticks_since_int': (32, '<L'),
         'fetches_to_stop': (36, '<L'),
-        'suppressed_int':  (40, 'B'),
-        'allow_int_after_ei': (41, 'B'),
+        'int_suppressed':  (40, 'B'),
+        'int_after_ei_allowed': (41, 'B'),
         'border_color': (42, 'B'),
-        'enable_trace': (43, 'B'),
+        'trace_enabled': (43, 'B'),
     }
 
     def __init__(self, machine_image, memory_image):
@@ -169,13 +169,13 @@ class MachineState(ProcessorState, MemoryState):
         return MachineState(self._image[:], self._memory_image[:])
 
     def is_suppressed_int(self):
-        return bool(self.get('suppressed_int'))
+        return bool(self.get('int_suppressed'))
 
     def suppress_int(self, suppress=True):
-        self.set('suppressed_int', int(suppress))
+        self.set('int_suppressed', int(suppress))
 
     def allow_int_after_ei(self, allow=True):
-        self.set('allow_int_after_ei', int(allow))
+        self.set('int_after_ei_allowed', int(allow))
 
     def set_fetches_limit(self, fetches_to_stop):
         self.set('fetches_to_stop', fetches_to_stop)
@@ -190,7 +190,7 @@ class MachineState(ProcessorState, MemoryState):
         self.set('border_color', color)
 
     def enable_trace(self, enable=True):
-        self.set('enable_trace', int(enable))
+        self.set('trace_enabled', int(enable))
 
     def install_snapshot(self, snapshot):
         assert isinstance(snapshot, zx.MachineSnapshot)

@@ -69,10 +69,10 @@ struct __attribute__((packed)) machine_state {
 
     least_u32 ticks_since_int = 0;
     least_u32 fetches_to_stop = 0;
-    least_u8 suppressed_int = false;
-    least_u8 allow_int_after_ei = false;
+    least_u8 int_suppressed = false;
+    least_u8 int_after_ei_allowed = false;
     least_u8 border_color = 7;
-    least_u8 enable_trace = 0;
+    least_u8 trace_enabled = false;
 };
 
 class machine_emulator : public zx::spectrum48 {
@@ -92,10 +92,10 @@ public:
 
         state.ticks_since_int = ticks_since_int;
         state.fetches_to_stop = fetches_to_stop;
-        state.suppressed_int = suppressed_int;
-        state.allow_int_after_ei = allow_int_after_ei;
+        state.int_suppressed = int_suppressed;
+        state.int_after_ei_allowed = int_after_ei_allowed;
         state.border_color = border_color;
-        state.enable_trace = enable_trace;
+        state.trace_enabled = trace_enabled;
     }
 
     void install_state() {
@@ -103,10 +103,10 @@ public:
 
         ticks_since_int = state.ticks_since_int;
         fetches_to_stop = state.fetches_to_stop;
-        suppressed_int = state.suppressed_int;
-        allow_int_after_ei = state.allow_int_after_ei;
+        int_suppressed = state.int_suppressed;
+        int_after_ei_allowed = state.int_after_ei_allowed;
         border_color = state.border_color;
-        enable_trace = state.enable_trace;
+        trace_enabled = state.trace_enabled;
     }
 
     pixels_buffer_type &get_frame_pixels() {
