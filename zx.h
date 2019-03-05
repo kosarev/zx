@@ -18,9 +18,12 @@ using z80::fast_u16;
 using z80::fast_u32;
 using z80::least_u8;
 using z80::least_u16;
-using z80::unreachable;
+using z80::size_type;
 
+using z80::unreachable;
 using z80::mask16;
+using z80::inc16;
+using z80::dec16;
 
 template<typename T>
 T non_constexpr() {
@@ -49,6 +52,49 @@ const events_mask custom_event      = 1u << 31;
 typedef fast_u8 memory_marks;
 const memory_marks no_marks        = 0;
 const memory_marks breakpoint_mark = 1u << 0;
+const memory_marks x_mark = 1u << 7;
+
+const size_type memory_image_size = 0x10000;  // 64K bytes.
+
+typedef least_u8 memory_image_type[memory_image_size];
+
+class disassembler : public z80::disassembler<disassembler> {
+public:
+    typedef z80::disassembler<disassembler> base;
+
+    disassembler(fast_u16 addr, const memory_image_type &memory)
+        : addr(addr), memory(memory)
+    {}
+
+    void on_output(const char *out) override {
+        std::snprintf(output_buff, max_output_buff_size, "%s", out);
+    }
+
+    fast_u8 on_read_next_byte() {
+        fast_u8 n = memory[mask16(addr)];
+        addr = inc16(addr);
+        return n;
+    }
+
+    fast_u16 get_last_read_addr() const {
+        return dec16(addr);
+    }
+
+    const char *disassemble() {
+        // Skip prefixes.
+        base::disassemble();
+        while(get_index_rp_kind() != z80::index_regp::hl)
+            base::disassemble();
+        return output_buff;
+    }
+
+private:
+    fast_u16 addr;
+    const memory_image_type &memory;
+
+    static const std::size_t max_output_buff_size = 32;
+    char output_buff[max_output_buff_size];
+};
 
 class spectrum48 : public z80::processor<spectrum48> {
 public:
@@ -468,8 +514,17 @@ public:
 
         if(trace_file && get_index_rp_kind() == z80::index_regp::hl) {
             fast_u16 pc = get_pc();
+            if(pc < 0x4000 && is_marked_addr(pc, x_mark)) {
+                fprintf(trace_file, "New addr %04x.",
+                        static_cast<unsigned>(pc));
+                mark_addr(pc, x_mark);
+            }
+
+            disassembler disasm(pc, memory_image);
             fprintf(trace_file,
-                    "PC:%04x AF:%04x BC:%04x DE:%04x HL:%04x IX:%04x IY:%04x SP:%04x MEMPTR:%04x IR:%04x %02x%02x%02x%02x%02x%02x%02x%02x\n",
+                    "PC:%04x AF:%04x BC:%04x DE:%04x HL:%04x IX:%04x IY:%04x "
+                    "SP:%04x MEMPTR:%04x IR:%04x iff1:%u "
+                    "%02x%02x%02x%02x%02x%02x%02x%02x %s\n",
                     static_cast<unsigned>(pc),
                     static_cast<unsigned>(get_af()),
                     static_cast<unsigned>(get_bc()),
@@ -480,6 +535,7 @@ public:
                     static_cast<unsigned>(get_sp()),
                     static_cast<unsigned>(get_memptr()),
                     static_cast<unsigned>(get_ir()),
+                    static_cast<unsigned>(get_iff1()),
                     static_cast<unsigned>(on_read_access((pc + 0) & 0xffff)),
                     static_cast<unsigned>(on_read_access((pc + 1) & 0xffff)),
                     static_cast<unsigned>(on_read_access((pc + 2) & 0xffff)),
@@ -487,7 +543,8 @@ public:
                     static_cast<unsigned>(on_read_access((pc + 4) & 0xffff)),
                     static_cast<unsigned>(on_read_access((pc + 5) & 0xffff)),
                     static_cast<unsigned>(on_read_access((pc + 6) & 0xffff)),
-                    static_cast<unsigned>(on_read_access((pc + 7) & 0xffff)));
+                    static_cast<unsigned>(on_read_access((pc + 7) & 0xffff)),
+                    disasm.disassemble());
             fflush(trace_file);
         }
     }

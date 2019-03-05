@@ -32,7 +32,7 @@ zx_emulator_module = Extension(
                         '-O3',
                         '-UNDEBUG', '-DTRACE=0',  # TODO
                        ],
-    sources=['zx.cpp', 'zx/_emulatormodule.cpp'],
+    sources=['zx.cpp', 'zx/_emulatormodule.cpp', 'z80/z80.cpp'],
     language='c++')
 
 
