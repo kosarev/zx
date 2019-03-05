@@ -50,9 +50,9 @@ const events_mask breakpoint_hit    = 1u << 4;
 const events_mask custom_event      = 1u << 31;
 
 typedef fast_u8 memory_marks;
-const memory_marks no_marks        = 0;
-const memory_marks breakpoint_mark = 1u << 0;
-const memory_marks x_mark = 1u << 7;
+const memory_marks no_marks           = 0;
+const memory_marks breakpoint_mark    = 1u << 0;
+const memory_marks visited_instr_mark = 1u << 7;
 
 const size_type memory_image_size = 0x10000;  // 64K bytes.
 
@@ -514,17 +514,15 @@ public:
 
         if(trace_file && get_index_rp_kind() == z80::index_regp::hl) {
             fast_u16 pc = get_pc();
-            if(pc < 0x4000 && is_marked_addr(pc, x_mark)) {
-                fprintf(trace_file, "New addr %04x.",
-                        static_cast<unsigned>(pc));
-                mark_addr(pc, x_mark);
-            }
+            bool new_rom_instr =
+                pc < 0x4000 && !is_marked_addr(pc, visited_instr_mark);
+            mark_addr(pc, visited_instr_mark);
 
             disassembler disasm(pc, memory_image);
             fprintf(trace_file,
                     "PC:%04x AF:%04x BC:%04x DE:%04x HL:%04x IX:%04x IY:%04x "
                     "SP:%04x MEMPTR:%04x IR:%04x iff1:%u "
-                    "%02x%02x%02x%02x%02x%02x%02x%02x %s\n",
+                    "%02x%02x%02x%02x%02x%02x%02x%02x %s%s\n",
                     static_cast<unsigned>(pc),
                     static_cast<unsigned>(get_af()),
                     static_cast<unsigned>(get_bc()),
@@ -544,7 +542,7 @@ public:
                     static_cast<unsigned>(on_read_access((pc + 5) & 0xffff)),
                     static_cast<unsigned>(on_read_access((pc + 6) & 0xffff)),
                     static_cast<unsigned>(on_read_access((pc + 7) & 0xffff)),
-                    disasm.disassemble());
+                    disasm.disassemble(), new_rom_instr ? " [new]" : "");
             fflush(trace_file);
         }
     }
