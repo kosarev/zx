@@ -523,7 +523,6 @@ public:
         fast_u16 pc = get_pc();
         bool new_rom_instr =
             pc < 0x4000 && !is_marked_addr(pc, visited_instr_mark);
-        mark_addr(pc, visited_instr_mark);
 
         disassembler disasm(pc, memory_image);
         std::fprintf(trace,
@@ -555,6 +554,7 @@ public:
 
     void on_step() {
         trace_state();
+        mark_addr(get_pc(), visited_instr_mark);
         base::on_step();
     }
 
