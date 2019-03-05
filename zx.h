@@ -66,9 +66,7 @@ public:
         : addr(addr), memory(memory)
     {}
 
-    void on_output(const char *out) override {
-        std::snprintf(output_buff, max_output_buff_size, "%s", out);
-    }
+    void on_output(const char *out) override;
 
     fast_u8 on_read_next_byte() {
         fast_u8 n = memory[mask16(addr)];
@@ -271,7 +269,7 @@ public:
     }
 
     void mark_addr(fast_u16 addr, memory_marks marks) {
-        memory_marks[mask16(addr)] |= marks;
+        memory_marks[mask16(addr)] |= static_cast<least_u8>(marks);
     }
 
     void mark_addrs(fast_u16 addr, fast_u16 size, memory_marks marks) {

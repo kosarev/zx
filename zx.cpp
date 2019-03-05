@@ -11,6 +11,10 @@
 
 namespace zx {
 
+void disassembler::on_output(const char *out) {
+    std::snprintf(output_buff, max_output_buff_size, "%s", out);
+}
+
 spectrum48::~spectrum48()
 {}
 
