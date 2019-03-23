@@ -177,6 +177,9 @@ class MachineState(ProcessorState, MemoryState):
     def allow_int_after_ei(self, allow=True):
         self.set('int_after_ei_allowed', int(allow))
 
+    def get_fetches_limit(self):
+        return self.get('fetches_to_stop')
+
     def set_fetches_limit(self, fetches_to_stop):
         self.set('fetches_to_stop', fetches_to_stop)
 

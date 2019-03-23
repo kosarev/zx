@@ -290,10 +290,17 @@ class emulator(Gtk.Window):
                     self._save_crash_rzx(recording, frame_state, chunk_i, frame_i)
                     assert 0
 
+                if frame_count == -65952 - 1000:
+                    machine_state.enable_trace()
+
                 num_of_fetches, samples = frame
                 # print(num_of_fetches, samples)
                 self.sample_i = 0
                 def on_input(addr):
+                    # print(machine_state.get_fetches_limit())
+                    fetch = num_of_fetches - machine_state.get_fetches_limit()
+                    # print('Input at fetch', fetch, 'of', num_of_fetches)
+
                     if self.sample_i >= len(samples):
                         raise zx.Error(
                             'Too few input samples at frame %d of %d. '
@@ -344,6 +351,13 @@ class emulator(Gtk.Window):
                         # instruction, so we continue until such
                         # instruction, if any, is completed.
                         if machine_state.get_index_rp_kind() != 'hl':
+                            machine_state.set_fetches_limit(1)
+                            continue
+
+                        # SPIN doesn't update the fetch counter if the last
+                        # instruction in frame is IN.
+                        if (creator_info == spin_v0p5_info and
+                                self.sample_i < len(samples)):
                             machine_state.set_fetches_limit(1)
                             continue
 
