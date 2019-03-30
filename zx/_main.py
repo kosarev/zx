@@ -381,10 +381,10 @@ class emulator(Gtk.Window):
             events = self.emulator.run()
             # TODO: print(events)
 
-            if events & self._FETCHES_LIMIT_HIT:
+            if events & self.emulator._FETCHES_LIMIT_HIT:
                 set_fetches_limit = True
 
-            if events & self._END_OF_FRAME:
+            if events & self.emulator._END_OF_FRAME:
                 self.emulator.render_frame()
                 self.frame_data[:] = self.emulator.get_frame_pixels()
                 self.area.queue_draw()
