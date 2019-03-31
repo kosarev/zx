@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-''' ZX Spectrum Emulator.
+#   ZX Spectrum Emulator.
+#   https://github.com/kosarev/zx
+#
+#   Copyright (C) 2017-2019 Ivan Kosarev.
+#   ivan@kosarev.info
+#
+#   Published under the MIT license.
 
-    Copyright (C) 2017-2019 Ivan Kosarev.
-    ivan@kosarev.info
-
-    Published under the MIT license.
-'''
 
 import cairo, gi, os, sys, time, zx
 import collections
@@ -374,6 +375,8 @@ class emulator(Gtk.Window):
 
 
     def main(self):
+        self.emulator.enable_trace()
+
         while not self.done:
             while Gtk.events_pending():
                 Gtk.main_iteration()

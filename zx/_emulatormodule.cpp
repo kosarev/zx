@@ -1,5 +1,6 @@
 
 /*  ZX Spectrum Emulation Module for Python.
+    https://github.com/kosarev/zx
 
     Copyright (C) 2017-2019 Ivan Kosarev.
     ivan@kosarev.info
