@@ -524,9 +524,11 @@ public:
 
         disassembler disasm(pc, memory_image);
         std::fprintf(trace,
+            "%7u "
             "PC:%04x AF:%04x BC:%04x DE:%04x HL:%04x IX:%04x IY:%04x "
             "SP:%04x MEMPTR:%04x IR:%04x iff1:%u "
             "%02x%02x%02x%02x%02x%02x%02x%02x %s%s\n",
+            static_cast<unsigned>(ticks_since_int),
             static_cast<unsigned>(pc),
             static_cast<unsigned>(get_af()),
             static_cast<unsigned>(get_bc()),
