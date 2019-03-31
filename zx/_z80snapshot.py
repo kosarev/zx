@@ -66,6 +66,10 @@ class Z80Snapshot(zx.MachineSnapshot):
         fields = {
             'processor_snapshot': zx.ProcessorSnapshot(processor_fields),
             'border_color': (flags1 >> 1) & 0x7,
+
+            # Give the snapshot a chance to execute at least one
+            # instruction without firing up an interrupt.
+            'ticks_since_int': ticks_per_frame - 23,
         }
 
         if 'ticks_count_high' in self:
