@@ -483,15 +483,16 @@ public:
         events = no_events;
 
         // Execute instructions that fit the current frame.
-        while(!events && !int_suppressed &&
-                  ticks_since_int < ticks_per_frame) {
-            // ~INT is sampled during the last tick of the
-            // previous instruction, so we have to see
-            // whether ~INT was active during that last tick
-            // and not the current tick.
-            ticks_type previous_tick = ticks_since_int - 1;
-            if(previous_tick < ticks_per_active_int)
-                handle_active_int();
+        while(!events && ticks_since_int < ticks_per_frame) {
+            if(!int_suppressed) {
+                // ~INT is sampled during the last tick of the
+                // previous instruction, so we have to see
+                // whether ~INT was active during that last tick
+                // and not the current tick.
+                ticks_type previous_tick = ticks_since_int - 1;
+                if(previous_tick < ticks_per_active_int)
+                    handle_active_int();
+            }
 
             step();
         }
