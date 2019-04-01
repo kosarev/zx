@@ -330,6 +330,8 @@ public:
 
     memory_image_type &get_memory() { return memory_image; }
 
+    static const ticks_type ticks_per_active_int = 32;
+
     // Four bits per frame pixel in brightness:grb format.
     static const unsigned bits_per_frame_pixel = 4;
 
@@ -480,18 +482,19 @@ public:
         // Reset events.
         events = no_events;
 
-        // The active-int period needs special processing.
-        if(!int_suppressed) {
-            const ticks_type ticks_per_active_int = 32;
-            while(!events && ticks_since_int < ticks_per_active_int) {
+        // Execute instructions that fit the current frame.
+        while(!events && !int_suppressed &&
+                  ticks_since_int < ticks_per_frame) {
+            // ~INT is sampled during the last tick of the
+            // previous instruction, so we have to see
+            // whether ~INT was active during that last tick
+            // and not the current tick.
+            ticks_type previous_tick = ticks_since_int - 1;
+            if(previous_tick < ticks_per_active_int)
                 handle_active_int();
-                step();
-            }
-        }
 
-        // Execute the rest of instructions in the frame.
-        while(!events && ticks_since_int < ticks_per_frame)
             step();
+        }
 
         // Signal end-of-frame, if it's the case.
         if(ticks_since_int >= ticks_per_frame)
