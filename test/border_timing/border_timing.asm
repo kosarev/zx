@@ -12,11 +12,11 @@
 ;   gets control at a specific frame tick. Then, on every frame
 ;   it draws 16 lines on the top border right above the screen
 ;   area so that the first line starts by an 'OUT (0xfe), A'
-;   instruction executed at tick 10741 (= 48 * 224 - 11) and
-;   every subsequent line starts by another 'OUT (0xfe), A'
-;   instruction 225 (=224 + 1) ticks later, meaning every new
-;   line is placed on the next scanline and also shifted right by
-;   one CPU tick.
+;   instruction which last tick is the beginning of the 48th
+;   scanline (48 * 224 = 10752) and every subsequent line starts
+;   by another 'OUT (0xfe), A' instruction 225 ticks later,
+;   meaning every new line is placed on the next scanline and
+;   shifted right by one CPU tick.
 ;
 ;   Here's how the test syncs calling the ISR with activation of
 ;   the ~INT signal. The first time the ISR gets control, we know
@@ -84,6 +84,10 @@ isr_addr:                   ; The address of the ISR.
 
 
 isr:
+                            ; 1 to 4 ticks since activating of
+                            ; the ~INT signal to complete the
+                            ; current instruction.
+
                             ; 19            Interrupt acknowledgement.
 
     pop hl                  ; 19 + 10 = 29  Remove the return address from the stack.
@@ -169,14 +173,21 @@ done_calibration:
     ; active, draw something on the screen so that imprecise
     ; timing becomes visible.
 draw:
-                            ; 37
-    ld a, 1                 ; +7 = 44
+                            ; 1 tick since ~INT to complete
+                            ; execution of the current HALT
+                            ; instruction.
+                            ;
+                            ; 37 ticks to get to this point.
+                            ;
+    ld a, 1                 ; 7
 
-    ld b, 16                ; +7 = 51
+    ld b, 16                ; 7
 
-    ld c, 218               ; +7 = 58
+    ld c, 218               ; 7
 
-top_lines_delay:            ; +10459 = 10517
+                            ; This is frame tick 59.
+
+top_lines_delay:            ; 10459
     nop                     ;   4
     nop                     ;   4
     nop                     ;   4
@@ -188,6 +199,8 @@ top_lines_delay:            ; +10459 = 10517
     dec c                   ;   4
     jr nz, top_lines_delay  ;   7 + 5
 
+                            ; This is frame tick 10518.
+
     dec de                  ; 6
     dec de                  ; 6
     dec de                  ; 6
@@ -195,7 +208,9 @@ top_lines_delay:            ; +10459 = 10517
     dec de                  ; 6
     ld c, 0                 ; 7
     ld c, 0                 ; 7
-    ld c, 0                 ; +7 = 10568
+    ld c, 0                 ; 7
+
+                            ; This is frame tick 10569.
 
 draw_line:                  ; 3595
     ld c, 10                ;   7
@@ -207,7 +222,14 @@ delay_line:                 ;   155
     ld c, 0                 ;   7
     nop                     ;   4
 
+
     out (0xfe), a           ;   11
+                            ; This instruction is first executed
+                            ; at tick 10742. The last tick of
+                            ; that instruction is thus 10752,
+                            ; which is the beginning of the 48th
+                            ; scanline (48 * 224 = 10752).
+
     xor 7                   ;   7
     out (0xfe), a           ;   11
     xor 7                   ;   7
@@ -215,7 +237,7 @@ delay_line:                 ;   155
     dec b                   ;   4
     jr nz, draw_line        ;   7 + 5
 
-    ld a, r                 ; +9 = 14172
+                            ; This is frame tick 14164.
 
     ei
     halt
