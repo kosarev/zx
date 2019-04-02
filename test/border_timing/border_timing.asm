@@ -17,6 +17,41 @@
 ;   instruction 225 (=224 + 1) ticks later, meaning every new
 ;   line is placed on the next scanline and also shifted right by
 ;   one CPU tick.
+;
+;   Here's how the test syncs calling the ISR with activation of
+;   the ~INT signal. The first time the ISR gets control, we know
+;   ~INT became active at one of the four ticks (T states) of the
+;   HALT's M1 cycle:
+;
+;   -------  ------ M1 -------
+;   T3 | T4  T1 | T2 | T3 | T4
+;                           ^^ ~INT goes active here or
+;
+;   - M1 -------  ------ M1 -------
+;   T2 | T3 | T4  T1 | T2 | T3 | T4
+;                           ^^ ~INT goes active here or
+;
+;   ------ M1 -------  ------ M1 -------
+;   T1 | T2 | T3 | T4  T1 | T2 | T3 | T4
+;                           ^^ ~INT goes active here or
+;
+;        ------ M1 -------  ------ M1 -------
+;        T1 | T2 | T3 | T4  T1 | T2 | T3 | T4
+;                           ^^ ~INT goes active here.
+;
+;   Then, on every frame the ISR takes one tick longer than usual
+;   until the number of executed M1 cycles of the HALT
+;   instruction is changed, which can only happen if we reached
+;   the T4 of the previous M1 cycle:
+;
+;            ------ M1 -------  ------ M1 -------
+;            T1 | T2 | T3 | T4  T1 | T2 | T3 | T4
+;                           ^^ ~INT goes active here.
+;
+;   At this point we know ~INT will be sampled at T4 of the first
+;   M1 cycle, so the CPU will start the 19 ticks long
+;   sequence calling the IM2 ISR immediately after that T4 tick.
+;   This means the ISR will get control at tick 20.
 
     org 0x8000
 
