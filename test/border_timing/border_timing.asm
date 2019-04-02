@@ -239,5 +239,13 @@ delay_line:                 ;   155
 
                             ; This is frame tick 14164.
 
+    ld a, r                 ; 9
+                            ; This instruction is to maintain the
+                            ; phase of ~INT within HALT's M1
+                            ; cycle. For this, the total number
+                            ; of ticks since ~INT not counting
+                            ; the first one (sampling) must be a
+                            ; multiple of 4.
+
     ei
     halt
