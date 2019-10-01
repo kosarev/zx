@@ -503,11 +503,31 @@ def fastforward(args):
         app.destroy()
 
 
+def convert(args):
+    if not args:
+        raise zx.Error('The file to convert from is not specified.')
+    src_filename = args.pop(0)
+
+    if not args:
+        raise zx.Error('The file to convert to is not specified.')
+    dest_filename = args.pop(0)
+
+    handle_extra_arguments(args)
+
+    # file = convert_file(src_filename, dest_filename)
+    print(src_filename, dest_filename)
+
+
 def handle_command_line(args):
     # Guess the command by the arguments.
     if (not args or
         len(args) == 1 and looks_like_filename(args[0])):
         run(args)
+        return
+
+    if (len(args) == 2 and looks_like_filename(args[0]) and
+        looks_like_filename(args[1])):
+        convert(args)
         return
 
     # Handle an explicitly specified command.
@@ -519,8 +539,9 @@ def handle_command_line(args):
         return
 
     COMMANDS = {
-        'run': run,
+        'convert': convert,
         'dump': dump,
+        'run': run,
 
         # TODO: Hidden commands for internal use.
         '__test': test,
