@@ -270,7 +270,8 @@ public:
     }
 
     void mark_addr(fast_u16 addr, memory_marks marks) {
-        memory_marks[mask16(addr)] |= static_cast<least_u8>(marks);
+        addr = mask16(addr);
+        memory_marks[addr] = static_cast<least_u8>(memory_marks[addr] | marks);
     }
 
     void mark_addrs(fast_u16 addr, fast_u16 size, memory_marks marks) {
