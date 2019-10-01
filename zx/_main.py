@@ -504,10 +504,13 @@ def fastforward(args):
 
 
 def handle_command_line(args):
-    if not args or looks_like_filename(args[0]):
+    # Guess the command by the arguments.
+    if (not args or
+        len(args) == 1 and looks_like_filename(args[0])):
         run(args)
         return
 
+    # Handle an explicitly specified command.
     command = args[0]
     if command in ['help', '-help', '--help',
                    '-h', '-?',
