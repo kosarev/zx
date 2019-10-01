@@ -9,7 +9,7 @@
 #   Published under the MIT license.
 
 
-from ._data import Data, FileFormat
+from ._data import Data, FileFormat, TapeFile
 from ._keyboard import KEYS_INFO
 from ._machine import Spectrum48
 from ._main import main, ProcessorSnapshot, MachineSnapshot, SnapshotsFormat

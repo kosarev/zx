@@ -13,9 +13,13 @@ from ._binary import BinaryParser
 import zx
 
 
-class TZXFile(zx.Data):
+class TZXFile(zx.TapeFile):
     def __init__(self, fields):
         self._fields = fields
+
+    def get_pulses(self):
+        assert 0
+        yield (0, 100)
 
 
 class TZXFileFormat(zx.FileFormat):

@@ -380,8 +380,10 @@ class emulator(Gtk.Window):
             self.main()
         elif isinstance(file, RZXFile):
             self.playback_input_recording(file)
+        elif isinstance(file, zx.TapeFile):
+            assert 0  # TODO
         else:
-            assert 0, "Unexpected type of file encountered."
+            raise zx.Error("Don't know how to run file %r." % filename)
 
 
 def handle_extra_arguments(args):

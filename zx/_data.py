@@ -8,6 +8,8 @@
 #
 #   Published under the MIT license.
 
+import zx
+
 
 class Data(object):
     def __init__(self, fields):
@@ -29,6 +31,10 @@ class Data(object):
     def items(self):
         for field in self._fields.items():
             yield field
+
+
+class TapeFile(Data):
+    pass
 
 
 class FileFormat(object):
