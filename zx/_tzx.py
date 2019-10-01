@@ -24,7 +24,7 @@ class TZXFile(zx.SoundFile):
             for i in range(8):
                 yield (b & (1 << (7 - i))) != 0
 
-    def _get_raw_pulses(self):
+    def get_pulses(self):
         level = False
         for block in self['blocks']:
             if block['id'] == '10 (Standard Speed Data Block)':
@@ -67,21 +67,15 @@ class TZXFile(zx.SoundFile):
                     pause_duration -= 1
                     level = not level
 
-
                 assert not level
                 if pause_duration:
                     yield (level, pause_duration * self._TICKS_FREQ / 1000)
             else:
                 assert 0, block  # TODO
 
-    def get_pulses(self):
-        for level, duration in self._get_raw_pulses():
-            # TODO: Do not hardcode the constants.
-            yield (level, int(duration * 44100 / self._TICKS_FREQ))
-
 
 class TZXFileFormat(zx.SoundFileFormat):
-    _name = 'TZX'
+    _NAME = 'TZX'
 
     def _parse_standard_speed_data_block(self, parser):
         block = parser.parse([('pause_after_block_in_ms', '<H'),

@@ -44,7 +44,7 @@ class File(Data):
 
 class FileFormat(object):
     def get_name(self):
-        return self._name
+        return self._NAME
 
 
 class SoundFile(File):
