@@ -33,9 +33,23 @@ class Data(object):
             yield field
 
 
-class TapeFile(Data):
-    pass
+class File(Data):
+    def __init__(self, format, fields):
+        self._format = format
+        Data.__init__(self, fields)
+
+    def get_format(self):
+        return self._format
 
 
 class FileFormat(object):
+    def get_name(self):
+        return self._name
+
+
+class SoundFile(File):
+    pass
+
+
+class SoundFileFormat(FileFormat):
     pass

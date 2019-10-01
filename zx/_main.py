@@ -42,14 +42,25 @@ class RZXFileFormat(zx.FileFormat):
 
 
 def detect_file_format(image, filename_extension):
-    if filename_extension.lower() == '.z80':
-        return zx.Z80SnapshotsFormat()
+    EXTENSIONS_TO_FORMATS = {
+        '.z80': zx.Z80SnapshotsFormat,
+        '.Z80': zx.Z80SnapshotsFormat,
+        '.wav': zx.WAVFileFormat,
+        '.WAV': zx.WAVFileFormat,
+    }
 
-    if image[:4] == b'RZX!':
-        return RZXFileFormat()
+    SIGNATURES_TO_FORMATS = {
+        b'RZX!': RZXFileFormat,
+        b'ZXTape!': zx.TZXFileFormat,
+    }
 
-    if image[:7] == b'ZXTape!':
-        return zx.TZXFileFormat()
+    if filename_extension in EXTENSIONS_TO_FORMATS:
+        return EXTENSIONS_TO_FORMATS[filename_extension]
+
+    if image:
+        for signature in SIGNATURES_TO_FORMATS:
+            if image[:len(signature)] == signature:
+                return SIGNATURES_TO_FORMATS[signature]
 
     return None
 
@@ -63,7 +74,7 @@ def parse_file(filename):
     if not format:
         raise zx.Error('Cannot determine the format of file %r.' % filename)
 
-    return format.parse(image)
+    return format().parse(image)
 
 
 class emulator(Gtk.Window):
@@ -380,7 +391,7 @@ class emulator(Gtk.Window):
             self.main()
         elif isinstance(file, RZXFile):
             self.playback_input_recording(file)
-        elif isinstance(file, zx.TapeFile):
+        elif isinstance(file, zx.SoundFile):
             assert 0  # TODO
         else:
             raise zx.Error("Don't know how to run file %r." % filename)
@@ -484,7 +495,25 @@ def fastforward(args):
 
 def convert_file(src_filename, dest_filename):
     src = parse_file(src_filename)
-    print(src, '->', dest_filename)
+    src_format = src.get_format()
+    # print(src, '->', dest_filename)
+
+    _, dest_ext = os.path.splitext(dest_filename)
+    dest_format = detect_file_format(image=None, filename_extension=dest_ext)
+    if not dest_format:
+        raise zx.Error('Cannot determine the format of file %r.' % (
+                           dest_filename))
+
+    if issubclass(src_format, zx.SoundFileFormat):
+        if issubclass(dest_format, zx.SoundFileFormat):
+            dest_format().save_from_pulses(dest_filename, src.get_pulses())
+        else:
+            raise zx.Error("Don't know how to convert from %s to %s files." % (
+                               src_format().get_name(),
+                               dest_format().get_name()))
+    else:
+        raise zx.Error("Don't know how to convert from %s files." % (
+                           src_format().get_name()))
 
 
 def convert(args):
