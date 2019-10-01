@@ -16,52 +16,26 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
 
-class Data(object):
-    def __init__(self, fields):
-        self._fields = fields
-
-    def __contains__(self, id):
-        return id in self._fields
-
-    def __getitem__(self, id):
-        return self._fields[id]
-
-    def __repr__(self):
-        return repr(self._fields)
-
-    def __iter__(self):
-        for id in self._fields:
-            yield id
-
-    def items(self):
-        for field in self._fields.items():
-            yield field
-
-
 
 # TODO: Move to the z80 project.
-class ProcessorSnapshot(Data):
+class ProcessorSnapshot(zx.Data):
     pass
 
 
-class MachineSnapshot(Data):
+class MachineSnapshot(zx.Data):
     pass
 
 
-class FileFormat(object):
+class SnapshotsFormat(zx.FileFormat):
     pass
 
 
-class SnapshotsFormat(FileFormat):
-    pass
-
-
-class RZXFile(Data):
+class RZXFile(zx.Data):
     def __init__(self, recording):
         self._recording = recording
 
 
-class RZXFileFormat(FileFormat):
+class RZXFileFormat(zx.FileFormat):
     def parse(self, image):
         recording = zx.parse_rzx(image)
         return RZXFile(recording)
@@ -73,6 +47,9 @@ def detect_file_format(image, filename_extension):
 
     if image[:4] == b'RZX!':
         return RZXFileFormat()
+
+    if image[:7] == b'ZXTape!':
+        return zx.TZXFileFormat()
 
     return None
 
