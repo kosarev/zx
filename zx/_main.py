@@ -61,7 +61,7 @@ class RZXFile(Data):
         self._recording = recording
 
 
-class RZXFilesFormat(FileFormat):
+class RZXFileFormat(FileFormat):
     def parse(self, image):
         recording = zx.parse_rzx(image)
         return RZXFile(recording)
@@ -72,7 +72,7 @@ def detect_file_format(image, filename_extension):
         return zx.Z80SnapshotsFormat()
 
     if image[:4] == b'RZX!':
-        return RZXFilesFormat()
+        return RZXFileFormat()
 
     return None
 
