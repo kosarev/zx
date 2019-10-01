@@ -84,7 +84,7 @@ def parse_file(filename):
     base, ext = os.path.splitext(filename)
     format = detect_file_format(image, ext)
     if not format:
-        raise zx.Error('Cannot determine format of file %r.' % filename)
+        raise zx.Error('Cannot determine the format of file %r.' % filename)
 
     return format.parse(image)
 
