@@ -286,6 +286,7 @@ class emulator(Gtk.Window):
                 frame_state = machine_state.clone()
 
                 # TODO: For debug purposes.
+                '''
                 frame_count += 1
                 if frame_count == -12820:
                     self._save_crash_rzx(recording, frame_state, chunk_i, frame_i)
@@ -293,6 +294,7 @@ class emulator(Gtk.Window):
 
                 if frame_count == -65952 - 1000:
                     machine_state.enable_trace()
+                '''
 
                 num_of_fetches, samples = frame
                 # print(num_of_fetches, samples)
@@ -375,7 +377,7 @@ class emulator(Gtk.Window):
 
 
     def main(self):
-        self.emulator.enable_trace()
+        # self.emulator.enable_trace()
 
         while not self.done:
             while Gtk.events_pending():
