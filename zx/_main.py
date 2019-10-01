@@ -482,6 +482,11 @@ def fastforward(args):
         app.destroy()
 
 
+def convert_file(src_filename, dest_filename):
+    src = parse_file(src_filename)
+    print(src, '->', dest_filename)
+
+
 def convert(args):
     if not args:
         raise zx.Error('The file to convert from is not specified.')
@@ -493,8 +498,7 @@ def convert(args):
 
     handle_extra_arguments(args)
 
-    # file = convert_file(src_filename, dest_filename)
-    print(src_filename, dest_filename)
+    convert_file(src_filename, dest_filename)
 
 
 def handle_command_line(args):
