@@ -230,9 +230,9 @@ delay_line:                 ;   155
                             ; which is the beginning of the 48th
                             ; scanline (48 * 224 = 10752).
 
-    xor 7                   ;   7
+    xor 1                   ;   7
     out (0xfe), a           ;   11
-    xor 7                   ;   7
+    xor 5                   ;   7
 
     dec b                   ;   4
     jr nz, draw_line        ;   7 + 5
