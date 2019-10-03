@@ -1,0 +1,5 @@
+Left to right:
+- Spectaculator 8.0, Early INT
+- Spectaculator 8.0, Late INT
+- ZXSpin 0.7q
+- Fuse 1.5.7

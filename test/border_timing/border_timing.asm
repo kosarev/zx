@@ -219,8 +219,8 @@ delay_line:                 ;   155
     dec c                   ;     4
     jr nz, delay_line       ;     7 + 5
 
-    ld c, 0                 ;   7
-    nop                     ;   4
+    ld a, b                 ;   4
+    and 3                   ;   7
 
 
     out (0xfe), a           ;   11
@@ -230,7 +230,7 @@ delay_line:                 ;   155
                             ; which is the beginning of the 48th
                             ; scanline (48 * 224 = 10752).
 
-    xor 1                   ;   7
+    ld a, 6                 ;   7
     out (0xfe), a           ;   11
     xor 5                   ;   7
 
