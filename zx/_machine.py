@@ -49,7 +49,7 @@ class ProcessorState(StateImage):
         'pc': (20, '<H'),
         'sp': (22, '<H'),
         'ir': (24, '<H'), 'r': (24, 'B'), 'i': (25, 'B'),
-        'memptr': (26, '<H'),
+        'wz': (26, '<H'),
 
         'iff1': (28, 'B'),
         'iff2': (29, 'B'),
@@ -127,7 +127,7 @@ class ProcessorState(StateImage):
     def get_int_mode(self):
         return self.get('int_mode')
 
-    def get_index_rp_kind(self):
+    def get_iregp_kind(self):
         n = self.get('index_rp_kind')
         return {0: 'hl', 1: 'ix', 2: 'iy'}[n]
 

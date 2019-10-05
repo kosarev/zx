@@ -224,7 +224,7 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
         #       the middle of IX- and IY-prefixed instructions, so
         #       such situations need some additional processing.
         # TODO: Check for similar problems with other state attributes.
-        assert state.get_index_rp_kind() == 'hl'
+        assert state.get_iregp_kind() == 'hl'
 
         flags1 = 0
         flags2 = 0

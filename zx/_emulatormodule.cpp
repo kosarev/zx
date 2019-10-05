@@ -57,7 +57,7 @@ struct __attribute__((packed)) processor_state {
     least_u16 pc;
     least_u16 sp;
     least_u16 ir;
-    least_u16 memptr;
+    least_u16 wz;
 
     least_u8 iff1;
     least_u8 iff2;
@@ -66,7 +66,7 @@ struct __attribute__((packed)) processor_state {
 };
 
 struct __attribute__((packed)) machine_state {
-    struct processor_state proc;
+    processor_state proc;
 
     least_u32 ticks_since_int = 0;
     least_u32 fetches_to_stop = 0;
@@ -122,9 +122,9 @@ public:
         return events;
     }
 
-    bool handle_active_int() {
+    bool on_handle_active_int() {
         install_state();
-        bool int_initiated = base::handle_active_int();
+        bool int_initiated = base::on_handle_active_int();
         retrieve_state();
         return int_initiated;
     }
@@ -136,8 +136,8 @@ public:
     }
 
 protected:
-    processor_state get_processor_state() {
-        processor_state state;
+    Spectrum48::processor_state get_processor_state() {
+        Spectrum48::processor_state state;
 
         state.bc = get_bc();
         state.de = get_de();
@@ -154,17 +154,17 @@ protected:
         state.pc = get_pc();
         state.sp = get_sp();
         state.ir = get_ir();
-        state.memptr = get_memptr();
+        state.wz = get_wz();
 
         state.iff1 = get_iff1() ? 1 : 0;
         state.iff2 = get_iff2() ? 1 : 0;
         state.int_mode = get_int_mode();
-        state.index_rp_kind = static_cast<least_u8>(get_index_rp_kind());
+        state.index_rp_kind = static_cast<least_u8>(get_iregp_kind());
 
         return state;
     }
 
-    void set_processor_state(const processor_state &state) {
+    void set_processor_state(const Spectrum48::processor_state &state) {
         set_bc(state.bc);
         set_de(state.de);
         set_hl(state.hl);
@@ -180,12 +180,12 @@ protected:
         set_pc(state.pc);
         set_sp(state.sp);
         set_ir(state.ir);
-        set_memptr(state.memptr);
+        set_wz(state.wz);
 
         set_iff1(state.iff1);
         set_iff2(state.iff2);
         set_int_mode(state.int_mode);
-        set_index_rp_kind(static_cast<z80::index_regp>(state.index_rp_kind));
+        set_iregp_kind(static_cast<z80::iregp>(state.index_rp_kind));
     }
 
     fast_u8 on_input(fast_u16 addr) override {
@@ -296,8 +296,8 @@ PyObject *run(PyObject *self, PyObject *args) {
     return Py_BuildValue("i", events);
 }
 
-PyObject *handle_active_int(PyObject *self, PyObject *args) {
-    bool int_initiated = cast_emulator(self).handle_active_int();
+PyObject *on_handle_active_int(PyObject *self, PyObject *args) {
+    bool int_initiated = cast_emulator(self).on_handle_active_int();
     return PyBool_FromLong(int_initiated);
 }
 
@@ -321,7 +321,7 @@ PyMethodDef methods[] = {
      "Set a callback function handling reading from ports."},
     {"run", run, METH_NOARGS,
      "Run emulator until one or several events are signaled."},
-    {"handle_active_int", handle_active_int, METH_NOARGS,
+    {"on_handle_active_int", on_handle_active_int, METH_NOARGS,
      "Attempts to initiate a masked interrupt."},
     { nullptr }  // Sentinel.
 };

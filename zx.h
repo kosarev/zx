@@ -19,7 +19,6 @@ using z80::fast_u16;
 using z80::fast_u32;
 using z80::least_u8;
 using z80::least_u16;
-using z80::size_type;
 
 using z80::unreachable;
 using z80::mask16;
@@ -55,19 +54,21 @@ const memory_marks no_marks           = 0;
 const memory_marks breakpoint_mark    = 1u << 0;
 const memory_marks visited_instr_mark = 1u << 7;
 
-const size_type memory_image_size = 0x10000;  // 64K bytes.
+const unsigned memory_image_size = 0x10000;  // 64K bytes.
 
 typedef least_u8 memory_image_type[memory_image_size];
 
-class disassembler : public z80::disassembler<disassembler> {
+class disassembler : public z80::z80_disasm<disassembler> {
 public:
-    typedef z80::disassembler<disassembler> base;
+    typedef z80::z80_disasm<disassembler> base;
 
     disassembler(fast_u16 addr, const memory_image_type &memory)
         : addr(addr), memory(memory)
     {}
 
-    void on_output(const char *out) override;
+    void on_emit(const char *out) {
+        std::snprintf(output_buff, max_output_buff_size, "%s", out);
+    }
 
     fast_u8 on_read_next_byte() {
         fast_u8 n = memory[mask16(addr)];
@@ -75,15 +76,15 @@ public:
         return n;
     }
 
-    fast_u16 get_last_read_addr() const {
+    fast_u16 on_get_last_read_addr() const {
         return dec16(addr);
     }
 
-    const char *disassemble() {
+    const char *on_disassemble() {
         // Skip prefixes.
-        base::disassemble();
-        while(get_index_rp_kind() != z80::index_regp::hl)
-            base::disassemble();
+        base::on_disassemble();
+        while(get_iregp_kind() != z80::iregp::hl)
+            base::on_disassemble();
         return output_buff;
     }
 
@@ -95,9 +96,9 @@ private:
     char output_buff[max_output_buff_size];
 };
 
-class spectrum48 : public z80::processor<spectrum48> {
+class spectrum48 : public z80::z80_cpu<spectrum48> {
 public:
-    typedef processor<spectrum48> base;
+    typedef z80_cpu<spectrum48> base;
     typedef fast_u32 ticks_type;
 
     spectrum48() {
@@ -114,7 +115,7 @@ public:
 
     void stop() { events |= machine_stopped; }
 
-    void tick(unsigned t) {
+    void on_tick(unsigned t) {
         ticks_since_int += t;
 
         // Handle stopping by hitting a specified number of ticks.
@@ -135,12 +136,12 @@ public:
         memory_image[addr] = static_cast<least_u8>(n);
     }
 
-    fast_u8 on_read_access(fast_u16 addr) {
+    fast_u8 on_read(fast_u16 addr) {
         assert(addr < memory_image_size);
         return memory_image[addr];
     }
 
-    void on_write_access(fast_u16 addr, fast_u8 n) {
+    void on_write(fast_u16 addr, fast_u8 n) {
         // Do not alter ROM.
         if(addr >= 0x4000)
             set_memory_byte(addr, n);
@@ -164,7 +165,7 @@ public:
         unsigned ticks_since_new_ula_cycle = ticks_since_new_line % 8;
         unsigned delay = ticks_since_new_ula_cycle == 7 ?
             0 : 6 - ticks_since_new_ula_cycle;
-        tick(delay);
+        on_tick(delay);
     }
 
     void handle_memory_contention(fast_u16 addr) {
@@ -172,77 +173,73 @@ public:
             handle_contention();
     }
 
-    fast_u8 on_fetch_cycle(fast_u16 addr, bool m1 = true) {
+    fast_u8 on_fetch_cycle() {
+        handle_memory_contention(get_pc());
+        return base::on_fetch_cycle();
+    }
+
+    fast_u8 on_m1_fetch_cycle() {
         // Handle stopping by hitting a specified number of fetches.
         // TODO: Rename fetches_to_stop -> m1_fetches_to_stop.
-        if(m1 && fetches_to_stop && --fetches_to_stop == 0)
+        if(fetches_to_stop && --fetches_to_stop == 0)
             events |= fetches_limit_hit;
 
+        return on_fetch_cycle();
+    }
+
+    fast_u8 on_read_cycle(fast_u16 addr) {
         handle_memory_contention(addr);
-        return base::on_fetch_cycle(addr, m1);
+        return base::on_read_cycle(addr);
     }
 
-    fast_u8 on_read_cycle(fast_u16 addr, unsigned ticks) {
-        assert(ticks == 3);
+    void on_write_cycle(fast_u16 addr, fast_u8 n) {
         handle_memory_contention(addr);
-        return base::on_read_cycle(addr, ticks);
+        base::on_write_cycle(addr, n);
     }
 
-    void on_write_cycle(fast_u16 addr, fast_u8 n, unsigned ticks) {
-        // assert(addr >= 0x4000);  // TODO
-        assert(ticks == 3);
-        handle_memory_contention(addr);
-        base::on_write_cycle(addr, n, ticks);
+    void handle_contention_tick() {
+        handle_memory_contention(addr_bus_value);
+        on_tick(1);
     }
 
-    void handle_contention_tick(fast_u16 addr) {
-        handle_memory_contention(addr);
-        tick(1);
+    void on_read_cycle_extra_1t() {
+        handle_contention_tick();
     }
 
-    fast_u8 on_4t_read_cycle(fast_u16 addr) {
-        fast_u8 n = on_read_cycle(addr, /* ticks= */ 3);
-        handle_contention_tick(addr);
-        return n;
+    void on_read_cycle_extra_2t() {
+        handle_contention_tick();
+        handle_contention_tick();
     }
 
-    fast_u8 on_5t_read_cycle(fast_u16 addr) {
-        fast_u8 n = on_read_cycle(addr, /* ticks= */ 3);
-        handle_contention_tick(addr);
-        handle_contention_tick(addr);
-        return n;
-    }
-
-    void on_5t_write_cycle(fast_u16 addr, fast_u8 n) {
-        on_write_cycle(addr, n, /* ticks= */ 3);
-        handle_contention_tick(addr);
-        handle_contention_tick(addr);
+    void on_write_cycle_extra_2t() {
+        handle_contention_tick();
+        handle_contention_tick();
     }
 
     void handle_port_contention(fast_u16 addr) {
         if(addr < 0x4000 || addr >= 0x8000)  {
             if((addr & 1) == 0) {
-                tick(1);
+                on_tick(1);
                 handle_contention();
-                tick(3);
+                on_tick(3);
             } else {
-                tick(4);
+                on_tick(4);
             }
         } else {
             if((addr & 1) == 0) {
                 handle_contention();
-                tick(1);
+                on_tick(1);
                 handle_contention();
-                tick(3);
+                on_tick(3);
             } else {
                 handle_contention();
-                tick(1);
+                on_tick(1);
                 handle_contention();
-                tick(1);
+                on_tick(1);
                 handle_contention();
-                tick(1);
+                on_tick(1);
                 handle_contention();
-                tick(1);
+                on_tick(1);
             }
         }
     }
@@ -301,24 +298,24 @@ public:
     }
 
     void on_3t_exec_cycle() {
-        handle_contention_tick(addr_bus_value);
-        handle_contention_tick(addr_bus_value);
-        handle_contention_tick(addr_bus_value);
+        handle_contention_tick();
+        handle_contention_tick();
+        handle_contention_tick();
     }
 
     void on_4t_exec_cycle() {
-        handle_contention_tick(addr_bus_value);
-        handle_contention_tick(addr_bus_value);
-        handle_contention_tick(addr_bus_value);
-        handle_contention_tick(addr_bus_value);
+        handle_contention_tick();
+        handle_contention_tick();
+        handle_contention_tick();
+        handle_contention_tick();
     }
 
     void on_5t_exec_cycle() {
-        handle_contention_tick(addr_bus_value);
-        handle_contention_tick(addr_bus_value);
-        handle_contention_tick(addr_bus_value);
-        handle_contention_tick(addr_bus_value);
-        handle_contention_tick(addr_bus_value);
+        handle_contention_tick();
+        handle_contention_tick();
+        handle_contention_tick();
+        handle_contention_tick();
+        handle_contention_tick();
     }
 
     void disable_int_on_ei() {
@@ -326,7 +323,7 @@ public:
             base::disable_int_on_ei();
     }
 
-    static const z80::size_type memory_image_size = 0x10000;  // 64K bytes.
+    static const unsigned memory_image_size = 0x10000;  // 64K bytes.
     typedef least_u8 memory_image_type[memory_image_size];
 
     memory_image_type &get_memory() { return memory_image; }
@@ -415,7 +412,7 @@ public:
             // Screen.
             fast_u16 addr = line_addr;
             for(; j != chunks_per_border_width + chunks_per_screen_line; ++j) {
-                fast_u8 b = on_read_access(addr);
+                fast_u8 b = on_read(addr);
                 uint_fast32_t c = 0;
                 c |= (b & 0x80) ? black : white; c <<= 4;
                 c |= (b & 0x40) ? black : white; c <<= 4;
@@ -492,10 +489,10 @@ public:
                 // and not the current tick.
                 ticks_type previous_tick = ticks_since_int - 1;
                 if(previous_tick < ticks_per_active_int)
-                    handle_active_int();
+                    on_handle_active_int();
             }
 
-            step();
+            on_step();
         }
 
         // Signal end-of-frame, if it's the case.
@@ -521,7 +518,7 @@ public:
         if(!trace)
             return;
 
-        if(get_index_rp_kind() != z80::index_regp::hl)
+        if(get_iregp_kind() != z80::iregp::hl)
             return;
 
         fast_u16 pc = get_pc();
@@ -532,7 +529,7 @@ public:
         std::fprintf(trace,
             "%7u "
             "PC:%04x AF:%04x BC:%04x DE:%04x HL:%04x IX:%04x IY:%04x "
-            "SP:%04x MEMPTR:%04x IR:%04x iff1:%u "
+            "SP:%04x WZ:%04x IR:%04x iff1:%u "
             "%02x%02x%02x%02x%02x%02x%02x%02x %s%s\n",
             static_cast<unsigned>(ticks_since_int),
             static_cast<unsigned>(pc),
@@ -543,18 +540,18 @@ public:
             static_cast<unsigned>(get_ix()),
             static_cast<unsigned>(get_iy()),
             static_cast<unsigned>(get_sp()),
-            static_cast<unsigned>(get_memptr()),
+            static_cast<unsigned>(get_wz()),
             static_cast<unsigned>(get_ir()),
             static_cast<unsigned>(get_iff1()),
-            static_cast<unsigned>(on_read_access((pc + 0) & 0xffff)),
-            static_cast<unsigned>(on_read_access((pc + 1) & 0xffff)),
-            static_cast<unsigned>(on_read_access((pc + 2) & 0xffff)),
-            static_cast<unsigned>(on_read_access((pc + 3) & 0xffff)),
-            static_cast<unsigned>(on_read_access((pc + 4) & 0xffff)),
-            static_cast<unsigned>(on_read_access((pc + 5) & 0xffff)),
-            static_cast<unsigned>(on_read_access((pc + 6) & 0xffff)),
-            static_cast<unsigned>(on_read_access((pc + 7) & 0xffff)),
-            disasm.disassemble(), new_rom_instr ? " [new]" : "");
+            static_cast<unsigned>(on_read((pc + 0) & 0xffff)),
+            static_cast<unsigned>(on_read((pc + 1) & 0xffff)),
+            static_cast<unsigned>(on_read((pc + 2) & 0xffff)),
+            static_cast<unsigned>(on_read((pc + 3) & 0xffff)),
+            static_cast<unsigned>(on_read((pc + 4) & 0xffff)),
+            static_cast<unsigned>(on_read((pc + 5) & 0xffff)),
+            static_cast<unsigned>(on_read((pc + 6) & 0xffff)),
+            static_cast<unsigned>(on_read((pc + 7) & 0xffff)),
+            disasm.on_disassemble(), new_rom_instr ? " [new]" : "");
         std::fflush(trace);
     }
 
@@ -564,8 +561,8 @@ public:
         base::on_step();
     }
 
-    bool handle_active_int() {
-        bool int_initiated = base::handle_active_int();
+    bool on_handle_active_int() {
+        bool int_initiated = base::on_handle_active_int();
         if(FILE *trace = get_trace_file()) {
             if(int_initiated) {
                 std::fprintf(trace, "INT accepted\n");

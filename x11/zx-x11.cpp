@@ -412,7 +412,7 @@ int main(int argc, const char *argv[]) {
                          "%5u %04x\n", static_cast<unsigned>(emu.get_ticks()),
                          static_cast<unsigned>(emu.get_pc()));
             std::fflush(stderr);
-            emu.step();
+            emu.on_step();
         }
         std::fprintf(stderr, "%5u\n", static_cast<unsigned>(emu.get_ticks()));
         return EXIT_SUCCESS;
