@@ -192,6 +192,9 @@ class MachineState(ProcessorState, MemoryState):
     def set_fetches_limit(self, fetches_to_stop):
         self.set('fetches_to_stop', fetches_to_stop)
 
+    def get_ticks_since_int(self):
+        return self.get('ticks_since_int')
+
     def set_ticks_since_int(self, ticks):
         self.set('ticks_since_int', ticks)
 

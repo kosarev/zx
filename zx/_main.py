@@ -83,6 +83,53 @@ def parse_file(filename):
     return format().parse(image)
 
 
+class TapePlayer(object):
+    def __init__(self):
+        # TODO
+        self._file = parse_file('/home/ik/labs/kosarev/github/zx/lab/tzx/border_timing.tap')
+        self._pulses = self._file.get_pulses()
+        self._tick = 0
+        self._level = False
+        self._pulse = 0
+        self._ticks_per_frame = 69888  # TODO
+
+    def get_level_at_frame_tick(self, tick):
+        assert self._tick <= tick
+
+        while self._tick < tick:
+            # See if we already have a non-zero-length pulse.
+            if self._pulse:
+                ticks_to_skip = min(self._pulse, tick - self._tick)
+                self._pulse -= ticks_to_skip
+                self._tick += ticks_to_skip
+                continue
+
+            # Get subsequent pulse, if any.
+            got_new_pulse = False
+            for self._level, self._pulse in self._pulses:
+                got_new_pulse = True
+                # print(self._pulse)
+                break
+
+            # Do nothing, if there are no more pulses available.
+            if not got_new_pulse:
+                self._level = False
+                self._tick = tick
+
+        return self._level
+
+    def skip_rest_of_frame(self):
+        if self._tick < self._ticks_per_frame:
+            self.get_level_at_frame_tick(self._ticks_per_frame)
+
+        assert self._tick >= self._ticks_per_frame
+        self._tick -= self._ticks_per_frame
+
+    def pause_or_unpause(self):
+        # TODO
+        pass
+
+
 class emulator(Gtk.Window):
     def __init__(self, speed_factor=1.0):
         super(emulator, self).__init__()
@@ -135,6 +182,8 @@ class emulator(Gtk.Window):
         self.connect("key-press-event", self.on_key_press)
         self.connect("key-release-event", self.on_key_release)
 
+        self.tape_player = TapePlayer()
+
     def on_done(self, widget, context):
         self.done = True
 
@@ -163,9 +212,13 @@ class emulator(Gtk.Window):
         if key_id in ['ESCAPE', 'F10']:
             self.done = True
             return
+
         if key_id == 'F2':
             # TODO: Let user choose the name.
             self.save_snapshot('saved.z80')
+
+        if key_id == 'F6':
+            self.tape_player.pause_or_unpause()
 
         self.handle_spectrum_key(self.keys.get(key_id, None), pressed=True)
 
@@ -193,6 +246,13 @@ class emulator(Gtk.Window):
             n &= self.keyboard_state[6]
         if addr & (1 << 15):
             n &= self.keyboard_state[7]
+
+        # TODO: Use the tick when the ear value is sampled
+        #       instead of the tick of the beginning of the input
+        #       cycle.
+        tick = self.emulator.get_ticks_since_int()
+        if self.tape_player.get_level_at_frame_tick(tick):
+            n |= 0x40
 
         return n
 
@@ -387,6 +447,7 @@ class emulator(Gtk.Window):
                 self.emulator.render_frame()
                 self.frame_data[:] = self.emulator.get_frame_pixels()
                 self.area.queue_draw()
+                self.tape_player.skip_rest_of_frame()
                 time.sleep((1 / 50) * self._speed_factor)
 
     def run_file(self, filename):
