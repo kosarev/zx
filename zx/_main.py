@@ -92,13 +92,15 @@ class TapePlayer(object):
         self._pulse = 0
         self._ticks_per_frame = 69888  # TODO
 
-    def load_tape(self):
-        filename = input('Tape file: ')
-        file = parse_file(filename)
+    def load_parsed_file(self, file):
         self._pulses = file.get_pulses()
         self._level = False
         self._is_paused = True
         print('Press F6 to unpause the tape.')
+
+    def load_tape(self):
+        filename = input('Tape file: ')
+        self.load_parsed_file(parse_file(filename))
 
     def pause_or_unpause(self):
         self._is_paused = not self._is_paused
@@ -475,7 +477,8 @@ class emulator(Gtk.Window):
         elif isinstance(file, RZXFile):
             self.playback_input_recording(file)
         elif isinstance(file, zx.SoundFile):
-            assert 0  # TODO
+            self.tape_player.load_parsed_file(file)
+            self.main()
         else:
             raise zx.Error("Don't know how to run file %r." % filename)
 
