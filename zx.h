@@ -431,8 +431,8 @@ public:
             // beginning of the frame with coordinates (0, 0).
             ticks_type frame_tick = render_tick + border_width / 2 - 8 / 2;  // TODO
 
-            unsigned line = frame_tick / ticks_per_line;
-            unsigned line_pixel = (frame_tick % ticks_per_line) * 2;
+            auto line = static_cast<unsigned>(frame_tick / ticks_per_line);
+            auto line_pixel = static_cast<unsigned>(frame_tick % ticks_per_line) * 2;
 
             // Top hidden lines.
             const unsigned top_hidden_lines = 64 - top_border_height;
