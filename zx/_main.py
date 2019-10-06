@@ -44,6 +44,7 @@ class RZXFileFormat(zx.FileFormat):
 def detect_file_format(image, filename_extension):
     KNOWN_FORMATS = [
         ('.rzx', b'RZX!', RZXFileFormat),
+        ('.tap', None, zx.TAPFileFormat),
         ('.tzx', b'ZXTape!', zx.TZXFileFormat),
         ('.wav', b'RIFF', zx.WAVFileFormat),
         ('.z80', None, zx.Z80SnapshotsFormat),

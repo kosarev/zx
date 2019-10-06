@@ -15,6 +15,7 @@ from ._machine import Spectrum48
 from ._main import main, ProcessorSnapshot, MachineSnapshot, SnapshotsFormat
 from ._rom import get_rom_image
 from ._rzx import parse_rzx, make_rzx
+from ._tap import TAPFileFormat
 from ._tzx import TZXFileFormat
 from ._utils import make16
 from ._wav import WAVFileFormat
