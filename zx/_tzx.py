@@ -13,16 +13,36 @@ from ._binary import BinaryParser
 import zx
 
 
+def get_standard_pilot_pulses(is_header):
+    pulse = 2168
+    duration = 8063 if is_header else 3223
+    for _ in range(duration):
+        yield pulse
+
+
+def get_standard_sync_pulses():
+    yield 667
+    yield 735
+
+
+def _get_data_bits(data):
+    for byte in data:
+        for i in range(8):
+            yield (byte & (1 << (7 - i))) != 0
+
+
+def get_standard_data_pulses(data):
+    for bit in _get_data_bits(data):
+        pulse = 1710 if bit else 855
+        yield pulse
+        yield pulse
+
+
 class TZXFile(zx.SoundFile):
     _TICKS_FREQ = 3500000
 
     def __init__(self, fields):
         zx.SoundFile.__init__(self, TZXFileFormat, fields)
-
-    def _get_data_bits(self, data):
-        for b in data:
-            for i in range(8):
-                yield (b & (1 << (7 - i))) != 0
 
     def get_pulses(self):
         level = False
@@ -31,24 +51,19 @@ class TZXFile(zx.SoundFile):
                 data = block['data']
 
                 # Generate pilot tone.
-                pilot_pulse = 2168
-                pilot_duration = 8063 if data[0] < 128 else 3223
-                for _ in range(pilot_duration):
-                    yield (level, pilot_pulse)
+                is_header = data[0] < 128
+                for pulse in get_standard_pilot_pulses(is_header):
+                    yield (level, pulse)
                     level = not level
 
                 # Sync pulses.
-                yield (level, 667)
-                level = not level
-
-                yield (level, 735)
-                level = not level
+                for pulse in get_standard_sync_pulses():
+                    yield (level, pulse)
+                    level = not level
 
                 # Data.
-                for b in self._get_data_bits(data):
-                    yield (level, 1710 if b else 855)
-                    level = not level
-                    yield (level, 1710 if b else 855)
+                for pulse in get_standard_data_pulses(data):
+                    yield (level, pulse)
                     level = not level
 
                 # Pause.
