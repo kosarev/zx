@@ -40,6 +40,8 @@ class TZXFile(zx.SoundFile):
 
                 # At the end of the non-zero-duration pause the
                 # output level shall be low.
+                ''' TODO: Despite the specification, this cases
+                          tape loading errors.
                 if level:
                     # Give the high pulse 1ms of time and drop it.
                     yield (level, self._TICKS_FREQ / 1000)
@@ -47,6 +49,8 @@ class TZXFile(zx.SoundFile):
                     level = not level
 
                 assert not level
+                '''
+
                 if pause_duration:
                     yield (level, pause_duration * self._TICKS_FREQ / 1000)
             else:

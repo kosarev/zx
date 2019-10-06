@@ -85,6 +85,7 @@ def parse_file(filename):
 
 class TapePlayer(object):
     def __init__(self):
+        self._is_paused = False
         self._pulses = []
         self._tick = 0
         self._level = False
@@ -95,11 +96,22 @@ class TapePlayer(object):
         filename = input('Tape file: ')
         file = parse_file(filename)
         self._pulses = file.get_pulses()
+        self._level = False
+        self._is_paused = True
+        print('Press F6 to unpause the tape.')
+
+    def pause_or_unpause(self):
+        self._is_paused = not self._is_paused
+        print('Tape is %s.' % ('paused' if self._is_paused else 'unpaused'))
 
     def get_level_at_frame_tick(self, tick):
         assert self._tick <= tick
 
         while self._tick < tick:
+            if self._is_paused:
+                self._tick = tick
+                continue
+
             # See if we already have a non-zero-length pulse.
             if self._pulse:
                 ticks_to_skip = min(self._pulse, tick - self._tick)
@@ -109,8 +121,10 @@ class TapePlayer(object):
 
             # Get subsequent pulse, if any.
             got_new_pulse = False
-            for self._level, self._pulse in self._pulses:
+            for level, pulse in self._pulses:
                 got_new_pulse = True
+                self._level = level
+                self._pulse = pulse
                 # print(self._pulse)
                 break
 
@@ -127,10 +141,6 @@ class TapePlayer(object):
 
         assert self._tick >= self._ticks_per_frame
         self._tick -= self._ticks_per_frame
-
-    def pause_or_unpause(self):
-        # TODO
-        pass
 
 
 class emulator(Gtk.Window):
