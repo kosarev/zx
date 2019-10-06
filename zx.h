@@ -36,8 +36,19 @@ constexpr T div_exact(T a, T b) {
 }
 
 template<typename T>
+constexpr T div_ceil(T a, T b) {
+    return (a + b - 1) / b;
+}
+
+
+template<typename T>
 constexpr bool is_multiple_of(T a, T b) {
     return b != 0 && a % b == 0;
+}
+
+template<typename T>
+constexpr bool round_up(T a, T b) {
+    return div_ceil(a, b) * b;
 }
 
 typedef fast_u32 events_mask;
@@ -152,7 +163,6 @@ public:
         if(ticks_since_int < cont_base)
             return;
 
-        const ticks_type ticks_per_line = 224;
         if(ticks_since_int >= cont_base + screen_height * ticks_per_line)
             return;
 
@@ -184,8 +194,16 @@ public:
         if(fetches_to_stop && --fetches_to_stop == 0)
             events |= fetches_limit_hit;
 
-        return on_fetch_cycle();
+        return base::on_m1_fetch_cycle();
     }
+
+#if 0  // TODO
+    fast_u8 on_m1_fetch_cycle() {
+        fast_u8 n = self().on_fetch_cycle();
+        self().on_inc_r_reg();
+        return n;
+    }
+#endif
 
     fast_u8 on_read_cycle(fast_u16 addr) {
         handle_memory_contention(addr);
@@ -217,7 +235,7 @@ public:
     }
 
     void handle_port_contention(fast_u16 addr) {
-        if(addr < 0x4000 || addr >= 0x8000)  {
+        if(addr < 0x4000 || addr >= 0x8000) {
             if((addr & 1) == 0) {
                 on_tick(1);
                 handle_contention();
@@ -284,11 +302,19 @@ public:
         base::on_set_pc(pc);
     }
 
+    // TODO: Get rid of all virtuals and remove the .cpp file.
     virtual fast_u8 on_input(fast_u16 addr);
 
     void on_output_cycle(fast_u16 addr, fast_u8 n) {
-        if((addr & 0xff) == 0xfe)
+        if((addr & 0xff) == 0xfe) {
+            // TODO: Render to (current_tick + 1) and then update
+            // the border color as the new value is sampled at
+            // the 2nd tick of the output cycle.
+            // TODO: The "+ 1" thing is still wrong as there may
+            // be contentions in the middle.
+            render_frame_to_tick(get_ticks() + 1);
             border_color = n & 0x7;
+        }
 
         handle_port_contention(addr);
     }
@@ -328,6 +354,8 @@ public:
 
     memory_image_type &get_memory() { return memory_image; }
 
+    static const ticks_type ticks_per_frame = 69888;
+    static const ticks_type ticks_per_line = 224;
     static const ticks_type ticks_per_active_int = 32;
 
     // Four bits per frame pixel in brightness:grb format.
@@ -345,12 +373,12 @@ public:
 
     // Eight frame pixels per chunk. The leftmost pixel occupies the most
     // significant bits.
-    static const unsigned frame_pixels_per_chunk = 8;
+    static const unsigned pixels_per_frame_chunk = 8;
 
     // The type of frame chunks.
     static const unsigned frame_chunk_width = 32;
     static_assert(
-        bits_per_frame_pixel * frame_pixels_per_chunk <= frame_chunk_width,
+        bits_per_frame_pixel * pixels_per_frame_chunk <= frame_chunk_width,
         "The frame chunk width is too small!");
     typedef uint_least32_t frame_chunk;
 
@@ -370,33 +398,101 @@ public:
     // We want screen, border and frame widths be multiples of chunk widths to
     // simplify the processing code and to benefit from aligned memory accesses.
     static const unsigned chunks_per_border_width =
-        div_exact(border_width, frame_pixels_per_chunk);
+        div_exact(border_width, pixels_per_frame_chunk);
     static const unsigned chunks_per_screen_line =
-        div_exact(screen_width, frame_pixels_per_chunk);
+        div_exact(screen_width, pixels_per_frame_chunk);
     static const unsigned chunks_per_frame_line =
-        div_exact(frame_width, frame_pixels_per_chunk);
+        div_exact(frame_width, pixels_per_frame_chunk);
 
     typedef frame_chunk frame_chunks_type[frame_height][chunks_per_frame_line];
 
     const frame_chunks_type &get_frame_chunks() { return frame_chunks; }
 
-    void render_frame() {
+    // TODO: Name the constants.
+    void start_new_frame() {
+        ticks_since_int %= ticks_per_frame;
+        render_tick = 0;
+    }
+
+    // TODO: Name the constants.
+    // TODO: Optimize.
+    void render_frame_to_tick(ticks_type end_tick) {
         static_assert(bits_per_frame_pixel == 4,
                       "Unsupported frame pixel format!");
-        static_assert(frame_pixels_per_chunk == 8,
+        static_assert(pixels_per_frame_chunk == 8,
                       "Unsupported frame chunk format!");
+
+        // TODO: Render the border by whole chunks when possible.
+        while(render_tick < end_tick) {
+            if(render_tick % 4 == 0)
+                latched_border_color = border_color;
+
+            // The tick since the beam was at the imaginary
+            // beginning of the frame with coordinates (0, 0).
+            ticks_type frame_tick = render_tick + border_width / 2 - 8 / 2;  // TODO
+
+            unsigned line = frame_tick / ticks_per_line;
+            unsigned line_pixel = (frame_tick % ticks_per_line) * 2;
+
+            // Top hidden lines.
+            const unsigned top_hidden_lines = 64 - top_border_height;
+            bool is_top_hidden_line = line < top_hidden_lines;
+            if(is_top_hidden_line) {
+                ++render_tick;
+                continue;
+            }
+
+            bool is_top_border = line < 64;
+            if(is_top_border ||
+                   line < 64 + screen_height + bottom_border_height) {
+                unsigned screen_line = line - top_hidden_lines;
+                frame_chunk *line_chunks = frame_chunks[screen_line];
+
+                unsigned chunk_index = line_pixel / pixels_per_frame_chunk;
+                unsigned chunk_pixel = line_pixel % pixels_per_frame_chunk;
+
+                if(chunk_index < chunks_per_frame_line) {
+                    frame_chunk *chunk = &line_chunks[chunk_index];
+                    unsigned pixels_value = (0x11000000 * latched_border_color) >> (chunk_pixel * 4);
+                    unsigned pixels_mask = 0xff000000 >> (chunk_pixel * 4);
+                    *chunk = (*chunk & ~pixels_mask) | pixels_value;
+                }
+
+                ++render_tick;
+                continue;
+            }
+
+            // TODO: Draw the rest of the screen.
+
+            ++render_tick;
+        }
+    }
+
+    // TODO: Move to the private section.
+    ticks_type render_tick = 0;
+    unsigned latched_border_color = 0;
+
+    // TODO: Eliminate.
+    void x_render_frame() {
+        render_frame_to_tick(ticks_per_frame);
+
+        // TODO
+        // return;
 
         const unsigned black = 0;
         const unsigned white = red_mask | green_mask | blue_mask;
 
-        frame_chunk border_chunk = 0x11111111 * border_color;
+        // TODO
+        // frame_chunk border_chunk = 0x11111111 * border_color;
 
         // Render the top border area.
         unsigned i = 0;
         for(; i != top_border_height; ++i) {
+#if 0  // TODO
             frame_chunk *line = frame_chunks[i];
             for(unsigned j = 0; j != chunks_per_frame_line; ++j)
                 line[j] = border_chunk;
+#endif
         }
 
         // Render the screen area.
@@ -406,8 +502,12 @@ public:
 
             // Left border.
             unsigned j = 0;
+#if 0
             for(; j != chunks_per_border_width; ++j)
                 line[j] = border_chunk;
+#else
+            j += chunks_per_border_width;
+#endif
 
             // Screen.
             fast_u16 addr = line_addr;
@@ -427,8 +527,10 @@ public:
             }
 
             // Right border.
+#if 0
             for(; j != chunks_per_frame_line; ++j)
                 line[j] = border_chunk;
+#endif
 
             // Move to next line.
             if(((line_addr += 0x0100) & 0x700) == 0) {
@@ -438,11 +540,13 @@ public:
         }
 
         // Render the bottom border area.
+#if 0
         for(; i != frame_height; ++i) {
             frame_chunk *line = frame_chunks[i];
             for(unsigned j = 0; j != chunks_per_frame_line; ++j)
                 line[j] = border_chunk;
         }
+#endif
     }
 
     typedef uint_least32_t pixel_type;
@@ -450,11 +554,11 @@ public:
     static const std::size_t pixels_buffer_size = sizeof(pixels_buffer_type);
 
     void get_frame_pixels(pixels_buffer_type &buffer) {
-        static_assert(is_multiple_of(frame_width, frame_pixels_per_chunk),
+        static_assert(is_multiple_of(frame_width, pixels_per_frame_chunk),
                       "Fractional number of chunks per line is not supported!");
         static_assert(bits_per_frame_pixel == 4,
                       "Unsupported frame pixel format!");
-        static_assert(frame_pixels_per_chunk == 8,
+        static_assert(pixels_per_frame_chunk == 8,
                       "Unsupported frame chunk format!");
         pixel_type *pixels = *buffer;
         std::size_t p = 0;
@@ -474,8 +578,8 @@ public:
 
     events_mask run() {
         // Normalize the ticks-since-int counter.
-        const ticks_type ticks_per_frame = 69888;
-        ticks_since_int %= ticks_per_frame;
+        if (ticks_since_int >= ticks_per_frame)
+            start_new_frame();
 
         // Reset events.
         events = no_events;
