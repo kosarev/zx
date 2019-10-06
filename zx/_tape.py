@@ -32,3 +32,18 @@ def get_standard_data_pulses(data):
         pulse = 1710 if bit else 855
         yield pulse
         yield pulse
+
+
+def get_standard_block_pulses(data):
+    # Generate pilot tone.
+    is_header = data[0] < 128
+    for pulse in get_standard_pilot_pulses(is_header):
+        yield pulse
+
+    # Sync pulses.
+    for pulse in get_standard_sync_pulses():
+        yield pulse
+
+    # Data.
+    for pulse in get_standard_data_pulses(data):
+        yield pulse

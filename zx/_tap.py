@@ -24,19 +24,8 @@ class TAPFile(zx.SoundFile):
         level = False
         blocks = self['blocks']
         for data in blocks:
-            # Generate pilot tone.
-            is_header = data[0] < 128
-            for pulse in get_standard_pilot_pulses(is_header):
-                yield (level, pulse)
-                level = not level
-
-            # Sync pulses.
-            for pulse in get_standard_sync_pulses():
-                yield (level, pulse)
-                level = not level
-
-            # Data.
-            for pulse in get_standard_data_pulses(data):
+            # The block itself.
+            for pulse in get_standard_block_pulses(data):
                 yield (level, pulse)
                 level = not level
 
