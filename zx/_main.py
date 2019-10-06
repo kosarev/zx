@@ -85,13 +85,16 @@ def parse_file(filename):
 
 class TapePlayer(object):
     def __init__(self):
-        # TODO
-        self._file = parse_file('/home/ik/labs/kosarev/github/zx/lab/tzx/border_timing.tap')
-        self._pulses = self._file.get_pulses()
+        self._pulses = []
         self._tick = 0
         self._level = False
         self._pulse = 0
         self._ticks_per_frame = 69888  # TODO
+
+    def load_tape(self):
+        filename = input('Tape file: ')
+        file = parse_file(filename)
+        self._pulses = file.get_pulses()
 
     def get_level_at_frame_tick(self, tick):
         assert self._tick <= tick
@@ -216,6 +219,9 @@ class emulator(Gtk.Window):
         if key_id == 'F2':
             # TODO: Let user choose the name.
             self.save_snapshot('saved.z80')
+
+        if key_id == 'F4':
+            self.tape_player.load_tape()
 
         if key_id == 'F6':
             self.tape_player.pause_or_unpause()
