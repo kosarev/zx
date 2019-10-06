@@ -21,7 +21,7 @@ pip install zx
 ```
 
 
-### Running snapshots and recordings
+### Running snapshots, recordings and tapes
 
 ```shell
 zx elven.z80
@@ -31,14 +31,13 @@ zx elven.z80
 zx exolon.rzx
 ```
 
+```shell
+zx eric.tap
+```
 
-### Converting TZX files to the WAV format
+
+### Converting tape files to the WAV format
 
 ```shell
 zx jack.tzx jack.wav
 ```
-
-
-
-
-
