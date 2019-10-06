@@ -42,25 +42,30 @@ class RZXFileFormat(zx.FileFormat):
 
 
 def detect_file_format(image, filename_extension):
-    EXTENSIONS_TO_FORMATS = {
-        '.z80': zx.Z80SnapshotsFormat,
-        '.Z80': zx.Z80SnapshotsFormat,
-        '.wav': zx.WAVFileFormat,
-        '.WAV': zx.WAVFileFormat,
-    }
+    KNOWN_FORMATS = [
+        ('.rzx', b'RZX!', RZXFileFormat),
+        ('.tzx', b'ZXTape!', zx.TZXFileFormat),
+        ('.wav', b'RIFF', zx.WAVFileFormat),
+        ('.z80', None, zx.Z80SnapshotsFormat),
+    ]
 
-    SIGNATURES_TO_FORMATS = {
-        b'RZX!': RZXFileFormat,
-        b'ZXTape!': zx.TZXFileFormat,
-    }
+    filename_extension = filename_extension.lower()
 
-    if filename_extension in EXTENSIONS_TO_FORMATS:
-        return EXTENSIONS_TO_FORMATS[filename_extension]
+    # First, try formats without signatures.
+    for ext, signature, format in KNOWN_FORMATS:
+        if not signature and filename_extension == ext:
+            return format
 
+    # Then, look at the signature.
     if image:
-        for signature in SIGNATURES_TO_FORMATS:
-            if image[:len(signature)] == signature:
-                return SIGNATURES_TO_FORMATS[signature]
+        for ext, signature, format in KNOWN_FORMATS:
+            if signature and image[:len(signature)] == signature:
+                return format
+
+    # Finally, just try to guess by the given extension.
+    for ext, signature, format in KNOWN_FORMATS:
+        if filename_extension == ext:
+            return format
 
     return None
 
