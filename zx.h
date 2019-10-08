@@ -159,7 +159,10 @@ public:
     }
 
     void handle_contention() {
-        const ticks_type cont_base = 14335;
+        // TODO: We sample ~INT during the last tick of the
+        // previous instruction, so we add 1 to the contention
+        // base to compensate that.
+        const ticks_type cont_base = 14335 + 1;
         if(ticks_since_int < cont_base)
             return;
 
