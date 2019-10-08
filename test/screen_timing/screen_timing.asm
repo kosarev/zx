@@ -239,7 +239,35 @@ delay_line:                 ;   155
 
                             ; This is frame tick 14164.
 
-    ld a, r                 ; 9
+    ld c, 8                 ; 7
+
+delay:                      ; 123
+    dec c                   ;   4
+    jr nz, delay            ;   7 + 5
+
+                            ; 13
+    ld a, r                 ;   9
+    nop                     ;   4
+
+                            ; This is frame tick 14307.
+
+                            ; 24
+    ld hl, 0x4000           ;   10
+    ld a, 0xff              ;   7
+    ld b, 0x00              ;   7
+
+    ld (hl), a              ; 7
+                            ; This instruction is at tick 14331,
+                            ; meaning its write cycle starts at
+                            ; tick 14335 -- the last tick at
+                            ; which a memory write cycle would
+                            ; perform uncontended before the
+                            ; first pixel of the screen area is
+                            ; displayed.
+
+    ld (hl), b              ; 7
+
+    ; ld a, 0                 ; 7
                             ; This instruction is to maintain the
                             ; phase of ~INT within HALT's M1
                             ; cycle. For this, the total number
