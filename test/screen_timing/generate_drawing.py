@@ -234,23 +234,16 @@ g.generate(
     Load(A, 6), OutA(0, -60),
 
     Load(A, 0), OutA(-16, -16),
-    Load(A, 5), OutA(-14, -15),
-    Load(A, 2), OutA(-12, -14),
-    Load(A, 4), OutA(-10, -13),
+    Load(A, 5), OutA(-14, -14),
+    Load(A, 2), OutA(-12, -12),
+    Load(A, 4), OutA(-10, -10),
 
-    Load(A, 0), OutA(-8, -12),
-    Load(A, 6), OutA(-6, -11),
-    Load(A, 1), OutA(-4, -10),
-    Load(A, 5), OutA(-2, -9),
+    Load(A, 0), OutA(-8, -8),
+    Load(A, 5), OutA(-6, -6),
+    Load(A, 2), OutA(-4, -4),
+    Load(A, 4), OutA(-2, -2),
 
-    Load(A, 3), OutA(0, -8),
-    Load(A, 4), OutA(2, -7),
-    Load(A, 2), OutA(4, -6),
-    Load(A, 6), OutA(6, -5),
-
-    Load(A, 0), OutA(8, -4),
-    Load(A, 5), OutA(10, -3),
-    Load(A, 2), OutA(12, -2),
-    Load(A, 4), OutA(14, -1),
+    Load(A, 0), OutA(256 - 2, -1),
+    Load(A, 6), OutA(256 + 64, -1),
 )
 g.emit_source()
