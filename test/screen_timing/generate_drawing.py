@@ -49,6 +49,12 @@ class OutA(Command):
         self.beam_pos = x, y
 
 
+class WriteAtHL(Command):
+    def __init__(self, x, y, reg):
+        self.beam_pos = x, y
+        self.reg = reg
+
+
 class drawing_generator(object):
     def __init__(self):
         self._lines = []
@@ -78,9 +84,14 @@ class drawing_generator(object):
         self.move_to_beam_pos(out.beam_pos, ticks_to_reserve=7)
         self.add_instr('out (0xfe), a', 11)
 
+    def generate_write_at_hl(self, write):
+        self.move_to_beam_pos(write.beam_pos, ticks_to_reserve=4)
+        self.add_instr('ld (hl), %s' % write.reg.name, 7)
+
     _COMMAND_GENERATORS = {
         Load: generate_load,
         OutA: generate_out_a,
+        WriteAtHL: generate_write_at_hl,
     }
 
     def generate_command(self, command):
@@ -160,9 +171,14 @@ class drawing_generator(object):
                 15: [4, 4, 7],
                 16: [4, 4, 4, 4],
                 20: [4, 4, 4, 4, 4],
+                21: [7, 7, 7],
                 22: [4, 4, 7, 7],
+                23: [4, 4, 4, 4, 7],
+                24: [4, 4, 4, 4, 4, 4],
+                25: [4, 7, 7, 7],
                 26: [4, 4, 4, 7, 7],
-                28: [7, 7, 7, 7],
+                27: [4, 4, 4, 4, 4, 7],
+                28: [4, 4, 4, 4, 4, 4, 4],
                 29: [4, 4, 7, 7, 7],
                 30: [4, 4, 4, 4, 7, 7],
             }
@@ -187,7 +203,7 @@ class drawing_generator(object):
                 self.add_instr('ld %s, %d' % (clobber.name, n), 7)
                 delay -= 7
 
-                label = self.add_label();
+                label = self.add_label()
                 ticks = n * 16 - 5
                 self.add_line('%-28s; %5d  %5d' % (
                     label + ':', self._tick, ticks))
@@ -256,6 +272,6 @@ g.generate(
 
     Load(A, 0xff),
     Load(HL, 0x4000),
-    # WriteAtHL(0, 0, A),
+    WriteAtHL(0, 0, A),
 )
 g.emit_source()
