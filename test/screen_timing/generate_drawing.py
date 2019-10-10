@@ -11,13 +11,13 @@
 
 
 class Reg(object):
-    def __init__(self, name, is_reg_pair=False):
+    def __init__(self, name):
         self.name = name
 
 
-class RegPair(Reg):
+class RegPair(object):
     def __init__(self, name):
-        super().__init__(name, is_reg_pair=True)
+        self.name = name
 
 
 A = Reg('a')
@@ -50,12 +50,22 @@ class OutA(Command):
 
 
 class WriteAtHL(Command):
+    def __init__(self, reg):
+        self.reg = reg
+
+
+class WriteScreenAtHL(Command):
     def __init__(self, x, y, reg):
         self.beam_pos = x, y
         self.reg = reg
 
 
 class drawing_generator(object):
+    SCREEN_WIDTH = 256
+    SCREEN_HEIGHT = 192
+    TICKS_PER_LINE = 224
+    PIXELS_PER_TICK = 2
+
     def __init__(self):
         self._lines = []
         self._label = 0
@@ -71,8 +81,11 @@ class drawing_generator(object):
         return 'l%d' % n
 
     def add_instr(self, instr, ticks):
-        self.add_line('    %-24s; %5d  %5d' % (instr, self._tick, ticks))
-        self._tick += ticks
+        if type(ticks) is not list:
+            ticks = [ticks]
+        self.add_line('    %-24s; %5d  %5s' % (
+            instr, self._tick, ' + '.join('%d' % x for x in ticks)))
+        self._tick += sum(ticks)
 
     def generate_load(self, load):
         if isinstance(load.reg, RegPair):
@@ -85,13 +98,18 @@ class drawing_generator(object):
         self.add_instr('out (0xfe), a', 11)
 
     def generate_write_at_hl(self, write):
+        delay = self.get_memory_contention_delay(self._tick + 4)
+        self.add_instr('ld (hl), %s' % write.reg.name, [7, delay])
+
+    def generate_write_screen_at_hl(self, write):
         self.move_to_beam_pos(write.beam_pos, ticks_to_reserve=4)
-        self.add_instr('ld (hl), %s' % write.reg.name, 7)
+        self.generate_write_at_hl(write)
 
     _COMMAND_GENERATORS = {
         Load: generate_load,
         OutA: generate_out_a,
         WriteAtHL: generate_write_at_hl,
+        WriteScreenAtHL: generate_write_screen_at_hl,
     }
 
     def generate_command(self, command):
@@ -156,7 +174,10 @@ class drawing_generator(object):
                                'delay of %d ticks!' % delay)
 
             if delay == 10:
-                assert 0  # TODO: 'jp nn'
+                label = self.add_label();
+                self.add_instr('jp %s' % label, 10)
+                self.add_line(label + ':')
+                break
 
             if delay == 13:
                 # TODO: 13 = 4 + 9, where the 9 needs a clobber.
@@ -170,6 +191,9 @@ class drawing_generator(object):
                 14: [7, 7],
                 15: [4, 4, 7],
                 16: [4, 4, 4, 4],
+                17: [7, 10],
+                18: [4, 7, 7],
+                19: [4, 4, 4, 7],
                 20: [4, 4, 4, 4, 4],
                 21: [7, 7, 7],
                 22: [4, 4, 7, 7],
@@ -181,6 +205,7 @@ class drawing_generator(object):
                 28: [4, 4, 4, 4, 4, 4, 4],
                 29: [4, 4, 7, 7, 7],
                 30: [4, 4, 4, 4, 7, 7],
+                31: [4, 4, 4, 4, 4, 4, 7],
             }
 
             if delay in NON_CLOBBERING_PATTERNS:
@@ -235,10 +260,32 @@ class drawing_generator(object):
         self.align_tick(4, 1)
 
     def move_to_beam_pos(self, pos, ticks_to_reserve):
-        BASE_TICK = 64 * 224 + 8 // 2
+        BASE_TICK = 64 * self.TICKS_PER_LINE + 8 // 2
         x, y = pos
-        target_tick = BASE_TICK + y * 224 + x // 2 - ticks_to_reserve
+        target_tick = (BASE_TICK + y * self.TICKS_PER_LINE + x // 2 -
+                       ticks_to_reserve)
         self.move_to_tick(target_tick, clobbers=[B])
+
+    def get_memory_contention_delay(self, tick):
+        # TODO: We sample ~INT during the last tick of the
+        # previous instruction, so we add 1 to the contention
+        # base to compensate that.
+        CONT_BASE = 14335 + 1
+        if tick < CONT_BASE:
+            return 0
+
+        if tick >= CONT_BASE + self.SCREEN_HEIGHT * self.TICKS_PER_LINE:
+            return 0
+
+        ticks_since_new_line = (tick - CONT_BASE) % self.TICKS_PER_LINE
+        if ticks_since_new_line >= self.SCREEN_WIDTH / self.PIXELS_PER_TICK:
+            return 0
+
+        ticks_since_new_ula_cycle = ticks_since_new_line % 8
+        delay = (0 if ticks_since_new_ula_cycle == 7 else
+                 6 - ticks_since_new_ula_cycle)
+
+        return delay
 
     def generate(self, *commands):
         for command in commands:
@@ -255,23 +302,74 @@ class drawing_generator(object):
 
 g = drawing_generator()
 g.generate(
+    # Let the border be (mostly) yellow.
     Load(A, 6), OutA(0, -60),
 
+    # Use the spare time to prepare the screen area.
+    Load(A, 0xff),
+    Load(HL, 0x4000), WriteAtHL(A),
+    Load(HL, 0x4001), WriteAtHL(A),
+    Load(HL, 0x4002), WriteAtHL(A),
+
+    Load(HL, 0x4100), WriteAtHL(A),
+    Load(HL, 0x4101), WriteAtHL(A),
+    Load(HL, 0x4102), WriteAtHL(A),
+
+    Load(HL, 0x4200), WriteAtHL(A),
+    Load(HL, 0x4201), WriteAtHL(A),
+    Load(HL, 0x4202), WriteAtHL(A),
+
+    Load(HL, 0x4300), WriteAtHL(A),
+    Load(HL, 0x4301), WriteAtHL(A),
+    Load(HL, 0x4302), WriteAtHL(A),
+
+    Load(HL, 0x4400), WriteAtHL(A),
+    Load(HL, 0x4401), WriteAtHL(A),
+    Load(HL, 0x4402), WriteAtHL(A),
+
+    Load(HL, 0x4500), WriteAtHL(A),
+    Load(HL, 0x4501), WriteAtHL(A),
+    Load(HL, 0x4502), WriteAtHL(A),
+
+    # Draw eight colour lines, each line starting one tick later
+    # and via that make the moment when the border value is
+    # latched be visible.
     Load(A, 0), OutA(-16, -16),
     Load(A, 5), OutA(-14, -14),
     Load(A, 2), OutA(-12, -12),
     Load(A, 4), OutA(-10, -10),
 
+    # This black line starts one chunk later.
     Load(A, 0), OutA(-8, -8),
     Load(A, 5), OutA(-6, -6),
     Load(A, 2), OutA(-4, -4),
     Load(A, 4), OutA(-2, -2),
 
+    # Continue the frame with yellow border again.
     Load(A, 0), OutA(256 - 2, -1),
     Load(A, 6), OutA(256 + 64, -1),
 
-    Load(A, 0xff),
-    Load(HL, 0x4000),
-    WriteAtHL(0, 0, A),
+    # This write is early enough to clear the chunk of pixels
+    # before it is latched.
+    Load(A, 0x00),
+    Load(HL, 0x4000), WriteScreenAtHL(-10, 0, A),
+
+    # But this one is too late.
+    Load(HL, 0x4100), WriteScreenAtHL(-8, 1, A),
+
+    # Similarly, for the second chunk in line, this is early
+    # enough to clear it.
+    Load(HL, 0x4201), WriteScreenAtHL(-10, 2, A),
+
+    # But this is again too late. Meaning both the adjacent
+    # chunks are latched during the same ULA delay.
+    Load(HL, 0x4301), WriteScreenAtHL(-8, 3, A),
+
+    # Now let's see when the third chunk is latched so we know
+    # the length of the 16-pixel cycles.
+    Load(HL, 0x4402), WriteScreenAtHL(6, 4, A),
+    Load(HL, 0x4502), WriteScreenAtHL(8, 5, A),
+
+    Load(A, 0x99),
 )
 g.emit_source()
