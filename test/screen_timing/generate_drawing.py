@@ -10,9 +10,14 @@
 #   Published under the MIT license.
 
 
-class Reg:
-    def __init__(self, name):
+class Reg(object):
+    def __init__(self, name, is_reg_pair=False):
         self.name = name
+
+
+class RegPair(Reg):
+    def __init__(self, name):
+        super().__init__(name, is_reg_pair=True)
 
 
 A = Reg('a')
@@ -24,9 +29,9 @@ H = Reg('h')
 L = Reg('l')
 R = Reg('r')
 
-BC = Reg('bc')
-DE = Reg('de')
-DE = Reg('hl')
+BC = RegPair('bc')
+DE = RegPair('de')
+HL = RegPair('hl')
 
 
 class Command:
@@ -64,7 +69,10 @@ class drawing_generator(object):
         self._tick += ticks
 
     def generate_load(self, load):
-        self.add_instr('ld %s, %d' % (load.reg.name, load.value), 7)
+        if isinstance(load.reg, RegPair):
+            self.add_instr('ld %s, 0x%04x' % (load.reg.name, load.value), 10)
+        else:
+            self.add_instr('ld %s, 0x%02x' % (load.reg.name, load.value), 7)
 
     def generate_out_a(self, out):
         self.move_to_beam_pos(out.beam_pos, ticks_to_reserve=7)
@@ -245,5 +253,9 @@ g.generate(
 
     Load(A, 0), OutA(256 - 2, -1),
     Load(A, 6), OutA(256 + 64, -1),
+
+    Load(A, 0xff),
+    Load(HL, 0x4000),
+    # WriteAtHL(0, 0, A),
 )
 g.emit_source()
