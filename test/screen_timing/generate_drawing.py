@@ -306,8 +306,9 @@ g.generate(
     Load(A, 6), OutA(0, -60),
 
     # Use the spare time to prepare the screen area.
-    Load(A, 0xff),
+    Load(A, 0x00),
     Load(HL, 0x4000), WriteAtHL(A),
+    Load(A, 0xff),
     Load(HL, 0x4001), WriteAtHL(A),
     Load(HL, 0x4002), WriteAtHL(A),
 
@@ -316,7 +317,9 @@ g.generate(
     Load(HL, 0x4102), WriteAtHL(A),
 
     Load(HL, 0x4200), WriteAtHL(A),
+    Load(A, 0x00),
     Load(HL, 0x4201), WriteAtHL(A),
+    Load(A, 0xff),
     Load(HL, 0x4202), WriteAtHL(A),
 
     Load(HL, 0x4300), WriteAtHL(A),
@@ -325,8 +328,10 @@ g.generate(
 
     Load(HL, 0x4400), WriteAtHL(A),
     Load(HL, 0x4401), WriteAtHL(A),
+    Load(A, 0x00),
     Load(HL, 0x4402), WriteAtHL(A),
 
+    Load(A, 0xff),
     Load(HL, 0x4500), WriteAtHL(A),
     Load(HL, 0x4501), WriteAtHL(A),
     Load(HL, 0x4502), WriteAtHL(A),
@@ -351,23 +356,29 @@ g.generate(
 
     # This write is early enough to clear the chunk of pixels
     # before it is latched.
-    Load(A, 0x00),
+    Load(A, 0xff),
     Load(HL, 0x4000), WriteScreenAtHL(-10, 0, A),
 
     # But this one is too late.
+    Load(A, 0x00),
     Load(HL, 0x4100), WriteScreenAtHL(-8, 1, A),
 
     # Similarly, for the second chunk in line, this is early
     # enough to clear it.
-    Load(HL, 0x4201), WriteScreenAtHL(-10, 2, A),
+    Load(A, 0xff),
+    Load(HL, 0x4201), WriteScreenAtHL(-19, 2, A),
 
     # But this is again too late. Meaning both the adjacent
     # chunks are latched during the same ULA delay.
+    Load(A, 0x00),
     Load(HL, 0x4301), WriteScreenAtHL(-8, 3, A),
 
     # Now let's see when the third chunk is latched so we know
     # the length of the 16-pixel cycles.
+    Load(A, 0xff),
     Load(HL, 0x4402), WriteScreenAtHL(6, 4, A),
+
+    Load(A, 0x00),
     Load(HL, 0x4502), WriteScreenAtHL(8, 5, A),
 
     Load(A, 0x99),
