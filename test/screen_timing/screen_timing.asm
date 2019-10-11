@@ -99,7 +99,7 @@ isr:
 reset_m1_count:
     ld a, r                 ; 37 +  9 = 46
     ld a, c                 ; 46 +  4 = 50
-                            ; We don't the values, but these
+                            ; We don't use the values, but these
                             ; instructions help to make the total
                             ; number of ticks to be the same as
                             ; in steps 2 and 3.
@@ -179,7 +179,11 @@ draw:
                             ;
                             ; 37 ticks to get to this point.
 
-    include 'drawing.inc'
+#if LATE_TIMINGS
+# include "drawing_late.inc"
+#else
+# include "drawing_early.inc"
+#endif
 
     ei
     halt

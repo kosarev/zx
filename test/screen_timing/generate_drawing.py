@@ -10,6 +10,9 @@
 #   Published under the MIT license.
 
 
+import sys
+
+
 class Reg(object):
     def __init__(self, name):
         self.name = name
@@ -66,7 +69,8 @@ class drawing_generator(object):
     TICKS_PER_LINE = 224
     PIXELS_PER_TICK = 2
 
-    def __init__(self):
+    def __init__(self, is_late_timings=False):
+        self.is_late_timings = is_late_timings
         self._lines = []
         self._label = 0
         self._tick = 38
@@ -261,6 +265,8 @@ class drawing_generator(object):
 
     def move_to_beam_pos(self, pos, ticks_to_reserve):
         BASE_TICK = 64 * self.TICKS_PER_LINE + 8 // 2
+        if self.is_late_timings:
+            BASE_TICK += 1
         x, y = pos
         target_tick = (BASE_TICK + y * self.TICKS_PER_LINE + x // 2 -
                        ticks_to_reserve)
@@ -271,6 +277,8 @@ class drawing_generator(object):
         # previous instruction, so we add 1 to the contention
         # base to compensate that.
         CONT_BASE = 14335 + 1
+        if self.is_late_timings:
+            CONT_BASE += 1
         if tick < CONT_BASE:
             return 0
 
@@ -300,7 +308,9 @@ class drawing_generator(object):
             print(line)
 
 
-g = drawing_generator()
+is_late_timings = len(sys.argv) > 1 and sys.argv[1] == 'late_timings'
+
+g = drawing_generator(is_late_timings)
 g.generate(
     # Let the border be (mostly) yellow.
     Load(A, 6), OutA(0, -60),
