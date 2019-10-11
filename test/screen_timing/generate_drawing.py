@@ -381,7 +381,7 @@ g.generate(
     # Similarly, for the second chunk in line, this is early
     # enough to clear it.
     Load(A, 0xff),
-    Load(HL, 0x4201), WriteScreenAtHL(-18, 2, A),
+    Load(HL, 0x4201), WriteScreenAtHL(-10, 2, A),
 
     # But this is again too late. Meaning both the adjacent
     # chunks are latched during the same ULA delay.
