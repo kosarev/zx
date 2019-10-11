@@ -305,7 +305,7 @@ g.generate(
     # Let the border be (mostly) yellow.
     Load(A, 6), OutA(0, -60),
 
-    # Use the spare time to prepare the screen area.
+    # Use the spare time to prepare the screen and attributes areas.
     Load(A, 0x00),
     Load(HL, 0x4000), WriteAtHL(A),
     Load(A, 0xff),
@@ -335,6 +335,11 @@ g.generate(
     Load(HL, 0x4500), WriteAtHL(A),
     Load(HL, 0x4501), WriteAtHL(A),
     Load(HL, 0x4502), WriteAtHL(A),
+
+    Load(A, 0xff),
+    Load(HL, 0x5820), WriteAtHL(A),
+    Load(HL, 0x5841), WriteAtHL(A),
+    Load(HL, 0x5862), WriteAtHL(A),
 
     # Draw eight colour lines, each line starting one tick later
     # and via that make the moment when the border value is
@@ -366,7 +371,7 @@ g.generate(
     # Similarly, for the second chunk in line, this is early
     # enough to clear it.
     Load(A, 0xff),
-    Load(HL, 0x4201), WriteScreenAtHL(-19, 2, A),
+    Load(HL, 0x4201), WriteScreenAtHL(-18, 2, A),
 
     # But this is again too late. Meaning both the adjacent
     # chunks are latched during the same ULA delay.
@@ -381,6 +386,38 @@ g.generate(
     Load(A, 0x00),
     Load(HL, 0x4502), WriteScreenAtHL(8, 5, A),
 
-    Load(A, 0x99),
+    # Now write some attribute bytes. This write is early enough
+    # to colour the attribute square with black before it's
+    # latched the first time.
+    Load(A, 0x00),
+    Load(HL, 0x5820), WriteScreenAtHL(-10, 8, A),
+
+    # This write is too late, so it should remain invisible.
+    Load(A, 0x6d),
+    WriteScreenAtHL(-8, 12, A),
+
+    # Make sure the rest of the square is black.
+    Load(A, 0x00),
+    WriteScreenAtHL(128, 12, A),
+
+    # Do the same with the 2nd attribute byte in line.
+    Load(A, 0x00),
+    Load(HL, 0x5841), WriteScreenAtHL(-10, 16, A),
+
+    Load(A, 0x6d),
+    WriteScreenAtHL(-8, 20, A),
+
+    Load(A, 0x00),
+    WriteScreenAtHL(128, 20, A),
+
+    # Do it once again for the 3rd attribute byte in line.
+    Load(A, 0x00),
+    Load(HL, 0x5862), WriteScreenAtHL(6, 24, A),
+
+    Load(A, 0x6d),
+    WriteScreenAtHL(8, 28, A),
+
+    Load(A, 0x00),
+    WriteScreenAtHL(128, 28, A),
 )
 g.emit_source()
