@@ -437,35 +437,42 @@ public:
             auto line = static_cast<unsigned>(frame_tick / ticks_per_line);
             auto line_pixel = static_cast<unsigned>(frame_tick % ticks_per_line) * 2;
 
-            // Top hidden lines.
-            const unsigned top_hidden_lines = 64 - top_border_height;
-            bool is_top_hidden_line = line < top_hidden_lines;
-            if(is_top_hidden_line) {
+            // Render the screen area.
+            bool is_screen_area = line >= 64 &&
+                                  line < 64 + screen_height &&
+                                  line_pixel >= border_width &&
+                                  line_pixel < border_width + screen_width;
+            if(is_screen_area) {
+                // TODO
                 ++render_tick;
                 continue;
             }
 
-            bool is_top_border = line < 64;
-            if(is_top_border ||
-                   line < 64 + screen_height + bottom_border_height) {
-                unsigned screen_line = line - top_hidden_lines;
-                frame_chunk *line_chunks = frame_chunks[screen_line];
+            // Render the border area.
+            // TODO: We can simply initialize the render tick
+            //       with the first visible tick value.
+            // TODO: We can simply stop the rendering loop at the
+            //       last visible tick.
+            unsigned top_hidden_lines = 64 - top_border_height;
+            bool is_visible_area =
+                line >= top_hidden_lines &&
+                line < 64 + screen_height + bottom_border_height &&
+                line_pixel < frame_width;
+            if(is_visible_area) {
+                unsigned frame_line = line - top_hidden_lines;
+                frame_chunk *line_chunks = frame_chunks[frame_line];
 
                 unsigned chunk_index = line_pixel / pixels_per_frame_chunk;
                 unsigned chunk_pixel = line_pixel % pixels_per_frame_chunk;
 
-                if(chunk_index < chunks_per_frame_line) {
-                    frame_chunk *chunk = &line_chunks[chunk_index];
-                    unsigned pixels_value = (0x11000000 * latched_border_color) >> (chunk_pixel * 4);
-                    unsigned pixels_mask = 0xff000000 >> (chunk_pixel * 4);
-                    *chunk = (*chunk & ~pixels_mask) | pixels_value;
-                }
+                frame_chunk *chunk = &line_chunks[chunk_index];
+                unsigned pixels_value = (0x11000000 * latched_border_color) >> (chunk_pixel * 4);
+                unsigned pixels_mask = 0xff000000 >> (chunk_pixel * 4);
+                *chunk = (*chunk & ~pixels_mask) | pixels_value;
 
                 ++render_tick;
                 continue;
             }
-
-            // TODO: Draw the rest of the screen.
 
             ++render_tick;
         }
