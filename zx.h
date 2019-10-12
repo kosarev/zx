@@ -424,6 +424,10 @@ public:
     void start_new_frame() {
         ticks_since_int %= ticks_per_frame;
         render_tick = 0;
+
+        ++frame_counter;
+        if(frame_counter % 16 == 0)
+            flash_mask ^= 0xffff;
     }
 
     // TODO: private
@@ -544,9 +548,12 @@ public:
                 //       as we read the bytes. And then just
                 //       apply them here.
                 unsigned pixels_value = 0;
-                pixels_value |= (latched_pixel_pattern2 & ((1u << 15) >> pixel_in_cycle)) != 0 ?
+                fast_u16 pattern = latched_pixel_pattern2;
+                if((attr & 0x80) != 0)
+                    pattern ^= flash_mask;
+                pixels_value |= (pattern & ((1u << 15) >> pixel_in_cycle)) != 0 ?
                     (ink_color << 28) : (paper_color << 28);
-                pixels_value |= (latched_pixel_pattern2 & ((1u << 14) >> pixel_in_cycle)) != 0 ?
+                pixels_value |= (pattern & ((1u << 14) >> pixel_in_cycle)) != 0 ?
                     (ink_color << 24) : (paper_color << 24);
                 pixels_value >>= pixel_in_chunk * 4;
 
@@ -594,12 +601,14 @@ public:
     }
 
     // TODO: Move to the private section.
+    unsigned frame_counter = 0;
     ticks_type render_tick = 0;
     unsigned latched_border_color = 0;
     fast_u16 latched_pixel_pattern = 0;
     fast_u16 latched_colour_attrs = 0;
     fast_u16 latched_pixel_pattern2 = 0;
     fast_u16 latched_colour_attrs2 = 0;
+    fast_u16 flash_mask = 0;
 
     // TODO: Eliminate.
     void x_render_screen() {
