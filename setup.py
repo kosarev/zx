@@ -2,13 +2,20 @@
 # -*- coding: utf-8 -*-
 
 import distutils.sysconfig, os
+import inspect
 # from distutils.core import Extension
 from setuptools import Extension, setup
 
 
 ZX_MAJOR_VERSION = 0
-ZX_MINOR_VERSION = 2
+ZX_MINOR_VERSION = 3
 ZX_PATCH_VERSION = 0
+
+
+here = os.path.abspath(os.path.dirname(inspect.getsource(lambda:0)))
+
+with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
 
 
 # Work around the problem with the warning about '-Wstrict-prototypes'.
@@ -42,7 +49,8 @@ setup(name='zx',
       version='%d.%d.%d' % (ZX_MAJOR_VERSION, ZX_MINOR_VERSION,
                             ZX_PATCH_VERSION),
       description='ZX Spectrum Emulator',
-      # TODO: long_description=...
+      long_description=long_description,
+      long_description_content_type='text/markdown',
       author='Ivan Kosarev',
       author_email='ivan@kosarev.info',
       url='https://github.com/kosarev/zx/',
@@ -75,6 +83,6 @@ setup(name='zx',
           'Topic :: Software Development :: Libraries',
           'Topic :: System :: Emulators',
       ],
-      # TODO: license=...
+      license='MIT',
       # TODO: Respect other parameters.
       )

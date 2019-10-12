@@ -11,7 +11,7 @@ ZX Spectrum Emulator written in a mix of Python and C++.
   analysis. etc.
 * Meant to be easy to customize and re-use via Python interfaces.
 * Based on the fast and flexible
-  [Z80 simulator](https://github.com/kosarev/z80).
+  [Z80 emulator](https://github.com/kosarev/z80).
 
 
 ### Installation
