@@ -21,6 +21,7 @@ using z80::least_u8;
 using z80::least_u16;
 
 using z80::unreachable;
+using z80::make16;
 using z80::mask16;
 using z80::inc16;
 using z80::dec16;
@@ -214,6 +215,13 @@ public:
     }
 
     void on_write_cycle(fast_u16 addr, fast_u8 n) {
+        // TODO: Render to (current_tick + 1) and then update
+        // the byte as the new value is sampled at
+        // the 2nd tick of the output cycle.
+        // TODO: The "+ 1" thing is still wrong as there may
+        // be contentions in the middle.
+        render_screen_to_tick(get_ticks() + 1);
+
         handle_memory_contention(addr);
         base::on_write_cycle(addr, n);
     }
@@ -315,7 +323,7 @@ public:
             // the 2nd tick of the output cycle.
             // TODO: The "+ 1" thing is still wrong as there may
             // be contentions in the middle.
-            render_frame_to_tick(get_ticks() + 1);
+            render_screen_to_tick(get_ticks() + 1);
             border_color = n & 0x7;
         }
 
@@ -407,19 +415,50 @@ public:
     static const unsigned chunks_per_frame_line =
         div_exact(frame_width, pixels_per_frame_chunk);
 
-    typedef frame_chunk frame_chunks_type[frame_height][chunks_per_frame_line];
+    typedef frame_chunk screen_chunks_type[frame_height][chunks_per_frame_line];
 
-    const frame_chunks_type &get_frame_chunks() { return frame_chunks; }
+    const screen_chunks_type &get_screen_chunks() { return screen_chunks; }
 
     // TODO: Name the constants.
+    // TODO: private
     void start_new_frame() {
         ticks_since_int %= ticks_per_frame;
         render_tick = 0;
     }
 
+    // TODO: private
+    static fast_u16 get_pixel_pattern_addr(unsigned frame_line,
+                                           unsigned pixel_in_line) {
+        assert(frame_line >= 64);
+        assert(frame_line < 64 + screen_height);
+        assert(pixel_in_line >= border_width);
+        assert(pixel_in_line < border_width + screen_width);
+
+        fast_u16 addr = 0x4000;
+
+        // Adjust the address according to the third of the
+        // screen.
+        unsigned line = frame_line - 64;
+        addr += 0x800 * (line / 64);
+        line %= 64;
+
+        // See which character line it is.
+        addr += 0x20 * (line / 8);
+        line %= 8;
+
+        // Then, adjust according to the pixel line within the
+        // character line.
+        addr += 0x100 * line;
+
+        // Finally, apply the offset in line.
+        addr += (pixel_in_line - border_width) / 8;
+
+        return addr;
+    }
+
     // TODO: Name the constants.
     // TODO: Optimize.
-    void render_frame_to_tick(ticks_type end_tick) {
+    void render_screen_to_tick(ticks_type end_tick) {
         static_assert(bits_per_frame_pixel == 4,
                       "Unsupported frame pixel format!");
         static_assert(pixels_per_frame_chunk == 8,
@@ -428,19 +467,73 @@ public:
         // TODO: Render the border by whole chunks when possible.
         while(render_tick < end_tick) {
             // The tick since the beam was at the imaginary
-            // beginning of the frame with coordinates (0, 0).
+            // beginning (the top left corner) of the frame.
             ticks_type frame_tick = render_tick + border_width / 2 - 8 / 2;  // TODO
 
-            auto line = static_cast<unsigned>(frame_tick / ticks_per_line);
-            auto line_pixel = static_cast<unsigned>(frame_tick % ticks_per_line) * 2;
+            // Latch screen area bytes. Note that the first time
+            // we do that when the beam is outside of the screen
+            // area.
+            auto frame_line = static_cast<unsigned>(frame_tick / ticks_per_line);
+            auto pixel_in_line = static_cast<unsigned>(frame_tick % ticks_per_line) * 2;
+            bool is_screen_latching_area =
+                frame_line >= 64 &&
+                frame_line < 64 + screen_height &&
+                pixel_in_line >= border_width - 8 &&
+                pixel_in_line < border_width + screen_width - 8;
+            if(is_screen_latching_area && render_tick % 8 == 0) {
+                fast_u16 addr = get_pixel_pattern_addr(frame_line,
+                                                       pixel_in_line + 8);
+                // TODO
+                // printf("%d -> 0x%04x\n", (int) render_tick, (unsigned) addr);
+                latched_pixel_pattern = make16(on_read(addr),
+                                               on_read(addr + 1));
+            }
 
             // Render the screen area.
-            bool is_screen_area = line >= 64 &&
-                                  line < 64 + screen_height &&
-                                  line_pixel >= border_width &&
-                                  line_pixel < border_width + screen_width;
+            const unsigned top_hidden_lines = 64 - top_border_height;
+            bool is_screen_area = frame_line >= 64 &&
+                                  frame_line < 64 + screen_height &&
+                                  pixel_in_line >= border_width &&
+                                  pixel_in_line < border_width + screen_width;
             if(is_screen_area) {
-                // TODO
+                // TODO: Support rendering by whole chunks for
+                //       better performance.
+
+                unsigned chunk_index = pixel_in_line / pixels_per_frame_chunk;
+                unsigned pixel_in_chunk = pixel_in_line % pixels_per_frame_chunk;
+
+                unsigned screen_line = frame_line - top_hidden_lines;
+                frame_chunk *line_chunks = screen_chunks[screen_line];
+                frame_chunk *chunk = &line_chunks[chunk_index];
+
+                // TODO: Support colours.
+                const unsigned black = 0;
+                const unsigned white = red_mask | green_mask | blue_mask;
+
+                unsigned paper_color = white;
+                unsigned ink_color = black;
+
+                unsigned pixel_in_cycle = (pixel_in_line - border_width) % 16;
+
+                if(pixel_in_cycle == 0)
+                    latched_pixel_pattern2 = latched_pixel_pattern;
+
+                // TODO: We can compute the whole chunk as soon
+                //       as we read the bytes. And then just
+                //       apply them here.
+                unsigned pixels_value = 0;
+                pixels_value |= (latched_pixel_pattern2 & ((1u << 15) >> pixel_in_cycle)) != 0 ?
+                    (ink_color << 28) : (paper_color << 28);
+                pixels_value |= (latched_pixel_pattern2 & ((1u << 14) >> pixel_in_cycle)) != 0 ?
+                    (ink_color << 24) : (paper_color << 24);
+                pixels_value >>= pixel_in_chunk * 4;
+
+                // printf("%d, pixel_in_cycle %d\n", (int) render_tick, (int) pixel_in_cycle);
+
+                unsigned pixels_mask = 0xff000000 >> (pixel_in_chunk * 4);
+
+                *chunk = (*chunk & ~pixels_mask) | pixels_value;
+
                 ++render_tick;
                 continue;
             }
@@ -450,26 +543,24 @@ public:
             //       with the first visible tick value and stop
             //       the rendering loop at the last visible tick.
             //       Just don't forget about latching.
-            unsigned top_hidden_lines = 64 - top_border_height;
             bool is_visible_area =
-                line >= top_hidden_lines &&
-                line < 64 + screen_height + bottom_border_height &&
-                line_pixel < frame_width;
+                frame_line >= top_hidden_lines &&
+                frame_line < 64 + screen_height + bottom_border_height &&
+                pixel_in_line < frame_width;
             if(is_visible_area) {
                 if(render_tick % 4 == 0)
                     latched_border_color = border_color;
 
-                unsigned frame_line = line - top_hidden_lines;
-                frame_chunk *line_chunks = frame_chunks[frame_line];
-
-                unsigned chunk_index = line_pixel / pixels_per_frame_chunk;
-                unsigned chunk_pixel = line_pixel % pixels_per_frame_chunk;
+                unsigned chunk_index = pixel_in_line / pixels_per_frame_chunk;
+                unsigned pixel_in_chunk = pixel_in_line % pixels_per_frame_chunk;
 
                 // TODO: Support rendering by whole chunks for
                 //       better performance.
+                unsigned screen_line = frame_line - top_hidden_lines;
+                frame_chunk *line_chunks = screen_chunks[screen_line];
                 frame_chunk *chunk = &line_chunks[chunk_index];
-                unsigned pixels_value = (0x11000000 * latched_border_color) >> (chunk_pixel * 4);
-                unsigned pixels_mask = 0xff000000 >> (chunk_pixel * 4);
+                unsigned pixels_value = (0x11000000 * latched_border_color) >> (pixel_in_chunk * 4);
+                unsigned pixels_mask = 0xff000000 >> (pixel_in_chunk * 4);
                 *chunk = (*chunk & ~pixels_mask) | pixels_value;
 
                 ++render_tick;
@@ -483,13 +574,15 @@ public:
     // TODO: Move to the private section.
     ticks_type render_tick = 0;
     unsigned latched_border_color = 0;
+    fast_u16 latched_pixel_pattern = 0;
+    fast_u16 latched_pixel_pattern2 = 0;
 
     // TODO: Eliminate.
-    void x_render_frame() {
-        render_frame_to_tick(ticks_per_frame);
+    void x_render_screen() {
+        render_screen_to_tick(ticks_per_frame);
 
         // TODO
-        // return;
+        return;
 
         const unsigned black = 0;
         const unsigned white = red_mask | green_mask | blue_mask;
@@ -501,7 +594,7 @@ public:
         unsigned i = 0;
         for(; i != top_border_height; ++i) {
 #if 0  // TODO
-            frame_chunk *line = frame_chunks[i];
+            frame_chunk *line = screen_chunks[i];
             for(unsigned j = 0; j != chunks_per_frame_line; ++j)
                 line[j] = border_chunk;
 #endif
@@ -510,7 +603,7 @@ public:
         // Render the screen area.
         fast_u16 line_addr = 0x4000;
         for(; i != top_border_height + screen_height; ++i) {
-            frame_chunk *line = frame_chunks[i];
+            frame_chunk *line = screen_chunks[i];
 
             // Left border.
             unsigned j = 0;
@@ -554,7 +647,7 @@ public:
         // Render the bottom border area.
 #if 0
         for(; i != frame_height; ++i) {
-            frame_chunk *line = frame_chunks[i];
+            frame_chunk *line = screen_chunks[i];
             for(unsigned j = 0; j != chunks_per_frame_line; ++j)
                 line[j] = border_chunk;
         }
@@ -574,8 +667,8 @@ public:
                       "Unsupported frame chunk format!");
         pixel_type *pixels = *buffer;
         std::size_t p = 0;
-        for(const auto &frame_line : frame_chunks) {
-            for(auto chunk : frame_line) {
+        for(const auto &screen_line : screen_chunks) {
+            for(auto chunk : screen_line) {
                 pixels[p++] = translate_color((chunk >> 28) & 0xf);
                 pixels[p++] = translate_color((chunk >> 24) & 0xf);
                 pixels[p++] = translate_color((chunk >> 20) & 0xf);
@@ -725,7 +818,7 @@ protected:
     bool trace_enabled = false;
 
 private:
-    frame_chunks_type frame_chunks;
+    screen_chunks_type screen_chunks;
     memory_image_type memory_image;
     least_u8 memory_marks[memory_image_size] = {};
 };

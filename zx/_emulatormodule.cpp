@@ -246,14 +246,14 @@ PyObject *get_memory(PyObject *self, PyObject *args) {
                                    sizeof(memory), PyBUF_WRITE);
 }
 
-PyObject *render_frame(PyObject *self, PyObject *args) {
+PyObject *render_screen(PyObject *self, PyObject *args) {
     auto &emulator = cast_emulator(self);
-    emulator.x_render_frame();
+    emulator.x_render_screen();
 
-    const auto &frame_chunks = emulator.get_frame_chunks();
+    const auto &screen_chunks = emulator.get_screen_chunks();
     return PyMemoryView_FromMemory(
-        const_cast<char*>(reinterpret_cast<const char*>(&frame_chunks)),
-        sizeof(frame_chunks), PyBUF_READ);
+        const_cast<char*>(reinterpret_cast<const char*>(&screen_chunks)),
+        sizeof(screen_chunks), PyBUF_READ);
 }
 
 static PyObject *get_frame_pixels(PyObject *self, PyObject *args) {
@@ -308,9 +308,9 @@ PyMethodDef methods[] = {
     {"get_memory", get_memory, METH_NOARGS,
      "Return a MemoryView object that exposes the memory of the simulated "
      "machine."},
-    {"render_frame", render_frame, METH_NOARGS,
-     "Render current frame and return a MemoryView object that exposes a "
-     "buffer that contains rendered data."},
+    {"render_screen", render_screen, METH_NOARGS,
+     "Render current screen frame and return a MemoryView object that exposes "
+     "a buffer that contains rendered data."},
     {"get_frame_pixels", get_frame_pixels, METH_NOARGS,
      "Convert rendered frame into an internally allocated array of RGB24 pixels "
      "and return a MemoryView object that exposes that array."},

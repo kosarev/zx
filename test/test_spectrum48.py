@@ -43,7 +43,7 @@ class test_render_frame(unittest.TestCase):
     def runTest(self):
         import zx
         mach = zx.Spectrum48()
-        data = mach.render_frame()
+        data = mach.render_screen()
         assert len(data) == 49280
 
 
@@ -51,7 +51,7 @@ class test_get_frame_pixels(unittest.TestCase):
     def runTest(self):
         import zx
         mach = zx.Spectrum48()
-        mach.render_frame()
+        mach.render_screen()
         pixels = mach.get_frame_pixels()
         assert len(pixels) == 394240
 

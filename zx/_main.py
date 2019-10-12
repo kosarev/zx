@@ -414,7 +414,7 @@ class emulator(Gtk.Window):
 
                     if (events & machine_state._END_OF_FRAME and
                             self._speed_factor is not None):
-                        self.emulator.render_frame()
+                        self.emulator.render_screen()
                         self.frame_data[:] = self.emulator.get_frame_pixels()
                         self.area.queue_draw()
                         # print(self.processor_state.get_bc())
@@ -462,7 +462,7 @@ class emulator(Gtk.Window):
                 set_fetches_limit = True
 
             if events & self.emulator._END_OF_FRAME:
-                self.emulator.render_frame()
+                self.emulator.render_screen()
                 self.frame_data[:] = self.emulator.get_frame_pixels()
                 self.area.queue_draw()
                 self.tape_player.skip_rest_of_frame()

@@ -273,7 +273,7 @@ public:
         machine::run();
 
         // Render the next frame.
-        render_frame();
+        render_screen();
 
         // Handle events of the windowing system.
         handle_events();
@@ -381,8 +381,8 @@ private:
                     window_width, window_height);
     }
 
-    void render_frame() {
-        machine::x_render_frame();
+    void render_screen() {
+        machine::x_render_screen();
         machine::get_frame_pixels(*window_pixels);
     }
 
