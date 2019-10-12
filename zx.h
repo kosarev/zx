@@ -456,6 +456,24 @@ public:
         return addr;
     }
 
+    // TODO: private
+    static fast_u16 get_colour_attrs_addr(unsigned frame_line,
+                                          unsigned pixel_in_line) {
+        assert(frame_line >= 64);
+        assert(frame_line < 64 + screen_height);
+        assert(pixel_in_line >= border_width);
+        assert(pixel_in_line < border_width + screen_width);
+
+        fast_u16 addr = 0x5800;
+
+        unsigned line = frame_line - 64;
+        addr += 0x20 * (line / 8);
+
+        addr += (pixel_in_line - border_width) / 8;
+
+        return addr;
+    }
+
     // TODO: Name the constants.
     // TODO: Optimize.
     void render_screen_to_tick(ticks_type end_tick) {
@@ -481,12 +499,17 @@ public:
                 pixel_in_line >= border_width - 8 &&
                 pixel_in_line < border_width + screen_width - 8;
             if(is_screen_latching_area && render_tick % 8 == 0) {
-                fast_u16 addr = get_pixel_pattern_addr(frame_line,
-                                                       pixel_in_line + 8);
+                fast_u16 pattern_addr = get_pixel_pattern_addr(
+                    frame_line, pixel_in_line + 8);
                 // TODO
                 // printf("%d -> 0x%04x\n", (int) render_tick, (unsigned) addr);
-                latched_pixel_pattern = make16(on_read(addr),
-                                               on_read(addr + 1));
+                latched_pixel_pattern = make16(on_read(pattern_addr),
+                                               on_read(pattern_addr + 1));
+
+                fast_u16 attr_addr = get_colour_attrs_addr(
+                    frame_line, pixel_in_line + 8);
+                latched_colour_attrs = make16(on_read(attr_addr),
+                                              on_read(attr_addr + 1));
             }
 
             // Render the screen area.
@@ -506,17 +529,15 @@ public:
                 frame_chunk *line_chunks = screen_chunks[screen_line];
                 frame_chunk *chunk = &line_chunks[chunk_index];
 
-                // TODO: Support colours.
-                const unsigned black = 0;
-                const unsigned white = red_mask | green_mask | blue_mask;
-
-                unsigned paper_color = white;
-                unsigned ink_color = black;
-
                 unsigned pixel_in_cycle = (pixel_in_line - border_width) % 16;
-
-                if(pixel_in_cycle == 0)
+                if(pixel_in_cycle == 0) {
                     latched_pixel_pattern2 = latched_pixel_pattern;
+                    latched_colour_attrs2 = latched_colour_attrs;
+                }
+
+                unsigned attr = latched_colour_attrs2 >> ((15 - pixel_in_cycle) / 8 * 8);
+                unsigned ink_color = (attr >> 0) & 0x7;
+                unsigned paper_color = (attr >> 3) & 0x7;
 
                 // TODO: We can compute the whole chunk as soon
                 //       as we read the bytes. And then just
@@ -575,7 +596,9 @@ public:
     ticks_type render_tick = 0;
     unsigned latched_border_color = 0;
     fast_u16 latched_pixel_pattern = 0;
+    fast_u16 latched_colour_attrs = 0;
     fast_u16 latched_pixel_pattern2 = 0;
+    fast_u16 latched_colour_attrs2 = 0;
 
     // TODO: Eliminate.
     void x_render_screen() {
