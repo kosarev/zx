@@ -427,9 +427,6 @@ public:
 
         // TODO: Render the border by whole chunks when possible.
         while(render_tick < end_tick) {
-            if(render_tick % 4 == 0)
-                latched_border_color = border_color;
-
             // The tick since the beam was at the imaginary
             // beginning of the frame with coordinates (0, 0).
             ticks_type frame_tick = render_tick + border_width / 2 - 8 / 2;  // TODO
@@ -450,21 +447,26 @@ public:
 
             // Render the border area.
             // TODO: We can simply initialize the render tick
-            //       with the first visible tick value.
-            // TODO: We can simply stop the rendering loop at the
-            //       last visible tick.
+            //       with the first visible tick value and stop
+            //       the rendering loop at the last visible tick.
+            //       Just don't forget about latching.
             unsigned top_hidden_lines = 64 - top_border_height;
             bool is_visible_area =
                 line >= top_hidden_lines &&
                 line < 64 + screen_height + bottom_border_height &&
                 line_pixel < frame_width;
             if(is_visible_area) {
+                if(render_tick % 4 == 0)
+                    latched_border_color = border_color;
+
                 unsigned frame_line = line - top_hidden_lines;
                 frame_chunk *line_chunks = frame_chunks[frame_line];
 
                 unsigned chunk_index = line_pixel / pixels_per_frame_chunk;
                 unsigned chunk_pixel = line_pixel % pixels_per_frame_chunk;
 
+                // TODO: Support rendering by whole chunks for
+                //       better performance.
                 frame_chunk *chunk = &line_chunks[chunk_index];
                 unsigned pixels_value = (0x11000000 * latched_border_color) >> (chunk_pixel * 4);
                 unsigned pixels_mask = 0xff000000 >> (chunk_pixel * 4);
