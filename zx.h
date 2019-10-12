@@ -539,7 +539,7 @@ public:
                     latched_colour_attrs2 = latched_colour_attrs;
                 }
 
-                unsigned attr = latched_colour_attrs2 >> ((15 - pixel_in_cycle) / 8 * 8);
+                auto attr = static_cast<unsigned>(latched_colour_attrs2 >> ((15 - pixel_in_cycle) / 8 * 8));
                 unsigned brightness = attr >> (6 - brightness_bit) & brightness_mask;
                 unsigned ink_color = ((attr >> 0) & 0x7) | brightness;
                 unsigned paper_color = ((attr >> 3) & 0x7) | brightness;
