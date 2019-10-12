@@ -382,7 +382,7 @@ private:
     }
 
     void render_screen() {
-        machine::x_render_screen();
+        machine::render_screen();
         machine::get_frame_pixels(*window_pixels);
     }
 

@@ -610,81 +610,8 @@ public:
     fast_u16 latched_colour_attrs2 = 0;
     fast_u16 flash_mask = 0;
 
-    // TODO: Eliminate.
-    void x_render_screen() {
+    void render_screen() {
         render_screen_to_tick(ticks_per_frame);
-
-        // TODO
-        return;
-
-        const unsigned black = 0;
-        const unsigned white = red_mask | green_mask | blue_mask;
-
-        // TODO
-        // frame_chunk border_chunk = 0x11111111 * border_color;
-
-        // Render the top border area.
-        unsigned i = 0;
-        for(; i != top_border_height; ++i) {
-#if 0  // TODO
-            frame_chunk *line = screen_chunks[i];
-            for(unsigned j = 0; j != chunks_per_frame_line; ++j)
-                line[j] = border_chunk;
-#endif
-        }
-
-        // Render the screen area.
-        fast_u16 line_addr = 0x4000;
-        for(; i != top_border_height + screen_height; ++i) {
-            frame_chunk *line = screen_chunks[i];
-
-            // Left border.
-            unsigned j = 0;
-#if 0
-            for(; j != chunks_per_border_width; ++j)
-                line[j] = border_chunk;
-#else
-            j += chunks_per_border_width;
-#endif
-
-            // Screen.
-            fast_u16 addr = line_addr;
-            for(; j != chunks_per_border_width + chunks_per_screen_line; ++j) {
-                fast_u8 b = on_read(addr);
-                uint_fast32_t c = 0;
-                c |= (b & 0x80) ? black : white; c <<= 4;
-                c |= (b & 0x40) ? black : white; c <<= 4;
-                c |= (b & 0x20) ? black : white; c <<= 4;
-                c |= (b & 0x10) ? black : white; c <<= 4;
-                c |= (b & 0x08) ? black : white; c <<= 4;
-                c |= (b & 0x04) ? black : white; c <<= 4;
-                c |= (b & 0x02) ? black : white; c <<= 4;
-                c |= (b & 0x01) ? black : white;
-                line[j] = static_cast<frame_chunk>(c);
-                ++addr;
-            }
-
-            // Right border.
-#if 0
-            for(; j != chunks_per_frame_line; ++j)
-                line[j] = border_chunk;
-#endif
-
-            // Move to next line.
-            if(((line_addr += 0x0100) & 0x700) == 0) {
-                line_addr += 0x20;
-                line_addr -= (line_addr & 0xff) < 0x20 ? 0x100 : 0x800;
-            }
-        }
-
-        // Render the bottom border area.
-#if 0
-        for(; i != frame_height; ++i) {
-            frame_chunk *line = screen_chunks[i];
-            for(unsigned j = 0; j != chunks_per_frame_line; ++j)
-                line[j] = border_chunk;
-        }
-#endif
     }
 
     typedef uint_least32_t pixel_type;

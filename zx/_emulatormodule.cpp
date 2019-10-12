@@ -248,7 +248,7 @@ PyObject *get_memory(PyObject *self, PyObject *args) {
 
 PyObject *render_screen(PyObject *self, PyObject *args) {
     auto &emulator = cast_emulator(self);
-    emulator.x_render_screen();
+    emulator.render_screen();
 
     const auto &screen_chunks = emulator.get_screen_chunks();
     return PyMemoryView_FromMemory(
