@@ -23,7 +23,8 @@ class TZXFile(zx.SoundFile):
     def get_pulses(self):
         level = False
         for block in self['blocks']:
-            if block['id'] == '10 (Standard Speed Data Block)':
+            id = block['id']
+            if id == '10 (Standard Speed Data Block)':
                 # The block itself.
                 data = block['data']
                 for pulse in get_standard_block_pulses(data):
@@ -53,6 +54,8 @@ class TZXFile(zx.SoundFile):
 
                 if pause_duration:
                     yield (level, pause_duration * self._TICKS_FREQ / 1000)
+            elif id == '30 (Text Description)':
+                print(block['text'])
             else:
                 assert 0, block  # TODO
 
@@ -68,8 +71,15 @@ class TZXFileFormat(zx.SoundFileFormat):
         del block['data_size']
         return block
 
+    def _parse_text_description(self, parser):
+        size = parser.parse_field('B', 'text_size')
+        text = parser.extract_block(size)
+        return {'id': '30 (Text Description)',
+                'text': text}
+
     _BLOCK_PARSERS = {
         0x10: _parse_standard_speed_data_block,
+        0x30: _parse_text_description,
     }
 
     def _parse_block(self, parser):
