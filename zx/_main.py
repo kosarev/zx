@@ -222,11 +222,25 @@ class emulator(Gtk.Window):
         else:
             self.keyboard_state[addr_line - 8] |= mask
 
+    def show_help(self):
+        KEYS = [
+            ('F1', 'Show help.'),
+            ('F4', 'Load tape file.'),
+            ('F6', 'Pause/unpause tape.'),
+            ('F10', 'Quit.'),
+        ]
+
+        for entry in KEYS:
+            print('%3s  %s' % entry)
+
     def on_key_press(self, widget, event):
         key_id = Gdk.keyval_name(event.keyval).upper()
         if key_id in ['ESCAPE', 'F10']:
             self.done = True
             return
+
+        if key_id == 'F1':
+            self.show_help()
 
         if key_id == 'F2':
             # TODO: Let user choose the name.

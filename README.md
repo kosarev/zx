@@ -14,11 +14,26 @@ ZX Spectrum Emulator written in a mix of Python and C++.
   [Z80 emulator](https://github.com/kosarev/z80).
 
 
-### Installation
+### Installation and running
 
 ```shell
 pip install zx
 ```
+
+```shell
+zx
+```
+
+
+### Control keys
+
+`F1` Show help.
+
+`F4` Load tape file.
+
+`F6` Pause/unpause tape.
+
+`F10` Quit.
 
 
 ### Running snapshots, recordings and tapes
