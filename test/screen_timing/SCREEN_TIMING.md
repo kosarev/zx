@@ -33,3 +33,9 @@ as a chunk of 16 pixels.
 
 Then at tick 14348 subsequent four bytes are read and another
 chunk of 16 pixels is displayed on the screen.
+
+
+## References
+
+* The relevant discussion on the WoS site:
+  https://www.worldofspectrum.org/forums/discussion/comment/957356/#Comment_957356
