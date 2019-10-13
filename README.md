@@ -29,7 +29,7 @@ zx
 
 `F1` Show help.
 
-`F4` Load tape file.
+`F3` Load tape file.
 
 `F6` Pause/unpause tape.
 

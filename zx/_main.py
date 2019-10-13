@@ -225,7 +225,7 @@ class emulator(Gtk.Window):
     def show_help(self):
         KEYS = [
             ('F1', 'Show help.'),
-            ('F4', 'Load tape file.'),
+            ('F3', 'Load tape file.'),
             ('F6', 'Pause/unpause tape.'),
             ('F10', 'Quit.'),
         ]
@@ -246,7 +246,7 @@ class emulator(Gtk.Window):
             # TODO: Let user choose the name.
             self.save_snapshot('saved.z80')
 
-        if key_id == 'F4':
+        if key_id == 'F3':
             self.tape_player.load_tape()
 
         if key_id == 'F6':
