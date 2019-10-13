@@ -16,6 +16,16 @@ ZX Spectrum Emulator written in a mix of Python and C++.
   [Z80 emulator](https://github.com/kosarev/z80).
 
 
+### Development status
+
+* Supported machines: 48K only for now.
+* Display: multi-colour effects, accurate timings.
+* Sound: not supported yet.
+* Tape: TAP and TZX formats supported as well as conversion to WAV.
+* Snapshots: Z80.
+* Playback recordings: RZX.
+
+
 ### Installation and running
 
 ```shell
@@ -25,14 +35,6 @@ $ pip install zx
 ```shell
 $ zx
 ```
-
-
-### Status
-
-* Supported machines: 48K only for now.
-* Display: multi-colour effects, accurate timings.
-* Sound: not supported yet.
-* Tape: TAP and TZX formats supported as well as conversion to WAV.
 
 
 ### Control keys
