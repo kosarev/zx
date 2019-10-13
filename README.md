@@ -29,6 +29,8 @@ $ zx
 
 `F1` Show help.
 
+`F2` Save snapshot.
+
 `F3` Load tape file.
 
 `F6` Pause/unpause tape.

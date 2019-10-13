@@ -226,6 +226,7 @@ class emulator(Gtk.Window):
     def show_help(self):
         KEYS = [
             ('F1', 'Show help.'),
+            ('F2', 'Save snapshot.'),
             ('F3', 'Load tape file.'),
             ('F6', 'Pause/unpause tape.'),
             ('F10', 'Quit.'),
@@ -251,9 +252,7 @@ class emulator(Gtk.Window):
             self.show_help()
 
         if key_id == 'F2':
-            # TODO: Let user choose the name.
-            # TODO: Document this control key.
-            self.save_snapshot('saved.z80')
+            self.save_snapshot()
 
         if key_id == 'F3':
             self.tape_player.load_tape()
@@ -300,9 +299,11 @@ class emulator(Gtk.Window):
 
         return n
 
-    def save_snapshot(self, filename):
+    def save_snapshot(self):
+        filename = input('Snapshot filename: ')
         with open(filename, 'wb') as f:
             f.write(zx.Z80SnapshotsFormat().make(self.emulator))
+        print('%s saved.' % filename)
 
     def _find_recording_info_chunk(self, recording):
         for chunk in recording['chunks']:
