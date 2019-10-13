@@ -7,11 +7,11 @@ ZX Spectrum Emulator written in a mix of Python and C++.
 
 
 ### Features
-* Fast and accurate emulation.
 * Designed to be suitable for research and development purposes
   such as unattended testing of Spectrum software, timing
   analysis, etc.
 * Meant to be easy to customize and re-use via Python interfaces.
+* Fast and accurate emulation.
 * Based on the fast and flexible
   [Z80 emulator](https://github.com/kosarev/z80).
 
@@ -25,6 +25,14 @@ $ pip install zx
 ```shell
 $ zx
 ```
+
+
+### Status
+
+* Supported machines: 48K only for now.
+* Display: multi-colour effects, accurate timings.
+* Sound: not supported yet.
+* Tape: TAP and TZX formats supported as well as conversion to WAV.
 
 
 ### Control keys
