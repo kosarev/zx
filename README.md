@@ -68,4 +68,4 @@ OrderedDict([('id', 'z80_snapshot'), ('a', 213), ('f', 66), ...
 ```
 
 On the `dump` command, **zx** parses the specified file (that can
-be of any supported format) in the form raw Python data.
+be of any supported format) in the form of raw Python data.
