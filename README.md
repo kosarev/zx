@@ -3,6 +3,8 @@
 # zx
 ZX Spectrum Emulator written in a mix of Python and C++.
 
+[[Screenshots](screenshots/README.md)]
+
 
 ### Features
 * Fast and accurate emulation.
