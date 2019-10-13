@@ -17,11 +17,11 @@ ZX Spectrum Emulator written in a mix of Python and C++.
 ### Installation and running
 
 ```shell
-pip install zx
+$ pip install zx
 ```
 
 ```shell
-zx
+$ zx
 ```
 
 
@@ -41,20 +41,31 @@ zx
 ### Running snapshots, recordings and tapes
 
 ```shell
-zx elven.z80
+$ zx elven.z80
 ```
 
 ```shell
-zx exolon.rzx
+$ zx exolon.rzx
 ```
 
 ```shell
-zx eric.tap
+$ zx eric.tap
 ```
 
 
 ### Converting tape files to the WAV format
 
 ```shell
-zx jack.tzx jack.wav
+$ zx jack.tzx jack.wav
 ```
+
+
+### Dumping files
+
+```shell
+$ zx dump rick.z80
+OrderedDict([('id', 'z80_snapshot'), ('a', 213), ('f', 66), ...
+```
+
+On the `dump` command, **zx** parses the specified file (that can
+be of any supported format) in the form raw Python data.
