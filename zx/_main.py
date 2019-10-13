@@ -155,6 +155,7 @@ class emulator(Gtk.Window):
         self.frame_height = 48 + 192 + 40
 
         self.done = False
+        self.is_paused = False
 
         self.scale = 2
 
@@ -228,13 +229,20 @@ class emulator(Gtk.Window):
             ('F3', 'Load tape file.'),
             ('F6', 'Pause/unpause tape.'),
             ('F10', 'Quit.'),
+            ('PAUSE', 'Pause/unpause emulation.'),
         ]
 
         for entry in KEYS:
-            print('%3s  %s' % entry)
+            print('%7s  %s' % entry)
+
+    def pause_or_unpause(self):
+        self.is_paused = not self.is_paused
+        print('%s.' % ('Paused' if self.is_paused else 'Unpaused'))
 
     def on_key_press(self, widget, event):
         key_id = Gdk.keyval_name(event.keyval).upper()
+        # print(key_id)
+
         if key_id in ['ESCAPE', 'F10']:
             self.done = True
             return
@@ -244,6 +252,7 @@ class emulator(Gtk.Window):
 
         if key_id == 'F2':
             # TODO: Let user choose the name.
+            # TODO: Document this control key.
             self.save_snapshot('saved.z80')
 
         if key_id == 'F3':
@@ -251,6 +260,9 @@ class emulator(Gtk.Window):
 
         if key_id == 'F6':
             self.tape_player.pause_or_unpause()
+
+        if key_id == 'PAUSE':
+            self.pause_or_unpause()
 
         self.handle_spectrum_key(self.keys.get(key_id, None), pressed=True)
 
@@ -412,7 +424,7 @@ class emulator(Gtk.Window):
                     while Gtk.events_pending():
                         Gtk.main_iteration()
 
-                    events = self.emulator.run()
+                    events = self.emulator.run() if not self.is_paused else 0
                     # TODO: print(events)
 
                     if events & machine_state._BREAKPOINT_HIT:
@@ -469,7 +481,7 @@ class emulator(Gtk.Window):
             while Gtk.events_pending():
                 Gtk.main_iteration()
 
-            events = self.emulator.run()
+            events = self.emulator.run() if not self.is_paused else 0
             # TODO: print(events)
 
             if events & self.emulator._FETCHES_LIMIT_HIT:

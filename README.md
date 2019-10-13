@@ -35,6 +35,8 @@ zx
 
 `F10` Quit.
 
+`PAUSE` Pause/unpause emulation.
+
 
 ### Running snapshots, recordings and tapes
 
