@@ -71,3 +71,8 @@ OrderedDict([('id', 'z80_snapshot'), ('a', 213), ('f', 66), ...
 
 On the `dump` command, **zx** parses the specified file (that can
 be of any supported format) in the form of raw Python data.
+
+
+### Reference papers
+
+* [Screen timings](test/screen_timing/SCREEN_TIMING.md)
