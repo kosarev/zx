@@ -3,7 +3,7 @@
 # zx
 ZX Spectrum Emulator written in a mix of Python and C++.
 
-[[Screenshots](screenshots/README.md)]
+[[Screenshots](https://github.com/kosarev/zx/screenshots/README.md)]
 
 
 ### Features
@@ -87,4 +87,4 @@ be of any supported format) in the form of raw Python data.
 
 ### Reference papers
 
-* [Screen timings](test/screen_timing/SCREEN_TIMING.md)
+* [Screen timings](https://github.com/kosarev/zx/test/screen_timing/SCREEN_TIMING.md)
