@@ -48,7 +48,7 @@ zx_emulator_module = Extension(
 setup(name='zx',
       version='%d.%d.%d' % (ZX_MAJOR_VERSION, ZX_MINOR_VERSION,
                             ZX_PATCH_VERSION),
-      description='ZX Spectrum Emulator',
+      description='ZX Spectrum Emulator for Researchers and Developers',
       long_description=long_description,
       long_description_content_type='text/markdown',
       author='Ivan Kosarev',
