@@ -12,5 +12,9 @@
 MASK16 = 0xffff
 
 
+def div_ceil(a, b):
+    return (a + b - 1) // b
+
+
 def make16(hi, lo):
     return ((hi << 8) | lo) & MASK16

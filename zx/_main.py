@@ -16,7 +16,6 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
 
-
 # TODO: Move to the z80 project.
 class ProcessorSnapshot(zx.Data):
     pass
@@ -204,8 +203,16 @@ class emulator(Gtk.Window):
         self.done = True
 
     def on_draw_area(self, widget, context):
+        window_width, window_height = self.get_size()
+        width = min(window_width,
+                    zx.div_ceil(window_height * self.frame_width,
+                                self.frame_height))
+        height = min(window_height,
+                     zx.div_ceil(window_width * self.frame_height,
+                                 self.frame_width))
+
         context.save()
-        context.scale(self.scale, self.scale)
+        context.scale(width / self.frame_width, height / self.frame_height)
         context.set_source(self.pattern)
         context.paint()
         context.restore()
