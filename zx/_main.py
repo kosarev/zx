@@ -106,8 +106,8 @@ class TapePlayer(object):
         self._is_paused = True
         print('Press F6 to unpause the tape.')
 
-    def load_tape(self, filename):
-        self.load_parsed_file(parse_file(filename))
+    def load_tape(self, file):
+        self.load_parsed_file(file)
 
     def pause_or_unpause(self):
         self._is_paused = not self._is_paused
@@ -275,10 +275,10 @@ class emulator(Gtk.Window):
         dialog.run()
         dialog.destroy()
 
-    def load_tape(self):
+    def load_file(self):
         # TODO: Add file filters.
         dialog = Gtk.FileChooserDialog(
-            'Load tape file', self,
+            'Load file', self,
             Gtk.FileChooserAction.OPEN,
             (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
              Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
@@ -286,7 +286,12 @@ class emulator(Gtk.Window):
         if dialog.run() == Gtk.ResponseType.OK:
             filename = dialog.get_filename()
             try:
-                self.tape_player.load_tape(filename)
+                file = parse_file(filename)
+                if isinstance(file, zx.SoundFile):
+                    self.tape_player.load_tape(file)
+                else:
+                    raise zx.Error(
+                        "Don't know how to load file %r." % filename)
             except zx.Error as e:
                 self.error_box('File error', '%s' % e.args)
 
@@ -325,7 +330,7 @@ class emulator(Gtk.Window):
             self.save_snapshot()
 
         if key_id == 'F3':
-            self.load_tape()
+            self.load_file()
 
         if key_id == 'F6':
             self.tape_player.pause_or_unpause()
