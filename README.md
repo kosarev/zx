@@ -43,7 +43,7 @@ $ zx
 
 `F2` Save snapshot.
 
-`F3` Load tape file.
+`F3` Load snapshot or tape file.
 
 `F6` Pause/unpause tape.
 

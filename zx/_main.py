@@ -254,7 +254,7 @@ class emulator(Gtk.Window):
         KEYS = [
             ('F1', 'Show help.'),
             ('F2', 'Save snapshot.'),
-            ('F3', 'Load tape file.'),
+            ('F3', 'Load snapshot or tape file.'),
             ('F6', 'Pause/unpause tape.'),
             ('F10', 'Quit.'),
             ('PAUSE', 'Pause/unpause emulation.'),
@@ -289,6 +289,8 @@ class emulator(Gtk.Window):
                 file = parse_file(filename)
                 if isinstance(file, zx.SoundFile):
                     self.tape_player.load_tape(file)
+                elif isinstance(file, MachineSnapshot):
+                    self.emulator.install_snapshot(file)
                 else:
                     raise zx.Error(
                         "Don't know how to load file %r." % filename)
