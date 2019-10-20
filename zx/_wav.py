@@ -17,6 +17,10 @@ class WAVFileFormat(zx.SoundFileFormat):
     _NAME = 'WAV'
     _TICKS_FREQ = 3500000
 
+    def parse(self, image):
+        # TODO
+        raise zx.Error('Parsing of WAV files is not supported yet.')
+
     def save_from_pulses(self, filename, pulses):
         with wave.open(filename, 'wb') as f:
             f.setnchannels(1)
