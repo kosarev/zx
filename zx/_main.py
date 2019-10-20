@@ -292,6 +292,12 @@ class emulator(Gtk.Window):
 
         dialog.destroy()
 
+    def save_snapshot(self):
+        filename = input('Snapshot filename: ')
+        with open(filename, 'wb') as f:
+            f.write(zx.Z80SnapshotsFormat().make(self.emulator))
+        print('%s saved.' % filename)
+
     def on_key_press(self, widget, event):
         key_id = Gdk.keyval_name(event.keyval).upper()
         # print(key_id)
@@ -350,12 +356,6 @@ class emulator(Gtk.Window):
             n |= 0x40
 
         return n
-
-    def save_snapshot(self):
-        filename = input('Snapshot filename: ')
-        with open(filename, 'wb') as f:
-            f.write(zx.Z80SnapshotsFormat().make(self.emulator))
-        print('%s saved.' % filename)
 
     def _find_recording_info_chunk(self, recording):
         for chunk in recording['chunks']:
