@@ -16,6 +16,15 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
 
+def rgb(color):
+    assert color.startswith('#')
+    assert len(color) == 7
+    r = int(color[1:3], 16)
+    g = int(color[3:5], 16)
+    b = int(color[5:7], 16)
+    return r / 0x100, g / 0x100, b / 0x100
+
+
 # TODO: Move to the z80 project.
 class ProcessorSnapshot(zx.Data):
     pass
@@ -145,6 +154,8 @@ class TapePlayer(object):
 
 
 class emulator(Gtk.Window):
+    SCREEN_AREA_BACKGROUND_COLOUR = rgb('#1e1e1e')
+
     def __init__(self, speed_factor=1.0):
         super(emulator, self).__init__()
 
@@ -211,7 +222,13 @@ class emulator(Gtk.Window):
                      zx.div_ceil(window_width * self.frame_height,
                                  self.frame_width))
 
+        # Draw the background.
         context.save()
+        context.rectangle(0, 0, window_width, window_height)
+        context.set_source_rgb(*self.SCREEN_AREA_BACKGROUND_COLOUR)
+        context.fill()
+
+        # Draw the emulated screen.
         context.translate((window_width - width) // 2,
                           (window_height - height) // 2)
         context.scale(width / self.frame_width, height / self.frame_height)
