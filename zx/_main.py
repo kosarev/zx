@@ -212,6 +212,8 @@ class emulator(Gtk.Window):
                                  self.frame_width))
 
         context.save()
+        context.translate((window_width - width) // 2,
+                          (window_height - height) // 2)
         context.scale(width / self.frame_width, height / self.frame_height)
         context.set_source(self.pattern)
         context.paint()
