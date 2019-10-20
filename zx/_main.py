@@ -176,6 +176,8 @@ class emulator(Gtk.Window):
         self.set_title("ZX Spectrum Emulator")
         self.resize(self.frame_width * self.scale,
                     self.frame_height * self.scale)
+        minimum_size = self.frame_width // 4, self.frame_height // 4
+        self.set_size_request(*minimum_size)
         self.set_position(Gtk.WindowPosition.CENTER)
         self.connect("delete-event", self.on_done)
 
