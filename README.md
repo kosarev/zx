@@ -3,7 +3,9 @@
 # zx
 ZX Spectrum Emulator written in a mix of Python and C++.
 
-[[Screenshots](https://github.com/kosarev/zx/tree/master/screenshots)]
+![Elven](https://raw.githubusercontent.com/kosarev/zx/master/screenshots/elven.png "Elven Warrior")
+
+[More screenshots](https://github.com/kosarev/zx/tree/master/screenshots)
 
 
 ### Features
