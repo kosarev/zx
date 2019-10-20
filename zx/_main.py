@@ -293,10 +293,22 @@ class emulator(Gtk.Window):
         dialog.destroy()
 
     def save_snapshot(self):
-        filename = input('Snapshot filename: ')
-        with open(filename, 'wb') as f:
-            f.write(zx.Z80SnapshotsFormat().make(self.emulator))
-        print('%s saved.' % filename)
+        # TODO: Add file filters.
+        dialog = Gtk.FileChooserDialog(
+            'Save snapshot', self,
+            Gtk.FileChooserAction.SAVE,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+             Gtk.STOCK_SAVE, Gtk.ResponseType.OK))
+        dialog.set_do_overwrite_confirmation(True)
+        if dialog.run() == Gtk.ResponseType.OK:
+            filename = dialog.get_filename()
+            try:
+                with open(filename, 'wb') as f:
+                    f.write(zx.Z80SnapshotsFormat().make(self.emulator))
+            except zx.Error as e:
+                self.error_box('File error', '%s' % e.args)
+
+        dialog.destroy()
 
     def on_key_press(self, widget, event):
         key_id = Gdk.keyval_name(event.keyval).upper()
