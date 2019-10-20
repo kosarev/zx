@@ -89,4 +89,4 @@ be of any supported format) in the form of raw Python data.
 
 ### Reference papers
 
-* [Screen timings](https://github.com/kosarev/zx/test/screen_timing/SCREEN_TIMING.md)
+* [Screen timings](https://github.com/kosarev/zx/blob/master/test/screen_timing/SCREEN_TIMING.md)
