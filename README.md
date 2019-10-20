@@ -3,7 +3,7 @@
 # zx
 ZX Spectrum Emulator written in a mix of Python and C++.
 
-[[Screenshots](https://github.com/kosarev/zx/screenshots/README.md)]
+[[Screenshots](https://github.com/kosarev/zx/tree/master/screenshots)]
 
 
 ### Features
