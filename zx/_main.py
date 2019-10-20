@@ -106,8 +106,7 @@ class TapePlayer(object):
         self._is_paused = True
         print('Press F6 to unpause the tape.')
 
-    def load_tape(self):
-        filename = input('Tape file: ')
+    def load_tape(self, filename):
         self.load_parsed_file(parse_file(filename))
 
     def pause_or_unpause(self):
@@ -268,6 +267,31 @@ class emulator(Gtk.Window):
         self.is_paused = not self.is_paused
         print('%s.' % ('Paused' if self.is_paused else 'Unpaused'))
 
+    def error_box(self, title, message):
+        dialog = Gtk.MessageDialog(
+            self, 0, Gtk.MessageType.ERROR,
+            Gtk.ButtonsType.OK, title)
+        dialog.format_secondary_text(message)
+        dialog.run()
+        dialog.destroy()
+
+    def load_tape(self):
+        # TODO: Add file filters.
+        dialog = Gtk.FileChooserDialog(
+            'Load tape file', self,
+            Gtk.FileChooserAction.OPEN,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+             Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
+
+        if dialog.run() == Gtk.ResponseType.OK:
+            filename = dialog.get_filename()
+            try:
+                self.tape_player.load_tape(filename)
+            except zx.Error as e:
+                self.error_box('File error', '%s' % e.args)
+
+        dialog.destroy()
+
     def on_key_press(self, widget, event):
         key_id = Gdk.keyval_name(event.keyval).upper()
         # print(key_id)
@@ -283,7 +307,7 @@ class emulator(Gtk.Window):
             self.save_snapshot()
 
         if key_id == 'F3':
-            self.tape_player.load_tape()
+            self.load_tape()
 
         if key_id == 'F6':
             self.tape_player.pause_or_unpause()
