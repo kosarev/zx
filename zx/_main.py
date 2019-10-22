@@ -237,19 +237,6 @@ class emulator(Gtk.Window):
         context.paint()
         context.restore()
 
-    def handle_spectrum_key(self, key_info, pressed):
-        if not key_info:
-            return
-
-        # print(key_info['id'])
-        addr_line = key_info['address_line']
-        mask = 1 << key_info['port_bit']
-
-        if pressed:
-            self.keyboard_state[addr_line - 8] &= mask ^ 0xff
-        else:
-            self.keyboard_state[addr_line - 8] |= mask
-
     def show_help(self):
         KEYS = [
             ('F1', 'Show help.'),
@@ -317,34 +304,45 @@ class emulator(Gtk.Window):
 
         dialog.destroy()
 
-    def on_key_press(self, widget, event):
+    def quit(self):
+        self.done = True
+
+    def pause_or_unpause_tape(self):
+        self.tape_player.pause_or_unpause()
+
+    KEY_HANDLERS = {
+        'ESCAPE': quit,
+        'F10': quit,
+        'F1': show_help,
+        'F2': save_snapshot,
+        'F3': load_file,
+        'F6': pause_or_unpause_tape,
+        'PAUSE': pause_or_unpause,
+    }
+
+    def on_key(self, event, pressed):
         key_id = Gdk.keyval_name(event.keyval).upper()
         # print(key_id)
 
-        if key_id in ['ESCAPE', 'F10']:
-            self.done = True
-            return
+        if pressed and key_id in self.KEY_HANDLERS:
+            self.KEY_HANDLERS[key_id](self)
 
-        if key_id == 'F1':
-            self.show_help()
+        key_info = self.keys.get(key_id, None)
+        if key_info:
+            # print(key_info['id'])
+            addr_line = key_info['address_line']
+            mask = 1 << key_info['port_bit']
 
-        if key_id == 'F2':
-            self.save_snapshot()
+            if pressed:
+                self.keyboard_state[addr_line - 8] &= mask ^ 0xff
+            else:
+                self.keyboard_state[addr_line - 8] |= mask
 
-        if key_id == 'F3':
-            self.load_file()
-
-        if key_id == 'F6':
-            self.tape_player.pause_or_unpause()
-
-        if key_id == 'PAUSE':
-            self.pause_or_unpause()
-
-        self.handle_spectrum_key(self.keys.get(key_id, None), pressed=True)
+    def on_key_press(self, widget, event):
+        self.on_key(event, pressed=True)
 
     def on_key_release(self, widget, event):
-        key_id = Gdk.keyval_name(event.keyval).upper()
-        self.handle_spectrum_key(self.keys.get(key_id, None), pressed=False)
+        self.on_key(event, pressed=False)
 
     def on_input(self, addr):
         # Scan keyboard.
