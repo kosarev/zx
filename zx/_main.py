@@ -330,6 +330,9 @@ class emulator(Gtk.Window):
 
         key_info = self.keys.get(key_id, None)
         if key_info:
+            # Unpause on any Spectrum key stroke.
+            self.is_paused = False
+
             # print(key_info['id'])
             addr_line = key_info['address_line']
             mask = 1 << key_info['port_bit']
