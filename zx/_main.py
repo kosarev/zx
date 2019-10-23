@@ -10,19 +10,11 @@
 #   Published under the MIT license.
 
 
-import cairo, gi, os, sys, time, zx
-import collections
+import cairo, gi, os, sys, time, collections
+import zx, zx._gui as _gui
+from zx._gui import rgb
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
-
-
-def rgb(color):
-    assert color.startswith('#')
-    assert len(color) == 7
-    r = int(color[1:3], 16)
-    g = int(color[3:5], 16)
-    b = int(color[5:7], 16)
-    return r / 0x100, g / 0x100, b / 0x100
 
 
 # TODO: Move to the z80 project.
@@ -226,15 +218,25 @@ class emulator(Gtk.Window):
         # Draw the background.
         context.save()
         context.rectangle(0, 0, window_width, window_height)
-        context.set_source_rgb(*self.SCREEN_AREA_BACKGROUND_COLOUR)
+        context.set_source_rgba(*self.SCREEN_AREA_BACKGROUND_COLOUR)
         context.fill()
 
         # Draw the emulated screen.
+        context.save()
         context.translate((window_width - width) // 2,
                           (window_height - height) // 2)
         context.scale(width / self.frame_width, height / self.frame_height)
         context.set_source(self.pattern)
         context.paint()
+        context.restore()
+
+        # Draw the pause sign.
+        if self.is_paused:
+            size = min(40, width * 0.1)
+            x = (window_width - size) // 2
+            y = (window_height - size) // 2
+            _gui.draw_pause(context, x, y, size, alpha=0.7)
+
         context.restore()
 
     def show_help(self):
@@ -252,7 +254,6 @@ class emulator(Gtk.Window):
 
     def pause_or_unpause(self):
         self.is_paused = not self.is_paused
-        print('%s.' % ('Paused' if self.is_paused else 'Unpaused'))
 
     def error_box(self, title, message):
         dialog = Gtk.MessageDialog(
