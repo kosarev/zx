@@ -498,7 +498,12 @@ class emulator(Gtk.Window):
                     while Gtk.events_pending():
                         Gtk.main_iteration()
 
-                    events = self.emulator.run() if not self.is_paused else 0
+                    if self.is_paused:
+                        # Give the CPU some spare time.
+                        time.sleep(1 / 50)
+                        continue
+
+                    events = self.emulator.run()
                     # TODO: print(events)
 
                     if events & machine_state._BREAKPOINT_HIT:
@@ -555,7 +560,12 @@ class emulator(Gtk.Window):
             while Gtk.events_pending():
                 Gtk.main_iteration()
 
-            events = self.emulator.run() if not self.is_paused else 0
+            if self.is_paused:
+                # Give the CPU some spare time.
+                time.sleep(1 / 50)
+                continue
+
+            events = self.emulator.run()
             # TODO: print(events)
 
             if events & self.emulator._FETCHES_LIMIT_HIT:
