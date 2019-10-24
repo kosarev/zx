@@ -507,6 +507,7 @@ class emulator(Gtk.Window):
 
                     if self.is_paused:
                         # Give the CPU some spare time.
+                        self.area.queue_draw()
                         time.sleep(1 / 50)
                         continue
 
@@ -569,6 +570,7 @@ class emulator(Gtk.Window):
 
             if self.is_paused:
                 # Give the CPU some spare time.
+                self.area.queue_draw()
                 time.sleep(1 / 50)
                 continue
 
