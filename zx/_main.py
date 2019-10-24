@@ -201,6 +201,8 @@ class emulator(Gtk.Window):
         self.connect("key-press-event", self.on_key_press)
         self.connect("key-release-event", self.on_key_release)
 
+        self.connect("button-press-event", self.on_click)
+
         self.tape_player = TapePlayer()
 
     def on_done(self, widget, context):
@@ -347,6 +349,11 @@ class emulator(Gtk.Window):
 
     def on_key_release(self, widget, event):
         self.on_key(event, pressed=False)
+
+    def on_click(self, widget, event):
+        if event.type == Gdk.EventType.BUTTON_PRESS:
+            self.pause_or_unpause()
+            return True
 
     def on_input(self, addr):
         # Scan keyboard.
