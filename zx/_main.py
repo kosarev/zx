@@ -41,6 +41,16 @@ class RZXFileFormat(zx.FileFormat):
         return RZXFile(recording)
 
 
+def get_timestamp():
+    # TODO: We can use this since Python 3.7.
+    # return time.time_ns() / (10 ** 9)
+    return time.time()
+
+
+def get_elapsed_time(timestamp):
+    return get_timestamp() - timestamp
+
+
 def detect_file_format(image, filename_extension):
     KNOWN_FORMATS = [
         ('.rzx', b'RZX!', RZXFileFormat),
@@ -156,7 +166,7 @@ class emulator(Gtk.Window):
         self.frame_height = 48 + 192 + 40
 
         self.done = False
-        self.is_paused = False
+        self.pause_timestamp = None
 
         self.scale = 2
 
@@ -233,11 +243,12 @@ class emulator(Gtk.Window):
         context.restore()
 
         # Draw the pause sign.
-        if self.is_paused:
+        if self.is_paused():
             size = min(40, width * 0.1)
             x = (window_width - size) // 2
             y = (window_height - size) // 2
-            _gui.draw_pause(context, x, y, size, alpha=0.7)
+            alpha = max(0, min(0.7, 1.5 - get_elapsed_time(self.pause_timestamp)))
+            _gui.draw_pause(context, x, y, size, alpha)
 
         context.restore()
 
@@ -254,8 +265,20 @@ class emulator(Gtk.Window):
         for entry in KEYS:
             print('%7s  %s' % entry)
 
+    def is_paused(self):
+        return self.pause_timestamp is not None
+
+    def pause(self):
+        self.pause_timestamp = get_timestamp()
+
+    def unpause(self):
+        self.pause_timestamp = None
+
     def pause_or_unpause(self):
-        self.is_paused = not self.is_paused
+        if self.is_paused():
+            self.unpause()
+        else:
+            self.pause()
 
     def error_box(self, title, message):
         dialog = Gtk.MessageDialog(
@@ -333,7 +356,7 @@ class emulator(Gtk.Window):
         key_info = self.keys.get(key_id, None)
         if key_info:
             # Unpause on any Spectrum key stroke.
-            self.is_paused = False
+            self.unpause()
 
             # print(key_info['id'])
             addr_line = key_info['address_line']
@@ -505,7 +528,7 @@ class emulator(Gtk.Window):
                     while Gtk.events_pending():
                         Gtk.main_iteration()
 
-                    if self.is_paused:
+                    if self.is_paused():
                         # Give the CPU some spare time.
                         self.area.queue_draw()
                         time.sleep(1 / 50)
@@ -568,7 +591,7 @@ class emulator(Gtk.Window):
             while Gtk.events_pending():
                 Gtk.main_iteration()
 
-            if self.is_paused:
+            if self.is_paused():
                 # Give the CPU some spare time.
                 self.area.queue_draw()
                 time.sleep(1 / 50)
