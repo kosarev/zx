@@ -199,7 +199,9 @@ class emulator(Gtk.Window):
 
         self.keyboard_state = [0xff] * 8
         self.keys = {'RETURN': zx.KEYS_INFO['ENTER'],
+                     'ALT_L': zx.KEYS_INFO['CAPS SHIFT'],
                      'SHIFT_L': zx.KEYS_INFO['CAPS SHIFT'],
+                     'ALT_R': zx.KEYS_INFO['SYMBOL SHIFT'],
                      'SHIFT_R': zx.KEYS_INFO['SYMBOL SHIFT'],
                      'SPACE': zx.KEYS_INFO['BREAK SPACE']}
         for id in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
