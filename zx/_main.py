@@ -172,6 +172,11 @@ class PlaybackPlayer(object):
 class emulator(Gtk.Window):
     SCREEN_AREA_BACKGROUND_COLOUR = rgb('#1e1e1e')
 
+    SPIN_V0P5_INFO = {'id': 'info',
+                      'creator': b'SPIN 0.5            ',
+                      'creator_major_version': 0,
+                      'creator_minor_version': 5}
+
     def __init__(self, speed_factor=1.0):
         super(emulator, self).__init__()
 
@@ -232,6 +237,7 @@ class emulator(Gtk.Window):
 
         self.tape_player = TapePlayer()
 
+        self.playback_player = None
         self.playback_samples = None
 
     def on_done(self, widget, context):
@@ -470,7 +476,7 @@ class emulator(Gtk.Window):
         with open('__crash.rzx', 'wb') as f:
             f.write(zx.make_rzx(crash_recording))
 
-    def _get_playback_samples(self, player):
+    def _get_playback_samples(self):
         # Interrupts are supposed to be controlled by the
         # recording.
         self.emulator.suppress_int()
@@ -478,7 +484,7 @@ class emulator(Gtk.Window):
         # self.emulator.enable_trace()
 
         frame_count = 0
-        for chunk_i, chunk in enumerate(player.get_chunks()):
+        for chunk_i, chunk in enumerate(self.playback_player.get_chunks()):
             if isinstance(chunk, MachineSnapshot):
                 self.emulator.install_snapshot(chunk)
                 continue
@@ -518,28 +524,9 @@ class emulator(Gtk.Window):
 
                 frame_count += 1
 
-    def playback_input_recording(self, file):
-        player = PlaybackPlayer(file)
-        creator_info = player.find_recording_info_chunk()
-
-        # SPIN v0.5 alters ROM to implement fast tape loading,
-        # but that affects recorded RZX files.
-        spin_v0p5_info = {'id': 'info',
-                          'creator': b'SPIN 0.5            ',
-                          'creator_major_version': 0,
-                          'creator_minor_version': 5}
-        if creator_info == spin_v0p5_info:
-            self.emulator.set_memory_block(0x1f47, b'\xf5')
-
-        # The bytes-saving ROM procedure needs special processing.
-        self.emulator.set_breakpoint(0x04d4)
-
-        # Process frames in order.
-        self.playback_samples = self._get_playback_samples(player)
-        sample = None
-        for sample in self.playback_samples:
-            break
-        assert sample == 'START_OF_FRAME'
+    def xmain(self):
+        if self.playback_player:
+            creator_info = self.playback_player.find_recording_info_chunk()
 
         while not self.done:
             while Gtk.events_pending():
@@ -570,7 +557,8 @@ class emulator(Gtk.Window):
                 # SPIN v0.5 skips executing instructions
                 # of the bytes-saving ROM procedure in
                 # fast save mode.
-                if (creator_info == spin_v0p5_info and
+                if (self.playback_samples and
+                        creator_info == self.SPIN_V0P5_INFO and
                         self.emulator.get_pc() == 0x04d4):
                     sp = self.emulator.get_sp()
                     ret_addr = self.emulator.read16(sp)
@@ -582,10 +570,11 @@ class emulator(Gtk.Window):
                 self.emulator.render_screen()
                 self.frame_data[:] = self.emulator.get_frame_pixels()
                 self.area.queue_draw()
-                # print(self.processor_state.get_bc())
+                self.tape_player.skip_rest_of_frame()
                 time.sleep((1 / 50) * self._speed_factor)
 
-            if events & self.emulator._FETCHES_LIMIT_HIT:
+            if (self.playback_samples and
+                events & self.emulator._FETCHES_LIMIT_HIT):
                 # Some simulators, e.g., SPIN, may store an interrupt
                 # point in the middle of a IX- or IY-prefixed
                 # instruction, so we continue until such
@@ -596,7 +585,8 @@ class emulator(Gtk.Window):
 
                 # SPIN doesn't update the fetch counter if the last
                 # instruction in frame is IN.
-                if (creator_info == spin_v0p5_info and
+                if (self.playback_samples and
+                        creator_info == self.SPIN_V0P5_INFO and
                         self.playback_sample_i < len(playback_samples)):
                     self.emulator.set_fetches_limit(1)
                     continue
@@ -623,9 +613,34 @@ class emulator(Gtk.Window):
                 assert sample == 'START_OF_FRAME'
                 self.emulator.on_handle_active_int()
 
+
+    def playback_input_recording(self, file):
+        self.playback_player = PlaybackPlayer(file)
+        creator_info = self.playback_player.find_recording_info_chunk()
+
+        # SPIN v0.5 alters ROM to implement fast tape loading,
+        # but that affects recorded RZX files.
+        if creator_info == self.SPIN_V0P5_INFO:
+            self.emulator.set_memory_block(0x1f47, b'\xf5')
+
+        # The bytes-saving ROM procedure needs special processing.
+        self.emulator.set_breakpoint(0x04d4)
+
+        # Process frames in order.
+        self.playback_samples = self._get_playback_samples()
+        sample = None
+        for sample in self.playback_samples:
+            break
+        assert sample == 'START_OF_FRAME'
+
+        self.xmain()
+
+        self.playback_player = None
         self.playback_samples = None
 
     def main(self):
+        self.xmain()
+        ''' TODO
         # self.emulator.enable_trace()
 
         while not self.done:
@@ -650,6 +665,7 @@ class emulator(Gtk.Window):
                 self.area.queue_draw()
                 self.tape_player.skip_rest_of_frame()
                 time.sleep((1 / 50) * self._speed_factor)
+        '''
 
     def run_file(self, filename):
         file = parse_file(filename)
