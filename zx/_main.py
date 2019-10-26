@@ -450,6 +450,22 @@ class emulator(Gtk.Window):
         with open('__crash.rzx', 'wb') as f:
             f.write(zx.make_rzx(crash_recording))
 
+    def _get_playback_frames(self, player):
+        frame_count = 0
+        for chunk_i, chunk in enumerate(player.get_chunks()):
+            if isinstance(chunk, MachineSnapshot):
+                self.emulator.install_snapshot(chunk)
+                continue
+
+            if chunk['id'] != 'port_samples':
+                continue
+
+            self.emulator.set_ticks_since_int(chunk['first_tick'])
+
+            for frame_i, frame in enumerate(chunk['frames']):
+                yield frame_count, chunk_i, frame_i, frame
+                frame_count += 1
+
     def playback_input_recording(self, file):
         # Interrupts are supposed to be controlled by the
         # recording.
@@ -472,25 +488,13 @@ class emulator(Gtk.Window):
         # The bytes-saving ROM procedure needs special processing.
         self.emulator.set_breakpoint(0x04d4)
 
-        # Process chunks in order.
-        frame_count = 0
-        for chunk_i, chunk in enumerate(player.get_chunks()):
+        # Process frames in order.
+        for (frame_count, chunk_i, frame_i,
+             frame) in self._get_playback_frames(player):
             if self.done:
                 break
 
-            if isinstance(chunk, MachineSnapshot):
-                self.emulator.install_snapshot(chunk)
-                continue
-
-            if chunk['id'] != 'port_samples':
-                continue
-
-            self.emulator.set_ticks_since_int(chunk['first_tick'])
-
-            for frame_i, frame in enumerate(chunk['frames']):
-                if self.done:
-                    break
-
+            if True:
                 # TODO: For debug purposes.
                 '''
                 frame_count += 1
