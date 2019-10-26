@@ -154,6 +154,21 @@ class TapePlayer(object):
         self._tick -= self._ticks_per_frame
 
 
+class PlaybackPlayer(object):
+    def __init__(self, file):
+        assert isinstance(file, RZXFile)
+        self._recording = file._recording
+
+    def find_recording_info_chunk(self):
+        for chunk in self._recording['chunks']:
+            if chunk['id'] == 'info':
+                return chunk
+        assert 0  # TODO
+
+    def get_chunks(self):
+        return self._recording['chunks']
+
+
 class emulator(Gtk.Window):
     SCREEN_AREA_BACKGROUND_COLOUR = rgb('#1e1e1e')
 
@@ -410,19 +425,13 @@ class emulator(Gtk.Window):
 
         return n
 
-    def _find_recording_info_chunk(self, recording):
-        for chunk in recording['chunks']:
-            if chunk['id'] == 'info':
-                return chunk
-        assert 0  # TODO
-
-    def _save_crash_rzx(self, recording, state, chunk_i, frame_i):
+    def _save_crash_rzx(self, player, state, chunk_i, frame_i):
         snapshot = zx.Z80SnapshotsFormat().make(state)
 
         crash_recording = {
             'id': 'input_recording',
             'chunks': [
-                self._find_recording_info_chunk(recording),
+                player.find_recording_info_chunk(),
                 {
                     'id': 'snapshot',
                     'image': snapshot,
@@ -448,10 +457,8 @@ class emulator(Gtk.Window):
         self.emulator.allow_int_after_ei(True)
         # self.emulator.enable_trace()
 
-        assert isinstance(file, RZXFile)
-        recording = file._recording
-
-        creator_info = self._find_recording_info_chunk(recording)
+        player = PlaybackPlayer(file)
+        creator_info = player.find_recording_info_chunk()
 
         # SPIN v0.5 alters ROM to implement fast tape loading,
         # but that affects recorded RZX files.
@@ -467,8 +474,7 @@ class emulator(Gtk.Window):
 
         # Process chunks in order.
         frame_count = 0
-        chunks = recording['chunks']
-        for chunk_i, chunk in enumerate(chunks):
+        for chunk_i, chunk in enumerate(player.get_chunks()):
             if self.done:
                 break
 
@@ -479,8 +485,7 @@ class emulator(Gtk.Window):
             if chunk['id'] != 'port_samples':
                 continue
 
-            first_tick = chunk['first_tick']
-            self.emulator.set_ticks_since_int(first_tick)
+            self.emulator.set_ticks_since_int(chunk['first_tick'])
 
             for frame_i, frame in enumerate(chunk['frames']):
                 if self.done:
@@ -491,7 +496,7 @@ class emulator(Gtk.Window):
                 frame_count += 1
                 if frame_count == -12820:
                     frame_state = self.emulator.clone()
-                    self._save_crash_rzx(recording, frame_state, chunk_i, frame_i)
+                    self._save_crash_rzx(player, frame_state, chunk_i, frame_i)
                     assert 0
 
                 if frame_count == -65952 - 1000:
