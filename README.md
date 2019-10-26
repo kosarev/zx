@@ -20,6 +20,7 @@ ZX Spectrum Emulator written in a mix of Python and C++.
 
 ### Development status
 
+* General status: working pre-alpha.
 * Supported machines: 48K only for now.
 * Display: multi-colour effects, accurate timings.
 * Sound: not supported yet.
