@@ -491,6 +491,12 @@ class emulator(Gtk.Window):
         self.emulator.allow_int_after_ei(False)
 
     def _get_playback_samples(self):
+        # TODO: Have a class describing playback state.
+        self.playback_frame_count = 0
+        self.playback_chunk = 0
+        self.playback_sample_values = []
+        self.playback_sample_i = 0
+
         frame_count = 0
         for chunk_i, chunk in enumerate(self.playback_player.get_chunks()):
             if isinstance(chunk, MachineSnapshot):
@@ -595,7 +601,7 @@ class emulator(Gtk.Window):
                 # instruction in frame is IN.
                 if (self.playback_samples and
                         creator_info == self.SPIN_V0P5_INFO and
-                        self.playback_sample_i < len(playback_samples)):
+                        self.playback_sample_i + 1 < len(self.playback_sample_values)):
                     self.emulator.set_fetches_limit(1)
                     continue
 
