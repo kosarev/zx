@@ -232,6 +232,8 @@ class emulator(Gtk.Window):
 
         self.tape_player = TapePlayer()
 
+        self.playback_samples = None
+
     def on_done(self, widget, context):
         self.done = True
 
@@ -396,6 +398,24 @@ class emulator(Gtk.Window):
             return True
 
     def on_input(self, addr):
+        # Handle playbacks.
+        if self.playback_samples:
+            sample = None
+            for sample in self.playback_samples:
+                break
+
+            if sample == 'END_OF_FRAME':
+                raise zx.Error(
+                    'Too few input samples at frame %d of %d. '
+                    'Given %d, used %d.' % (
+                        self.playback_frame_count,
+                        len(self.playback_chunk['frames']),
+                        len(self.playback_samples), sample_i),
+                    id='too_few_input_samples')
+
+            # print('on_input() returns %d' % sample)
+            return sample
+
         # Scan keyboard.
         n = 0xbf
         addr ^= 0xffff
@@ -514,25 +534,6 @@ class emulator(Gtk.Window):
         # The bytes-saving ROM procedure needs special processing.
         self.emulator.set_breakpoint(0x04d4)
 
-        def on_input(addr):
-            sample = None
-            for sample in self.playback_samples:
-                break
-
-            if sample == 'END_OF_FRAME':
-                raise zx.Error(
-                    'Too few input samples at frame %d of %d. '
-                    'Given %d, used %d.' % (
-                        self.playback_frame_count,
-                        len(self.playback_chunk['frames']),
-                        len(self.playback_samples), sample_i),
-                    id='too_few_input_samples')
-
-            # print('on_input() returns %d' % sample)
-            return sample
-
-        self.emulator.set_on_input_callback(on_input)
-
         # Process frames in order.
         self.playback_samples = self._get_playback_samples(player)
         sample = None
@@ -621,6 +622,8 @@ class emulator(Gtk.Window):
 
                 assert sample == 'START_OF_FRAME'
                 self.emulator.on_handle_active_int()
+
+        self.playback_samples = None
 
     def main(self):
         # self.emulator.enable_trace()
