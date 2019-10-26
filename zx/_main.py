@@ -444,10 +444,9 @@ class emulator(Gtk.Window):
     def playback_input_recording(self, file):
         # Interrupts are supposed to be controlled by the
         # recording.
-        machine_state = self.emulator  # TODO: Eliminate.
-        machine_state.suppress_int()
-        machine_state.allow_int_after_ei(True)
-        # machine_state.enable_trace()
+        self.emulator.suppress_int()
+        self.emulator.allow_int_after_ei(True)
+        # self.emulator.enable_trace()
 
         assert isinstance(file, RZXFile)
         recording = file._recording
@@ -461,10 +460,10 @@ class emulator(Gtk.Window):
                           'creator_major_version': 0,
                           'creator_minor_version': 5 }
         if creator_info == spin_v0p5_info:
-            machine_state.set_memory_block(0x1f47, b'\xf5')
+            self.emulator.set_memory_block(0x1f47, b'\xf5')
 
         # The bytes-saving ROM procedure needs special processing.
-        machine_state.set_breakpoint(0x04d4)
+        self.emulator.set_breakpoint(0x04d4)
 
         # Process chunks in order.
         frame_count = 0
@@ -481,13 +480,13 @@ class emulator(Gtk.Window):
                 continue
 
             first_tick = chunk['first_tick']
-            machine_state.set_ticks_since_int(first_tick)
+            self.emulator.set_ticks_since_int(first_tick)
 
             for frame_i, frame in enumerate(chunk['frames']):
                 if self.done:
                     break
 
-                frame_state = machine_state.clone()
+                frame_state = self.emulator.clone()
 
                 # TODO: For debug purposes.
                 '''
@@ -497,15 +496,15 @@ class emulator(Gtk.Window):
                     assert 0
 
                 if frame_count == -65952 - 1000:
-                    machine_state.enable_trace()
+                    self.emulator.enable_trace()
                 '''
 
                 num_of_fetches, samples = frame
                 # print(num_of_fetches, samples)
                 self.sample_i = 0
                 def on_input(addr):
-                    # print(machine_state.get_fetches_limit())
-                    fetch = num_of_fetches - machine_state.get_fetches_limit()
+                    # print(self.emulator.get_fetches_limit())
+                    fetch = num_of_fetches - self.emulator.get_fetches_limit()
                     # print('Input at fetch', fetch, 'of', num_of_fetches)
 
                     if self.sample_i >= len(samples):
@@ -524,7 +523,7 @@ class emulator(Gtk.Window):
                 self.emulator.set_on_input_callback(on_input)
 
                 # TODO: print(num_of_fetches, samples, flush=True)
-                machine_state.set_fetches_limit(num_of_fetches)
+                self.emulator.set_fetches_limit(num_of_fetches)
 
                 while not self.done:
                     while Gtk.events_pending():
@@ -539,18 +538,18 @@ class emulator(Gtk.Window):
                     events = self.emulator.run()
                     # TODO: print(events)
 
-                    if events & machine_state._BREAKPOINT_HIT:
+                    if events & self.emulator._BREAKPOINT_HIT:
                         # SPIN v0.5 skips executing instructions
                         # of the bytes-saving ROM procedure in
                         # fast save mode.
                         if (creator_info == spin_v0p5_info and
-                                machine_state.get_pc() == 0x04d4):
-                            sp = machine_state.get_sp()
-                            ret_addr = machine_state.read16(sp)
-                            machine_state.set_sp(sp + 2)
-                            machine_state.set_pc(ret_addr)
+                                self.emulator.get_pc() == 0x04d4):
+                            sp = self.emulator.get_sp()
+                            ret_addr = self.emulator.read16(sp)
+                            self.emulator.set_sp(sp + 2)
+                            self.emulator.set_pc(ret_addr)
 
-                    if (events & machine_state._END_OF_FRAME and
+                    if (events & self.emulator._END_OF_FRAME and
                             self._speed_factor is not None):
                         self.emulator.render_screen()
                         self.frame_data[:] = self.emulator.get_frame_pixels()
@@ -558,20 +557,20 @@ class emulator(Gtk.Window):
                         # print(self.processor_state.get_bc())
                         time.sleep((1 / 50) * self._speed_factor)
 
-                    if events & machine_state._FETCHES_LIMIT_HIT:
+                    if events & self.emulator._FETCHES_LIMIT_HIT:
                         # Some simulators, e.g., SPIN, may store an interrupt
                         # point in the middle of a IX- or IY-prefixed
                         # instruction, so we continue until such
                         # instruction, if any, is completed.
-                        if machine_state.get_iregp_kind() != 'hl':
-                            machine_state.set_fetches_limit(1)
+                        if self.emulator.get_iregp_kind() != 'hl':
+                            self.emulator.set_fetches_limit(1)
                             continue
 
                         # SPIN doesn't update the fetch counter if the last
                         # instruction in frame is IN.
                         if (creator_info == spin_v0p5_info and
                                 self.sample_i < len(samples)):
-                            machine_state.set_fetches_limit(1)
+                            self.emulator.set_fetches_limit(1)
                             continue
 
                         self.emulator.on_handle_active_int()
