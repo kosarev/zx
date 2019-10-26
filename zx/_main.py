@@ -486,12 +486,11 @@ class emulator(Gtk.Window):
                 if self.done:
                     break
 
-                frame_state = self.emulator.clone()
-
                 # TODO: For debug purposes.
                 '''
                 frame_count += 1
                 if frame_count == -12820:
+                    frame_state = self.emulator.clone()
                     self._save_crash_rzx(recording, frame_state, chunk_i, frame_i)
                     assert 0
 
