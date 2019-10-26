@@ -380,8 +380,8 @@ class emulator(Gtk.Window):
 
         key_info = self.keys.get(key_id, None)
         if key_info:
-            # Unpause on any Spectrum key stroke.
             self.unpause()
+            self._quit_playback_mode()
 
             # print(key_info['id'])
             addr_line = key_info['address_line']
@@ -476,13 +476,21 @@ class emulator(Gtk.Window):
         with open('__crash.rzx', 'wb') as f:
             f.write(zx.make_rzx(crash_recording))
 
-    def _get_playback_samples(self):
+    def _enter_playback_mode(self):
         # Interrupts are supposed to be controlled by the
         # recording.
         self.emulator.suppress_int()
-        self.emulator.allow_int_after_ei(True)
+        self.emulator.allow_int_after_ei()
         # self.emulator.enable_trace()
 
+    def _quit_playback_mode(self):
+        self.playback_player = None
+        self.playback_samples = None
+
+        self.emulator.suppress_int(False)
+        self.emulator.allow_int_after_ei(False)
+
+    def _get_playback_samples(self):
         frame_count = 0
         for chunk_i, chunk in enumerate(self.playback_player.get_chunks()):
             if isinstance(chunk, MachineSnapshot):
@@ -613,7 +621,6 @@ class emulator(Gtk.Window):
                 assert sample == 'START_OF_FRAME'
                 self.emulator.on_handle_active_int()
 
-
     def playback_input_recording(self, file):
         self.playback_player = PlaybackPlayer(file)
         creator_info = self.playback_player.find_recording_info_chunk()
@@ -633,10 +640,9 @@ class emulator(Gtk.Window):
             break
         assert sample == 'START_OF_FRAME'
 
+        self._enter_playback_mode()
         self.main()
-
-        self.playback_player = None
-        self.playback_samples = None
+        self._quit_playback_mode()
 
     def run_file(self, filename):
         file = parse_file(filename)
