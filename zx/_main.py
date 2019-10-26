@@ -524,7 +524,7 @@ class emulator(Gtk.Window):
 
                 frame_count += 1
 
-    def xmain(self):
+    def main(self):
         if self.playback_player:
             creator_info = self.playback_player.find_recording_info_chunk()
 
@@ -633,39 +633,10 @@ class emulator(Gtk.Window):
             break
         assert sample == 'START_OF_FRAME'
 
-        self.xmain()
+        self.main()
 
         self.playback_player = None
         self.playback_samples = None
-
-    def main(self):
-        self.xmain()
-        ''' TODO
-        # self.emulator.enable_trace()
-
-        while not self.done:
-            while Gtk.events_pending():
-                Gtk.main_iteration()
-
-            if self.is_paused():
-                # Give the CPU some spare time.
-                self.area.queue_draw()
-                time.sleep(1 / 50)
-                continue
-
-            events = self.emulator.run()
-            # TODO: print(events)
-
-            if events & self.emulator._FETCHES_LIMIT_HIT:
-                set_fetches_limit = True
-
-            if events & self.emulator._END_OF_FRAME:
-                self.emulator.render_screen()
-                self.frame_data[:] = self.emulator.get_frame_pixels()
-                self.area.queue_draw()
-                self.tape_player.skip_rest_of_frame()
-                time.sleep((1 / 50) * self._speed_factor)
-        '''
 
     def run_file(self, filename):
         file = parse_file(filename)
