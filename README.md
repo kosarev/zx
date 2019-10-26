@@ -22,7 +22,8 @@ ZX Spectrum Emulator written in a mix of Python and C++.
 
 * General status: working pre-alpha.
 * Supported machines: 48K only for now.
-* Display: multi-colour effects, accurate timings.
+* Display: multi-colour effects,
+  [accurate timings](https://github.com/kosarev/zx/blob/master/test/screen_timing/SCREEN_TIMING.md).
 * Sound: not supported yet.
 * Tape: TAP and TZX formats supported as well as conversion to WAV.
 * Snapshots: Z80.
@@ -40,19 +41,22 @@ $ zx
 ```
 
 
-### Control keys
+### Controls
 
-`F1` Show help.
+`F1` displays help.
 
-`F2` Save snapshot.
+`F2` is to save snapshot.
 
-`F3` Load snapshot or tape file.
+`F3` is to load snapshot or tape file.
 
-`F6` Pause/unpause tape.
+`F6` pauses/unpauses tape.
 
-`F10` Quit.
+`F10` and `ESC` quit the emulator.
 
-`PAUSE` Pause/unpause emulation.
+`PAUSE` and mouse click pause/unpause emulation or RZX playback.
+
+Any Spectrum key stroke unpauses emulation and leaves the RZX
+playback mode back to the regular emulation mode.
 
 
 ### Running snapshots, recordings and tapes
