@@ -450,7 +450,7 @@ class emulator(Gtk.Window):
         with open('__crash.rzx', 'wb') as f:
             f.write(zx.make_rzx(crash_recording))
 
-    def _get_playback_frames(self, player):
+    def _get_playback_samples(self, player):
         # Interrupts are supposed to be controlled by the
         # recording.
         self.emulator.suppress_int()
@@ -469,7 +469,33 @@ class emulator(Gtk.Window):
             self.emulator.set_ticks_since_int(chunk['first_tick'])
 
             for frame_i, frame in enumerate(chunk['frames']):
-                yield frame_count, chunk_i, frame_i, frame
+                num_of_fetches, samples = frame
+                # print(num_of_fetches, samples)
+
+                self.emulator.set_fetches_limit(num_of_fetches)
+                # print(num_of_fetches, samples, flush=True)
+
+                # print('START_OF_FRAME', flush=True)
+                yield 'START_OF_FRAME'
+
+                for sample_i, sample in enumerate(samples):
+                    # print(self.emulator.get_fetches_limit())
+                    # fetch = num_of_fetches - self.emulator.get_fetches_limit()
+                    # print('Input at fetch', fetch, 'of', num_of_fetches)
+                    # TODO: print('read_port 0x%04x 0x%02x' % (addr, n), flush=True)
+
+                    # TODO: Have a class describing playback state.
+                    self.playback_frame_count = frame_count
+                    self.playback_chunk = chunk
+                    self.playback_sample_values = samples
+                    self.playback_sample_i = sample_i
+                    # print(frame_count, chunk_i, frame_i, sample_i, sample, flush=True)
+
+                    yield sample
+
+                # print('END_OF_FRAME', flush=True)
+                yield 'END_OF_FRAME'
+
                 frame_count += 1
 
     def playback_input_recording(self, file):
@@ -488,11 +514,35 @@ class emulator(Gtk.Window):
         # The bytes-saving ROM procedure needs special processing.
         self.emulator.set_breakpoint(0x04d4)
 
-        # Process frames in order.
-        for (frame_count, chunk_i, frame_i,
-             frame) in self._get_playback_frames(player):
-            if self.done:
+        def on_input(addr):
+            sample = None
+            for sample in self.playback_samples:
                 break
+
+            if sample == 'END_OF_FRAME':
+                raise zx.Error(
+                    'Too few input samples at frame %d of %d. '
+                    'Given %d, used %d.' % (
+                        self.playback_frame_count,
+                        len(self.playback_chunk['frames']),
+                        len(self.playback_samples), sample_i),
+                    id='too_few_input_samples')
+
+            # print('on_input() returns %d' % sample)
+            return sample
+
+        self.emulator.set_on_input_callback(on_input)
+
+        # Process frames in order.
+        self.playback_samples = self._get_playback_samples(player)
+        sample = None
+        for sample in self.playback_samples:
+            break
+        assert sample == 'START_OF_FRAME'
+
+        while not self.done:
+            while Gtk.events_pending():
+                Gtk.main_iteration()
 
             # TODO: For debug purposes.
             '''
@@ -506,91 +556,71 @@ class emulator(Gtk.Window):
                 self.emulator.enable_trace()
             '''
 
-            num_of_fetches, samples = frame
-            # print(num_of_fetches, samples)
-            self.sample_i = 0
-            def on_input(addr):
-                # print(self.emulator.get_fetches_limit())
-                fetch = num_of_fetches - self.emulator.get_fetches_limit()
-                # print('Input at fetch', fetch, 'of', num_of_fetches)
+            if self.is_paused():
+                # Give the CPU some spare time.
+                self.area.queue_draw()
+                time.sleep(1 / 50)
+                continue
 
-                if self.sample_i >= len(samples):
-                    raise zx.Error(
-                        'Too few input samples at frame %d of %d. '
-                        'Given %d, used %d.' % (
-                            frame_count, len(chunk['frames']),
-                            len(samples), self.sample_i),
-                        id='too_few_input_samples')
+            events = self.emulator.run()
+            # TODO: print(events)
 
-                n = samples[self.sample_i]
-                # TODO: print('read_port 0x%04x 0x%02x' % (addr, n), flush=True)
-                self.sample_i += 1
-                return n
+            if events & self.emulator._BREAKPOINT_HIT:
+                # SPIN v0.5 skips executing instructions
+                # of the bytes-saving ROM procedure in
+                # fast save mode.
+                if (creator_info == spin_v0p5_info and
+                        self.emulator.get_pc() == 0x04d4):
+                    sp = self.emulator.get_sp()
+                    ret_addr = self.emulator.read16(sp)
+                    self.emulator.set_sp(sp + 2)
+                    self.emulator.set_pc(ret_addr)
 
-            self.emulator.set_on_input_callback(on_input)
+            if (events & self.emulator._END_OF_FRAME and
+                    self._speed_factor is not None):
+                self.emulator.render_screen()
+                self.frame_data[:] = self.emulator.get_frame_pixels()
+                self.area.queue_draw()
+                # print(self.processor_state.get_bc())
+                time.sleep((1 / 50) * self._speed_factor)
 
-            # TODO: print(num_of_fetches, samples, flush=True)
-            self.emulator.set_fetches_limit(num_of_fetches)
-
-            while not self.done:
-                while Gtk.events_pending():
-                    Gtk.main_iteration()
-
-                if self.is_paused():
-                    # Give the CPU some spare time.
-                    self.area.queue_draw()
-                    time.sleep(1 / 50)
+            if events & self.emulator._FETCHES_LIMIT_HIT:
+                # Some simulators, e.g., SPIN, may store an interrupt
+                # point in the middle of a IX- or IY-prefixed
+                # instruction, so we continue until such
+                # instruction, if any, is completed.
+                if self.emulator.get_iregp_kind() != 'hl':
+                    self.emulator.set_fetches_limit(1)
                     continue
 
-                events = self.emulator.run()
-                # TODO: print(events)
+                # SPIN doesn't update the fetch counter if the last
+                # instruction in frame is IN.
+                if (creator_info == spin_v0p5_info and
+                        self.playback_sample_i < len(playback_samples)):
+                    self.emulator.set_fetches_limit(1)
+                    continue
 
-                if events & self.emulator._BREAKPOINT_HIT:
-                    # SPIN v0.5 skips executing instructions
-                    # of the bytes-saving ROM procedure in
-                    # fast save mode.
-                    if (creator_info == spin_v0p5_info and
-                            self.emulator.get_pc() == 0x04d4):
-                        sp = self.emulator.get_sp()
-                        ret_addr = self.emulator.read16(sp)
-                        self.emulator.set_sp(sp + 2)
-                        self.emulator.set_pc(ret_addr)
+                sample = None
+                for sample in self.playback_samples:
+                    break
+                if sample != 'END_OF_FRAME':
+                    raise zx.Error(
+                        'Too many input samples at frame %d of %d. '
+                        'Given %d, used %d.' % (
+                            self.playback_frame_count,
+                            len(self.playback_chunk['frames']),
+                            len(self.playback_samples),
+                            self.playback_sample_i + 1),
+                        id='too_many_input_samples')
 
-                if (events & self.emulator._END_OF_FRAME and
-                        self._speed_factor is not None):
-                    self.emulator.render_screen()
-                    self.frame_data[:] = self.emulator.get_frame_pixels()
-                    self.area.queue_draw()
-                    # print(self.processor_state.get_bc())
-                    time.sleep((1 / 50) * self._speed_factor)
-
-                if events & self.emulator._FETCHES_LIMIT_HIT:
-                    # Some simulators, e.g., SPIN, may store an interrupt
-                    # point in the middle of a IX- or IY-prefixed
-                    # instruction, so we continue until such
-                    # instruction, if any, is completed.
-                    if self.emulator.get_iregp_kind() != 'hl':
-                        self.emulator.set_fetches_limit(1)
-                        continue
-
-                    # SPIN doesn't update the fetch counter if the last
-                    # instruction in frame is IN.
-                    if (creator_info == spin_v0p5_info and
-                            self.sample_i < len(samples)):
-                        self.emulator.set_fetches_limit(1)
-                        continue
-
-                    self.emulator.on_handle_active_int()
+                sample = None
+                for sample in self.playback_samples:
+                    break
+                if sample is None:
                     break
 
-            if self.sample_i != len(samples):
-                raise zx.Error(
-                    'Too many input samples at frame %d of %d. '
-                    'Given %d, used %d.' % (
-                        frame_count, len(chunk['frames']),
-                        len(samples), self.sample_i),
-                    id='too_many_input_samples')
-
+                assert sample == 'START_OF_FRAME'
+                self.emulator.on_handle_active_int()
 
     def main(self):
         # self.emulator.enable_trace()
