@@ -111,7 +111,7 @@ class TapePlayer(object):
     def load_tape(self, file):
         self.load_parsed_file(file)
 
-    def pause_or_unpause(self):
+    def toggle_pause(self):
         self._is_paused = not self._is_paused
         print('Tape is %s.' % ('paused' if self._is_paused else 'unpaused'))
 
@@ -169,6 +169,39 @@ class PlaybackPlayer(object):
         return self._recording['chunks']
 
 
+class Notification(object):
+    def __init__(self):
+        self.clear()
+
+    def set(self, draw):
+        self._timestamp = get_timestamp()
+        self._draw = draw
+
+    def clear(self):
+        self._timestamp = None
+        self._draw = None
+
+    def draw(self, window_size, screen_size, context):
+        if not self._timestamp:
+            return
+
+        width, height = screen_size
+        window_width, window_height = window_size
+
+        size = min(40, width * 0.1)
+        x = (window_width - size) // 2
+        y = (window_height - size) // 2
+
+        alpha = 1.5 - get_elapsed_time(self._timestamp)
+        alpha = max(0, min(0.7, alpha))
+
+        if not alpha:
+            self.clear()
+            return
+
+        self._draw(context, x, y, size, alpha)
+
+
 class emulator(Gtk.Window):
     SCREEN_AREA_BACKGROUND_COLOUR = rgb('#1e1e1e')
 
@@ -185,8 +218,9 @@ class emulator(Gtk.Window):
         self.frame_width = 48 + 256 + 48
         self.frame_height = 48 + 192 + 40
 
+        self._notification = Notification()
         self.done = False
-        self.pause_timestamp = None
+        self._is_paused = False
 
         self.scale = 2
 
@@ -244,7 +278,8 @@ class emulator(Gtk.Window):
         self.done = True
 
     def on_draw_area(self, widget, context):
-        window_width, window_height = self.get_size()
+        window_size = self.get_size()
+        window_width, window_height = window_size
         width = min(window_width,
                     zx.div_ceil(window_height * self.frame_width,
                                 self.frame_height))
@@ -267,14 +302,7 @@ class emulator(Gtk.Window):
         context.paint()
         context.restore()
 
-        # Draw the pause sign.
-        if self.is_paused():
-            size = min(40, width * 0.1)
-            x = (window_width - size) // 2
-            y = (window_height - size) // 2
-            alpha = max(0, min(0.7, 1.5 - get_elapsed_time(self.pause_timestamp)))
-            _gui.draw_pause(context, x, y, size, alpha)
-
+        self._notification.draw(window_size, (width, height), context)
         context.restore()
 
     def show_help(self):
@@ -290,17 +318,15 @@ class emulator(Gtk.Window):
         for entry in KEYS:
             print('%7s  %s' % entry)
 
-    def is_paused(self):
-        return self.pause_timestamp is not None
-
     def pause(self):
-        self.pause_timestamp = get_timestamp()
+        self._is_paused = True
+        self._notification.set(_gui.draw_pause)
 
     def unpause(self):
-        self.pause_timestamp = None
+        self._is_paused = False
 
-    def pause_or_unpause(self):
-        if self.is_paused():
+    def toggle_pause(self):
+        if self._is_paused:
             self.unpause()
         else:
             self.pause()
@@ -358,8 +384,8 @@ class emulator(Gtk.Window):
     def quit(self):
         self.done = True
 
-    def pause_or_unpause_tape(self):
-        self.tape_player.pause_or_unpause()
+    def toggle_tape_pause(self):
+        self.tape_player.toggle_pause()
 
     KEY_HANDLERS = {
         'ESCAPE': quit,
@@ -367,8 +393,8 @@ class emulator(Gtk.Window):
         'F1': show_help,
         'F2': save_snapshot,
         'F3': load_file,
-        'F6': pause_or_unpause_tape,
-        'PAUSE': pause_or_unpause,
+        'F6': toggle_tape_pause,
+        'PAUSE': toggle_pause,
     }
 
     def on_key(self, event, pressed):
@@ -400,7 +426,7 @@ class emulator(Gtk.Window):
 
     def on_click(self, widget, event):
         if event.type == Gdk.EventType.BUTTON_PRESS:
-            self.pause_or_unpause()
+            self.toggle_pause()
             return True
 
     def on_input(self, addr):
@@ -558,7 +584,7 @@ class emulator(Gtk.Window):
                 self.emulator.enable_trace()
             '''
 
-            if self.is_paused():
+            if self._is_paused:
                 # Give the CPU some spare time.
                 self.area.queue_draw()
                 time.sleep(1 / 50)
