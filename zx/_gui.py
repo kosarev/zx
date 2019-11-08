@@ -27,7 +27,7 @@ def draw_pause(context, x, y, size, alpha=1):
     context.fill()
 
     w = 0.2 * size
-    h = 1.0 * size
+    h = 0.8 * size
     d = 0.3 * size
     context.rectangle(x - d, y - h / 2, w, h)
     context.rectangle(x + d - w, y - h / 2, w, h)
