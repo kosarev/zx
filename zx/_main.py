@@ -375,6 +375,8 @@ class emulator(Gtk.Window):
         if self.is_paused():
             self._notification.set(_gui.draw_pause_notification,
                                    self._emulation_time)
+        else:
+            self._notification.clear()
 
     def toggle_pause(self):
         self.pause(not self.is_paused())
