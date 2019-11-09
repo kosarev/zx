@@ -3,6 +3,8 @@
 
 ![Elven](elven.png "Elven Warrior")
 
+![Tape Pause](tape_pause.gif "Tape pause")
+
 ![Aquaplane](aquaplane.png "Aquaplane")
 
 ![Black Lamp](black_lamp.png "Black Lamp")
