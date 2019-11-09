@@ -8,7 +8,11 @@
 #
 #   Published under the MIT license.
 
+import cairo
+
+
 PI = 3.1415926535
+
 
 def rgb(color, alpha=1):
     assert color.startswith('#')
@@ -34,6 +38,8 @@ def _draw_tape_sign(context, x, y, size, alpha):
     H = 0.6
 
     context.set_line_width(size * 0.05)
+    context.set_line_cap(cairo.LINE_CAP_ROUND)
+    context.set_line_join(cairo.LINE_JOIN_ROUND)
 
     context.rectangle(x - size * 0.5, y - size * (H / 2), size, size * H)
 
