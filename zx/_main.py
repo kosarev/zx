@@ -391,8 +391,10 @@ class emulator(Gtk.Window):
 
     def pause_tape(self, is_paused=True):
         self.tape_player.pause(is_paused)
-        if self.is_tape_paused():
-            self._notification.set(_gui.draw_tape_pause_notification)
+
+        draw = (_gui.draw_tape_pause_notification if self.is_tape_paused()
+                    else _gui.draw_tape_resume_notification)
+        self._notification.set(draw)
 
     def toggle_tape_pause(self):
         self.pause_tape(not self.is_tape_paused())
