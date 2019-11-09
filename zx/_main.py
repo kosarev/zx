@@ -196,14 +196,15 @@ class Notification(object):
         x = (window_width - size) // 2
         y = (window_height - size) // 2
 
-        alpha = 1.5 - get_elapsed_time(self._timestamp)
+        t = get_elapsed_time(self._timestamp)
+        alpha = 1.5 - t
         alpha = max(0, min(0.7, alpha))
 
         if not alpha:
             self.clear()
             return
 
-        self._draw(context, x + size / 2, y + size / 2, size, alpha)
+        self._draw(context, x + size / 2, y + size / 2, size, alpha, t)
 
 
 class emulator(Gtk.Window):

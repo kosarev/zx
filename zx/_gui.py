@@ -32,10 +32,11 @@ def _draw_pause_sign(context, x, y, size, alpha):
     context.fill()
 
 
-def _draw_tape_sign(context, x, y, size, alpha):
+def _draw_tape_sign(context, x, y, size, alpha, t=0):
     R = 0.10
     D = 0.33 - R
     H = 0.6
+    RPM = 33.3
 
     context.set_line_width(size * 0.05)
     context.set_line_cap(cairo.LINE_CAP_ROUND)
@@ -43,14 +44,19 @@ def _draw_tape_sign(context, x, y, size, alpha):
 
     context.rectangle(x - size * 0.5, y - size * (H / 2), size, size * H)
 
-    context.move_to(x - size * D, y - size * R)
-    context.line_to(x + size * D, y - size * R)
+    context.move_to(x - size * (D - 0.15), y - size * R)
+    context.line_to(x + size * (D - 0.15), y - size * R)
 
     context.move_to(x - size * (D - R), y)
-    context.arc(x - size * D, y, size * R, 0, 2 * PI)
+    context.new_sub_path()
+    a = t * (RPM * 2 * PI / 60)
+    context.arc(x - size * D, y, size * R, a, a + (2 * PI - 0.7))
 
     context.move_to(x + size * (D + R), y)
-    context.arc(x + size * D, y, size * R, 0, 2 * PI)
+    context.new_sub_path()
+    a += PI / 5
+    # context.arc(x + size * D, y, size * R, 0, 2 * PI)
+    context.arc(x + size * D, y, size * R, a, a + (2 * PI - 0.7))
 
     context.stroke()
 
@@ -61,14 +67,14 @@ def _draw_notification_circle(context, x, y, size, alpha):
     context.fill()
 
 
-def draw_pause_notification(context, x, y, size, alpha=1):
+def draw_pause_notification(context, x, y, size, alpha=1, t=0):
     _draw_notification_circle(context, x, y, size, alpha)
 
     context.set_source_rgba(*rgb('#ffffff', alpha))
     _draw_pause_sign(context, x, y, size, alpha)
 
 
-def draw_tape_pause_notification(context, x, y, size, alpha=1):
+def draw_tape_pause_notification(context, x, y, size, alpha=1, t=0):
     _draw_notification_circle(context, x, y, size, alpha)
 
     context.set_source_rgba(*rgb('#ffffff', alpha))
@@ -76,8 +82,8 @@ def draw_tape_pause_notification(context, x, y, size, alpha=1):
     _draw_pause_sign(context, x, y + size * 0.23, size * 0.5, alpha)
 
 
-def draw_tape_resume_notification(context, x, y, size, alpha=1):
+def draw_tape_resume_notification(context, x, y, size, alpha=1, t=0):
     _draw_notification_circle(context, x, y, size, alpha)
 
     context.set_source_rgba(*rgb('#ffffff', alpha))
-    _draw_tape_sign(context, x, y - size * 0.015, size * 0.6, alpha)
+    _draw_tape_sign(context, x, y - size * 0.015, size * 0.6, alpha, t)
