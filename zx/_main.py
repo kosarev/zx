@@ -292,7 +292,8 @@ class emulator(Gtk.Window):
         self.frame_data = self.frame.get_data()
 
         self.pattern = cairo.SurfacePattern(self.frame)
-        self.pattern.set_filter(cairo.FILTER_NEAREST)
+        if not SCREENCAST:
+            self.pattern.set_filter(cairo.FILTER_NEAREST)
 
         self.emulator = zx.Spectrum48()
         self.processor_state = self.emulator  # TODO: Eliminate.
