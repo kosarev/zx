@@ -17,6 +17,9 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
 
+SCREENCAST = False
+
+
 # TODO: Move to the z80 project.
 class ProcessorSnapshot(zx.Data):
     pass
@@ -224,6 +227,20 @@ class Notification(object):
                    self._time.get())
 
 
+# TODO: A quick solution for making screencasts.
+class Screencast(object):
+    def __init__(self):
+        self._counter = 0
+
+    def on_draw(self, surface):
+        if not SCREENCAST:
+            return
+
+        filename = '%05d.png' % self._counter
+        surface.write_to_png(filename)
+        self._counter += 1
+
+
 class emulator(Gtk.Window):
     SCREEN_AREA_BACKGROUND_COLOUR = rgb('#1e1e1e')
 
@@ -235,6 +252,8 @@ class emulator(Gtk.Window):
     def __init__(self, speed_factor=1.0):
         super(emulator, self).__init__()
 
+        self._screencast = Screencast()
+
         self._emulation_time = Time()
         self._speed_factor = speed_factor
 
@@ -245,15 +264,18 @@ class emulator(Gtk.Window):
         self.done = False
         self._is_paused = False
 
-        self.scale = 2
+        self.scale = 1 if SCREENCAST else 2
 
         self.area = Gtk.DrawingArea()
         self.area.connect("draw", self.on_draw_area)
         self.add(self.area)
 
         self.set_title("ZX Spectrum Emulator")
-        self.resize(self.frame_width * self.scale,
-                    self.frame_height * self.scale)
+        window_width = self.frame_width * self.scale
+        window_height = self.frame_height * self.scale
+        if SCREENCAST:
+            window_width += 90
+        self.resize(window_width, window_height)
         minimum_size = self.frame_width // 4, self.frame_height // 4
         self.set_size_request(*minimum_size)
         self.set_position(Gtk.WindowPosition.CENTER)
@@ -327,6 +349,8 @@ class emulator(Gtk.Window):
 
         self._notification.draw(window_size, (width, height), context)
         context.restore()
+
+        self._screencast.on_draw(context.get_group_target())
 
     def show_help(self):
         KEYS = [
