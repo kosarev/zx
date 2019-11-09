@@ -49,13 +49,13 @@ $ zx
 
 `F3` is to load snapshot or tape file.
 
-`F6` pauses/unpauses tape.
+`F6` pauses/resumes tape.
 
 `F10` and `ESC` quit the emulator.
 
-`PAUSE` and mouse click pause/unpause emulation or RZX playback.
+`PAUSE` and mouse click pause/resume emulation or RZX playback.
 
-Any Spectrum key stroke unpauses emulation and leaves the RZX
+Any Spectrum key stroke resumes emulation and leaves the RZX
 playback mode back to the regular emulation mode.
 
 

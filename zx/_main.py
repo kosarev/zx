@@ -105,17 +105,19 @@ class TapePlayer(object):
     def is_paused(self):
         return self._is_paused
 
+    def pause(self, is_paused=True):
+        self._is_paused = is_paused
+
+    def toggle_pause(self):
+        self.pause(not self.is_paused())
+
     def load_parsed_file(self, file):
         self._pulses = file.get_pulses()
         self._level = False
-        self._is_paused = True
-        print('Press F6 to unpause the tape.')
+        self.pause()
 
     def load_tape(self, file):
         self.load_parsed_file(file)
-
-    def toggle_pause(self):
-        self._is_paused = not self._is_paused
 
     def get_level_at_frame_tick(self, tick):
         assert self._tick <= tick
@@ -312,26 +314,24 @@ class emulator(Gtk.Window):
             ('F1', 'Show help.'),
             ('F2', 'Save snapshot.'),
             ('F3', 'Load snapshot or tape file.'),
-            ('F6', 'Pause/unpause tape.'),
+            ('F6', 'Pause/resume tape.'),
             ('F10', 'Quit.'),
-            ('PAUSE', 'Pause/unpause emulation.'),
+            ('PAUSE', 'Pause/resume emulation.'),
         ]
 
         for entry in KEYS:
             print('%7s  %s' % entry)
 
-    def pause(self):
-        self._is_paused = True
-        self._notification.set(_gui.draw_pause_notification)
+    def is_paused(self):
+        return self._is_paused
 
-    def unpause(self):
-        self._is_paused = False
+    def pause(self, is_paused = True):
+        self._is_paused = is_paused
+        if self.is_paused():
+            self._notification.set(_gui.draw_pause_notification)
 
     def toggle_pause(self):
-        if self._is_paused:
-            self.unpause()
-        else:
-            self.pause()
+        self.pause(not self.is_paused())
 
     def error_box(self, title, message):
         dialog = Gtk.MessageDialog(
@@ -354,7 +354,7 @@ class emulator(Gtk.Window):
             try:
                 file = parse_file(filename)
                 if isinstance(file, zx.SoundFile):
-                    self.tape_player.load_tape(file)
+                    self.load_tape(file)
                 elif isinstance(file, MachineSnapshot):
                     self.emulator.install_snapshot(file)
                 else:
@@ -386,11 +386,20 @@ class emulator(Gtk.Window):
     def quit(self):
         self.done = True
 
-    def toggle_tape_pause(self):
-        player = self.tape_player
-        player.toggle_pause()
-        if player.is_paused():
+    def is_tape_paused(self):
+        return self.tape_player.is_paused()
+
+    def pause_tape(self, is_paused=True):
+        self.tape_player.pause(is_paused)
+        if self.is_tape_paused():
             self._notification.set(_gui.draw_tape_pause_notification)
+
+    def toggle_tape_pause(self):
+        self.pause_tape(not self.is_tape_paused())
+
+    def load_tape(self, file):
+        self.tape_player.load_tape(file)
+        self.pause_tape()
 
     KEY_HANDLERS = {
         'ESCAPE': quit,
@@ -411,7 +420,7 @@ class emulator(Gtk.Window):
 
         key_info = self.keys.get(key_id, None)
         if key_info:
-            self.unpause()
+            self.pause(False)
             self._quit_playback_mode()
 
             # print(key_info['id'])
@@ -690,7 +699,7 @@ class emulator(Gtk.Window):
         elif isinstance(file, RZXFile):
             self.playback_input_recording(file)
         elif isinstance(file, zx.SoundFile):
-            self.tape_player.load_parsed_file(file)
+            self.load_tape(file)
             self.main()
         else:
             raise zx.Error("Don't know how to run file %r." % filename)
