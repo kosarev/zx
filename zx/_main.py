@@ -271,11 +271,12 @@ class emulator(Gtk.Window):
         self.add(self.area)
 
         self.set_title("ZX Spectrum Emulator")
-        window_width = self.frame_width * self.scale
-        window_height = self.frame_height * self.scale
         if SCREENCAST:
-            window_width += 90
-        self.resize(window_width, window_height)
+            width, height = 640, 390
+        else:
+            width, height = (self.frame_width * self.scale,
+                             self.frame_height * self.scale)
+        self.resize(width, height)
         minimum_size = self.frame_width // 4, self.frame_height // 4
         self.set_size_request(*minimum_size)
         self.set_position(Gtk.WindowPosition.CENTER)
