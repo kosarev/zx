@@ -93,14 +93,26 @@ def parse_file(filename):
     return format().parse(image)
 
 
+class Time(object):
+    def __init__(self):
+        self._seconds = 0
+
+    def get(self):
+        return self._seconds
+
+    def advance(self, s):
+        self._seconds += s
+
+
 class TapePlayer(object):
     def __init__(self):
-        self._is_paused = False
+        self._is_paused = True
         self._pulses = []
         self._tick = 0
         self._level = False
         self._pulse = 0
         self._ticks_per_frame = 69888  # TODO
+        self._time = Time()
 
     def is_paused(self):
         return self._is_paused
@@ -110,6 +122,9 @@ class TapePlayer(object):
 
     def toggle_pause(self):
         self.pause(not self.is_paused())
+
+    def get_time(self):
+        return self._time
 
     def load_parsed_file(self, file):
         self._pulses = file.get_pulses()
@@ -132,6 +147,7 @@ class TapePlayer(object):
                 ticks_to_skip = min(self._pulse, tick - self._tick)
                 self._pulse -= ticks_to_skip
                 self._tick += ticks_to_skip
+                self._time.advance(ticks_to_skip / (self._ticks_per_frame * 50))
                 continue
 
             # Get subsequent pulse, if any.
@@ -177,9 +193,10 @@ class Notification(object):
     def __init__(self):
         self.clear()
 
-    def set(self, draw):
+    def set(self, draw, time):
         self._timestamp = get_timestamp()
         self._draw = draw
+        self._time = time
 
     def clear(self):
         self._timestamp = None
@@ -196,15 +213,15 @@ class Notification(object):
         x = (window_width - size) // 2
         y = (window_height - size) // 2
 
-        t = get_elapsed_time(self._timestamp)
-        alpha = 1.5 - t
+        alpha = 1.5 - get_elapsed_time(self._timestamp)
         alpha = max(0, min(0.7, alpha))
 
         if not alpha:
             self.clear()
             return
 
-        self._draw(context, x + size / 2, y + size / 2, size, alpha, t)
+        self._draw(context, x + size / 2, y + size / 2, size, alpha,
+                   self._time.get())
 
 
 class emulator(Gtk.Window):
@@ -218,6 +235,7 @@ class emulator(Gtk.Window):
     def __init__(self, speed_factor=1.0):
         super(emulator, self).__init__()
 
+        self._emulation_time = Time()
         self._speed_factor = speed_factor
 
         self.frame_width = 48 + 256 + 48
@@ -329,7 +347,8 @@ class emulator(Gtk.Window):
     def pause(self, is_paused = True):
         self._is_paused = is_paused
         if self.is_paused():
-            self._notification.set(_gui.draw_pause_notification)
+            self._notification.set(_gui.draw_pause_notification,
+                                   self._emulation_time)
 
     def toggle_pause(self):
         self.pause(not self.is_paused())
@@ -395,7 +414,7 @@ class emulator(Gtk.Window):
 
         draw = (_gui.draw_tape_pause_notification if self.is_tape_paused()
                     else _gui.draw_tape_resume_notification)
-        self._notification.set(draw)
+        self._notification.set(draw, self.tape_player.get_time())
 
     def toggle_tape_pause(self):
         self.pause_tape(not self.is_tape_paused())
@@ -629,6 +648,7 @@ class emulator(Gtk.Window):
                 self.area.queue_draw()
                 self.tape_player.skip_rest_of_frame()
                 time.sleep((1 / 50) * self._speed_factor)
+                self._emulation_time.advance(1 / 50)
 
             if (self.playback_samples and
                 events & self.emulator._FETCHES_LIMIT_HIT):

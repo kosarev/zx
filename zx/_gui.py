@@ -78,7 +78,7 @@ def draw_tape_pause_notification(context, x, y, size, alpha=1, t=0):
     _draw_notification_circle(context, x, y, size, alpha)
 
     context.set_source_rgba(*rgb('#ffffff', alpha))
-    _draw_tape_sign(context, x, y - size * 0.13, size * 0.5, alpha)
+    _draw_tape_sign(context, x, y - size * 0.13, size * 0.5, alpha, t)
     _draw_pause_sign(context, x, y + size * 0.23, size * 0.5, alpha)
 
 
