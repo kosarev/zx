@@ -102,6 +102,9 @@ class TapePlayer(object):
         self._pulse = 0
         self._ticks_per_frame = 69888  # TODO
 
+    def is_paused(self):
+        return self._is_paused
+
     def load_parsed_file(self, file):
         self._pulses = file.get_pulses()
         self._level = False
@@ -113,7 +116,6 @@ class TapePlayer(object):
 
     def toggle_pause(self):
         self._is_paused = not self._is_paused
-        print('Tape is %s.' % ('paused' if self._is_paused else 'unpaused'))
 
     def get_level_at_frame_tick(self, tick):
         assert self._tick <= tick
@@ -188,7 +190,7 @@ class Notification(object):
         width, height = screen_size
         window_width, window_height = window_size
 
-        size = min(40, width * 0.1)
+        size = min(80, width * 0.2)
         x = (window_width - size) // 2
         y = (window_height - size) // 2
 
@@ -199,7 +201,7 @@ class Notification(object):
             self.clear()
             return
 
-        self._draw(context, x, y, size, alpha)
+        self._draw(context, x + size / 2, y + size / 2, size, alpha)
 
 
 class emulator(Gtk.Window):
@@ -320,7 +322,7 @@ class emulator(Gtk.Window):
 
     def pause(self):
         self._is_paused = True
-        self._notification.set(_gui.draw_pause)
+        self._notification.set(_gui.draw_pause_notification)
 
     def unpause(self):
         self._is_paused = False
@@ -385,7 +387,10 @@ class emulator(Gtk.Window):
         self.done = True
 
     def toggle_tape_pause(self):
-        self.tape_player.toggle_pause()
+        player = self.tape_player
+        player.toggle_pause()
+        if player.is_paused():
+            self._notification.set(_gui.draw_tape_pause_notification)
 
     KEY_HANDLERS = {
         'ESCAPE': quit,
