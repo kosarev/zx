@@ -8,7 +8,7 @@ from setuptools import Extension, setup
 
 
 ZX_MAJOR_VERSION = 0
-ZX_MINOR_VERSION = 5
+ZX_MINOR_VERSION = 6
 ZX_PATCH_VERSION = 0
 
 
