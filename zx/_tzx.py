@@ -77,15 +77,43 @@ class TZXFileFormat(zx.SoundFileFormat):
         return {'id': '30 (Text Description)',
                 'text': text}
 
+    _ARCHIVE_INFO_STRING_IDS = {
+        0x00: 'Full title',
+        0x01: 'Software house/publisher',
+        0x02: 'Author(s)',
+        0x03: 'Year of publication',
+        0x04: 'Language',
+        0x05: 'Game/utility type',
+        0x06: 'Price',
+        0x07: 'Protection scheme/loader',
+        0x08: 'Origin',
+        0xFF: 'Comment(s)',
+    }
+
+    def _parse_archive_info(self, parser):
+        block_size = parser.parse_field('<H', 'block_size')
+        num_of_strings = parser.parse_field('B', 'num_of_strings')
+        for _ in range(num_of_strings):
+            id = parser.parse_field('B', 'id')
+            length = parser.parse_field('B', 'length')
+            body = parser.extract_block(length)
+
+            if id not in self._ARCHIVE_INFO_STRING_IDS:
+                raise zx.Error('Unknown TZX archive info string id 0x%02x.' %
+                               id)
+
+            print('%s: %s' % (self._ARCHIVE_INFO_STRING_IDS[id], body))
+
     _BLOCK_PARSERS = {
         0x10: _parse_standard_speed_data_block,
         0x30: _parse_text_description,
+        0x32: _parse_archive_info,
     }
 
     def _parse_block(self, parser):
         block_id = parser.parse_field('B', 'block_id')
         if block_id not in self._BLOCK_PARSERS:
-            raise zx.Error('Unsupported TZX block id %x.' % block_id)
+            raise zx.Error('Unsupported TZX block id 0x%x.' % block_id)
 
         return self._BLOCK_PARSERS[block_id](self, parser)
 
