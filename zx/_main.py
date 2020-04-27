@@ -967,6 +967,8 @@ def main():
         handle_command_line(sys.argv[1:])
     except zx.Error as e:
         print('zx: %s' % e.args)
+    except FileNotFoundError as e:
+        print('zx: %s: %r.' % (e.args[1], e.filename))
 
 
 if __name__ == "__main__":
