@@ -70,7 +70,7 @@ $ zx exolon.rzx
 ```
 
 ```shell
-$ zx eric.tap
+$ zx eric.tap.zip
 ```
 
 

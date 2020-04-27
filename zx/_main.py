@@ -61,6 +61,7 @@ def detect_file_format(image, filename_extension):
         ('.tzx', b'ZXTape!', zx.TZXFileFormat),
         ('.wav', b'RIFF', zx.WAVFileFormat),
         ('.z80', None, zx.Z80SnapshotsFormat),
+        ('.zip', b'PK\x03\x04', zx.ZIPFileFormat),
     ]
 
     filename_extension = filename_extension.lower()
@@ -84,16 +85,52 @@ def detect_file_format(image, filename_extension):
     return None
 
 
-def parse_file(filename):
-    with open(filename, 'rb') as f:
-        image = f.read()
+def parse_archive(format, image):
+    candidates = []
+    for member_name, member_image in format().read_files(image):
+        base, ext = os.path.splitext(member_name)
+        member_format = detect_file_format(member_image, ext)
 
+        if not member_format:
+            continue
+
+        # Recursively parse member archives.
+        if issubclass(member_format, zx.ArchiveFileFormat):
+            candidates.extend(parse_archive(member_format, member_image))
+            continue
+
+        candidates.append((member_name, member_format, member_image))
+
+    return candidates
+
+
+def parse_file_image(filename, image):
     base, ext = os.path.splitext(filename)
     format = detect_file_format(image, ext)
     if not format:
         raise zx.Error('Cannot determine the format of file %r.' % filename)
 
+    if issubclass(format, zx.ArchiveFileFormat):
+        candidates = parse_archive(format, image)
+        if len(candidates) == 0:
+            raise zx.Error('No files of known formats in archive %r.' %
+                               filename)
+
+        if len(candidates) > 1:
+            raise zx.Error(
+                'More than one file of a known format in archive %r: %s.' % (
+                    filename, ', '.join(repr(n) for n, f, im in candidates)))
+
+        filename, format, image = candidates[0]
+
     return format().parse(image)
+
+
+def parse_file(filename):
+    with open(filename, 'rb') as f:
+        image = f.read()
+
+    return parse_file_image(filename, image)
 
 
 class Time(object):

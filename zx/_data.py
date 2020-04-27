@@ -47,6 +47,10 @@ class FileFormat(object):
         return self._NAME
 
 
+class ArchiveFileFormat(FileFormat):
+    pass
+
+
 class SoundFile(File):
     pass
 
