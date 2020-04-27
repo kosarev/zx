@@ -71,6 +71,11 @@ class TZXFileFormat(zx.SoundFileFormat):
         del block['data_size']
         return block
 
+    def _parse_group_start(self, parser):
+        length = parser.parse_field('B', 'name_length')
+        name = parser.extract_block(length)
+        print('Group start: %r' % name)
+
     def _parse_text_description(self, parser):
         size = parser.parse_field('B', 'text_size')
         text = parser.extract_block(size)
@@ -106,6 +111,7 @@ class TZXFileFormat(zx.SoundFileFormat):
 
     _BLOCK_PARSERS = {
         0x10: _parse_standard_speed_data_block,
+        0x21: _parse_group_start,
         0x30: _parse_text_description,
         0x32: _parse_archive_info,
     }
