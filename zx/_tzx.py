@@ -10,7 +10,7 @@
 
 
 from ._binary import BinaryParser
-from ._tape import *
+from ._tape import get_block_pulses, get_data_pulses
 import zx
 
 
@@ -24,10 +24,31 @@ class TZXFile(zx.SoundFile):
         level = False
         for block in self['blocks']:
             id = block['id']
-            if id == '10 (Standard Speed Data Block)':
+            if id in ['0x10 (Standard Speed Data Block)',
+                      '0x11 (Turbo Speed Data Block)',
+                      '0x14 (Pure Data Block)']:
                 # The block itself.
                 data = block['data']
-                for pulse in get_standard_block_pulses(data):
+                if id == '0x10 (Standard Speed Data Block)':
+                    pulses = get_block_pulses(data)
+                elif id == '0x11 (Turbo Speed Data Block)':
+                    pulses = get_block_pulses(
+                        data=data,
+                        pilot_pulse_len=block['pilot_pulse_len'],
+                        first_sync_pulse_len=block['first_sync_pulse_len'],
+                        second_sync_pulse_len=block['second_sync_pulse_len'],
+                        zero_bit_pulse_len=block['zero_bit_pulse_len'],
+                        one_bit_pulse_len=block['one_bit_pulse_len'],
+                        pilot_tone_len=block['pilot_tone_len'])
+                elif id == '0x14 (Pure Data Block)':
+                    pulses = get_data_pulses(
+                        data=data,
+                        zero_bit_pulse_len=block['zero_bit_pulse_len'],
+                        one_bit_pulse_len=block['one_bit_pulse_len'])
+                else:
+                    assert 0, id
+
+                for pulse in pulses:
                     yield (level, pulse)
                     level = not level
 
@@ -54,8 +75,11 @@ class TZXFile(zx.SoundFile):
 
                 if pause_duration:
                     yield (level, pause_duration * self._TICKS_FREQ / 1000)
-            elif id == '30 (Text Description)':
+            elif id == '0x30 (Text Description)':
                 print(block['text'])
+            elif id in ['0x32 (Archive Info)', '0x21 (Group Start)',
+                        '0x22 (Group End)']:
+                pass
             else:
                 assert 0, block  # TODO
 
@@ -66,20 +90,61 @@ class TZXFileFormat(zx.SoundFileFormat):
     def _parse_standard_speed_data_block(self, parser):
         block = parser.parse([('pause_after_block_in_ms', '<H'),
                               ('data_size', '<H')])
-        block.update({'id': '10 (Standard Speed Data Block)',
+        block.update({'id': '0x10 (Standard Speed Data Block)',
                       'data': parser.extract_block(block['data_size'])})
         del block['data_size']
+        return block
+
+    def _parse_turbo_speed_data_block(self, parser):
+        block = parser.parse([('pilot_pulse_len', '<H'),
+                              ('first_sync_pulse_len', '<H'),
+                              ('second_sync_pulse_len', '<H'),
+                              ('zero_bit_pulse_len', '<H'),
+                              ('one_bit_pulse_len', '<H'),
+                              ('pilot_tone_len', '<H'),
+                              ('used_bits_in_last_byte', '<B'),
+                              ('pause_after_block_in_ms', '<H'),
+                              ('data_size_lo', '<H'),
+                              ('data_size_hi', '<B')])
+        data_size = (block.pop('data_size_hi') * 0x10000 +
+                     block.pop('data_size_lo'))
+        data_size_in_bits = data_size * 8 + block.pop('used_bits_in_last_byte')
+        block.update({'id': '0x11 (Turbo Speed Data Block)',
+                      'data_size_in_bits': data_size_in_bits,
+                      'data': parser.extract_block(data_size)})
+        return block
+
+    def _parse_pure_data_block(self, parser):
+        block = parser.parse([('zero_bit_pulse_len', '<H'),
+                              ('one_bit_pulse_len', '<H'),
+                              ('used_bits_in_last_byte', '<B'),
+                              ('pause_after_block_in_ms', '<H'),
+                              ('data_size_lo', '<H'),
+                              ('data_size_hi', '<B')])
+        data_size = (block.pop('data_size_hi') * 0x10000 +
+                     block.pop('data_size_lo'))
+        data_size_in_bits = data_size * 8 + block.pop('used_bits_in_last_byte')
+        block.update({'id': '0x14 (Pure Data Block)',
+                      'data_size_in_bits': data_size_in_bits,
+                      'data': parser.extract_block(data_size)})
         return block
 
     def _parse_group_start(self, parser):
         length = parser.parse_field('B', 'name_length')
         name = parser.extract_block(length)
-        print('Group start: %r' % name)
+        print('Group start: %r.' % name)
+        return {'id': '0x21 (Group Start)',
+                'name': name}
+
+    def _parse_group_end(self, parser):
+        # TODO: Check for a matching group start?
+        print('Group end.')
+        return {'id': '0x22 (Group End)'}
 
     def _parse_text_description(self, parser):
         size = parser.parse_field('B', 'text_size')
         text = parser.extract_block(size)
-        return {'id': '30 (Text Description)',
+        return {'id': '0x30 (Text Description)',
                 'text': text}
 
     _ARCHIVE_INFO_STRING_IDS = {
@@ -108,10 +173,15 @@ class TZXFileFormat(zx.SoundFileFormat):
                                id)
 
             print('%s: %s' % (self._ARCHIVE_INFO_STRING_IDS[id], body))
+        # TODO: Encode all the details.
+        return {'id': '0x32 (Archive Info)'}
 
     _BLOCK_PARSERS = {
         0x10: _parse_standard_speed_data_block,
+        0x11: _parse_turbo_speed_data_block,
+        0x14: _parse_pure_data_block,
         0x21: _parse_group_start,
+        0x22: _parse_group_end,
         0x30: _parse_text_description,
         0x32: _parse_archive_info,
     }

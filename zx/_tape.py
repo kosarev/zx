@@ -9,16 +9,16 @@
 #   Published under the MIT license.
 
 
-def get_standard_pilot_pulses(is_header):
-    pulse = 2168
-    duration = 8063 if is_header else 3223
-    for _ in range(duration):
-        yield pulse
+def _get_pilot_pulses(pilot_tone_len,
+                      pilot_pulse_len=2168):
+    for _ in range(pilot_tone_len):
+        yield pilot_pulse_len
 
 
-def get_standard_sync_pulses():
-    yield 667
-    yield 735
+def _get_sync_pulses(first_sync_pulse_len=667,
+                     second_sync_pulse_len=735):
+    yield first_sync_pulse_len
+    yield second_sync_pulse_len
 
 
 def _get_data_bits(data):
@@ -27,23 +27,37 @@ def _get_data_bits(data):
             yield (byte & (1 << (7 - i))) != 0
 
 
-def get_standard_data_pulses(data):
+def get_data_pulses(data,
+                    zero_bit_pulse_len=855,
+                    one_bit_pulse_len=1710):
     for bit in _get_data_bits(data):
-        pulse = 1710 if bit else 855
+        pulse = one_bit_pulse_len if bit else zero_bit_pulse_len
         yield pulse
         yield pulse
 
 
-def get_standard_block_pulses(data):
+def get_block_pulses(data,
+                     pilot_pulse_len=2168,
+                     first_sync_pulse_len=667,
+                     second_sync_pulse_len=735,
+                     zero_bit_pulse_len=855,
+                     one_bit_pulse_len=1710,
+                     pilot_tone_len=None):
     # Generate pilot tone.
-    is_header = data[0] < 128
-    for pulse in get_standard_pilot_pulses(is_header):
+    if pilot_tone_len is None:
+        is_header = data[0] < 128
+        pilot_tone_len = 8063 if is_header else 3223
+
+    for pulse in _get_pilot_pulses(pilot_tone_len):
         yield pulse
 
     # Sync pulses.
-    for pulse in get_standard_sync_pulses():
+    for pulse in _get_sync_pulses(first_sync_pulse_len,
+                                  second_sync_pulse_len):
         yield pulse
 
     # Data.
-    for pulse in get_standard_data_pulses(data):
+    for pulse in get_data_pulses(data,
+                                 zero_bit_pulse_len,
+                                 one_bit_pulse_len):
         yield pulse

@@ -10,7 +10,7 @@
 
 
 from ._binary import BinaryParser
-from ._tape import *
+from ._tape import get_block_pulses
 import zx
 
 
@@ -25,7 +25,7 @@ class TAPFile(zx.SoundFile):
         blocks = self['blocks']
         for data in blocks:
             # The block itself.
-            for pulse in get_standard_block_pulses(data):
+            for pulse in get_block_pulses(data):
                 yield (level, pulse)
                 level = not level
 
