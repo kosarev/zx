@@ -805,6 +805,8 @@ class emulator(Gtk.Window):
         while not self.done:
             self.run_quantum()
 
+        self._quit_playback_mode()
+
     def load_input_recording(self, file):
         self.playback_player = PlaybackPlayer(file)
         creator_info = self.playback_player.find_recording_info_chunk()
@@ -824,11 +826,6 @@ class emulator(Gtk.Window):
             break
         assert sample == 'START_OF_FRAME'
 
-    def playback_input_recording(self):
-        self._enter_playback_mode()
-        self.main()
-        self._quit_playback_mode()
-
     def load_file(self, filename):
         file = parse_file(filename)
 
@@ -836,24 +833,15 @@ class emulator(Gtk.Window):
             self.emulator.install_snapshot(file)
         elif isinstance(file, RZXFile):
             self.load_input_recording(file)
+            self._enter_playback_mode()
         elif isinstance(file, zx.SoundFile):
             self.load_tape(file)
         else:
             raise zx.Error("Don't know how to load file %r." % filename)
 
-        return file
-
     def run_file(self, filename):
-        file = self.load_file(filename)
-
-        if isinstance(file, MachineSnapshot):
-            self.main()
-        elif isinstance(file, RZXFile):
-            self.playback_input_recording()
-        elif isinstance(file, zx.SoundFile):
-            self.main()
-        else:
-            raise zx.Error("Don't know how to run file %r." % filename)
+        self.load_file(filename)
+        self.main()
 
 
 def handle_extra_arguments(args):
