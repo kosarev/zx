@@ -132,13 +132,13 @@ class TZXFileFormat(zx.SoundFileFormat):
     def _parse_group_start(self, parser):
         length = parser.parse_field('B', 'name_length')
         name = parser.extract_block(length)
-        print('Group start: %r.' % name)
+        # print('Group start: %r.' % name)
         return {'id': '0x21 (Group Start)',
                 'name': name}
 
     def _parse_group_end(self, parser):
         # TODO: Check for a matching group start?
-        print('Group end.')
+        # print('Group end.')
         return {'id': '0x22 (Group End)'}
 
     def _parse_text_description(self, parser):
@@ -172,7 +172,7 @@ class TZXFileFormat(zx.SoundFileFormat):
                 raise zx.Error('Unknown TZX archive info string id 0x%02x.' %
                                id)
 
-            print('%s: %s' % (self._ARCHIVE_INFO_STRING_IDS[id], body))
+            # print('%s: %s' % (self._ARCHIVE_INFO_STRING_IDS[id], body))
         # TODO: Encode all the details.
         return {'id': '0x32 (Archive Info)'}
 
