@@ -287,6 +287,16 @@ class Screencast(object):
         self._counter += 1
 
 
+# Stores information about the running code.
+class Profile(object):
+    _instr_addrs = set()
+
+    def add_instr_addr(self, addr):
+        if addr not in self._instr_addrs:
+            self._instr_addrs.add(addr)
+            print('0x%04x' % addr)
+
+
 class emulator(Gtk.Window):
     SCREEN_AREA_BACKGROUND_COLOUR = rgb('#1e1e1e')
 
@@ -295,7 +305,7 @@ class emulator(Gtk.Window):
                       'creator_major_version': 0,
                       'creator_minor_version': 5}
 
-    def __init__(self, speed_factor=1.0):
+    def __init__(self, speed_factor=1.0, collect_profile=False):
         super(emulator, self).__init__()
 
         self._screencast = Screencast()
@@ -366,6 +376,12 @@ class emulator(Gtk.Window):
 
         self.playback_player = None
         self.playback_samples = None
+
+        if not collect_profile:
+            self._profile = None
+        else:
+            self._profile = Profile()
+            self.emulator.set_breakpoints(0, 0x10000)
 
     def on_done(self, widget, context):
         self.done = True
@@ -734,6 +750,10 @@ class emulator(Gtk.Window):
             # TODO: print(events)
 
             if events & self.emulator._BREAKPOINT_HIT:
+                if self._profile:
+                    pc = self.emulator.get_pc()
+                    self._profile.add_instr_addr(pc)
+
                 # SPIN v0.5 skips executing instructions
                 # of the bytes-saving ROM procedure in
                 # fast save mode.
@@ -849,16 +869,20 @@ def handle_extra_arguments(args):
         raise zx.Error('Extra argument %r.' % args[0])
 
 
-def run(args):
-    if not args:
-        app = emulator()
-        app.main()
-    else:
+def run(args, collect_profile=False):
+    app = emulator(collect_profile=collect_profile)
+
+    if args:
         filename = args.pop(0)
         handle_extra_arguments(args)
 
-        app = emulator()
-        app.run_file(filename)
+        app.load_file(filename)
+
+    app.main()
+
+
+def profile(args):
+    run(args, collect_profile=True)
 
 
 def dump(args):
@@ -1030,6 +1054,7 @@ def handle_command_line(args):
     COMMANDS = {
         'convert': convert,
         'dump': dump,
+        'profile': profile,
         'run': run,
 
         # TODO: Hidden commands for internal use.

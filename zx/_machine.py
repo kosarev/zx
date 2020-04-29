@@ -236,5 +236,8 @@ class Spectrum48(Spectrum48Base, MachineState):
         # Install ROM.
         self.set_memory_block(0x0000, zx.get_rom_image(self.machine_kind))
 
-    def set_breakpoint(self, pc):
-        self.mark_addrs(pc, 1, self._BREAKPOINT_MARK)
+    def set_breakpoints(self, addr, size):
+        self.mark_addrs(addr, size, self._BREAKPOINT_MARK)
+
+    def set_breakpoint(self, addr):
+        self.set_breakpoints(addr, 1)
