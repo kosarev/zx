@@ -153,6 +153,7 @@ class TapePlayer(object):
         self._pulse = 0
         self._ticks_per_frame = 69888  # TODO
         self._time = Time()
+        self._is_end = False
 
     def is_paused(self):
         return self._is_paused
@@ -160,8 +161,14 @@ class TapePlayer(object):
     def pause(self, is_paused=True):
         self._is_paused = is_paused
 
+    def unpause(self):
+        self.pause(is_paused=False)
+
     def toggle_pause(self):
         self.pause(not self.is_paused())
+
+    def is_end(self):
+        return self._is_end
 
     def get_time(self):
         return self._time
@@ -173,9 +180,10 @@ class TapePlayer(object):
 
     def load_tape(self, file):
         self.load_parsed_file(file)
+        self._is_end = False
 
     def get_level_at_frame_tick(self, tick):
-        assert self._tick <= tick
+        assert self._tick <= tick, (self._tick, tick)
 
         while self._tick < tick:
             if self._is_paused:
@@ -203,6 +211,7 @@ class TapePlayer(object):
             if not got_new_pulse:
                 self._level = False
                 self._tick = tick
+                self._is_end = True
 
         return self._level
 
@@ -450,6 +459,13 @@ class emulator(Gtk.Window):
 
         dialog.destroy()
 
+    def save_snapshot_file(self, format, filename):
+        try:
+            with open(filename, 'wb') as f:
+                f.write(format().make(self.emulator))
+        except zx.Error as e:
+            self.error_box('File error', '%s' % e.args)
+
     def save_snapshot(self):
         # TODO: Add file filters.
         dialog = Gtk.FileChooserDialog(
@@ -459,13 +475,8 @@ class emulator(Gtk.Window):
              Gtk.STOCK_SAVE, Gtk.ResponseType.OK))
         dialog.set_do_overwrite_confirmation(True)
         if dialog.run() == Gtk.ResponseType.OK:
-            filename = dialog.get_filename()
-            try:
-                with open(filename, 'wb') as f:
-                    f.write(zx.Z80SnapshotsFormat().make(self.emulator))
-            except zx.Error as e:
-                self.error_box('File error', '%s' % e.args)
-
+            self.save_snapshot_file(zx.Z80SnapshotsFormat,
+                                    dialog.get_filename())
         dialog.destroy()
 
     def quit(self):
@@ -481,12 +492,18 @@ class emulator(Gtk.Window):
                     else _gui.draw_tape_resume_notification)
         self._notification.set(draw, self.tape_player.get_time())
 
+    def unpause_tape(self):
+        self.pause_tape(is_paused=False)
+
     def toggle_tape_pause(self):
         self.pause_tape(not self.is_tape_paused())
 
     def load_tape(self, file):
         self.tape_player.load_tape(file)
         self.pause_tape()
+
+    def is_end_of_tape(self):
+        return self.tape_player.is_end()
 
     KEY_HANDLERS = {
         'ESCAPE': quit,
@@ -497,6 +514,35 @@ class emulator(Gtk.Window):
         'F6': toggle_tape_pause,
         'PAUSE': toggle_pause,
     }
+
+    def _handle_key_stroke(self, key_info, pressed):
+        # print(key_info['id'])
+        addr_line = key_info['address_line']
+        mask = 1 << key_info['port_bit']
+
+        if pressed:
+            self.keyboard_state[addr_line - 8] &= mask ^ 0xff
+        else:
+            self.keyboard_state[addr_line - 8] |= mask
+
+    def generate_key_strokes(self, *keys):
+        for key in keys:
+            strokes = key.split('+')
+
+            # TODO: Refine handling of aliases.
+            ALIASES = {'SS': 'SYMBOL SHIFT'}
+            strokes = [ALIASES.get(s, s) for s in strokes]
+            # print(strokes)
+
+            for id in strokes:
+                # print(id)
+                self._handle_key_stroke(zx.KEYS_INFO[id], pressed=True)
+                self.run(0.03)
+
+            for id in reversed(strokes):
+                # print(id)
+                self._handle_key_stroke(zx.KEYS_INFO[id], pressed=False)
+                self.run(0.03)
 
     def on_key(self, event, pressed):
         key_id = Gdk.keyval_name(event.keyval).upper()
@@ -510,14 +556,7 @@ class emulator(Gtk.Window):
             self.pause(False)
             self._quit_playback_mode()
 
-            # print(key_info['id'])
-            addr_line = key_info['address_line']
-            mask = 1 << key_info['port_bit']
-
-            if pressed:
-                self.keyboard_state[addr_line - 8] &= mask ^ 0xff
-            else:
-                self.keyboard_state[addr_line - 8] |= mask
+            self._handle_key_stroke(key_info, pressed)
 
     def on_key_press(self, widget, event):
         self.on_key(event, pressed=True)
@@ -665,11 +704,11 @@ class emulator(Gtk.Window):
 
                 frame_count += 1
 
-    def main(self):
+    def run_quantum(self):
         if self.playback_player:
             creator_info = self.playback_player.find_recording_info_chunk()
 
-        while not self.done:
+        if True:  # TODO
             while Gtk.events_pending():
                 Gtk.main_iteration()
 
@@ -689,7 +728,7 @@ class emulator(Gtk.Window):
                 # Give the CPU some spare time.
                 self.area.queue_draw()
                 time.sleep(1 / 50)
-                continue
+                return
 
             events = self.emulator.run()
             # TODO: print(events)
@@ -706,13 +745,14 @@ class emulator(Gtk.Window):
                     self.emulator.set_sp(sp + 2)
                     self.emulator.set_pc(ret_addr)
 
-            if (events & self.emulator._END_OF_FRAME and
-                    self._speed_factor is not None):
-                self.emulator.render_screen()
-                self.frame_data[:] = self.emulator.get_frame_pixels()
-                self.area.queue_draw()
+            if events & self.emulator._END_OF_FRAME:
+                if self._speed_factor is not None:
+                    self.emulator.render_screen()
+                    self.frame_data[:] = self.emulator.get_frame_pixels()
+                    self.area.queue_draw()
+                    time.sleep((1 / 50) * self._speed_factor)
+
                 self.tape_player.skip_rest_of_frame()
-                time.sleep((1 / 50) * self._speed_factor)
                 self._emulation_time.advance(1 / 50)
 
             if (self.playback_samples and
@@ -723,7 +763,7 @@ class emulator(Gtk.Window):
                 # instruction, if any, is completed.
                 if self.emulator.get_iregp_kind() != 'hl':
                     self.emulator.set_fetches_limit(1)
-                    continue
+                    return
 
                 # SPIN doesn't update the fetch counter if the last
                 # instruction in frame is IN.
@@ -731,7 +771,7 @@ class emulator(Gtk.Window):
                         creator_info == self.SPIN_V0P5_INFO and
                         self.playback_sample_i + 1 < len(self.playback_sample_values)):
                     self.emulator.set_fetches_limit(1)
-                    continue
+                    return
 
                 sample = None
                 for sample in self.playback_samples:
@@ -750,12 +790,22 @@ class emulator(Gtk.Window):
                 for sample in self.playback_samples:
                     break
                 if sample is None:
-                    break
+                    self.done = True
+                    return
 
                 assert sample == 'START_OF_FRAME'
                 self.emulator.on_handle_active_int()
 
-    def playback_input_recording(self, file):
+    def run(self, duration):
+        end_time = self._emulation_time.get() + duration
+        while not self.done and self._emulation_time.get() < end_time:
+            self.run_quantum()
+
+    def main(self):
+        while not self.done:
+            self.run_quantum()
+
+    def load_input_recording(self, file):
         self.playback_player = PlaybackPlayer(file)
         creator_info = self.playback_player.find_recording_info_chunk()
 
@@ -774,20 +824,33 @@ class emulator(Gtk.Window):
             break
         assert sample == 'START_OF_FRAME'
 
+    def playback_input_recording(self):
         self._enter_playback_mode()
         self.main()
         self._quit_playback_mode()
 
-    def run_file(self, filename):
+    def load_file(self, filename):
         file = parse_file(filename)
 
         if isinstance(file, MachineSnapshot):
             self.emulator.install_snapshot(file)
-            self.main()
         elif isinstance(file, RZXFile):
-            self.playback_input_recording(file)
+            self.load_input_recording(file)
         elif isinstance(file, zx.SoundFile):
             self.load_tape(file)
+        else:
+            raise zx.Error("Don't know how to load file %r." % filename)
+
+        return file
+
+    def run_file(self, filename):
+        file = self.load_file(filename)
+
+        if isinstance(file, MachineSnapshot):
+            self.main()
+        elif isinstance(file, RZXFile):
+            self.playback_input_recording()
+        elif isinstance(file, zx.SoundFile):
             self.main()
         else:
             raise zx.Error("Don't know how to run file %r." % filename)
@@ -889,6 +952,33 @@ def fastforward(args):
         app.destroy()
 
 
+def _convert_tape_to_snapshot(src_filename, src_format,
+                              dest_filename, dest_format):
+    assert issubclass(src_format, zx.SoundFileFormat), src_format
+    assert issubclass(dest_format, SnapshotsFormat), dest_format
+
+    app = emulator(speed_factor=None)
+    # app = emulator()
+
+    # Let the initialization complete.
+    app.run(1.8)
+
+    # Type in 'LOAD ""'.
+    app.generate_key_strokes('J', 'SS+P', 'SS+P', 'ENTER')
+
+    # Load and run the tape.
+    app.load_file(src_filename)
+    app.unpause_tape()
+
+    # Wait till the end of the tape.
+    while not app.done and not app.is_end_of_tape():
+        app.run_quantum()
+
+    # Save snapshot and quit.
+    app.save_snapshot_file(dest_format, dest_filename)
+    app.destroy()
+
+
 def convert_file(src_filename, dest_filename):
     src = parse_file(src_filename)
     src_format = src.get_format()
@@ -903,6 +993,9 @@ def convert_file(src_filename, dest_filename):
     if issubclass(src_format, zx.SoundFileFormat):
         if issubclass(dest_format, zx.SoundFileFormat):
             dest_format().save_from_pulses(dest_filename, src.get_pulses())
+        elif issubclass(dest_format, SnapshotsFormat):
+            _convert_tape_to_snapshot(src_filename, src_format,
+                                      dest_filename, dest_format)
         else:
             raise zx.Error("Don't know how to convert from %s to %s files." % (
                                src_format().get_name(),
