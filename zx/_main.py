@@ -289,12 +289,14 @@ class Screencast(object):
 
 # Stores information about the running code.
 class Profile(object):
-    _instr_addrs = set()
+    _annots = dict()
 
     def add_instr_addr(self, addr):
-        if addr not in self._instr_addrs:
-            self._instr_addrs.add(addr)
-            print('0x%04x' % addr)
+        self._annots[addr] = 'instr'
+
+    def __iter__(self):
+        for addr in sorted(self._annots):
+            yield addr, self._annots[addr]
 
 
 class emulator(Gtk.Window):
@@ -305,7 +307,7 @@ class emulator(Gtk.Window):
                       'creator_major_version': 0,
                       'creator_minor_version': 5}
 
-    def __init__(self, speed_factor=1.0, collect_profile=False):
+    def __init__(self, speed_factor=1.0, profile=None):
         super(emulator, self).__init__()
 
         self._screencast = Screencast()
@@ -377,10 +379,8 @@ class emulator(Gtk.Window):
         self.playback_player = None
         self.playback_samples = None
 
-        if not collect_profile:
-            self._profile = None
-        else:
-            self._profile = Profile()
+        self._profile = profile
+        if self._profile:
             self.emulator.set_breakpoints(0, 0x10000)
 
     def on_done(self, widget, context):
@@ -869,8 +869,8 @@ def handle_extra_arguments(args):
         raise zx.Error('Extra argument %r.' % args[0])
 
 
-def run(args, collect_profile=False):
-    app = emulator(collect_profile=collect_profile)
+def run(args, profile=None):
+    app = emulator(profile=profile)
 
     if args:
         filename = args.pop(0)
@@ -882,7 +882,11 @@ def run(args, collect_profile=False):
 
 
 def profile(args):
-    run(args, collect_profile=True)
+    profile = Profile()
+    run(args, profile)
+
+    for addr, annot in profile:
+        print('@0x%04x %s' % (addr, annot))
 
 
 def dump(args):
