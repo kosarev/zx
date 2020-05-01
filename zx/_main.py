@@ -464,7 +464,7 @@ class emulator(Gtk.Window):
         dialog.run()
         dialog.destroy()
 
-    def load_file(self):
+    def choose_and_load_file(self):
         # TODO: Add file filters.
         dialog = Gtk.FileChooserDialog(
             'Load file', self,
@@ -475,14 +475,7 @@ class emulator(Gtk.Window):
         if dialog.run() == Gtk.ResponseType.OK:
             filename = dialog.get_filename()
             try:
-                file = parse_file(filename)
-                if isinstance(file, zx.SoundFile):
-                    self.load_tape(file)
-                elif isinstance(file, MachineSnapshot):
-                    self.emulator.install_snapshot(file)
-                else:
-                    raise zx.Error(
-                        "Don't know how to load file %r." % filename)
+                self.parse_and_load_file(filename)
             except zx.Error as e:
                 self.error_box('File error', '%s' % e.args)
 
@@ -539,7 +532,7 @@ class emulator(Gtk.Window):
         'F10': quit,
         'F1': show_help,
         'F2': save_snapshot,
-        'F3': load_file,
+        'F3': choose_and_load_file,
         'F6': toggle_tape_pause,
         'PAUSE': toggle_pause,
     }
@@ -859,9 +852,7 @@ class emulator(Gtk.Window):
             break
         assert sample == 'START_OF_FRAME'
 
-    def load_file(self, filename):
-        file = parse_file(filename)
-
+    def load_file(self, file):
         if isinstance(file, MachineSnapshot):
             self.emulator.install_snapshot(file)
         elif isinstance(file, RZXFile):
@@ -872,8 +863,11 @@ class emulator(Gtk.Window):
         else:
             raise zx.Error("Don't know how to load file %r." % filename)
 
+    def parse_and_load_file(self, filename):
+        self.load_file(parse_file(filename))
+
     def run_file(self, filename):
-        self.load_file(filename)
+        self.parse_and_load_file(filename)
         self.main()
 
 
@@ -896,7 +890,7 @@ def run(args):
 
     app = emulator()
     if filename:
-        app.load_file(filename)
+        app.parse_and_load_file(filename)
     app.main()
     app.destroy()
 
@@ -909,7 +903,7 @@ def profile(args):
 
     profile = Profile()
     app = emulator(profile=profile)
-    app.load_file(file_to_run)
+    app.parse_and_load_file(file_to_run)
     app.main()
     app.destroy()
 
@@ -1001,7 +995,7 @@ def fastforward(args):
         app.destroy()
 
 
-def _convert_tape_to_snapshot(src_filename, src_format,
+def _convert_tape_to_snapshot(src, src_format,
                               dest_filename, dest_format):
     assert issubclass(src_format, zx.SoundFileFormat), src_format
     assert issubclass(dest_format, SnapshotsFormat), dest_format
@@ -1016,7 +1010,7 @@ def _convert_tape_to_snapshot(src_filename, src_format,
     app.generate_key_strokes('J', 'SS+P', 'SS+P', 'ENTER')
 
     # Load and run the tape.
-    app.load_file(src_filename)
+    app.load_file(src)
     app.unpause_tape()
 
     # Wait till the end of the tape.
@@ -1026,6 +1020,14 @@ def _convert_tape_to_snapshot(src_filename, src_format,
     # Save snapshot and quit.
     app.save_snapshot_file(dest_format, dest_filename)
     app.destroy()
+
+
+def _convert_tape_to_tape(src, src_format,
+                          dest_filename, dest_format):
+    assert issubclass(src_format, zx.SoundFileFormat), src_format
+    assert issubclass(dest_format, zx.SoundFileFormat), dest_format
+
+    dest_format().save_from_pulses(dest_filename, src.get_pulses())
 
 
 def convert_file(src_filename, dest_filename):
@@ -1039,19 +1041,21 @@ def convert_file(src_filename, dest_filename):
         raise zx.Error('Cannot determine the format of file %r.' % (
                            dest_filename))
 
-    if issubclass(src_format, zx.SoundFileFormat):
-        if issubclass(dest_format, zx.SoundFileFormat):
-            dest_format().save_from_pulses(dest_filename, src.get_pulses())
-        elif issubclass(dest_format, SnapshotsFormat):
-            _convert_tape_to_snapshot(src_filename, src_format,
-                                      dest_filename, dest_format)
-        else:
-            raise zx.Error("Don't know how to convert from %s to %s files." % (
-                               src_format().get_name(),
-                               dest_format().get_name()))
-    else:
-        raise zx.Error("Don't know how to convert from %s files." % (
-                           src_format().get_name()))
+    CONVERTERS = [
+        (zx.SoundFileFormat, zx.SoundFileFormat,
+         _convert_tape_to_tape),
+        (zx.SoundFileFormat, SnapshotsFormat,
+         _convert_tape_to_snapshot),
+    ]
+
+    for sf, df, conv in CONVERTERS:
+        if issubclass(src_format, sf) and issubclass(dest_format, df):
+            conv(src, src_format, dest_filename, dest_format)
+            return
+
+    raise zx.Error("Don't know how to convert from %s to %s files." % (
+                   src_format().get_name(),
+                   dest_format().get_name()))
 
 
 def convert(args):
