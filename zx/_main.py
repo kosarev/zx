@@ -906,8 +906,9 @@ def looks_like_filename(s):
 
 def usage():
     print('Usage:')
-    print('  zx [run] [<filename>]')
-    print('  zx dump <filename>')
+    print('  zx [run] [<file>]')
+    print('  zx dump <file>')
+    print('  zx profile <file-to-run> <profile-filename>')
     print('  zx help')
     sys.exit()
 
