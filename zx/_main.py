@@ -126,8 +126,21 @@ def parse_file_image(filename, image):
     return format().parse(image)
 
 
+def open_file_or_url(path):
+    if path.startswith(('http:', 'https:', 'ftp:')):
+        import urllib.request
+        import urllib.error
+        try:
+            return urllib.request.urlopen(path)
+        except urllib.error.HTTPError as e:
+            raise zx.Error('Cannot read remote file: %s, code %d.' % (
+                               e.reason, e.code))
+
+    return open(path, 'rb')
+
+
 def parse_file(filename):
-    with open(filename, 'rb') as f:
+    with open_file_or_url(filename) as f:
         image = f.read()
 
     return parse_file_image(filename, image)
