@@ -74,10 +74,14 @@ $ zx https://www.worldofspectrum.org/pub/sinclair/games/e/EricTheFloaters.tzx.zi
 ```
 
 
-### Converting tape files to the WAV format
+### Converting files
 
 ```shell
 $ zx jack.tzx jack.wav
+```
+
+```shell
+$ zx eric.tap eric.z80
 ```
 
 
