@@ -131,7 +131,13 @@ def open_file_or_url(path):
         import urllib.request
         import urllib.error
         try:
-            return urllib.request.urlopen(path)
+            HEADERS = {
+                'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.1; '
+                              'en-US; rv:1.9.0.7) Gecko/2009021910 '
+                              'Firefox/3.0.7',
+            }
+            req = urllib.request.Request(path, headers=HEADERS)
+            return urllib.request.urlopen(req)
         except urllib.error.HTTPError as e:
             raise zx.Error('Cannot read remote file: %s, code %d.' % (
                                e.reason, e.code))
