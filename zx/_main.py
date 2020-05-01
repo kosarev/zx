@@ -25,7 +25,7 @@ class ProcessorSnapshot(zx.Data):
     pass
 
 
-class MachineSnapshot(zx.Data):
+class MachineSnapshot(zx.File):
     pass
 
 

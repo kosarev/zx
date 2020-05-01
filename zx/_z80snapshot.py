@@ -112,7 +112,7 @@ class Z80Snapshot(zx.MachineSnapshot):
                 image = block['image']
                 memory_blocks.append((self._MEMORY_PAGE_ADDRS[page_no], image))
 
-        return UnifiedSnapshot(fields)
+        return UnifiedSnapshot(Z80SnapshotsFormat, fields)
 
 
 class Z80SnapshotsFormat(zx.SnapshotsFormat):
@@ -217,7 +217,7 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
                 block = self._parse_memory_block(parser)
                 memory_blocks.append(block)
 
-        return Z80Snapshot(fields)
+        return Z80Snapshot(Z80SnapshotsFormat, fields)
 
     # TODO: Rework to generate an internal representation of the
     #       format and then generate its binary version.
