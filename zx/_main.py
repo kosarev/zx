@@ -864,18 +864,24 @@ class emulator(Gtk.Window):
         self.main()
 
 
+def pop_argument(args, error):
+    if not args:
+        raise zx.Error(error)
+    return args.pop(0)
+
+
 def handle_extra_arguments(args):
     if args:
         raise zx.Error('Extra argument %r.' % args[0])
 
 
-def run(args, profile=None):
+def run(args):
     filename = None
     if args:
         filename = args.pop(0)
         handle_extra_arguments(args)
 
-    app = emulator(profile=profile)
+    app = emulator()
     if filename:
         app.load_file(filename)
     app.main()
@@ -883,11 +889,22 @@ def run(args, profile=None):
 
 
 def profile(args):
-    profile = Profile()
-    run(args, profile)
+    file_to_run = pop_argument(args, "The file to run is not specified.")
+    profile_filename = pop_argument(args, "The profile filename is not "
+                                          "specified.")
+    handle_extra_arguments(args)
 
-    for addr, annot in profile:
-        print('@0x%04x %s' % (addr, annot))
+    profile = Profile()
+    app = emulator(profile=profile)
+    app.load_file(file_to_run)
+    app.main()
+    app.destroy()
+
+    # TODO: Amend profile data by reading them out first instead
+    # of overwriting.
+    with open(profile_filename, 'wt') as f:
+        for addr, annot in profile:
+            print('@0x%04x %s' % (addr, annot), file=f)
 
 
 def dump(args):
