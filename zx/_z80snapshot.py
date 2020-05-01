@@ -208,7 +208,12 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
                     raise zx.Error('The snapshot is too large.')
                 image = parser.extract_rest()
             else:
-                assert 0  # TODO: Support compressed v1 memory snapshots.
+                image = self._uncompress(parser.extract_rest(),
+                                         48 * 1024 + 4)
+
+                # Remove the terminator.
+                assert image[48 * 1024:] == b'\x00\xed\xed\x00'
+                image = image[:48 * 1024]
 
             fields['memory_snapshot'] = image
         else:
