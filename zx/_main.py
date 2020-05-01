@@ -870,15 +870,16 @@ def handle_extra_arguments(args):
 
 
 def run(args, profile=None):
-    app = emulator(profile=profile)
-
+    filename = None
     if args:
         filename = args.pop(0)
         handle_extra_arguments(args)
 
+    app = emulator(profile=profile)
+    if filename:
         app.load_file(filename)
-
     app.main()
+    app.destroy()
 
 
 def profile(args):
