@@ -70,7 +70,7 @@ $ zx exolon.rzx
 ```
 
 ```shell
-$ zx eric.tap.zip
+$ zx https://www.worldofspectrum.org/pub/sinclair/games/e/EricTheFloaters.tzx.zip
 ```
 
 
