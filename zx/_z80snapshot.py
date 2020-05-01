@@ -212,7 +212,9 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
                                          48 * 1024 + 4)
 
                 # Remove the terminator.
-                assert image[48 * 1024:] == b'\x00\xed\xed\x00'
+                if image[48 * 1024:] != b'\x00\xed\xed\x00':
+                    raise zx.Error('The compressed memory block does not '
+                                   'terminate properly.')
                 image = image[:48 * 1024]
 
             fields['memory_snapshot'] = image
