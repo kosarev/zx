@@ -53,6 +53,8 @@ $ zx
 
 `F10` and `ESC` quit the emulator.
 
+`F11` and double click switch between fullscreen and windowed mode.
+
 `PAUSE` and mouse click pause/resume emulation or RZX playback.
 
 Any Spectrum key stroke resumes emulation and leaves the RZX

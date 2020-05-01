@@ -392,6 +392,7 @@ class emulator(Gtk.Window):
         self.connect("key-release-event", self.on_key_release)
 
         self.connect("button-press-event", self.on_click)
+        self.connect("window-state-event", self.on_window_state_event)
 
         self.tape_player = TapePlayer()
 
@@ -442,6 +443,7 @@ class emulator(Gtk.Window):
             ('F3', 'Load snapshot or tape file.'),
             ('F6', 'Pause/resume tape.'),
             ('F10', 'Quit.'),
+            ('F11', 'Fullscreen/windowed mode.'),
             ('PAUSE', 'Pause/resume emulation.'),
         ]
 
@@ -533,6 +535,16 @@ class emulator(Gtk.Window):
     def is_end_of_tape(self):
         return self.tape_player.is_end()
 
+    def on_window_state_event(self, widget, event):
+        state = event.new_window_state
+        self._is_fullscreen = bool(state & Gdk.WindowState.FULLSCREEN)
+
+    def toggle_fullscreen(self):
+        if self._is_fullscreen:
+            self.unfullscreen()
+        else:
+            self.fullscreen()
+
     KEY_HANDLERS = {
         'ESCAPE': quit,
         'F10': quit,
@@ -540,6 +552,7 @@ class emulator(Gtk.Window):
         'F2': save_snapshot,
         'F3': choose_and_load_file,
         'F6': toggle_tape_pause,
+        'F11': toggle_fullscreen,
         'PAUSE': toggle_pause,
     }
 
@@ -596,6 +609,8 @@ class emulator(Gtk.Window):
         if event.type == Gdk.EventType.BUTTON_PRESS:
             self.toggle_pause()
             return True
+        elif event.type == Gdk.EventType._2BUTTON_PRESS:
+            self.toggle_fullscreen()
 
     def on_input(self, addr):
         # Handle playbacks.
