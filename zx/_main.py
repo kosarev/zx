@@ -1030,6 +1030,17 @@ def _convert_tape_to_tape(src, src_format,
     dest_format().save_from_pulses(dest_filename, src.get_pulses())
 
 
+def _convert_snapshot_to_snapshot(src, src_format,
+                                  dest_filename, dest_format):
+    assert issubclass(src_format, SnapshotsFormat), src_format
+    assert issubclass(dest_format, SnapshotsFormat), dest_format
+
+    app = emulator(speed_factor=None)
+    app.load_file(src)
+    app.save_snapshot_file(dest_format, dest_filename)
+    app.destroy()
+
+
 def convert_file(src_filename, dest_filename):
     src = parse_file(src_filename)
     src_format = src.get_format()
@@ -1046,6 +1057,8 @@ def convert_file(src_filename, dest_filename):
          _convert_tape_to_tape),
         (zx.SoundFileFormat, SnapshotsFormat,
          _convert_tape_to_snapshot),
+        (SnapshotsFormat, SnapshotsFormat,
+         _convert_snapshot_to_snapshot),
     ]
 
     for sf, df, conv in CONVERTERS:
