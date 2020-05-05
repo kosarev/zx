@@ -924,6 +924,9 @@ class Emulator(Gtk.Window):
     def on_breakpoint(self):
         pass
 
+    def get_memory_view(self, addr, size):
+        return self._emulator.get_memory_block(addr, size)
+
 
 def pop_argument(args, error):
     if not args:
