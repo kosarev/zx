@@ -403,6 +403,12 @@ class Emulator(Gtk.Window):
         if self._profile:
             self.emulator.set_breakpoints(0, 0x10000)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, tb):
+        self.destroy()
+
     def on_done(self, widget, context):
         self.done = True
 
