@@ -372,8 +372,8 @@ class Emulator(Gtk.Window):
         if not SCREENCAST:
             self.pattern.set_filter(cairo.FILTER_NEAREST)
 
-        self.emulator = zx.Spectrum48()
-        self.processor_state = self.emulator  # TODO: Eliminate.
+        self._emulator = zx.Spectrum48()
+        self.processor_state = self._emulator  # TODO: Eliminate.
 
         self.keyboard_state = [0xff] * 8
         self.keys = {'RETURN': zx.KEYS_INFO['ENTER'],
@@ -387,7 +387,7 @@ class Emulator(Gtk.Window):
                    'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
                    'U', 'V', 'W', 'X', 'Y', 'Z']:
             self.keys[id] = zx.KEYS_INFO[id]
-        self.emulator.set_on_input_callback(self.on_input)
+        self._emulator.set_on_input_callback(self.on_input)
         self.connect("key-press-event", self.on_key_press)
         self.connect("key-release-event", self.on_key_release)
 
@@ -401,7 +401,7 @@ class Emulator(Gtk.Window):
 
         self._profile = profile
         if self._profile:
-            self.emulator.set_breakpoints(0, 0x10000)
+            self._emulator.set_breakpoints(0, 0x10000)
 
     def __enter__(self):
         return self
@@ -498,7 +498,7 @@ class Emulator(Gtk.Window):
     def save_snapshot_file(self, format, filename):
         try:
             with open(filename, 'wb') as f:
-                f.write(format().make(self.emulator))
+                f.write(format().make(self._emulator))
         except zx.Error as e:
             self.error_box('File error', '%s' % e.args)
 
@@ -660,7 +660,7 @@ class Emulator(Gtk.Window):
         # TODO: Use the tick when the ear value is sampled
         #       instead of the tick of the beginning of the input
         #       cycle.
-        tick = self.emulator.get_ticks_since_int()
+        tick = self._emulator.get_ticks_since_int()
         if self.tape_player.get_level_at_frame_tick(tick):
             n |= 0x40
 
@@ -694,16 +694,16 @@ class Emulator(Gtk.Window):
     def _enter_playback_mode(self):
         # Interrupts are supposed to be controlled by the
         # recording.
-        self.emulator.suppress_int()
-        self.emulator.allow_int_after_ei()
-        # self.emulator.enable_trace()
+        self._emulator.suppress_int()
+        self._emulator.allow_int_after_ei()
+        # self._emulator.enable_trace()
 
     def _quit_playback_mode(self):
         self.playback_player = None
         self.playback_samples = None
 
-        self.emulator.suppress_int(False)
-        self.emulator.allow_int_after_ei(False)
+        self._emulator.suppress_int(False)
+        self._emulator.allow_int_after_ei(False)
 
     def _get_playback_samples(self):
         # TODO: Have a class describing playback state.
@@ -715,27 +715,27 @@ class Emulator(Gtk.Window):
         frame_count = 0
         for chunk_i, chunk in enumerate(self.playback_player.get_chunks()):
             if isinstance(chunk, MachineSnapshot):
-                self.emulator.install_snapshot(chunk)
+                self._emulator.install_snapshot(chunk)
                 continue
 
             if chunk['id'] != 'port_samples':
                 continue
 
-            self.emulator.set_ticks_since_int(chunk['first_tick'])
+            self._emulator.set_ticks_since_int(chunk['first_tick'])
 
             for frame_i, frame in enumerate(chunk['frames']):
                 num_of_fetches, samples = frame
                 # print(num_of_fetches, samples)
 
-                self.emulator.set_fetches_limit(num_of_fetches)
+                self._emulator.set_fetches_limit(num_of_fetches)
                 # print(num_of_fetches, samples, flush=True)
 
                 # print('START_OF_FRAME', flush=True)
                 yield 'START_OF_FRAME'
 
                 for sample_i, sample in enumerate(samples):
-                    # print(self.emulator.get_fetches_limit())
-                    # fetch = num_of_fetches - self.emulator.get_fetches_limit()
+                    # print(self._emulator.get_fetches_limit())
+                    # fetch = num_of_fetches - self._emulator.get_fetches_limit()
                     # print('Input at fetch', fetch, 'of', num_of_fetches)
                     # TODO: print('read_port 0x%04x 0x%02x' % (addr, n), flush=True)
 
@@ -765,12 +765,12 @@ class Emulator(Gtk.Window):
             '''
             frame_count += 1
             if frame_count == -12820:
-                frame_state = self.emulator.clone()
+                frame_state = self._emulator.clone()
                 self._save_crash_rzx(player, frame_state, chunk_i, frame_i)
                 assert 0
 
             if frame_count == -65952 - 1000:
-                self.emulator.enable_trace()
+                self._emulator.enable_trace()
             '''
 
             if self._is_paused:
@@ -779,12 +779,12 @@ class Emulator(Gtk.Window):
                 time.sleep(1 / 50)
                 return
 
-            events = self.emulator.run()
+            events = self._emulator.run()
             # TODO: print(events)
 
-            if events & self.emulator._BREAKPOINT_HIT:
+            if events & self._emulator._BREAKPOINT_HIT:
                 if self._profile:
-                    pc = self.emulator.get_pc()
+                    pc = self._emulator.get_pc()
                     self._profile.add_instr_addr(pc)
 
                 # SPIN v0.5 skips executing instructions
@@ -792,16 +792,16 @@ class Emulator(Gtk.Window):
                 # fast save mode.
                 if (self.playback_samples and
                         creator_info == self.SPIN_V0P5_INFO and
-                        self.emulator.get_pc() == 0x04d4):
-                    sp = self.emulator.get_sp()
-                    ret_addr = self.emulator.read16(sp)
-                    self.emulator.set_sp(sp + 2)
-                    self.emulator.set_pc(ret_addr)
+                        self._emulator.get_pc() == 0x04d4):
+                    sp = self._emulator.get_sp()
+                    ret_addr = self._emulator.read16(sp)
+                    self._emulator.set_sp(sp + 2)
+                    self._emulator.set_pc(ret_addr)
 
-            if events & self.emulator._END_OF_FRAME:
+            if events & self._emulator._END_OF_FRAME:
                 if self._speed_factor is not None:
-                    self.emulator.render_screen()
-                    self.frame_data[:] = self.emulator.get_frame_pixels()
+                    self._emulator.render_screen()
+                    self.frame_data[:] = self._emulator.get_frame_pixels()
                     self.area.queue_draw()
                     time.sleep((1 / 50) * self._speed_factor)
 
@@ -809,13 +809,13 @@ class Emulator(Gtk.Window):
                 self._emulation_time.advance(1 / 50)
 
             if (self.playback_samples and
-                events & self.emulator._FETCHES_LIMIT_HIT):
+                events & self._emulator._FETCHES_LIMIT_HIT):
                 # Some simulators, e.g., SPIN, may store an interrupt
                 # point in the middle of a IX- or IY-prefixed
                 # instruction, so we continue until such
                 # instruction, if any, is completed.
-                if self.emulator.get_iregp_kind() != 'hl':
-                    self.emulator.set_fetches_limit(1)
+                if self._emulator.get_iregp_kind() != 'hl':
+                    self._emulator.set_fetches_limit(1)
                     return
 
                 # SPIN doesn't update the fetch counter if the last
@@ -823,7 +823,7 @@ class Emulator(Gtk.Window):
                 if (self.playback_samples and
                         creator_info == self.SPIN_V0P5_INFO and
                         self.playback_sample_i + 1 < len(self.playback_sample_values)):
-                    self.emulator.set_fetches_limit(1)
+                    self._emulator.set_fetches_limit(1)
                     return
 
                 sample = None
@@ -847,7 +847,7 @@ class Emulator(Gtk.Window):
                     return
 
                 assert sample == 'START_OF_FRAME'
-                self.emulator.on_handle_active_int()
+                self._emulator.on_handle_active_int()
 
     def run(self, duration):
         end_time = self._emulation_time.get() + duration
@@ -867,10 +867,10 @@ class Emulator(Gtk.Window):
         # SPIN v0.5 alters ROM to implement fast tape loading,
         # but that affects recorded RZX files.
         if creator_info == self.SPIN_V0P5_INFO:
-            self.emulator.set_memory_block(0x1f47, b'\xf5')
+            self._emulator.set_memory_block(0x1f47, b'\xf5')
 
         # The bytes-saving ROM procedure needs special processing.
-        self.emulator.set_breakpoint(0x04d4)
+        self._emulator.set_breakpoint(0x04d4)
 
         # Process frames in order.
         self.playback_samples = self._get_playback_samples()
@@ -883,7 +883,7 @@ class Emulator(Gtk.Window):
         file = parse_file(filename)
 
         if isinstance(file, MachineSnapshot):
-            self.emulator.install_snapshot(file)
+            self._emulator.install_snapshot(file)
         elif isinstance(file, RZXFile):
             self.load_input_recording(file)
             self._enter_playback_mode()
