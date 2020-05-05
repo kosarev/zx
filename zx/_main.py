@@ -318,7 +318,7 @@ class Profile(object):
             yield addr, self._annots[addr]
 
 
-class emulator(Gtk.Window):
+class Emulator(Gtk.Window):
     SCREEN_AREA_BACKGROUND_COLOUR = rgb('#1e1e1e')
 
     SPIN_V0P5_INFO = {'id': 'info',
@@ -327,7 +327,7 @@ class emulator(Gtk.Window):
                       'creator_minor_version': 5}
 
     def __init__(self, speed_factor=1.0, profile=None):
-        super(emulator, self).__init__()
+        super(Emulator, self).__init__()
 
         self._screencast = Screencast()
 
@@ -909,7 +909,7 @@ def run(args):
         filename = args.pop(0)
         handle_extra_arguments(args)
 
-    app = emulator()
+    app = Emulator()
     if filename:
         app.parse_and_load_file(filename)
     app.main()
@@ -923,7 +923,7 @@ def profile(args):
     handle_extra_arguments(args)
 
     profile = Profile()
-    app = emulator(profile=profile)
+    app = Emulator(profile=profile)
     app.parse_and_load_file(file_to_run)
     app.main()
     app.destroy()
@@ -986,7 +986,7 @@ def test_file(filename):
         os.rename(filename, dest_path)
         print('%r moved to %r' % (filename, dest_dir))
 
-    app = emulator(speed_factor=None)
+    app = Emulator(speed_factor=None)
     try:
         app.run_file(filename)
         if app.done:
@@ -1008,7 +1008,7 @@ def test(args):
 
 def fastforward(args):
     for filename in args:
-        app = emulator(speed_factor=0)
+        app = Emulator(speed_factor=0)
         app.run_file(filename)
         if app.done:
             break
@@ -1021,8 +1021,8 @@ def _convert_tape_to_snapshot(src, src_format,
     assert issubclass(src_format, zx.SoundFileFormat), src_format
     assert issubclass(dest_format, SnapshotsFormat), dest_format
 
-    app = emulator(speed_factor=None)
-    # app = emulator()
+    app = Emulator(speed_factor=None)
+    # app = Emulator()
 
     # Let the initialization complete.
     app.run(1.8)
@@ -1056,7 +1056,7 @@ def _convert_snapshot_to_snapshot(src, src_format,
     assert issubclass(src_format, SnapshotsFormat), src_format
     assert issubclass(dest_format, SnapshotsFormat), dest_format
 
-    app = emulator(speed_factor=None)
+    app = Emulator(speed_factor=None)
     app.load_file(src)
     app.save_snapshot_file(dest_format, dest_filename)
     app.destroy()
