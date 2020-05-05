@@ -13,7 +13,8 @@ from ._data import Data, File, FileFormat, ArchiveFileFormat
 from ._data import SoundFile, SoundFileFormat
 from ._keyboard import KEYS_INFO
 from ._machine import Spectrum48
-from ._main import main, ProcessorSnapshot, MachineSnapshot, SnapshotsFormat
+from ._main import (main, Emulator, ProcessorSnapshot, MachineSnapshot,
+                    SnapshotsFormat)
 from ._rom import get_rom_image
 from ._rzx import parse_rzx, make_rzx
 from ._tap import TAPFileFormat

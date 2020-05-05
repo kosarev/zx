@@ -483,7 +483,7 @@ class Emulator(Gtk.Window):
         if dialog.run() == Gtk.ResponseType.OK:
             filename = dialog.get_filename()
             try:
-                self.parse_and_load_file(filename)
+                self.load_file(filename)
             except zx.Error as e:
                 self.error_box('File error', '%s' % e.args)
 
@@ -873,7 +873,9 @@ class Emulator(Gtk.Window):
             break
         assert sample == 'START_OF_FRAME'
 
-    def load_file(self, file):
+    def load_file(self, filename):
+        file = parse_file(filename)
+
         if isinstance(file, MachineSnapshot):
             self.emulator.install_snapshot(file)
         elif isinstance(file, RZXFile):
@@ -884,12 +886,28 @@ class Emulator(Gtk.Window):
         else:
             raise zx.Error("Don't know how to load file %r." % filename)
 
-    def parse_and_load_file(self, filename):
-        self.load_file(parse_file(filename))
-
     def run_file(self, filename):
-        self.parse_and_load_file(filename)
+        self.load_file(filename)
         self.main()
+
+    def autoload_tape(self, filename):
+        tape = parse_file(filename)
+        if not isinstance(tape, zx.SoundFile):
+            raise zx.Error('%r does not seem to be a tape file.' % filename)
+
+        # Let the initialization complete.
+        self.run(1.8)
+
+        # Type in 'LOAD ""'.
+        self.generate_key_strokes('J', 'SS+P', 'SS+P', 'ENTER')
+
+        # Load and run the tape.
+        self.load_tape(tape)
+        self.unpause_tape()
+
+        # Wait till the end of the tape.
+        while not self.done and not self.is_end_of_tape():
+            self.run_quantum()
 
 
 def pop_argument(args, error):
@@ -911,7 +929,7 @@ def run(args):
 
     app = Emulator()
     if filename:
-        app.parse_and_load_file(filename)
+        app.load_file(filename)
     app.main()
     app.destroy()
 
@@ -924,7 +942,7 @@ def profile(args):
 
     profile = Profile()
     app = Emulator(profile=profile)
-    app.parse_and_load_file(file_to_run)
+    app.load_file(file_to_run)
     app.main()
     app.destroy()
 
@@ -1016,34 +1034,23 @@ def fastforward(args):
         app.destroy()
 
 
-def _convert_tape_to_snapshot(src, src_format,
+def _convert_tape_to_snapshot(src, src_filename, src_format,
                               dest_filename, dest_format):
     assert issubclass(src_format, zx.SoundFileFormat), src_format
     assert issubclass(dest_format, SnapshotsFormat), dest_format
 
-    app = Emulator(speed_factor=None)
-    # app = Emulator()
+    # app = Emulator(speed_factor=None)
+    app = Emulator()
 
-    # Let the initialization complete.
-    app.run(1.8)
-
-    # Type in 'LOAD ""'.
-    app.generate_key_strokes('J', 'SS+P', 'SS+P', 'ENTER')
-
-    # Load and run the tape.
-    app.load_file(src)
-    app.unpause_tape()
-
-    # Wait till the end of the tape.
-    while not app.done and not app.is_end_of_tape():
-        app.run_quantum()
+    # Load the tape into memory automatically.
+    app.autoload_tape(src_filename)
 
     # Save snapshot and quit.
     app.save_snapshot_file(dest_format, dest_filename)
     app.destroy()
 
 
-def _convert_tape_to_tape(src, src_format,
+def _convert_tape_to_tape(src, src_filename, src_format,
                           dest_filename, dest_format):
     assert issubclass(src_format, zx.SoundFileFormat), src_format
     assert issubclass(dest_format, zx.SoundFileFormat), dest_format
@@ -1051,7 +1058,7 @@ def _convert_tape_to_tape(src, src_format,
     dest_format().save_from_pulses(dest_filename, src.get_pulses())
 
 
-def _convert_snapshot_to_snapshot(src, src_format,
+def _convert_snapshot_to_snapshot(src, src_filename, src_format,
                                   dest_filename, dest_format):
     assert issubclass(src_format, SnapshotsFormat), src_format
     assert issubclass(dest_format, SnapshotsFormat), dest_format
@@ -1084,7 +1091,7 @@ def convert_file(src_filename, dest_filename):
 
     for sf, df, conv in CONVERTERS:
         if issubclass(src_format, sf) and issubclass(dest_format, df):
-            conv(src, src_format, dest_filename, dest_format)
+            conv(src, src_filename, src_format, dest_filename, dest_format)
             return
 
     raise zx.Error("Don't know how to convert from %s to %s files." % (
