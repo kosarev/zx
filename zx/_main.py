@@ -783,6 +783,8 @@ class Emulator(Gtk.Window):
             # TODO: print(events)
 
             if events & self._emulator._BREAKPOINT_HIT:
+                self.on_breakpoint()
+
                 if self._profile:
                     pc = self._emulator.get_pc()
                     self._profile.add_instr_addr(pc)
@@ -914,6 +916,12 @@ class Emulator(Gtk.Window):
         # Wait till the end of the tape.
         while not self.done and not self.is_end_of_tape():
             self.run_quantum()
+
+    def set_breakpoint(self, addr):
+        self._emulator.set_breakpoint(addr)
+
+    def on_breakpoint(self):
+        pass
 
 
 def pop_argument(args, error):
