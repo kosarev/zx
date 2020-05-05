@@ -904,6 +904,7 @@ class Emulator(Gtk.Window):
             raise zx.Error('%r does not seem to be a tape file.' % filename)
 
         # Let the initialization complete.
+        self._emulator.set_pc(0x0000)
         self.run(1.8)
 
         # Type in 'LOAD ""'.
