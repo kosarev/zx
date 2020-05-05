@@ -534,7 +534,7 @@ class Emulator(Gtk.Window):
     def toggle_tape_pause(self):
         self.pause_tape(not self.is_tape_paused())
 
-    def load_tape(self, file):
+    def _load_tape_to_player(self, file):
         self.tape_player.load_tape(file)
         self.pause_tape()
 
@@ -890,7 +890,7 @@ class Emulator(Gtk.Window):
             self.load_input_recording(file)
             self._enter_playback_mode()
         elif isinstance(file, zx.SoundFile):
-            self.load_tape(file)
+            self._load_tape_to_player(file)
         else:
             raise zx.Error("Don't know how to load file %r." % filename)
 
@@ -898,7 +898,7 @@ class Emulator(Gtk.Window):
         self.load_file(filename)
         self.main()
 
-    def autoload_tape(self, filename):
+    def load_tape(self, filename):
         tape = parse_file(filename)
         if not isinstance(tape, zx.SoundFile):
             raise zx.Error('%r does not seem to be a tape file.' % filename)
@@ -910,7 +910,7 @@ class Emulator(Gtk.Window):
         self.generate_key_strokes('J', 'SS+P', 'SS+P', 'ENTER')
 
         # Load and run the tape.
-        self.load_tape(tape)
+        self._load_tape_to_player(tape)
         self.unpause_tape()
 
         # Wait till the end of the tape.
@@ -1057,7 +1057,7 @@ def _convert_tape_to_snapshot(src, src_filename, src_format,
     app = Emulator()
 
     # Load the tape into memory automatically.
-    app.autoload_tape(src_filename)
+    app.load_tape(src_filename)
 
     # Save snapshot and quit.
     app.save_snapshot_file(dest_format, dest_filename)
