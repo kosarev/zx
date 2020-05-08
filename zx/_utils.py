@@ -18,3 +18,9 @@ def div_ceil(a, b):
 
 def make16(hi, lo):
     return ((hi << 8) | lo) & MASK16
+
+
+def _split16(nn):
+    lo = nn & 0xff
+    hi = (nn >> 8) & 0xff
+    return lo, hi

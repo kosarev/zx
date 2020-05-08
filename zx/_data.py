@@ -57,3 +57,11 @@ class SoundFile(File):
 
 class SoundFileFormat(FileFormat):
     pass
+
+
+class _MachineSnapshot(File):
+    pass
+
+
+class _UnifiedSnapshot(_MachineSnapshot):
+    pass

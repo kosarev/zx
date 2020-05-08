@@ -208,7 +208,7 @@ class MachineState(ProcessorState, MemoryState):
         self.set('trace_enabled', int(enable))
 
     def install_snapshot(self, snapshot):
-        assert isinstance(snapshot, zx.MachineSnapshot)
+        assert isinstance(snapshot, zx._MachineSnapshot)
         for field, value in snapshot.get_unified_snapshot().items():
             if field == 'processor_snapshot':
                 ProcessorState.install_snapshot(self, value)

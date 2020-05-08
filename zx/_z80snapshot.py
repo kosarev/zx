@@ -14,10 +14,6 @@ import collections
 import zx
 
 
-class UnifiedSnapshot(zx.MachineSnapshot):
-    pass
-
-
 _V1_FORMAT = '1.45'
 _V2_FORMAT = '2.x'
 _V3_FORMAT = '3.x'
@@ -32,7 +28,7 @@ def _get_format_version(fields):
     return _V1_FORMAT
 
 
-class Z80Snapshot(zx.MachineSnapshot):
+class Z80Snapshot(zx._MachineSnapshot):
     _MEMORY_PAGE_ADDRS = {4: 0x8000, 5: 0xc000, 8: 0x4000}
 
     def get_unified_snapshot(self):
@@ -112,7 +108,7 @@ class Z80Snapshot(zx.MachineSnapshot):
                 image = block['image']
                 memory_blocks.append((self._MEMORY_PAGE_ADDRS[page_no], image))
 
-        return UnifiedSnapshot(Z80SnapshotsFormat, fields)
+        return zx._UnifiedSnapshot(Z80SnapshotsFormat, fields)
 
 
 class Z80SnapshotsFormat(zx.SnapshotsFormat):
@@ -228,7 +224,7 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
 
     # TODO: Rework to generate an internal representation of the
     #       format and then generate its binary version.
-    def make(self, state):
+    def make_snapshot(self, state):
         # TODO: The z80 format cannot represent processor states in
         #       the middle of IX- and IY-prefixed instructions, so
         #       such situations need some additional processing.

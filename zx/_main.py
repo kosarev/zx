@@ -25,10 +25,6 @@ class ProcessorSnapshot(zx.Data):
     pass
 
 
-class MachineSnapshot(zx.File):
-    pass
-
-
 class SnapshotsFormat(zx.FileFormat):
     pass
 
@@ -57,6 +53,7 @@ def get_elapsed_time(timestamp):
 def detect_file_format(image, filename_extension):
     KNOWN_FORMATS = [
         ('.rzx', b'RZX!', RZXFileFormat),
+        ('.scr', None, zx._SCRFileFormat),
         ('.tap', None, zx.TAPFileFormat),
         ('.tzx', b'ZXTape!', zx.TZXFileFormat),
         ('.wav', b'RIFF', zx.WAVFileFormat),
@@ -498,7 +495,13 @@ class Emulator(Gtk.Window):
     def save_snapshot_file(self, format, filename):
         try:
             with open(filename, 'wb') as f:
-                f.write(format().make(self._emulator))
+                snapshot = format().make_snapshot(self._emulator)
+                # TODO: make_snapshot() shall always return a snapshot object.
+                if issubclass(type(snapshot), zx._MachineSnapshot):
+                    image = snapshot.get_file_image()
+                else:
+                    image = snapshot
+                f.write(image)
         except zx.Error as e:
             self.error_box('File error', '%s' % e.args)
 
@@ -714,7 +717,7 @@ class Emulator(Gtk.Window):
 
         frame_count = 0
         for chunk_i, chunk in enumerate(self.playback_player.get_chunks()):
-            if isinstance(chunk, MachineSnapshot):
+            if isinstance(chunk, zx._MachineSnapshot):
                 self._emulator.install_snapshot(chunk)
                 continue
 
@@ -884,7 +887,7 @@ class Emulator(Gtk.Window):
     def load_file(self, filename):
         file = parse_file(filename)
 
-        if isinstance(file, MachineSnapshot):
+        if isinstance(file, zx._MachineSnapshot):
             self._emulator.install_snapshot(file)
         elif isinstance(file, RZXFile):
             self.load_input_recording(file)
@@ -1082,7 +1085,7 @@ def _convert_snapshot_to_snapshot(src, src_filename, src_format,
     assert issubclass(dest_format, SnapshotsFormat), dest_format
 
     app = Emulator(speed_factor=None)
-    app.load_file(src)
+    app.load_file(src_filename)
     app.save_snapshot_file(dest_format, dest_filename)
     app.destroy()
 
