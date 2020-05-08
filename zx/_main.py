@@ -1060,8 +1060,8 @@ def _convert_tape_to_snapshot(src, src_filename, src_format,
     assert issubclass(src_format, zx.SoundFileFormat), src_format
     assert issubclass(dest_format, SnapshotsFormat), dest_format
 
-    # app = Emulator(speed_factor=None)
-    app = Emulator()
+    app = Emulator(speed_factor=None)
+    # app = Emulator()
 
     # Load the tape into memory automatically.
     app.load_tape(src_filename)
