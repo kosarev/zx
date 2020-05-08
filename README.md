@@ -78,6 +78,9 @@ $ zx https://www.worldofspectrum.org/pub/sinclair/games/e/EricTheFloaters.tzx.zi
 
 ### Converting files
 
+Supported formats: `.rzx`, `.scr`, `.tap`, `.tzx`, `.wav`,
+`.z80`, `.zip`.
+
 ```shell
 $ zx jack.tzx jack.wav
 ```
