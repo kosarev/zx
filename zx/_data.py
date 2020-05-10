@@ -69,3 +69,8 @@ class _MachineSnapshot(File):
 
 class _UnifiedSnapshot(_MachineSnapshot):
     pass
+
+
+# TODO: Move to the z80 project.
+class ProcessorSnapshot(Data):
+    pass

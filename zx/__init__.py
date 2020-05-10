@@ -14,4 +14,4 @@ from ._data import SoundFile, SoundFileFormat, _MachineSnapshot
 from ._data import _UnifiedSnapshot
 from ._keyboard import KEYS_INFO
 from ._machine import _Events, Spectrum48
-from ._main import main, Emulator, ProcessorSnapshot
+from ._main import main, Emulator

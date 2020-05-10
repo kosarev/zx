@@ -10,6 +10,7 @@
 
 
 from ._binary import BinaryParser, BinaryWriter
+from ._data import ProcessorSnapshot
 from ._data import SnapshotFormat
 from ._error import Error
 from ._utils import make16
@@ -71,7 +72,7 @@ class Z80Snapshot(zx._MachineSnapshot):
         quarter_tstates = ticks_per_frame // 4
 
         fields = {
-            'processor_snapshot': zx.ProcessorSnapshot(processor_fields),
+            'processor_snapshot': ProcessorSnapshot(processor_fields),
             'border_color': (flags1 >> 1) & 0x7,
 
             # Give the snapshot a chance to execute at least one

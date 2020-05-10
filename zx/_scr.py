@@ -10,6 +10,7 @@
 
 
 from ._binary import BinaryParser, BinaryWriter
+from ._data import ProcessorSnapshot
 from ._data import SnapshotFormat
 from ._utils import _split16
 import collections
@@ -28,7 +29,7 @@ class _SCRSnapshot(zx._MachineSnapshot):
         }
 
         fields = {
-            'processor_snapshot': zx.ProcessorSnapshot(processor_fields),
+            'processor_snapshot': ProcessorSnapshot(processor_fields),
             'border_color': 0,
         }
 

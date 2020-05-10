@@ -30,11 +30,6 @@ from gi.repository import Gtk, Gdk
 SCREENCAST = False
 
 
-# TODO: Move to the z80 project.
-class ProcessorSnapshot(zx.Data):
-    pass
-
-
 class RZXFile(zx.Data):
     def __init__(self, recording):
         self._recording = recording

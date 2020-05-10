@@ -10,6 +10,7 @@
 
 
 import struct, enum, zx
+from ._data import ProcessorSnapshot
 from ._emulator import Spectrum48Base
 from ._rom import get_rom_image
 from ._utils import make16
@@ -142,7 +143,7 @@ class ProcessorState(StateImage):
         return {0: 'hl', 1: 'ix', 2: 'iy'}[n]
 
     def install_snapshot(self, snapshot):
-        assert isinstance(snapshot, zx.ProcessorSnapshot)
+        assert isinstance(snapshot, ProcessorSnapshot)
         for field, value in snapshot.items():
             if field != 'id':
                 self.set(field, value)
