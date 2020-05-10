@@ -23,6 +23,7 @@ _V1_FORMAT = '1.45'
 _V2_FORMAT = '2.x'
 _V3_FORMAT = '3.x'
 
+
 def _get_format_version(fields):
     if 'ticks_count_low' in fields:
         return _V3_FORMAT
@@ -67,7 +68,8 @@ class Z80Snapshot(MachineSnapshot):
             'ir': make16(hi=self['i'], lo=r),
             'iff1': 0 if self['iff1'] == 0 else 1,
             'iff2': 0 if self['iff2'] == 0 else 1,
-            'int_mode': int_mode }
+            'int_mode': int_mode,
+        }
 
         ticks_per_frame = 69888  # TODO
         quarter_tstates = ticks_per_frame // 4
@@ -85,7 +87,7 @@ class Z80Snapshot(MachineSnapshot):
             ticks_high = self['ticks_count_high']
             ticks_low = self['ticks_count_low']
             ticks_since_int = (((ticks_high + 1) % 4 + 1) * quarter_tstates -
-                                   (ticks_low + 1))
+                               (ticks_low + 1))
             fields['ticks_since_int'] = ticks_since_int
 
         # Determine machine kind.
@@ -258,9 +260,9 @@ class Z80SnapshotFormat(SnapshotFormat):
         writer = BinaryWriter()
         writer.write(
             self._PRIMARY_HEADER,
-            a=state.get_a(), f=state.get_f(), bc=state.get_bc(), hl=state.get_hl(),
-            pc=state.get_pc(), sp=state.get_sp(), i=state.get_i(), r=r,
-            flags1=flags1, de=state.get_de(),
+            a=state.get_a(), f=state.get_f(), bc=state.get_bc(),
+            hl=state.get_hl(), pc=state.get_pc(), sp=state.get_sp(),
+            i=state.get_i(), r=r, flags1=flags1, de=state.get_de(),
             alt_bc=state.get_alt_bc(), alt_de=state.get_alt_de(),
             alt_hl=state.get_alt_hl(),
             alt_a=state.get_alt_a(), alt_f=state.get_alt_f(),

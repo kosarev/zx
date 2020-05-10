@@ -19,11 +19,11 @@ from ._utils import make16
 
 
 class Events(enum.IntFlag):
-    NO_EVENTS         = 0
-    END_OF_FRAME      = 1 << 1
+    NO_EVENTS = 0
+    END_OF_FRAME = 1 << 1
     FETCHES_LIMIT_HIT = 1 << 3
-    BREAKPOINT_HIT    = 1 << 4
-    END_OF_TAPE       = 1 << 5
+    BREAKPOINT_HIT = 1 << 4
+    END_OF_TAPE = 1 << 5
 
 
 class StateImage(object):
@@ -243,7 +243,7 @@ class MachineState(ProcessorState, MemoryState):
 
 class Spectrum48(Spectrum48Base, MachineState):
     # Memory marks.
-    _NO_MARKS        = 0
+    _NO_MARKS = 0
     _BREAKPOINT_MARK = 1 << 0
 
     def __init__(self):

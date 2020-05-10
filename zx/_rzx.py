@@ -185,9 +185,9 @@ def make_rzx(recording):
             image = chunk['image']
             chunk_writer.write(['<L:flags', '4s:filename_extension',
                                 '<L:uncompressed_length'],
-                                flags=0,  # Non-descriptor. Not compressed.
-                                filename_extension=b'Z80\x00',
-                                uncompressed_length=len(image))
+                               flags=0,  # Non-descriptor. Not compressed.
+                               filename_extension=b'Z80\x00',
+                               uncompressed_length=len(image))
             chunk_writer.write_block(image)
         elif id == 'port_samples':
             chunk_id = RZX_BLOCK_ID_INPUT_RECORDING
@@ -198,7 +198,7 @@ def make_rzx(recording):
                                num_of_frames=len(frames), reserved=0,
                                first_tick=0,  # TODO
                                flags=0,  # Not protected. Not compressed.
-                              )
+                               )
 
             for num_of_fetches, samples in frames:
                 chunk_writer.write(['<H:num_of_fetches',
@@ -210,7 +210,7 @@ def make_rzx(recording):
             assert 0, (id, list(chunk))  # TODO
 
         writer.write(['B:id', '<L:size'],
-                      id=chunk_id, size=len(chunk_writer.get_image()) + 4 + 1)
+                     id=chunk_id, size=len(chunk_writer.get_image()) + 4 + 1)
         writer.write_block(chunk_writer.get_image())
 
     return writer.get_image()

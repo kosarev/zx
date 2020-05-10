@@ -39,7 +39,7 @@ from ._wav import WAVFileFormat
 from ._z80snapshot import Z80SnapshotFormat
 from ._zip import ZIPFileFormat
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk
+from gi.repository import Gtk, Gdk  # nopep8
 
 
 SCREENCAST = False
@@ -116,7 +116,7 @@ def parse_file_image(filename, image):
         candidates = parse_archive(format, image)
         if len(candidates) == 0:
             raise Error('No files of known formats in archive %r.' %
-                            filename)
+                        filename)
 
         if len(candidates) > 1:
             raise Error(
@@ -214,7 +214,8 @@ class TapePlayer(object):
                 ticks_to_skip = min(self._pulse, tick - self._tick)
                 self._pulse -= ticks_to_skip
                 self._tick += ticks_to_skip
-                self._time.advance(ticks_to_skip / (self._ticks_per_frame * 50))
+                self._time.advance(ticks_to_skip /
+                                   (self._ticks_per_frame * 50))
                 continue
 
             # Get subsequent pulse, if any.
@@ -468,7 +469,7 @@ class Emulator(Gtk.Window):
     def is_paused(self):
         return self._is_paused
 
-    def pause(self, is_paused = True):
+    def pause(self, is_paused=True):
         self._is_paused = is_paused
         if self.is_paused():
             self._notification.set(draw_pause_notification,
@@ -540,7 +541,7 @@ class Emulator(Gtk.Window):
         self.tape_player.pause(is_paused)
 
         draw = (draw_tape_pause_notification if self.is_tape_paused()
-                    else draw_tape_resume_notification)
+                else draw_tape_resume_notification)
         self._notification.set(draw, self.tape_player.get_time())
 
     def unpause_tape(self):
@@ -755,16 +756,19 @@ class Emulator(Gtk.Window):
 
                 for sample_i, sample in enumerate(samples):
                     # print(self._emulator.get_fetches_limit())
-                    # fetch = num_of_fetches - self._emulator.get_fetches_limit()
+                    # fetch = num_of_fetches -
+                    #         self._emulator.get_fetches_limit()
                     # print('Input at fetch', fetch, 'of', num_of_fetches)
-                    # TODO: print('read_port 0x%04x 0x%02x' % (addr, n), flush=True)
+                    # TODO: print('read_port 0x%04x 0x%02x' % (addr, n),
+                    #             flush=True)
 
                     # TODO: Have a class describing playback state.
                     self.playback_frame_count = frame_count
                     self.playback_chunk = chunk
                     self.playback_sample_values = samples
                     self.playback_sample_i = sample_i
-                    # print(frame_count, chunk_i, frame_i, sample_i, sample, flush=True)
+                    # print(frame_count, chunk_i, frame_i, sample_i, sample,
+                    #       flush=True)
 
                     yield sample
 
@@ -843,7 +847,8 @@ class Emulator(Gtk.Window):
                 # instruction in frame is IN.
                 if (self.playback_samples and
                         creator_info == self.SPIN_V0P5_INFO and
-                        self.playback_sample_i + 1 < len(self.playback_sample_values)):
+                        self.playback_sample_i + 1 <
+                        len(self.playback_sample_values)):
                     self._emulator.set_fetches_limit(1)
                     return
 
@@ -1018,6 +1023,7 @@ def usage():
 
 def test_file(filename):
     print('%r' % filename)
+
     def move(dest_dir):
         os.makedirs(dest_dir, exist_ok=True)
 
@@ -1034,10 +1040,9 @@ def test_file(filename):
                 dest_filename = dest_filename[0] + '--2'
             else:
                 dest_filename = (dest_filename[0] + '--' +
-                                     str(int(dest_filename[1]) + 1))
+                                 str(int(dest_filename[1]) + 1))
 
             dest_filename = dest_filename + ext
-
 
         os.rename(filename, dest_path)
         print('%r moved to %r' % (filename, dest_dir))
@@ -1154,12 +1159,12 @@ def convert(args):
 def handle_command_line(args):
     # Guess the command by the arguments.
     if (not args or
-        len(args) == 1 and looks_like_filename(args[0])):
+            len(args) == 1 and looks_like_filename(args[0])):
         run(args)
         return
 
     if (len(args) == 2 and looks_like_filename(args[0]) and
-        looks_like_filename(args[1])):
+            looks_like_filename(args[1])):
         convert(args)
         return
 
