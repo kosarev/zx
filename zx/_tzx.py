@@ -68,7 +68,7 @@ class TZXFile(SoundFile):
                           tape loading errors.
                 if level:
                     # Give the high pulse 1ms of time and drop it.
-                    yield level, self._TICKS_FREQ / 1000, ('PAUSE',)
+                    yield level, self._TICKS_FREQ // 1000, ('PAUSE',)
                     pause_duration -= 1
                     level = not level
 
@@ -76,7 +76,7 @@ class TZXFile(SoundFile):
                 '''
 
                 if pause_duration:
-                    yield (level, pause_duration * self._TICKS_FREQ / 1000,
+                    yield (level, pause_duration * self._TICKS_FREQ // 1000,
                            ('PAUSE',))
             elif id == '0x30 (Text Description)':
                 print(block['text'])
