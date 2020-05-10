@@ -13,6 +13,7 @@
 import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
 from ._error import Error
+from ._zip import ZIPFileFormat
 from zx._gui import rgb
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
@@ -59,7 +60,7 @@ def detect_file_format(image, filename_extension):
         ('.tzx', b'ZXTape!', zx.TZXFileFormat),
         ('.wav', b'RIFF', zx.WAVFileFormat),
         ('.z80', None, zx.Z80SnapshotsFormat),
-        ('.zip', b'PK\x03\x04', zx.ZIPFileFormat),
+        ('.zip', b'PK\x03\x04', ZIPFileFormat),
     ]
 
     filename_extension = filename_extension.lower()
