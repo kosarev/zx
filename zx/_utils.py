@@ -24,3 +24,14 @@ def _split16(nn):
     lo = nn & 0xff
     hi = (nn >> 8) & 0xff
     return lo, hi
+
+
+class Time(object):
+    def __init__(self):
+        self._seconds = 0
+
+    def get(self):
+        return self._seconds
+
+    def advance(self, s):
+        self._seconds += s

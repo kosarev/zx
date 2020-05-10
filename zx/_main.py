@@ -35,6 +35,7 @@ from ._scr import SCRFileFormat
 from ._tap import TAPFileFormat
 from ._tzx import TZXFileFormat
 from ._utils import div_ceil
+from ._utils import Time
 from ._wav import WAVFileFormat
 from ._z80snapshot import Z80SnapshotFormat
 from ._zip import ZIPFileFormat
@@ -152,17 +153,6 @@ def parse_file(filename):
         image = f.read()
 
     return parse_file_image(filename, image)
-
-
-class Time(object):
-    def __init__(self):
-        self._seconds = 0
-
-    def get(self):
-        return self._seconds
-
-    def advance(self, s):
-        self._seconds += s
 
 
 class TapePlayer(object):
