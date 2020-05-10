@@ -343,6 +343,7 @@ class Emulator(Gtk.Window):
         self._notification = Notification()
         self.done = False
         self._is_paused = False
+        self._events_to_signal = zx._Events.NO_EVENTS
 
         self.scale = 1 if SCREENCAST else 2
 
@@ -673,6 +674,11 @@ class Emulator(Gtk.Window):
         if self.tape_player.get_level_at_frame_tick(tick):
             n |= 0x40
 
+        END_OF_TAPE = zx._Events.END_OF_TAPE
+        if END_OF_TAPE in self._events_to_signal and self.is_end_of_tape():
+            self._emulator.raise_events(END_OF_TAPE)
+            self._events_to_signal &= ~END_OF_TAPE
+
         return n
 
     def _save_crash_rzx(self, player, state, chunk_i, frame_i):
@@ -923,6 +929,7 @@ class Emulator(Gtk.Window):
         self.unpause_tape()
 
         # Wait till the end of the tape.
+        self._events_to_signal |= zx._Events.END_OF_TAPE
         while not self.done and not self.is_end_of_tape():
             self.run_quantum()
 

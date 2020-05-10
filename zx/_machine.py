@@ -18,6 +18,7 @@ class _Events(enum.IntFlag):
     END_OF_FRAME      = 1 << 1
     FETCHES_LIMIT_HIT = 1 << 3
     BREAKPOINT_HIT    = 1 << 4
+    END_OF_TAPE       = 1 << 5
 
 
 class StateImage(object):
