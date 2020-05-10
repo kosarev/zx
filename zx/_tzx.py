@@ -10,6 +10,7 @@
 
 
 from ._binary import BinaryParser
+from ._error import Error
 from ._tape import get_block_pulses, get_data_pulses, tag_last_pulse
 import zx
 
@@ -173,8 +174,7 @@ class TZXFileFormat(zx.SoundFileFormat):
             body = parser.extract_block(length)
 
             if id not in self._ARCHIVE_INFO_STRING_IDS:
-                raise zx.Error('Unknown TZX archive info string id 0x%02x.' %
-                               id)
+                raise Error('Unknown TZX archive info string id 0x%02x.' % id)
 
             # print('%s: %s' % (self._ARCHIVE_INFO_STRING_IDS[id], body))
         # TODO: Encode all the details.
@@ -193,7 +193,7 @@ class TZXFileFormat(zx.SoundFileFormat):
     def _parse_block(self, parser):
         block_id = parser.parse_field('B', 'block_id')
         if block_id not in self._BLOCK_PARSERS:
-            raise zx.Error('Unsupported TZX block id 0x%x.' % block_id)
+            raise Error('Unsupported TZX block id 0x%x.' % block_id)
 
         return self._BLOCK_PARSERS[block_id](self, parser)
 
@@ -206,8 +206,8 @@ class TZXFileFormat(zx.SoundFileFormat):
                                ('minor_revision', 'B')])
         tzx_signature = b'ZXTape!\x1a'
         if header['signature'] != tzx_signature:
-            raise zx.Error('Bad TZX file signature %r; expected %r.' % (
-                              header['signature'], tzx_signature))
+            raise Error('Bad TZX file signature %r; expected %r.' % (
+                        header['signature'], tzx_signature))
 
         # Parse blocks.
         blocks = []

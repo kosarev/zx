@@ -24,12 +24,3 @@ from ._utils import div_ceil, make16
 from ._wav import WAVFileFormat
 from ._z80snapshot import Z80SnapshotsFormat
 from ._zip import ZIPFileFormat
-
-
-class Error(Exception):
-    """Basic exception for the whole ZX module."""
-    def __init__(self, reason, id=None):
-        super().__init__(reason)
-
-        if id:
-            self.id = id

@@ -10,6 +10,7 @@
 
 
 from ._binary import BinaryParser, BinaryWriter
+from ._error import Error
 import zx
 
 
@@ -34,8 +35,8 @@ def parse_snapshot_block(image):
 
     # TODO: Support snapshot descriptors.
     if descriptor:
-        raise zx.Error('RZX snapshot descriptors are not supported yet.',
-                       id='rzx_snapshot_descriptor')
+        raise Error('RZX snapshot descriptors are not supported yet.',
+                    id='rzx_snapshot_descriptor')
 
     snapshot_image = parser.extract_rest()
     if compressed:
@@ -45,8 +46,8 @@ def parse_snapshot_block(image):
     # TODO: Support other snapshot formats.
     filename_extension = header['filename_extension']
     if filename_extension not in [b'z80\x00', b'Z80\x00']:
-        raise zx.Error('Unknown RZX snapshot format %r.' % filename_extension,
-                       id='unknown_rzx_snapshot_format')
+        raise Error('Unknown RZX snapshot format %r.' % filename_extension,
+                    id='unknown_rzx_snapshot_format')
 
     format = zx.Z80SnapshotsFormat()
     return format.parse(snapshot_image)
@@ -131,8 +132,8 @@ def parse_block(parser):
 
     # TODO: Handle unknown blocks.
     if block_id not in RZX_BLOCK_PARSERS:
-        raise zx.Error('Unsupported RZX block %r.' % block_id,
-                       id='unsupported_rzx_block')
+        raise Error('Unsupported RZX block %r.' % block_id,
+                    id='unsupported_rzx_block')
 
     return RZX_BLOCK_PARSERS[block_id](payload_image)
 
@@ -147,8 +148,8 @@ def parse_rzx(image):
                            ('flags', '<L')])
     rzx_signature = b'RZX!'
     if header['signature'] != rzx_signature:
-        raise zx.Error('Bad RZX file signature %r; expected %r.' % (
-                          header['signature'], rzx_signature))
+        raise Error('Bad RZX file signature %r; expected %r.' % (
+                        header['signature'], rzx_signature))
 
     # Unpack blocks.
     chunks = []

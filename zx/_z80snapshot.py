@@ -10,6 +10,7 @@
 
 
 from ._binary import BinaryParser, BinaryWriter
+from ._error import Error
 import collections
 import zx
 
@@ -40,7 +41,7 @@ class Z80Snapshot(zx._MachineSnapshot):
         flags2 = self['flags2']
         int_mode = flags2 & 0x3
         if int_mode not in [0, 1, 2]:
-            raise zx.Error('Invalid interrupt mode %d.' % int_mode)
+            raise Error('Invalid interrupt mode %d.' % int_mode)
 
         format_version = _get_format_version(self._fields)
 
@@ -94,8 +95,8 @@ class Z80Snapshot(zx._MachineSnapshot):
             if hardware_mode == 0 and not flags3_bit7:
                 machine_kind = 'ZX Spectrum 48K'
             else:
-                raise zx.Error('Unsupported type of emulated machine.',
-                               id='unsupported_machine')
+                raise Error('Unsupported type of emulated machine.',
+                            id='unsupported_machine')
 
         # Handle memory blocks.
         memory_blocks = fields.setdefault('memory_blocks', [])
@@ -156,7 +157,7 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
                 output.append(input.pop(0))
 
         if len(output) != uncompressed_size:
-            raise zx.Error('Corrupted compressed memory block.')
+            raise Error('Corrupted compressed memory block.')
 
         return bytes(output)
 
@@ -193,15 +194,15 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
                 fields.update(extra_parser.parse(self._EXTRA_HEADER2b))
 
             if extra_parser:
-                raise zx.Error('Too many headers in Z80 snapshot.',
-                               id='too_many_z80_snapshot_headers')
+                raise Error('Too many headers in Z80 snapshot.',
+                            id='too_many_z80_snapshot_headers')
 
         # Parse memory snapshot.
         if _get_format_version(fields) == _V1_FORMAT:
             compressed = (fields['flags1'] & 0x20) != 0
             if not compressed:
                 if parser.get_rest_size() != 48 * 1024:
-                    raise zx.Error('The snapshot is too large.')
+                    raise Error('The snapshot is too large.')
                 image = parser.extract_rest()
             else:
                 image = self._uncompress(parser.extract_rest(),
@@ -209,8 +210,8 @@ class Z80SnapshotsFormat(zx.SnapshotsFormat):
 
                 # Remove the terminator.
                 if image[48 * 1024:] != b'\x00\xed\xed\x00':
-                    raise zx.Error('The compressed memory block does not '
-                                   'terminate properly.')
+                    raise Error('The compressed memory block does not '
+                                'terminate properly.')
                 image = image[:48 * 1024]
 
             fields['memory_snapshot'] = image

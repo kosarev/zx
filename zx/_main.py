@@ -12,6 +12,7 @@
 
 import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
+from ._error import Error
 from zx._gui import rgb
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
@@ -105,16 +106,16 @@ def parse_file_image(filename, image):
     base, ext = os.path.splitext(filename)
     format = detect_file_format(image, ext)
     if not format:
-        raise zx.Error('Cannot determine the format of file %r.' % filename)
+        raise Error('Cannot determine the format of file %r.' % filename)
 
     if issubclass(format, zx.ArchiveFileFormat):
         candidates = parse_archive(format, image)
         if len(candidates) == 0:
-            raise zx.Error('No files of known formats in archive %r.' %
-                               filename)
+            raise Error('No files of known formats in archive %r.' %
+                            filename)
 
         if len(candidates) > 1:
-            raise zx.Error(
+            raise Error(
                 'More than one file of a known format in archive %r: %s.' % (
                     filename, ', '.join(repr(n) for n, f, im in candidates)))
 
@@ -136,8 +137,8 @@ def open_file_or_url(path):
             req = urllib.request.Request(path, headers=HEADERS)
             return urllib.request.urlopen(req)
         except urllib.error.HTTPError as e:
-            raise zx.Error('Cannot read remote file: %s, code %d.' % (
-                               e.reason, e.code))
+            raise Error('Cannot read remote file: %s, code %d.' % (
+                            e.reason, e.code))
 
     return open(path, 'rb')
 
@@ -494,7 +495,7 @@ class Emulator(Gtk.Window):
             filename = dialog.get_filename()
             try:
                 self.load_file(filename)
-            except zx.Error as e:
+            except Error as e:
                 self.error_box('File error', '%s' % e.args)
 
         dialog.destroy()
@@ -509,7 +510,7 @@ class Emulator(Gtk.Window):
                 else:
                     image = snapshot
                 f.write(image)
-        except zx.Error as e:
+        except Error as e:
             self.error_box('File error', '%s' % e.args)
 
     def save_snapshot(self):
@@ -636,7 +637,7 @@ class Emulator(Gtk.Window):
                 break
 
             if sample == 'END_OF_FRAME':
-                raise zx.Error(
+                raise Error(
                     'Too few input samples at frame %d of %d. '
                     'Given %d, used %d.' % (
                         self.playback_frame_count,
@@ -846,7 +847,7 @@ class Emulator(Gtk.Window):
                 for sample in self.playback_samples:
                     break
                 if sample != 'END_OF_FRAME':
-                    raise zx.Error(
+                    raise Error(
                         'Too many input samples at frame %d of %d. '
                         'Given %d, used %d.' % (
                             self.playback_frame_count,
@@ -906,7 +907,7 @@ class Emulator(Gtk.Window):
         elif isinstance(file, zx.SoundFile):
             self._load_tape_to_player(file)
         else:
-            raise zx.Error("Don't know how to load file %r." % filename)
+            raise Error("Don't know how to load file %r." % filename)
 
     def run_file(self, filename):
         self.load_file(filename)
@@ -915,7 +916,7 @@ class Emulator(Gtk.Window):
     def load_tape(self, filename):
         tape = parse_file(filename)
         if not isinstance(tape, zx.SoundFile):
-            raise zx.Error('%r does not seem to be a tape file.' % filename)
+            raise Error('%r does not seem to be a tape file.' % filename)
 
         # Let the initialization complete.
         self._emulator.set_pc(0x0000)
@@ -945,13 +946,13 @@ class Emulator(Gtk.Window):
 
 def pop_argument(args, error):
     if not args:
-        raise zx.Error(error)
+        raise Error(error)
     return args.pop(0)
 
 
 def handle_extra_arguments(args):
     if args:
-        raise zx.Error('Extra argument %r.' % args[0])
+        raise Error('Extra argument %r.' % args[0])
 
 
 def run(args):
@@ -988,7 +989,7 @@ def profile(args):
 
 def dump(args):
     if not args:
-        raise zx.Error('The file to dump is not specified.')
+        raise Error('The file to dump is not specified.')
 
     filename = args.pop(0)
     handle_extra_arguments(args)
@@ -1043,7 +1044,7 @@ def test_file(filename):
         if app.done:
             return False
         move('passed')
-    except zx.Error as e:
+    except Error as e:
         move(e.id)
 
     app.destroy()
@@ -1110,8 +1111,8 @@ def convert_file(src_filename, dest_filename):
     _, dest_ext = os.path.splitext(dest_filename)
     dest_format = detect_file_format(image=None, filename_extension=dest_ext)
     if not dest_format:
-        raise zx.Error('Cannot determine the format of file %r.' % (
-                           dest_filename))
+        raise Error('Cannot determine the format of file %r.' % (
+                        dest_filename))
 
     CONVERTERS = [
         (zx.SoundFileFormat, zx.SoundFileFormat,
@@ -1127,18 +1128,18 @@ def convert_file(src_filename, dest_filename):
             conv(src, src_filename, src_format, dest_filename, dest_format)
             return
 
-    raise zx.Error("Don't know how to convert from %s to %s files." % (
-                   src_format().get_name(),
-                   dest_format().get_name()))
+    raise Error("Don't know how to convert from %s to %s files." % (
+                src_format().get_name(),
+                dest_format().get_name()))
 
 
 def convert(args):
     if not args:
-        raise zx.Error('The file to convert from is not specified.')
+        raise Error('The file to convert from is not specified.')
     src_filename = args.pop(0)
 
     if not args:
-        raise zx.Error('The file to convert to is not specified.')
+        raise Error('The file to convert to is not specified.')
     dest_filename = args.pop(0)
 
     handle_extra_arguments(args)
@@ -1178,7 +1179,7 @@ def handle_command_line(args):
     }
 
     if command not in COMMANDS:
-        raise zx.Error('Unknown command %r.' % command)
+        raise Error('Unknown command %r.' % command)
 
     COMMANDS[command](args[1:])
 
@@ -1186,7 +1187,7 @@ def handle_command_line(args):
 def main():
     try:
         handle_command_line(sys.argv[1:])
-    except zx.Error as e:
+    except Error as e:
         print('zx: %s' % e.args)
     except FileNotFoundError as e:
         print('zx: %s: %r.' % (e.args[1], e.filename))

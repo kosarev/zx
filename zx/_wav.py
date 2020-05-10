@@ -10,6 +10,7 @@
 
 
 import struct, wave
+from ._error import Error
 import zx
 
 
@@ -19,7 +20,7 @@ class WAVFileFormat(zx.SoundFileFormat):
 
     def parse(self, image):
         # TODO
-        raise zx.Error('Parsing of WAV files is not supported yet.')
+        raise Error('Parsing of WAV files is not supported yet.')
 
     def save_from_pulses(self, filename, pulses):
         with wave.open(filename, 'wb') as f:
