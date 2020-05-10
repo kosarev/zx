@@ -10,6 +10,7 @@
 
 
 from ._binary import BinaryParser
+from ._data import SoundFileFormat
 from ._tape import get_block_pulses, tag_last_pulse
 import zx
 
@@ -37,7 +38,7 @@ class TAPFile(zx.SoundFile):
         return tag_last_pulse(self._generate_pulses())
 
 
-class TAPFileFormat(zx.SoundFileFormat):
+class TAPFileFormat(SoundFileFormat):
     _NAME = 'TAP'
 
     def _parse_block(self, parser):

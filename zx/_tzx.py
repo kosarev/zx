@@ -10,6 +10,7 @@
 
 
 from ._binary import BinaryParser
+from ._data import SoundFileFormat
 from ._error import Error
 from ._tape import get_block_pulses, get_data_pulses, tag_last_pulse
 import zx
@@ -89,7 +90,7 @@ class TZXFile(zx.SoundFile):
         return tag_last_pulse(self._generate_pulses())
 
 
-class TZXFileFormat(zx.SoundFileFormat):
+class TZXFileFormat(SoundFileFormat):
     _NAME = 'TZX'
 
     def _parse_standard_speed_data_block(self, parser):

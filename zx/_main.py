@@ -14,6 +14,7 @@ import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
 from ._data import MachineSnapshot
 from ._data import SnapshotFormat
+from ._data import SoundFileFormat
 from ._error import Error
 from ._keyboard import KEYS_INFO
 from ._machine import Events, Spectrum48
@@ -1073,7 +1074,7 @@ def fastforward(args):
 
 def _convert_tape_to_snapshot(src, src_filename, src_format,
                               dest_filename, dest_format):
-    assert issubclass(src_format, zx.SoundFileFormat), src_format
+    assert issubclass(src_format, SoundFileFormat), src_format
     assert issubclass(dest_format, SnapshotFormat), dest_format
 
     app = Emulator(speed_factor=None)
@@ -1089,8 +1090,8 @@ def _convert_tape_to_snapshot(src, src_filename, src_format,
 
 def _convert_tape_to_tape(src, src_filename, src_format,
                           dest_filename, dest_format):
-    assert issubclass(src_format, zx.SoundFileFormat), src_format
-    assert issubclass(dest_format, zx.SoundFileFormat), dest_format
+    assert issubclass(src_format, SoundFileFormat), src_format
+    assert issubclass(dest_format, SoundFileFormat), dest_format
 
     dest_format().save_from_pulses(dest_filename, src.get_pulses())
 
@@ -1118,9 +1119,9 @@ def convert_file(src_filename, dest_filename):
                         dest_filename))
 
     CONVERTERS = [
-        (zx.SoundFileFormat, zx.SoundFileFormat,
+        (SoundFileFormat, SoundFileFormat,
          _convert_tape_to_tape),
-        (zx.SoundFileFormat, SnapshotFormat,
+        (SoundFileFormat, SnapshotFormat,
          _convert_tape_to_snapshot),
         (SnapshotFormat, SnapshotFormat,
          _convert_snapshot_to_snapshot),

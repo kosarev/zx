@@ -10,11 +10,12 @@
 
 
 import struct, wave
+from ._data import SoundFileFormat
 from ._error import Error
 import zx
 
 
-class WAVFileFormat(zx.SoundFileFormat):
+class WAVFileFormat(SoundFileFormat):
     _NAME = 'WAV'
     _TICKS_FREQ = 3500000
 
