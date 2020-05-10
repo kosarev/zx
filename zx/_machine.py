@@ -13,7 +13,7 @@ import enum
 import struct
 from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
-from ._emulator import Spectrum48Base
+from ._emulatorbase import Spectrum48Base
 from ._rom import get_rom_image
 from ._utils import make16
 

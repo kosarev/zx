@@ -30,8 +30,8 @@ for var in ['OPT']:
     config_vars[var] = ' '.join(opts)
 
 
-zx_emulator_module = Extension(
-    name='zx._emulator',
+zx_emulatorbase_module = Extension(
+    name='zx._emulatorbase',
     define_macros=[('ZX_MAJOR_VERSION', '%d' % ZX_MAJOR_VERSION),
                    ('ZX_MINOR_VERSION', '%d' % ZX_MINOR_VERSION),
                    ('ZX_PATCH_VERSION', '%d' % ZX_PATCH_VERSION)],
@@ -39,7 +39,7 @@ zx_emulator_module = Extension(
                         '-O3',
                         '-UNDEBUG',  # TODO
                        ],
-    sources=['zx.cpp', 'zx/_emulatormodule.cpp'],
+    sources=['zx.cpp', 'zx/_emulatorbase.cpp'],
     language='c++')
 
 
@@ -54,7 +54,7 @@ setup(name='zx',
       author='Ivan Kosarev',
       author_email='ivan@kosarev.info',
       url='https://github.com/kosarev/zx/',
-      ext_modules=[zx_emulator_module],
+      ext_modules=[zx_emulatorbase_module],
       packages=['zx'],
       install_requires=[
           'pycairo',
