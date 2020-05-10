@@ -9,4 +9,5 @@
 #   Published under the MIT license.
 
 
-from ._main import main, Emulator
+from ._emulator import Emulator
+from ._main import main
