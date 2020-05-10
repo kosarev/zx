@@ -16,4 +16,3 @@ from ._keyboard import KEYS_INFO
 from ._machine import _Events, Spectrum48
 from ._main import main, Emulator, ProcessorSnapshot
 from ._rom import get_rom_image
-from ._rzx import parse_rzx, make_rzx

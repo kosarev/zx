@@ -14,6 +14,7 @@ import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
 from ._data import SnapshotFormat
 from ._error import Error
+from ._rzx import parse_rzx, make_rzx
 from ._scr import SCRFileFormat
 from ._tap import TAPFileFormat
 from ._tzx import TZXFileFormat
@@ -41,7 +42,7 @@ class RZXFile(zx.Data):
 
 class RZXFileFormat(zx.FileFormat):
     def parse(self, image):
-        recording = zx.parse_rzx(image)
+        recording = parse_rzx(image)
         return RZXFile(recording)
 
 
@@ -709,7 +710,7 @@ class Emulator(Gtk.Window):
             f.write(snapshot)
 
         with open('__crash.rzx', 'wb') as f:
-            f.write(zx.make_rzx(crash_recording))
+            f.write(make_rzx(crash_recording))
 
     def _enter_playback_mode(self):
         # Interrupts are supposed to be controlled by the
