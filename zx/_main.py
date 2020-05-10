@@ -14,6 +14,7 @@ import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
 from ._data import SnapshotFormat
 from ._error import Error
+from ._wav import WAVFileFormat
 from ._z80snapshot import Z80SnapshotFormat
 from ._zip import ZIPFileFormat
 from zx._gui import rgb
@@ -56,7 +57,7 @@ def detect_file_format(image, filename_extension):
         ('.scr', None, zx._SCRFileFormat),
         ('.tap', None, zx.TAPFileFormat),
         ('.tzx', b'ZXTape!', zx.TZXFileFormat),
-        ('.wav', b'RIFF', zx.WAVFileFormat),
+        ('.wav', b'RIFF', WAVFileFormat),
         ('.z80', None, Z80SnapshotFormat),
         ('.zip', b'PK\x03\x04', ZIPFileFormat),
     ]

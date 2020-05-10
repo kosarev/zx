@@ -21,4 +21,3 @@ from ._scr import _SCRFileFormat
 from ._tap import TAPFileFormat
 from ._tzx import TZXFileFormat
 from ._utils import div_ceil, make16
-from ._wav import WAVFileFormat
