@@ -10,6 +10,8 @@
 
 
 from ._binary import BinaryParser, BinaryWriter
+from ._data import Data
+from ._data import FileFormat
 from ._error import Error
 from ._z80snapshot import Z80SnapshotFormat
 
@@ -138,7 +140,7 @@ def parse_block(parser):
     return RZX_BLOCK_PARSERS[block_id](payload_image)
 
 
-def parse_rzx(image):
+def _parse_rzx(image):
     parser = BinaryParser(image)
 
     # Unpack header.
@@ -212,3 +214,14 @@ def make_rzx(recording):
         writer.write_block(chunk_writer.get_image())
 
     return writer.get_image()
+
+
+class RZXFile(Data):
+    def __init__(self, recording):
+        self._recording = recording
+
+
+class RZXFileFormat(FileFormat):
+    def parse(self, image):
+        recording = _parse_rzx(image)
+        return RZXFile(recording)

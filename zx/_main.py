@@ -17,8 +17,6 @@ import os
 import sys
 import time
 from ._data import ArchiveFileFormat
-from ._data import Data
-from ._data import FileFormat
 from ._data import MachineSnapshot
 from ._data import SnapshotFormat
 from ._data import SoundFile
@@ -30,7 +28,9 @@ from ._gui import draw_tape_resume_notification
 from ._gui import rgb
 from ._keyboard import KEYS_INFO
 from ._machine import Events, Spectrum48
-from ._rzx import parse_rzx, make_rzx
+from ._rzx import make_rzx
+from ._rzx import RZXFile
+from ._rzx import RZXFileFormat
 from ._scr import SCRFileFormat
 from ._tap import TAPFileFormat
 from ._tzx import TZXFileFormat
@@ -43,17 +43,6 @@ from gi.repository import Gtk, Gdk
 
 
 SCREENCAST = False
-
-
-class RZXFile(Data):
-    def __init__(self, recording):
-        self._recording = recording
-
-
-class RZXFileFormat(FileFormat):
-    def parse(self, image):
-        recording = parse_rzx(image)
-        return RZXFile(recording)
 
 
 def get_timestamp():
