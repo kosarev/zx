@@ -14,6 +14,7 @@ import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
 from ._data import SnapshotFormat
 from ._error import Error
+from ._machine import _Events, Spectrum48
 from ._rzx import parse_rzx, make_rzx
 from ._scr import SCRFileFormat
 from ._tap import TAPFileFormat
@@ -377,7 +378,7 @@ class Emulator(Gtk.Window):
         if not SCREENCAST:
             self.pattern.set_filter(cairo.FILTER_NEAREST)
 
-        self._emulator = zx.Spectrum48()
+        self._emulator = Spectrum48()
         self.processor_state = self._emulator  # TODO: Eliminate.
 
         self.keyboard_state = [0xff] * 8
