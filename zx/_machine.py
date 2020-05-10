@@ -11,6 +11,7 @@
 
 import struct, enum, zx
 from ._emulator import Spectrum48Base
+from ._utils import make16
 
 
 class _Events(enum.IntFlag):
@@ -164,7 +165,7 @@ class MemoryState(object):
         return self._memory_image[addr]
 
     def read16(self, addr):
-        return zx.make16(hi=self.read8(addr + 1), lo=self.read8(addr))
+        return make16(hi=self.read8(addr + 1), lo=self.read8(addr))
 
 
 class MachineState(ProcessorState, MemoryState):

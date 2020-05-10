@@ -14,6 +14,7 @@ import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
 from ._data import SnapshotFormat
 from ._error import Error
+from ._utils import div_ceil
 from ._wav import WAVFileFormat
 from ._z80snapshot import Z80SnapshotFormat
 from ._zip import ZIPFileFormat
@@ -421,11 +422,11 @@ class Emulator(Gtk.Window):
         window_size = self.get_size()
         window_width, window_height = window_size
         width = min(window_width,
-                    zx.div_ceil(window_height * self.frame_width,
-                                self.frame_height))
+                    div_ceil(window_height * self.frame_width,
+                             self.frame_height))
         height = min(window_height,
-                     zx.div_ceil(window_width * self.frame_height,
-                                 self.frame_width))
+                     div_ceil(window_width * self.frame_height,
+                              self.frame_width))
 
         # Draw the background.
         context.save()

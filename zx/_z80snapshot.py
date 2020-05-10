@@ -12,6 +12,7 @@
 from ._binary import BinaryParser, BinaryWriter
 from ._data import SnapshotFormat
 from ._error import Error
+from ._utils import make16
 import collections
 import zx
 
@@ -52,16 +53,16 @@ class Z80Snapshot(zx._MachineSnapshot):
             'bc': self['bc'],
             'de': self['de'],
             'hl': self['hl'],
-            'af': zx.make16(hi=self['a'], lo=self['f']),
+            'af': make16(hi=self['a'], lo=self['f']),
             'ix': self['ix'],
             'iy': self['iy'],
             'alt_bc': self['alt_bc'],
             'alt_de': self['alt_de'],
             'alt_hl': self['alt_hl'],
-            'alt_af': zx.make16(hi=self['alt_a'], lo=self['alt_f']),
+            'alt_af': make16(hi=self['alt_a'], lo=self['alt_f']),
             'pc': pc,
             'sp': self['sp'],
-            'ir': zx.make16(hi=self['i'], lo=r),
+            'ir': make16(hi=self['i'], lo=r),
             'iff1': 0 if self['iff1'] == 0 else 1,
             'iff2': 0 if self['iff2'] == 0 else 1,
             'int_mode': int_mode }
