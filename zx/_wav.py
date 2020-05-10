@@ -9,10 +9,10 @@
 #   Published under the MIT license.
 
 
-import struct, wave
+import struct
+import wave
 from ._data import SoundFileFormat
 from ._error import Error
-import zx
 
 
 class WAVFileFormat(SoundFileFormat):

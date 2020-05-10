@@ -10,8 +10,12 @@
 #   Published under the MIT license.
 
 
-import cairo, gi, os, sys, time, collections
-import zx, zx._gui as _gui
+import cairo
+import collections
+import gi
+import os
+import sys
+import time
 from ._data import ArchiveFileFormat
 from ._data import Data
 from ._data import FileFormat
@@ -20,6 +24,10 @@ from ._data import SnapshotFormat
 from ._data import SoundFile
 from ._data import SoundFileFormat
 from ._error import Error
+from ._gui import draw_pause_notification
+from ._gui import draw_tape_pause_notification
+from ._gui import draw_tape_resume_notification
+from ._gui import rgb
 from ._keyboard import KEYS_INFO
 from ._machine import Events, Spectrum48
 from ._rzx import parse_rzx, make_rzx
@@ -30,7 +38,6 @@ from ._utils import div_ceil
 from ._wav import WAVFileFormat
 from ._z80snapshot import Z80SnapshotFormat
 from ._zip import ZIPFileFormat
-from zx._gui import rgb
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
@@ -475,7 +482,7 @@ class Emulator(Gtk.Window):
     def pause(self, is_paused = True):
         self._is_paused = is_paused
         if self.is_paused():
-            self._notification.set(_gui.draw_pause_notification,
+            self._notification.set(draw_pause_notification,
                                    self._emulation_time)
         else:
             self._notification.clear()
@@ -543,8 +550,8 @@ class Emulator(Gtk.Window):
     def pause_tape(self, is_paused=True):
         self.tape_player.pause(is_paused)
 
-        draw = (_gui.draw_tape_pause_notification if self.is_tape_paused()
-                    else _gui.draw_tape_resume_notification)
+        draw = (draw_tape_pause_notification if self.is_tape_paused()
+                    else draw_tape_resume_notification)
         self._notification.set(draw, self.tape_player.get_time())
 
     def unpause_tape(self):

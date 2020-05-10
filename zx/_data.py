@@ -8,8 +8,6 @@
 #
 #   Published under the MIT license.
 
-import zx
-
 
 class Data(object):
     def __init__(self, fields):

@@ -14,7 +14,6 @@ from ._data import SoundFile
 from ._data import SoundFileFormat
 from ._error import Error
 from ._tape import get_block_pulses, get_data_pulses, tag_last_pulse
-import zx
 
 
 class TZXFile(SoundFile):

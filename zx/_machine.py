@@ -9,7 +9,8 @@
 #   Published under the MIT license.
 
 
-import struct, enum, zx
+import enum
+import struct
 from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
 from ._emulator import Spectrum48Base

@@ -13,7 +13,6 @@ from ._binary import BinaryParser
 from ._data import SoundFile
 from ._data import SoundFileFormat
 from ._tape import get_block_pulses, tag_last_pulse
-import zx
 
 
 class TAPFile(SoundFile):

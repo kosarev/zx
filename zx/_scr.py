@@ -9,14 +9,13 @@
 #   Published under the MIT license.
 
 
+import collections
 from ._binary import BinaryParser, BinaryWriter
 from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
 from ._data import SnapshotFormat
 from ._data import UnifiedSnapshot
 from ._utils import _split16
-import collections
-import zx
 
 
 class _SCRSnapshot(MachineSnapshot):

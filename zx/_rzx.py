@@ -12,7 +12,6 @@
 from ._binary import BinaryParser, BinaryWriter
 from ._error import Error
 from ._z80snapshot import Z80SnapshotFormat
-import zx
 
 
 def parse_creator_info_block(image):

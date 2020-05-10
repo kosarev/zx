@@ -9,7 +9,7 @@
 #   Published under the MIT license.
 
 
-import struct, zx
+import struct
 from ._error import Error
 
 

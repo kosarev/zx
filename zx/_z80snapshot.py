@@ -9,6 +9,7 @@
 #   Published under the MIT license.
 
 
+import collections
 from ._binary import BinaryParser, BinaryWriter
 from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
@@ -16,8 +17,6 @@ from ._data import SnapshotFormat
 from ._data import UnifiedSnapshot
 from ._error import Error
 from ._utils import make16
-import collections
-import zx
 
 
 _V1_FORMAT = '1.45'
