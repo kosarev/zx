@@ -12,9 +12,10 @@
 import io
 import zipfile
 import zx
+from ._data import ArchiveFileFormat
 
 
-class ZIPFileFormat(zx.ArchiveFileFormat):
+class ZIPFileFormat(ArchiveFileFormat):
     _NAME = 'ZIP'
 
     def read_files(self, image):

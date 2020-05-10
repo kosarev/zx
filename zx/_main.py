@@ -12,6 +12,7 @@
 
 import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
+from ._data import ArchiveFileFormat
 from ._data import MachineSnapshot
 from ._data import SnapshotFormat
 from ._data import SoundFile
@@ -98,7 +99,7 @@ def parse_archive(format, image):
             continue
 
         # Recursively parse member archives.
-        if issubclass(member_format, zx.ArchiveFileFormat):
+        if issubclass(member_format, ArchiveFileFormat):
             candidates.extend(parse_archive(member_format, member_image))
             continue
 
@@ -113,7 +114,7 @@ def parse_file_image(filename, image):
     if not format:
         raise Error('Cannot determine the format of file %r.' % filename)
 
-    if issubclass(format, zx.ArchiveFileFormat):
+    if issubclass(format, ArchiveFileFormat):
         candidates = parse_archive(format, image)
         if len(candidates) == 0:
             raise Error('No files of known formats in archive %r.' %
