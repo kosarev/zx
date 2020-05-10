@@ -25,6 +25,7 @@ from ._error import Error
 from ._gui import draw_pause_notification
 from ._gui import draw_tape_pause_notification
 from ._gui import draw_tape_resume_notification
+from ._gui import Notification
 from ._gui import rgb
 from ._keyboard import KEYS_INFO
 from ._machine import Events, Spectrum48
@@ -169,41 +170,6 @@ class PlaybackPlayer(object):
 
     def get_chunks(self):
         return self._recording['chunks']
-
-
-class Notification(object):
-    def __init__(self):
-        self.clear()
-
-    def set(self, draw, time):
-        self._timestamp = get_timestamp()
-        self._draw = draw
-        self._time = time
-
-    def clear(self):
-        self._timestamp = None
-        self._draw = None
-
-    def draw(self, window_size, screen_size, context):
-        if not self._timestamp:
-            return
-
-        width, height = screen_size
-        window_width, window_height = window_size
-
-        size = min(80, width * 0.2)
-        x = (window_width - size) // 2
-        y = (window_height - size) // 2
-
-        alpha = 1.5 - get_elapsed_time(self._timestamp)
-        alpha = max(0, min(0.7, alpha))
-
-        if not alpha:
-            self.clear()
-            return
-
-        self._draw(context, x + size / 2, y + size / 2, size, alpha,
-                   self._time.get())
 
 
 # TODO: A quick solution for making screencasts.

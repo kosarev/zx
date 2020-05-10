@@ -87,3 +87,38 @@ def draw_tape_resume_notification(context, x, y, size, alpha=1, t=0):
 
     context.set_source_rgba(*rgb('#ffffff', alpha))
     _draw_tape_sign(context, x, y - size * 0.015, size * 0.6, alpha, t)
+
+
+class Notification(object):
+    def __init__(self):
+        self.clear()
+
+    def set(self, draw, time):
+        self._timestamp = get_timestamp()
+        self._draw = draw
+        self._time = time
+
+    def clear(self):
+        self._timestamp = None
+        self._draw = None
+
+    def draw(self, window_size, screen_size, context):
+        if not self._timestamp:
+            return
+
+        width, height = screen_size
+        window_width, window_height = window_size
+
+        size = min(80, width * 0.2)
+        x = (window_width - size) // 2
+        y = (window_height - size) // 2
+
+        alpha = 1.5 - get_elapsed_time(self._timestamp)
+        alpha = max(0, min(0.7, alpha))
+
+        if not alpha:
+            self.clear()
+            return
+
+        self._draw(context, x + size / 2, y + size / 2, size, alpha,
+                   self._time.get())
