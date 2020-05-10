@@ -13,6 +13,7 @@
 import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
 from ._data import ArchiveFileFormat
+from ._data import Data
 from ._data import FileFormat
 from ._data import MachineSnapshot
 from ._data import SnapshotFormat
@@ -37,7 +38,7 @@ from gi.repository import Gtk, Gdk
 SCREENCAST = False
 
 
-class RZXFile(zx.Data):
+class RZXFile(Data):
     def __init__(self, recording):
         self._recording = recording
 
