@@ -14,7 +14,7 @@ import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
 from ._data import SnapshotFormat
 from ._error import Error
-from ._machine import _Events, Spectrum48
+from ._machine import Events, Spectrum48
 from ._rzx import parse_rzx, make_rzx
 from ._scr import SCRFileFormat
 from ._tap import TAPFileFormat
@@ -345,7 +345,7 @@ class Emulator(Gtk.Window):
         self._notification = Notification()
         self.done = False
         self._is_paused = False
-        self._events_to_signal = zx._Events.NO_EVENTS
+        self._events_to_signal = Events.NO_EVENTS
 
         self.scale = 1 if SCREENCAST else 2
 
@@ -676,7 +676,7 @@ class Emulator(Gtk.Window):
         if self.tape_player.get_level_at_frame_tick(tick):
             n |= 0x40
 
-        END_OF_TAPE = zx._Events.END_OF_TAPE
+        END_OF_TAPE = Events.END_OF_TAPE
         if END_OF_TAPE in self._events_to_signal and self.is_end_of_tape():
             self._emulator.raise_events(END_OF_TAPE)
             self._events_to_signal &= ~END_OF_TAPE
@@ -796,10 +796,10 @@ class Emulator(Gtk.Window):
                 time.sleep(1 / 50)
                 return
 
-            events = zx._Events(self._emulator.run())
+            events = Events(self._emulator.run())
             # TODO: print(events)
 
-            if zx._Events.BREAKPOINT_HIT in events:
+            if Events.BREAKPOINT_HIT in events:
                 self.on_breakpoint()
 
                 if self._profile:
@@ -817,7 +817,7 @@ class Emulator(Gtk.Window):
                     self._emulator.set_sp(sp + 2)
                     self._emulator.set_pc(ret_addr)
 
-            if zx._Events.END_OF_FRAME in events:
+            if Events.END_OF_FRAME in events:
                 if self._speed_factor is not None:
                     self._emulator.render_screen()
                     self.frame_data[:] = self._emulator.get_frame_pixels()
@@ -827,7 +827,7 @@ class Emulator(Gtk.Window):
                 self.tape_player.skip_rest_of_frame()
                 self._emulation_time.advance(1 / 50)
 
-            if self.playback_samples and zx._Events.FETCHES_LIMIT_HIT in events:
+            if self.playback_samples and Events.FETCHES_LIMIT_HIT in events:
                 # Some simulators, e.g., SPIN, may store an interrupt
                 # point in the middle of a IX- or IY-prefixed
                 # instruction, so we continue until such
@@ -931,7 +931,7 @@ class Emulator(Gtk.Window):
         self.unpause_tape()
 
         # Wait till the end of the tape.
-        self._events_to_signal |= zx._Events.END_OF_TAPE
+        self._events_to_signal |= Events.END_OF_TAPE
         while not self.done and not self.is_end_of_tape():
             self.run_quantum()
 

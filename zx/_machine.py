@@ -16,7 +16,7 @@ from ._rom import get_rom_image
 from ._utils import make16
 
 
-class _Events(enum.IntFlag):
+class Events(enum.IntFlag):
     NO_EVENTS         = 0
     END_OF_FRAME      = 1 << 1
     FETCHES_LIMIT_HIT = 1 << 3
