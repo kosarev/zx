@@ -32,7 +32,7 @@ class WAVFileFormat(SoundFileFormat):
             f.setframerate(frame_rate)
 
             amplitude = 32767
-            for level, duration in pulses:
+            for level, duration, tags in pulses:
                 duration = int(duration * frame_rate / self._TICKS_FREQ)
                 sample = -amplitude if level else amplitude
                 frame = struct.pack('<h', sample)
