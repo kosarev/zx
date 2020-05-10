@@ -10,7 +10,7 @@
 
 
 from ._binary import BinaryParser
-from ._tape import get_block_pulses, get_data_pulses
+from ._tape import get_block_pulses, get_data_pulses, tag_last_pulse
 import zx
 
 
@@ -20,7 +20,7 @@ class TZXFile(zx.SoundFile):
     def __init__(self, fields):
         zx.SoundFile.__init__(self, TZXFileFormat, fields)
 
-    def get_pulses(self):
+    def _generate_pulses(self):
         level = False
         for block in self['blocks']:
             id = block['id']
@@ -48,8 +48,8 @@ class TZXFile(zx.SoundFile):
                 else:
                     assert 0, id
 
-                for pulse in pulses:
-                    yield (level, pulse)
+                for pulse, ids in pulses:
+                    yield level, pulse, ids
                     level = not level
 
                 # Pause.
@@ -66,7 +66,7 @@ class TZXFile(zx.SoundFile):
                           tape loading errors.
                 if level:
                     # Give the high pulse 1ms of time and drop it.
-                    yield (level, self._TICKS_FREQ / 1000)
+                    yield level, self._TICKS_FREQ / 1000, ('PAUSE',)
                     pause_duration -= 1
                     level = not level
 
@@ -74,7 +74,8 @@ class TZXFile(zx.SoundFile):
                 '''
 
                 if pause_duration:
-                    yield (level, pause_duration * self._TICKS_FREQ / 1000)
+                    yield (level, pause_duration * self._TICKS_FREQ / 1000,
+                           ('PAUSE',))
             elif id == '0x30 (Text Description)':
                 print(block['text'])
             elif id in ['0x32 (Archive Info)', '0x21 (Group Start)',
@@ -82,6 +83,9 @@ class TZXFile(zx.SoundFile):
                 pass
             else:
                 assert 0, block  # TODO
+
+    def get_pulses(self):
+        return tag_last_pulse(self._generate_pulses())
 
 
 class TZXFileFormat(zx.SoundFileFormat):

@@ -10,7 +10,7 @@
 
 
 from ._binary import BinaryParser
-from ._tape import get_block_pulses
+from ._tape import get_block_pulses, tag_last_pulse
 import zx
 
 
@@ -20,18 +20,21 @@ class TAPFile(zx.SoundFile):
     def __init__(self, fields):
         zx.SoundFile.__init__(self, TAPFileFormat, fields)
 
-    def get_pulses(self):
+    def _generate_pulses(self):
         level = False
         blocks = self['blocks']
         for data in blocks:
             # The block itself.
-            for pulse in get_block_pulses(data):
-                yield (level, pulse)
+            for pulse, id in get_block_pulses(data):
+                yield level, pulse, id
                 level = not level
 
             # Pause. Skip, if it's the last block.
             if data is not blocks[-1]:
-                yield (level, self._TICKS_FREQ)  # 1s.
+                yield level, self._TICKS_FREQ, ('PAUSE',)  # 1s.
+
+    def get_pulses(self):
+        return tag_last_pulse(self._generate_pulses())
 
 
 class TAPFileFormat(zx.SoundFileFormat):

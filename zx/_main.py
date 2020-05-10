@@ -163,13 +163,12 @@ class Time(object):
 class TapePlayer(object):
     def __init__(self):
         self._is_paused = True
-        self._pulses = []
+        self._pulses = None
         self._tick = 0
         self._level = False
         self._pulse = 0
         self._ticks_per_frame = 69888  # TODO
         self._time = Time()
-        self._is_end = False
 
     def is_paused(self):
         return self._is_paused
@@ -184,7 +183,7 @@ class TapePlayer(object):
         self.pause(not self.is_paused())
 
     def is_end(self):
-        return self._is_end
+        return self._pulses is None
 
     def get_time(self):
         return self._time
@@ -196,7 +195,6 @@ class TapePlayer(object):
 
     def load_tape(self, file):
         self.load_parsed_file(file)
-        self._is_end = False
 
     def get_level_at_frame_tick(self, tick):
         assert self._tick <= tick, (self._tick, tick)
@@ -215,19 +213,27 @@ class TapePlayer(object):
                 continue
 
             # Get subsequent pulse, if any.
-            got_new_pulse = False
-            for level, pulse in self._pulses:
-                got_new_pulse = True
-                self._level = level
-                self._pulse = pulse
-                # print(self._pulse)
-                break
+            new_pulse = None
+            if self._pulses:
+                for new_pulse in self._pulses:
+                    break
+
+            if new_pulse:
+                # print(new_pulse)
+                self._level, self._pulse, ids = new_pulse
+
+                # The tape shall be considered stopped as soon as the last
+                # pulse is fetched, and not on the next attempt to fetch a
+                # pulse.
+                if 'END' in ids:
+                    self._pulses = None
+
+                continue
 
             # Do nothing, if there are no more pulses available.
-            if not got_new_pulse:
-                self._level = False
-                self._tick = tick
-                self._is_end = True
+            self._pulses = None
+            self._level = False
+            self._tick = tick
 
         return self._level
 
