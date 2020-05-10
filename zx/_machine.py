@@ -163,10 +163,11 @@ class MachineState(ProcessorState, MemoryState):
     _MACHINE_FIELDS = {
         'ticks_since_int': (32, '<L'),
         'fetches_to_stop': (36, '<L'),
-        'int_suppressed':  (40, 'B'),
-        'int_after_ei_allowed': (41, 'B'),
-        'border_color': (42, 'B'),
-        'trace_enabled': (43, 'B'),
+        'events': (40, '<L'),
+        'int_suppressed':  (44, 'B'),
+        'int_after_ei_allowed': (45, 'B'),
+        'border_color': (46, 'B'),
+        'trace_enabled': (47, 'B'),
     }
 
     def __init__(self, machine_image, memory_image):
@@ -191,6 +192,15 @@ class MachineState(ProcessorState, MemoryState):
 
     def set_fetches_limit(self, fetches_to_stop):
         self.set('fetches_to_stop', fetches_to_stop)
+
+    def get_events(self):
+        return self.get('events')
+
+    def set_events(self, events):
+        self.set('events', events)
+
+    def raise_events(self, events):
+        self.set_events(self.get_events() | events)
 
     def get_ticks_since_int(self):
         return self.get('ticks_since_int')

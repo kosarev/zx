@@ -70,6 +70,7 @@ struct __attribute__((packed)) machine_state {
 
     least_u32 ticks_since_int = 0;
     least_u32 fetches_to_stop = 0;
+    least_u32 events = 0;
     least_u8 int_suppressed = false;
     least_u8 int_after_ei_allowed = false;
     least_u8 border_color = 7;
@@ -93,6 +94,7 @@ public:
 
         state.ticks_since_int = ticks_since_int;
         state.fetches_to_stop = fetches_to_stop;
+        state.events = events;
         state.int_suppressed = int_suppressed;
         state.int_after_ei_allowed = int_after_ei_allowed;
         state.border_color = border_color;
@@ -104,6 +106,7 @@ public:
 
         ticks_since_int = state.ticks_since_int;
         fetches_to_stop = state.fetches_to_stop;
+        events = state.events;
         int_suppressed = state.int_suppressed;
         int_after_ei_allowed = state.int_after_ei_allowed;
         border_color = state.border_color;
