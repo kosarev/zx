@@ -14,6 +14,7 @@ import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
 from ._data import SnapshotFormat
 from ._error import Error
+from ._keyboard import KEYS_INFO
 from ._machine import Events, Spectrum48
 from ._rzx import parse_rzx, make_rzx
 from ._scr import SCRFileFormat
@@ -382,17 +383,17 @@ class Emulator(Gtk.Window):
         self.processor_state = self._emulator  # TODO: Eliminate.
 
         self.keyboard_state = [0xff] * 8
-        self.keys = {'RETURN': zx.KEYS_INFO['ENTER'],
-                     'ALT_L': zx.KEYS_INFO['CAPS SHIFT'],
-                     'SHIFT_L': zx.KEYS_INFO['CAPS SHIFT'],
-                     'ALT_R': zx.KEYS_INFO['SYMBOL SHIFT'],
-                     'SHIFT_R': zx.KEYS_INFO['SYMBOL SHIFT'],
-                     'SPACE': zx.KEYS_INFO['BREAK SPACE']}
+        self.keys = {'RETURN': KEYS_INFO['ENTER'],
+                     'ALT_L': KEYS_INFO['CAPS SHIFT'],
+                     'SHIFT_L': KEYS_INFO['CAPS SHIFT'],
+                     'ALT_R': KEYS_INFO['SYMBOL SHIFT'],
+                     'SHIFT_R': KEYS_INFO['SYMBOL SHIFT'],
+                     'SPACE': KEYS_INFO['BREAK SPACE']}
         for id in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
                    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
                    'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
                    'U', 'V', 'W', 'X', 'Y', 'Z']:
-            self.keys[id] = zx.KEYS_INFO[id]
+            self.keys[id] = KEYS_INFO[id]
         self._emulator.set_on_input_callback(self.on_input)
         self.connect("key-press-event", self.on_key_press)
         self.connect("key-release-event", self.on_key_release)
@@ -595,12 +596,12 @@ class Emulator(Gtk.Window):
 
             for id in strokes:
                 # print(id)
-                self._handle_key_stroke(zx.KEYS_INFO[id], pressed=True)
+                self._handle_key_stroke(KEYS_INFO[id], pressed=True)
                 self.run(0.03)
 
             for id in reversed(strokes):
                 # print(id)
-                self._handle_key_stroke(zx.KEYS_INFO[id], pressed=False)
+                self._handle_key_stroke(KEYS_INFO[id], pressed=False)
                 self.run(0.03)
 
     def on_key(self, event, pressed):
