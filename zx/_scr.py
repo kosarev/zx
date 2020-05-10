@@ -10,6 +10,7 @@
 
 
 from ._binary import BinaryParser, BinaryWriter
+from ._data import SnapshotFormat
 from ._utils import _split16
 import collections
 import zx
@@ -44,7 +45,7 @@ class _SCRSnapshot(zx._MachineSnapshot):
         return self['dot_patterns'] + self['colour_attrs']
 
 
-class _SCRFileFormat(zx.SnapshotsFormat):
+class _SCRFileFormat(SnapshotFormat):
     _NAME = 'SCR'
 
     _FIELDS = ['6144s:dot_patterns', '768s:colour_attrs']

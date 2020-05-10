@@ -11,6 +11,7 @@
 
 from ._binary import BinaryParser, BinaryWriter
 from ._error import Error
+from ._z80snapshot import Z80SnapshotFormat
 import zx
 
 
@@ -49,7 +50,7 @@ def parse_snapshot_block(image):
         raise Error('Unknown RZX snapshot format %r.' % filename_extension,
                     id='unknown_rzx_snapshot_format')
 
-    format = zx.Z80SnapshotsFormat()
+    format = Z80SnapshotFormat()
     return format.parse(snapshot_image)
 
 

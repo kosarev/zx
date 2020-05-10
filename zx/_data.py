@@ -59,6 +59,10 @@ class SoundFileFormat(FileFormat):
     pass
 
 
+class SnapshotFormat(FileFormat):
+    pass
+
+
 class _MachineSnapshot(File):
     pass
 

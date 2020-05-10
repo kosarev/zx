@@ -12,7 +12,9 @@
 
 import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
+from ._data import SnapshotFormat
 from ._error import Error
+from ._z80snapshot import Z80SnapshotFormat
 from ._zip import ZIPFileFormat
 from zx._gui import rgb
 gi.require_version('Gtk', '3.0')
@@ -24,10 +26,6 @@ SCREENCAST = False
 
 # TODO: Move to the z80 project.
 class ProcessorSnapshot(zx.Data):
-    pass
-
-
-class SnapshotsFormat(zx.FileFormat):
     pass
 
 
@@ -59,7 +57,7 @@ def detect_file_format(image, filename_extension):
         ('.tap', None, zx.TAPFileFormat),
         ('.tzx', b'ZXTape!', zx.TZXFileFormat),
         ('.wav', b'RIFF', zx.WAVFileFormat),
-        ('.z80', None, zx.Z80SnapshotsFormat),
+        ('.z80', None, Z80SnapshotFormat),
         ('.zip', b'PK\x03\x04', ZIPFileFormat),
     ]
 
@@ -523,7 +521,7 @@ class Emulator(Gtk.Window):
              Gtk.STOCK_SAVE, Gtk.ResponseType.OK))
         dialog.set_do_overwrite_confirmation(True)
         if dialog.run() == Gtk.ResponseType.OK:
-            self.save_snapshot_file(zx.Z80SnapshotsFormat,
+            self.save_snapshot_file(Z80SnapshotFormat,
                                     dialog.get_filename())
         dialog.destroy()
 
@@ -684,7 +682,7 @@ class Emulator(Gtk.Window):
         return n
 
     def _save_crash_rzx(self, player, state, chunk_i, frame_i):
-        snapshot = zx.Z80SnapshotsFormat().make(state)
+        snapshot = Z80SnapshotFormat().make(state)
 
         crash_recording = {
             'id': 'input_recording',
@@ -1072,7 +1070,7 @@ def fastforward(args):
 def _convert_tape_to_snapshot(src, src_filename, src_format,
                               dest_filename, dest_format):
     assert issubclass(src_format, zx.SoundFileFormat), src_format
-    assert issubclass(dest_format, SnapshotsFormat), dest_format
+    assert issubclass(dest_format, SnapshotFormat), dest_format
 
     app = Emulator(speed_factor=None)
     # app = Emulator()
@@ -1095,8 +1093,8 @@ def _convert_tape_to_tape(src, src_filename, src_format,
 
 def _convert_snapshot_to_snapshot(src, src_filename, src_format,
                                   dest_filename, dest_format):
-    assert issubclass(src_format, SnapshotsFormat), src_format
-    assert issubclass(dest_format, SnapshotsFormat), dest_format
+    assert issubclass(src_format, SnapshotFormat), src_format
+    assert issubclass(dest_format, SnapshotFormat), dest_format
 
     app = Emulator(speed_factor=None)
     app.load_file(src_filename)
@@ -1118,9 +1116,9 @@ def convert_file(src_filename, dest_filename):
     CONVERTERS = [
         (zx.SoundFileFormat, zx.SoundFileFormat,
          _convert_tape_to_tape),
-        (zx.SoundFileFormat, SnapshotsFormat,
+        (zx.SoundFileFormat, SnapshotFormat,
          _convert_tape_to_snapshot),
-        (SnapshotsFormat, SnapshotsFormat,
+        (SnapshotFormat, SnapshotFormat,
          _convert_snapshot_to_snapshot),
     ]
 
