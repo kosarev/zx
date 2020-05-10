@@ -14,6 +14,7 @@ import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
 from ._data import SnapshotFormat
 from ._error import Error
+from ._scr import SCRFileFormat
 from ._tap import TAPFileFormat
 from ._tzx import TZXFileFormat
 from ._utils import div_ceil
@@ -57,7 +58,7 @@ def get_elapsed_time(timestamp):
 def detect_file_format(image, filename_extension):
     KNOWN_FORMATS = [
         ('.rzx', b'RZX!', RZXFileFormat),
-        ('.scr', None, zx._SCRFileFormat),
+        ('.scr', None, SCRFileFormat),
         ('.tap', None, TAPFileFormat),
         ('.tzx', b'ZXTape!', TZXFileFormat),
         ('.wav', b'RIFF', WAVFileFormat),

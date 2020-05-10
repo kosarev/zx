@@ -17,4 +17,3 @@ from ._machine import _Events, Spectrum48
 from ._main import main, Emulator, ProcessorSnapshot
 from ._rom import get_rom_image
 from ._rzx import parse_rzx, make_rzx
-from ._scr import _SCRFileFormat
