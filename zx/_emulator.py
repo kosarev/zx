@@ -65,12 +65,12 @@ class PlaybackPlayer(object):
 
 
 class Emulator(Gtk.Window):
-    SCREEN_AREA_BACKGROUND_COLOUR = rgb('#1e1e1e')
+    _SCREEN_AREA_BACKGROUND_COLOUR = rgb('#1e1e1e')
 
-    SPIN_V0P5_INFO = {'id': 'info',
-                      'creator': b'SPIN 0.5            ',
-                      'creator_major_version': 0,
-                      'creator_minor_version': 5}
+    _SPIN_V0P5_INFO = {'id': 'info',
+                       'creator': b'SPIN 0.5            ',
+                       'creator_major_version': 0,
+                       'creator_minor_version': 5}
 
     def __init__(self, speed_factor=1.0, profile=None):
         super(Emulator, self).__init__()
@@ -85,13 +85,13 @@ class Emulator(Gtk.Window):
 
         self._notification = Notification()
         self.done = False
-        self._is_paused = False
+        self._is_paused_flag = False
         self._events_to_signal = Events.NO_EVENTS
 
         self.scale = 1 if SCREENCAST else 2
 
         self.area = Gtk.DrawingArea()
-        self.area.connect("draw", self.on_draw_area)
+        self.area.connect("draw", self._on_draw_area)
         self.add(self.area)
 
         self.set_title("ZX Spectrum Emulator")
@@ -104,7 +104,7 @@ class Emulator(Gtk.Window):
         minimum_size = self.frame_width // 4, self.frame_height // 4
         self.set_size_request(*minimum_size)
         self.set_position(Gtk.WindowPosition.CENTER)
-        self.connect("delete-event", self.on_done)
+        self.connect("delete-event", self._on_done)
 
         # Don't even show the window on full throttle.
         if self._speed_factor is not None:
@@ -134,12 +134,12 @@ class Emulator(Gtk.Window):
                    'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
                    'U', 'V', 'W', 'X', 'Y', 'Z']:
             self.keys[id] = KEYS_INFO[id]
-        self._emulator.set_on_input_callback(self.on_input)
-        self.connect("key-press-event", self.on_key_press)
-        self.connect("key-release-event", self.on_key_release)
+        self._emulator.set_on_input_callback(self._on_input)
+        self.connect("key-press-event", self._on_key_press)
+        self.connect("key-release-event", self._on_key_release)
 
-        self.connect("button-press-event", self.on_click)
-        self.connect("window-state-event", self.on_window_state_event)
+        self.connect("button-press-event", self._on_click)
+        self.connect("window-state-event", self._on_window_state_event)
 
         self.tape_player = TapePlayer()
 
@@ -156,10 +156,10 @@ class Emulator(Gtk.Window):
     def __exit__(self, type, value, tb):
         self.destroy()
 
-    def on_done(self, widget, context):
-        self.done = True
+    def _on_done(self, widget, context):
+        self._quit()
 
-    def on_draw_area(self, widget, context):
+    def _on_draw_area(self, widget, context):
         window_size = self.get_size()
         window_width, window_height = window_size
         width = min(window_width,
@@ -172,7 +172,7 @@ class Emulator(Gtk.Window):
         # Draw the background.
         context.save()
         context.rectangle(0, 0, window_width, window_height)
-        context.set_source_rgba(*self.SCREEN_AREA_BACKGROUND_COLOUR)
+        context.set_source_rgba(*self._SCREEN_AREA_BACKGROUND_COLOUR)
         context.fill()
 
         # Draw the emulated screen.
@@ -189,7 +189,7 @@ class Emulator(Gtk.Window):
 
         self._screencast.on_draw(context.get_group_target())
 
-    def show_help(self):
+    def _show_help(self):
         KEYS = [
             ('F1', 'Show help.'),
             ('F2', 'Save snapshot.'),
@@ -203,21 +203,21 @@ class Emulator(Gtk.Window):
         for entry in KEYS:
             print('%7s  %s' % entry)
 
-    def is_paused(self):
-        return self._is_paused
+    def _is_paused(self):
+        return self._is_paused_flag
 
-    def pause(self, is_paused=True):
-        self._is_paused = is_paused
-        if self.is_paused():
+    def _pause(self, is_paused=True):
+        self._is_paused_flag = is_paused
+        if self._is_paused():
             self._notification.set(draw_pause_notification,
                                    self._emulation_time)
         else:
             self._notification.clear()
 
-    def toggle_pause(self):
-        self.pause(not self.is_paused())
+    def _toggle_pause(self):
+        self._pause(not self._is_paused())
 
-    def error_box(self, title, message):
+    def _error_box(self, title, message):
         dialog = Gtk.MessageDialog(
             self, 0, Gtk.MessageType.ERROR,
             Gtk.ButtonsType.OK, title)
@@ -225,7 +225,7 @@ class Emulator(Gtk.Window):
         dialog.run()
         dialog.destroy()
 
-    def choose_and_load_file(self):
+    def _choose_and_load_file(self):
         # TODO: Add file filters.
         dialog = Gtk.FileChooserDialog(
             'Load file', self,
@@ -236,13 +236,13 @@ class Emulator(Gtk.Window):
         if dialog.run() == Gtk.ResponseType.OK:
             filename = dialog.get_filename()
             try:
-                self.load_file(filename)
+                self._load_file(filename)
             except Error as e:
-                self.error_box('File error', '%s' % e.args)
+                self._error_box('File error', '%s' % e.args)
 
         dialog.destroy()
 
-    def save_snapshot_file(self, format, filename):
+    def _save_snapshot_file(self, format, filename):
         try:
             with open(filename, 'wb') as f:
                 snapshot = format().make_snapshot(self._emulator)
@@ -253,9 +253,9 @@ class Emulator(Gtk.Window):
                     image = snapshot
                 f.write(image)
         except Error as e:
-            self.error_box('File error', '%s' % e.args)
+            self._error_box('File error', '%s' % e.args)
 
-    def save_snapshot(self):
+    def _save_snapshot(self):
         # TODO: Add file filters.
         dialog = Gtk.FileChooserDialog(
             'Save snapshot', self,
@@ -264,55 +264,56 @@ class Emulator(Gtk.Window):
              Gtk.STOCK_SAVE, Gtk.ResponseType.OK))
         dialog.set_do_overwrite_confirmation(True)
         if dialog.run() == Gtk.ResponseType.OK:
-            self.save_snapshot_file(Z80SnapshotFormat,
-                                    dialog.get_filename())
+            self._save_snapshot_file(Z80SnapshotFormat,
+                                     dialog.get_filename())
         dialog.destroy()
 
-    def quit(self):
+    # TODO: Make this a public function and hide the 'done' flag.
+    def _quit(self):
         self.done = True
 
-    def is_tape_paused(self):
+    def _is_tape_paused(self):
         return self.tape_player.is_paused()
 
-    def pause_tape(self, is_paused=True):
+    def _pause_tape(self, is_paused=True):
         self.tape_player.pause(is_paused)
 
-        draw = (draw_tape_pause_notification if self.is_tape_paused()
+        draw = (draw_tape_pause_notification if self._is_tape_paused()
                 else draw_tape_resume_notification)
         self._notification.set(draw, self.tape_player.get_time())
 
-    def unpause_tape(self):
-        self.pause_tape(is_paused=False)
+    def _unpause_tape(self):
+        self._pause_tape(is_paused=False)
 
-    def toggle_tape_pause(self):
-        self.pause_tape(not self.is_tape_paused())
+    def _toggle_tape_pause(self):
+        self._pause_tape(not self._is_tape_paused())
 
     def _load_tape_to_player(self, file):
         self.tape_player.load_tape(file)
-        self.pause_tape()
+        self._pause_tape()
 
-    def is_end_of_tape(self):
+    def _is_end_of_tape(self):
         return self.tape_player.is_end()
 
-    def on_window_state_event(self, widget, event):
+    def _on_window_state_event(self, widget, event):
         state = event.new_window_state
         self._is_fullscreen = bool(state & Gdk.WindowState.FULLSCREEN)
 
-    def toggle_fullscreen(self):
+    def _toggle_fullscreen(self):
         if self._is_fullscreen:
             self.unfullscreen()
         else:
             self.fullscreen()
 
-    KEY_HANDLERS = {
-        'ESCAPE': quit,
-        'F10': quit,
-        'F1': show_help,
-        'F2': save_snapshot,
-        'F3': choose_and_load_file,
-        'F6': toggle_tape_pause,
-        'F11': toggle_fullscreen,
-        'PAUSE': toggle_pause,
+    _KEY_HANDLERS = {
+        'ESCAPE': _quit,
+        'F10': _quit,
+        'F1': _show_help,
+        'F2': _save_snapshot,
+        'F3': _choose_and_load_file,
+        'F6': _toggle_tape_pause,
+        'F11': _toggle_fullscreen,
+        'PAUSE': _toggle_pause,
     }
 
     def _handle_key_stroke(self, key_info, pressed):
@@ -325,7 +326,7 @@ class Emulator(Gtk.Window):
         else:
             self.keyboard_state[addr_line - 8] |= mask
 
-    def generate_key_strokes(self, *keys):
+    def _generate_key_strokes(self, *keys):
         for key in keys:
             strokes = key.split('+')
 
@@ -337,41 +338,41 @@ class Emulator(Gtk.Window):
             for id in strokes:
                 # print(id)
                 self._handle_key_stroke(KEYS_INFO[id], pressed=True)
-                self.run(0.03)
+                self._run(0.03)
 
             for id in reversed(strokes):
                 # print(id)
                 self._handle_key_stroke(KEYS_INFO[id], pressed=False)
-                self.run(0.03)
+                self._run(0.03)
 
-    def on_key(self, event, pressed):
+    def _on_key(self, event, pressed):
         key_id = Gdk.keyval_name(event.keyval).upper()
         # print(key_id)
 
-        if pressed and key_id in self.KEY_HANDLERS:
-            self.KEY_HANDLERS[key_id](self)
+        if pressed and key_id in self._KEY_HANDLERS:
+            self._KEY_HANDLERS[key_id](self)
 
         key_info = self.keys.get(key_id, None)
         if key_info:
-            self.pause(False)
+            self._pause(False)
             self._quit_playback_mode()
 
             self._handle_key_stroke(key_info, pressed)
 
-    def on_key_press(self, widget, event):
-        self.on_key(event, pressed=True)
+    def _on_key_press(self, widget, event):
+        self._on_key(event, pressed=True)
 
-    def on_key_release(self, widget, event):
-        self.on_key(event, pressed=False)
+    def _on_key_release(self, widget, event):
+        self._on_key(event, pressed=False)
 
-    def on_click(self, widget, event):
+    def _on_click(self, widget, event):
         if event.type == Gdk.EventType.BUTTON_PRESS:
-            self.toggle_pause()
+            self._toggle_pause()
             return True
         elif event.type == Gdk.EventType._2BUTTON_PRESS:
-            self.toggle_fullscreen()
+            self._toggle_fullscreen()
 
-    def on_input(self, addr):
+    def _on_input(self, addr):
         # Handle playbacks.
         if self.playback_samples:
             sample = None
@@ -387,7 +388,7 @@ class Emulator(Gtk.Window):
                         len(self.playback_samples), sample_i),
                     id='too_few_input_samples')
 
-            # print('on_input() returns %d' % sample)
+            # print('_on_input() returns %d' % sample)
             return sample
 
         # Scan keyboard.
@@ -418,7 +419,7 @@ class Emulator(Gtk.Window):
             n |= 0x40
 
         END_OF_TAPE = Events.END_OF_TAPE
-        if END_OF_TAPE in self._events_to_signal and self.is_end_of_tape():
+        if END_OF_TAPE in self._events_to_signal and self._is_end_of_tape():
             self._emulator.raise_events(END_OF_TAPE)
             self._events_to_signal &= ~END_OF_TAPE
 
@@ -514,7 +515,7 @@ class Emulator(Gtk.Window):
 
                 frame_count += 1
 
-    def run_quantum(self):
+    def _run_quantum(self):
         if self.playback_player:
             creator_info = self.playback_player.find_recording_info_chunk()
 
@@ -534,7 +535,7 @@ class Emulator(Gtk.Window):
                 self._emulator.enable_trace()
             '''
 
-            if self._is_paused:
+            if self._is_paused():
                 # Give the CPU some spare time.
                 self.area.queue_draw()
                 time.sleep(1 / 50)
@@ -554,7 +555,7 @@ class Emulator(Gtk.Window):
                 # of the bytes-saving ROM procedure in
                 # fast save mode.
                 if (self.playback_samples and
-                        creator_info == self.SPIN_V0P5_INFO and
+                        creator_info == self._SPIN_V0P5_INFO and
                         self._emulator.get_pc() == 0x04d4):
                     sp = self._emulator.get_sp()
                     ret_addr = self._emulator.read16(sp)
@@ -583,7 +584,7 @@ class Emulator(Gtk.Window):
                 # SPIN doesn't update the fetch counter if the last
                 # instruction in frame is IN.
                 if (self.playback_samples and
-                        creator_info == self.SPIN_V0P5_INFO and
+                        creator_info == self._SPIN_V0P5_INFO and
                         self.playback_sample_i + 1 <
                         len(self.playback_sample_values)):
                     self._emulator.set_fetches_limit(1)
@@ -612,24 +613,24 @@ class Emulator(Gtk.Window):
                 assert sample == 'START_OF_FRAME'
                 self._emulator.on_handle_active_int()
 
-    def run(self, duration):
+    def _run(self, duration):
         end_time = self._emulation_time.get() + duration
         while not self.done and self._emulation_time.get() < end_time:
-            self.run_quantum()
+            self._run_quantum()
 
     def main(self):
         while not self.done:
-            self.run_quantum()
+            self._run_quantum()
 
         self._quit_playback_mode()
 
-    def load_input_recording(self, file):
+    def _load_input_recording(self, file):
         self.playback_player = PlaybackPlayer(file)
         creator_info = self.playback_player.find_recording_info_chunk()
 
         # SPIN v0.5 alters ROM to implement fast tape loading,
         # but that affects recorded RZX files.
-        if creator_info == self.SPIN_V0P5_INFO:
+        if creator_info == self._SPIN_V0P5_INFO:
             self._emulator.set_memory_block(0x1f47, b'\xf5')
 
         # The bytes-saving ROM procedure needs special processing.
@@ -642,21 +643,21 @@ class Emulator(Gtk.Window):
             break
         assert sample == 'START_OF_FRAME'
 
-    def load_file(self, filename):
+    def _load_file(self, filename):
         file = parse_file(filename)
 
         if isinstance(file, MachineSnapshot):
             self._emulator.install_snapshot(file)
         elif isinstance(file, RZXFile):
-            self.load_input_recording(file)
+            self._load_input_recording(file)
             self._enter_playback_mode()
         elif isinstance(file, SoundFile):
             self._load_tape_to_player(file)
         else:
             raise Error("Don't know how to load file %r." % filename)
 
-    def run_file(self, filename):
-        self.load_file(filename)
+    def _run_file(self, filename):
+        self._load_file(filename)
         self.main()
 
     def load_tape(self, filename):
@@ -666,19 +667,19 @@ class Emulator(Gtk.Window):
 
         # Let the initialization complete.
         self._emulator.set_pc(0x0000)
-        self.run(1.8)
+        self._run(1.8)
 
         # Type in 'LOAD ""'.
-        self.generate_key_strokes('J', 'SS+P', 'SS+P', 'ENTER')
+        self._generate_key_strokes('J', 'SS+P', 'SS+P', 'ENTER')
 
         # Load and run the tape.
         self._load_tape_to_player(tape)
-        self.unpause_tape()
+        self._unpause_tape()
 
         # Wait till the end of the tape.
         self._events_to_signal |= Events.END_OF_TAPE
-        while not self.done and not self.is_end_of_tape():
-            self.run_quantum()
+        while not self.done and not self._is_end_of_tape():
+            self._run_quantum()
 
     def set_breakpoint(self, addr):
         self._emulator.set_breakpoint(addr)

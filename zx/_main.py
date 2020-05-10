@@ -55,7 +55,7 @@ def run(args):
 
     app = Emulator()
     if filename:
-        app.load_file(filename)
+        app._load_file(filename)
     app.main()
     app.destroy()
 
@@ -68,7 +68,7 @@ def profile(args):
 
     profile = Profile()
     app = Emulator(profile=profile)
-    app.load_file(file_to_run)
+    app._load_file(file_to_run)
     app.main()
     app.destroy()
 
@@ -132,7 +132,7 @@ def test_file(filename):
 
     app = Emulator(speed_factor=None)
     try:
-        app.run_file(filename)
+        app._run_file(filename)
         if app.done:
             return False
         move('passed')
@@ -153,7 +153,7 @@ def test(args):
 def fastforward(args):
     for filename in args:
         app = Emulator(speed_factor=0)
-        app.run_file(filename)
+        app._run_file(filename)
         if app.done:
             break
 
@@ -172,7 +172,7 @@ def _convert_tape_to_snapshot(src, src_filename, src_format,
     app.load_tape(src_filename)
 
     # Save snapshot and quit.
-    app.save_snapshot_file(dest_format, dest_filename)
+    app._save_snapshot_file(dest_format, dest_filename)
     app.destroy()
 
 
@@ -190,8 +190,8 @@ def _convert_snapshot_to_snapshot(src, src_filename, src_format,
     assert issubclass(dest_format, SnapshotFormat), dest_format
 
     app = Emulator(speed_factor=None)
-    app.load_file(src_filename)
-    app.save_snapshot_file(dest_format, dest_filename)
+    app._load_file(src_filename)
+    app._save_snapshot_file(dest_format, dest_filename)
     app.destroy()
 
 
