@@ -67,7 +67,7 @@ class _MachineSnapshot(File):
     pass
 
 
-class _UnifiedSnapshot(_MachineSnapshot):
+class UnifiedSnapshot(_MachineSnapshot):
     pass
 
 

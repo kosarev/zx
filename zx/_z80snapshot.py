@@ -12,6 +12,7 @@
 from ._binary import BinaryParser, BinaryWriter
 from ._data import ProcessorSnapshot
 from ._data import SnapshotFormat
+from ._data import UnifiedSnapshot
 from ._error import Error
 from ._utils import make16
 import collections
@@ -112,7 +113,7 @@ class Z80Snapshot(zx._MachineSnapshot):
                 image = block['image']
                 memory_blocks.append((self._MEMORY_PAGE_ADDRS[page_no], image))
 
-        return zx._UnifiedSnapshot(Z80SnapshotFormat, fields)
+        return UnifiedSnapshot(Z80SnapshotFormat, fields)
 
 
 class Z80SnapshotFormat(SnapshotFormat):

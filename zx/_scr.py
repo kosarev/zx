@@ -12,6 +12,7 @@
 from ._binary import BinaryParser, BinaryWriter
 from ._data import ProcessorSnapshot
 from ._data import SnapshotFormat
+from ._data import UnifiedSnapshot
 from ._utils import _split16
 import collections
 import zx
@@ -40,7 +41,7 @@ class _SCRSnapshot(zx._MachineSnapshot):
         # LOOP_ADDR: jp LOOP_ADDR
         memory_blocks.append((LOOP_ADDR, b'\xc3' + bytes(_split16(LOOP_ADDR))))
 
-        return zx._UnifiedSnapshot(SCRFileFormat, fields)
+        return UnifiedSnapshot(SCRFileFormat, fields)
 
     def get_file_image(self):
         return self['dot_patterns'] + self['colour_attrs']
