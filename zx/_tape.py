@@ -9,7 +9,7 @@
 #   Published under the MIT license.
 
 
-from ._utils import Time
+from ._time import Time
 
 
 def _get_pilot_pulses(pilot_tone_len,

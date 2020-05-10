@@ -35,9 +35,9 @@ from ._rzx import RZXFileFormat
 from ._scr import SCRFileFormat
 from ._tape import TapePlayer
 from ._tap import TAPFileFormat
+from ._time import Time
 from ._tzx import TZXFileFormat
 from ._utils import div_ceil
-from ._utils import Time
 from ._wav import WAVFileFormat
 from ._z80snapshot import Z80SnapshotFormat
 from ._zip import ZIPFileFormat
@@ -46,16 +46,6 @@ from gi.repository import Gtk, Gdk  # nopep8
 
 
 SCREENCAST = False
-
-
-def get_timestamp():
-    # TODO: We can use this since Python 3.7.
-    # return time.time_ns() / (10 ** 9)
-    return time.time()
-
-
-def get_elapsed_time(timestamp):
-    return get_timestamp() - timestamp
 
 
 def detect_file_format(image, filename_extension):

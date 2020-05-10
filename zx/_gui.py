@@ -9,6 +9,8 @@
 #   Published under the MIT license.
 
 import cairo
+from ._time import get_elapsed_time
+from ._time import get_timestamp
 
 
 PI = 3.1415926535
