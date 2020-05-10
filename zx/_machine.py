@@ -9,8 +9,15 @@
 #   Published under the MIT license.
 
 
-import struct, zx
+import struct, enum, zx
 from ._emulator import Spectrum48Base
+
+
+class _Events(enum.IntFlag):
+    NO_EVENTS         = 0
+    END_OF_FRAME      = 1 << 1
+    FETCHES_LIMIT_HIT = 1 << 3
+    BREAKPOINT_HIT    = 1 << 4
 
 
 class StateImage(object):
@@ -229,12 +236,6 @@ class MachineState(ProcessorState, MemoryState):
 
 
 class Spectrum48(Spectrum48Base, MachineState):
-    # Events.
-    _NO_EVENTS         = 0
-    _END_OF_FRAME      = 1 << 1
-    _FETCHES_LIMIT_HIT = 1 << 3
-    _BREAKPOINT_HIT    = 1 << 4
-
     # Memory marks.
     _NO_MARKS        = 0
     _BREAKPOINT_MARK = 1 << 0

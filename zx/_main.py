@@ -788,10 +788,10 @@ class Emulator(Gtk.Window):
                 time.sleep(1 / 50)
                 return
 
-            events = self._emulator.run()
+            events = zx._Events(self._emulator.run())
             # TODO: print(events)
 
-            if events & self._emulator._BREAKPOINT_HIT:
+            if zx._Events.BREAKPOINT_HIT in events:
                 self.on_breakpoint()
 
                 if self._profile:
@@ -809,7 +809,7 @@ class Emulator(Gtk.Window):
                     self._emulator.set_sp(sp + 2)
                     self._emulator.set_pc(ret_addr)
 
-            if events & self._emulator._END_OF_FRAME:
+            if zx._Events.END_OF_FRAME in events:
                 if self._speed_factor is not None:
                     self._emulator.render_screen()
                     self.frame_data[:] = self._emulator.get_frame_pixels()
@@ -819,8 +819,7 @@ class Emulator(Gtk.Window):
                 self.tape_player.skip_rest_of_frame()
                 self._emulation_time.advance(1 / 50)
 
-            if (self.playback_samples and
-                events & self._emulator._FETCHES_LIMIT_HIT):
+            if self.playback_samples and zx._Events.FETCHES_LIMIT_HIT in events:
                 # Some simulators, e.g., SPIN, may store an interrupt
                 # point in the middle of a IX- or IY-prefixed
                 # instruction, so we continue until such
