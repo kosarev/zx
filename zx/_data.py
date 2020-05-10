@@ -63,11 +63,11 @@ class SnapshotFormat(FileFormat):
     pass
 
 
-class _MachineSnapshot(File):
+class MachineSnapshot(File):
     pass
 
 
-class UnifiedSnapshot(_MachineSnapshot):
+class UnifiedSnapshot(MachineSnapshot):
     pass
 
 

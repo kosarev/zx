@@ -10,5 +10,5 @@
 
 
 from ._data import Data, File, FileFormat, ArchiveFileFormat
-from ._data import SoundFile, SoundFileFormat, _MachineSnapshot
+from ._data import SoundFile, SoundFileFormat
 from ._main import main, Emulator

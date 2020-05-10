@@ -10,6 +10,7 @@
 
 
 from ._binary import BinaryParser, BinaryWriter
+from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
 from ._data import SnapshotFormat
 from ._data import UnifiedSnapshot
@@ -18,7 +19,7 @@ import collections
 import zx
 
 
-class _SCRSnapshot(zx._MachineSnapshot):
+class _SCRSnapshot(MachineSnapshot):
     def get_unified_snapshot(self):
         # The address of the endless loop.
         LOOP_ADDR = 0x8000

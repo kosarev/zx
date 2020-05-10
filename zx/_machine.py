@@ -10,6 +10,7 @@
 
 
 import struct, enum, zx
+from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
 from ._emulator import Spectrum48Base
 from ._rom import get_rom_image
@@ -229,7 +230,7 @@ class MachineState(ProcessorState, MemoryState):
         self.set('trace_enabled', int(enable))
 
     def install_snapshot(self, snapshot):
-        assert isinstance(snapshot, zx._MachineSnapshot)
+        assert isinstance(snapshot, MachineSnapshot)
         for field, value in snapshot.get_unified_snapshot().items():
             if field == 'processor_snapshot':
                 ProcessorState.install_snapshot(self, value)

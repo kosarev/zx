@@ -12,6 +12,7 @@
 
 import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
+from ._data import MachineSnapshot
 from ._data import SnapshotFormat
 from ._error import Error
 from ._keyboard import KEYS_INFO
@@ -507,7 +508,7 @@ class Emulator(Gtk.Window):
             with open(filename, 'wb') as f:
                 snapshot = format().make_snapshot(self._emulator)
                 # TODO: make_snapshot() shall always return a snapshot object.
-                if issubclass(type(snapshot), zx._MachineSnapshot):
+                if issubclass(type(snapshot), MachineSnapshot):
                     image = snapshot.get_file_image()
                 else:
                     image = snapshot
@@ -732,7 +733,7 @@ class Emulator(Gtk.Window):
 
         frame_count = 0
         for chunk_i, chunk in enumerate(self.playback_player.get_chunks()):
-            if isinstance(chunk, zx._MachineSnapshot):
+            if isinstance(chunk, MachineSnapshot):
                 self._emulator.install_snapshot(chunk)
                 continue
 
@@ -901,7 +902,7 @@ class Emulator(Gtk.Window):
     def load_file(self, filename):
         file = parse_file(filename)
 
-        if isinstance(file, zx._MachineSnapshot):
+        if isinstance(file, MachineSnapshot):
             self._emulator.install_snapshot(file)
         elif isinstance(file, RZXFile):
             self.load_input_recording(file)

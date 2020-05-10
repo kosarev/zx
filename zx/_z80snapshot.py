@@ -10,6 +10,7 @@
 
 
 from ._binary import BinaryParser, BinaryWriter
+from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
 from ._data import SnapshotFormat
 from ._data import UnifiedSnapshot
@@ -33,7 +34,7 @@ def _get_format_version(fields):
     return _V1_FORMAT
 
 
-class Z80Snapshot(zx._MachineSnapshot):
+class Z80Snapshot(MachineSnapshot):
     _MEMORY_PAGE_ADDRS = {4: 0x8000, 5: 0xc000, 8: 0x4000}
 
     def get_unified_snapshot(self):
