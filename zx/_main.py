@@ -13,6 +13,7 @@
 import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
 from ._data import ArchiveFileFormat
+from ._data import FileFormat
 from ._data import MachineSnapshot
 from ._data import SnapshotFormat
 from ._data import SoundFile
@@ -41,7 +42,7 @@ class RZXFile(zx.Data):
         self._recording = recording
 
 
-class RZXFileFormat(zx.FileFormat):
+class RZXFileFormat(FileFormat):
     def parse(self, image):
         recording = parse_rzx(image)
         return RZXFile(recording)

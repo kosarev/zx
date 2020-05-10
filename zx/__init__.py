@@ -9,5 +9,5 @@
 #   Published under the MIT license.
 
 
-from ._data import Data, File, FileFormat
+from ._data import Data, File
 from ._main import main, Emulator
