@@ -11,6 +11,7 @@
 
 import struct, enum, zx
 from ._emulator import Spectrum48Base
+from ._rom import get_rom_image
 from ._utils import make16
 
 
@@ -247,7 +248,7 @@ class Spectrum48(Spectrum48Base, MachineState):
         MachineState.__init__(self, self.get_state_image(), self.get_memory())
 
         # Install ROM.
-        self.set_memory_block(0x0000, zx.get_rom_image(self.machine_kind))
+        self.set_memory_block(0x0000, get_rom_image(self.machine_kind))
 
     def set_breakpoints(self, addr, size):
         self.mark_addrs(addr, size, self._BREAKPOINT_MARK)
