@@ -9,6 +9,9 @@
 #   Published under the MIT license.
 
 
+from ._utils import Time
+
+
 def _get_pilot_pulses(pilot_tone_len,
                       pilot_pulse_len=2168):
     for _ in range(pilot_tone_len):
@@ -77,3 +80,89 @@ def tag_last_pulse(pulses):
         if 'END' not in ids:
             ids = tuple(list(ids) + ['END'])
             yield level, pulse, ids
+
+
+class TapePlayer(object):
+    def __init__(self):
+        self._is_paused = True
+        self._pulses = None
+        self._tick = 0
+        self._level = False
+        self._pulse = 0
+        self._ticks_per_frame = 69888  # TODO
+        self._time = Time()
+
+    def is_paused(self):
+        return self._is_paused
+
+    def pause(self, is_paused=True):
+        self._is_paused = is_paused
+
+    def unpause(self):
+        self.pause(is_paused=False)
+
+    def toggle_pause(self):
+        self.pause(not self.is_paused())
+
+    def is_end(self):
+        return self._pulses is None
+
+    def get_time(self):
+        return self._time
+
+    def load_parsed_file(self, file):
+        self._pulses = file.get_pulses()
+        self._level = False
+        self.pause()
+
+    def load_tape(self, file):
+        self.load_parsed_file(file)
+
+    def get_level_at_frame_tick(self, tick):
+        assert self._tick <= tick, (self._tick, tick)
+
+        while self._tick < tick:
+            if self._is_paused:
+                self._tick = tick
+                continue
+
+            # See if we already have a non-zero-length pulse.
+            if self._pulse:
+                ticks_to_skip = min(self._pulse, tick - self._tick)
+                self._pulse -= ticks_to_skip
+                self._tick += ticks_to_skip
+                self._time.advance(ticks_to_skip /
+                                   (self._ticks_per_frame * 50))
+                continue
+
+            # Get subsequent pulse, if any.
+            new_pulse = None
+            if self._pulses:
+                for new_pulse in self._pulses:
+                    break
+
+            if new_pulse:
+                # print(new_pulse)
+                self._level, self._pulse, ids = new_pulse
+
+                # The tape shall be considered stopped as soon as the last
+                # pulse is fetched, and not on the next attempt to fetch a
+                # pulse.
+                if 'END' in ids:
+                    self._pulses = None
+
+                continue
+
+            # Do nothing, if there are no more pulses available.
+            self._pulses = None
+            self._level = False
+            self._tick = tick
+
+        return self._level
+
+    def skip_rest_of_frame(self):
+        if self._tick < self._ticks_per_frame:
+            self.get_level_at_frame_tick(self._ticks_per_frame)
+
+        assert self._tick >= self._ticks_per_frame
+        self._tick -= self._ticks_per_frame
