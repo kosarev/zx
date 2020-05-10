@@ -14,6 +14,7 @@ import cairo, gi, os, sys, time, collections
 import zx, zx._gui as _gui
 from ._data import MachineSnapshot
 from ._data import SnapshotFormat
+from ._data import SoundFile
 from ._data import SoundFileFormat
 from ._error import Error
 from ._keyboard import KEYS_INFO
@@ -908,7 +909,7 @@ class Emulator(Gtk.Window):
         elif isinstance(file, RZXFile):
             self.load_input_recording(file)
             self._enter_playback_mode()
-        elif isinstance(file, zx.SoundFile):
+        elif isinstance(file, SoundFile):
             self._load_tape_to_player(file)
         else:
             raise Error("Don't know how to load file %r." % filename)
@@ -919,7 +920,7 @@ class Emulator(Gtk.Window):
 
     def load_tape(self, filename):
         tape = parse_file(filename)
-        if not isinstance(tape, zx.SoundFile):
+        if not isinstance(tape, SoundFile):
             raise Error('%r does not seem to be a tape file.' % filename)
 
         # Let the initialization complete.

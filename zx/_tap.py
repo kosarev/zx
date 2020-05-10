@@ -10,16 +10,17 @@
 
 
 from ._binary import BinaryParser
+from ._data import SoundFile
 from ._data import SoundFileFormat
 from ._tape import get_block_pulses, tag_last_pulse
 import zx
 
 
-class TAPFile(zx.SoundFile):
+class TAPFile(SoundFile):
     _TICKS_FREQ = 3500000
 
     def __init__(self, fields):
-        zx.SoundFile.__init__(self, TAPFileFormat, fields)
+        SoundFile.__init__(self, TAPFileFormat, fields)
 
     def _generate_pulses(self):
         level = False

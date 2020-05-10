@@ -10,5 +10,4 @@
 
 
 from ._data import Data, File, FileFormat, ArchiveFileFormat
-from ._data import SoundFile
 from ._main import main, Emulator
