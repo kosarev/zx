@@ -17,7 +17,7 @@ from ._error import Error
 from ._file import parse_file
 from ._gui import ScreenWindow
 from ._keyboard import KEYS_INFO
-from ._machine import Events
+from ._machine import RunEvents
 from ._machine import Spectrum48
 from ._rzx import RZXFile
 from ._tape import TapePlayer
@@ -55,7 +55,7 @@ class Emulator(object):
         self.done = False
 
         self._is_paused_flag = False
-        self._events_to_signal = Events.NO_EVENTS
+        self._events_to_signal = RunEvents.NO_EVENTS
 
         # Don't even create the window on full throttle.
         self._devices = devices if devices is not None else []
@@ -209,7 +209,7 @@ class Emulator(object):
         if self.tape_player.get_level_at_frame_tick(tick):
             n |= 0x40
 
-        END_OF_TAPE = Events.END_OF_TAPE
+        END_OF_TAPE = RunEvents.END_OF_TAPE
         if END_OF_TAPE in self._events_to_signal and self._is_end_of_tape():
             self._machine.raise_events(END_OF_TAPE)
             self._events_to_signal &= ~END_OF_TAPE
@@ -331,10 +331,10 @@ class Emulator(object):
                     time.sleep((1 / 50) * self._speed_factor)
                 return
 
-            events = Events(self._machine.run())
+            events = RunEvents(self._machine.run())
             # TODO: print(events)
 
-            if Events.BREAKPOINT_HIT in events:
+            if RunEvents.BREAKPOINT_HIT in events:
                 self.on_breakpoint()
 
                 if self._profile:
@@ -352,7 +352,7 @@ class Emulator(object):
                     self._machine.set_sp(sp + 2)
                     self._machine.set_pc(ret_addr)
 
-            if Events.END_OF_FRAME in events:
+            if RunEvents.END_OF_FRAME in events:
                 self._machine.render_screen()
 
                 pixels = self._machine.get_frame_pixels()
@@ -364,7 +364,7 @@ class Emulator(object):
                 if self._speed_factor:
                     time.sleep((1 / 50) * self._speed_factor)
 
-            if self.playback_samples and Events.FETCHES_LIMIT_HIT in events:
+            if self.playback_samples and RunEvents.FETCHES_LIMIT_HIT in events:
                 # Some simulators, e.g., SPIN, may store an interrupt
                 # point in the middle of a IX- or IY-prefixed
                 # instruction, so we continue until such
@@ -469,7 +469,7 @@ class Emulator(object):
         self._unpause_tape()
 
         # Wait till the end of the tape.
-        self._events_to_signal |= Events.END_OF_TAPE
+        self._events_to_signal |= RunEvents.END_OF_TAPE
         while not self.done and not self._is_end_of_tape():
             self._run_quantum()
 
