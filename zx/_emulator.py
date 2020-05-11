@@ -423,11 +423,15 @@ class Emulator(object):
         while not self.done and self._emulation_time.get() < end_time:
             self._run_quantum()
 
-    def main(self):
+    def run(self):
         while not self.done:
             self._run_quantum()
 
         self._quit_playback_mode()
+
+    # TODO: Deprecated. Remove.
+    def main(self):
+        self.run()
 
     def _load_input_recording(self, file):
         self._playback_player = PlaybackPlayer(file)
@@ -463,7 +467,7 @@ class Emulator(object):
 
     def _run_file(self, filename):
         self._load_file(filename)
-        self.main()
+        self.run()
 
     def load_tape(self, filename):
         tape = parse_file(filename)

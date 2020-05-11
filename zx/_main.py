@@ -58,7 +58,7 @@ def run(args):
     with Emulator() as app:
         if filename:
             app._load_file(filename)
-        app.main()
+        app.run()
 
 
 def profile(args):
@@ -70,7 +70,7 @@ def profile(args):
     profile = Profile()
     with Emulator(profile=profile) as app:
         app._load_file(file_to_run)
-        app.main()
+        app.run()
 
     # TODO: Amend profile data by reading them out first instead
     # of overwriting.
