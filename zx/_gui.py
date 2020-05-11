@@ -172,9 +172,10 @@ class ScreenWindow(Device):
         }
 
         self._EMULATOR_EVENT_HANDLERS = {
-            EmulatorEvent.PAUSE_STATE_UPDATED: self._on_pause_state_update,
-            EmulatorEvent.TAPE_STATE_UPDATED: self._on_tape_state_update,
-            EmulatorEvent.RUN_QUANTUM: self._on_run_quantum,
+            EmulatorEvent.PAUSE_STATE_UPDATED: self._on_updated_pause_state,
+            EmulatorEvent.QUANTUM_RUN: self._on_quantum_run,
+            EmulatorEvent.SCREEN_UPDATED: self._on_updated_screen,
+            EmulatorEvent.TAPE_STATE_UPDATED: self._on_updated_tape_state,
         }
 
         self._notification = Notification()
@@ -260,7 +261,7 @@ class ScreenWindow(Device):
 
         self._screencast.on_draw(context.get_group_target())
 
-    def update_frame(self, pixels):
+    def _on_updated_screen(self, pixels):
         self.frame_data[:] = pixels
         self.area.queue_draw()
 
@@ -356,24 +357,24 @@ class ScreenWindow(Device):
         state = event.new_window_state
         self._is_fullscreen = bool(state & Gdk.WindowState.FULLSCREEN)
 
-    def _on_emulator_event(self, id):
-        self._EMULATOR_EVENT_HANDLERS[id]()
+    def _on_emulator_event(self, id, *args):
+        self._EMULATOR_EVENT_HANDLERS[id](*args)
 
-    def _on_pause_state_update(self):
+    def _on_updated_pause_state(self):
         if self.emulator._is_paused():
             self._notification.set(draw_pause_notification,
                                    self.emulator._emulation_time)
         else:
             self._notification.clear()
 
-    def _on_tape_state_update(self):
+    def _on_updated_tape_state(self):
         tape_paused = self.emulator._is_tape_paused()
         draw = (draw_tape_pause_notification if tape_paused
                 else draw_tape_resume_notification)
         tape_time = self.emulator.tape_player.get_time()
         self._notification.set(draw, tape_time)
 
-    def _on_run_quantum(self):
+    def _on_quantum_run(self):
         while Gtk.events_pending():
             Gtk.main_iteration()
 

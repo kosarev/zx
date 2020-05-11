@@ -86,9 +86,9 @@ class Emulator(object):
     def _is_paused(self):
         return self._is_paused_flag
 
-    def _notify(self, id):
+    def _notify(self, id, *args):
         if self._screen_window:
-            self._screen_window._on_emulator_event(id)
+            self._screen_window._on_emulator_event(id, *args)
 
     def _pause(self, is_paused=True):
         self._is_paused_flag = is_paused
@@ -308,7 +308,7 @@ class Emulator(object):
             creator_info = self.playback_player.find_recording_info_chunk()
 
         if True:  # TODO
-            self._notify(EmulatorEvent.RUN_QUANTUM)
+            self._notify(EmulatorEvent.QUANTUM_RUN)
 
             # TODO: For debug purposes.
             '''
@@ -350,11 +350,10 @@ class Emulator(object):
                     self._emulator.set_pc(ret_addr)
 
             if Events.END_OF_FRAME in events:
-                if self._screen_window:
-                    self._emulator.render_screen()
+                self._emulator.render_screen()
 
-                    pixels = self._emulator.get_frame_pixels()
-                    self._screen_window.update_frame(pixels)
+                pixels = self._emulator.get_frame_pixels()
+                self._notify(EmulatorEvent.SCREEN_UPDATED, pixels)
 
                 self.tape_player.skip_rest_of_frame()
                 self._emulation_time.advance(1 / 50)

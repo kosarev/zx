@@ -13,8 +13,9 @@ import enum
 
 class EmulatorEvent(enum.Enum):
     PAUSE_STATE_UPDATED = enum.auto()
+    QUANTUM_RUN = enum.auto()
+    SCREEN_UPDATED = enum.auto()
     TAPE_STATE_UPDATED = enum.auto()
-    RUN_QUANTUM = enum.auto()
 
 
 class Device(object):
