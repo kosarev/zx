@@ -19,6 +19,7 @@ from ._data import SnapshotFormat
 from ._data import SoundFileFormat
 from ._emulator import Emulator
 from ._error import Error
+from ._error import USER_ERRORS
 from ._error import verbalize_error
 from ._file import parse_file
 from ._rzx import make_rzx
@@ -267,7 +268,7 @@ def handle_command_line(args):
 def main():
     try:
         handle_command_line(sys.argv[1:])
-    except BaseException as e:
+    except USER_ERRORS as e:
         sys.exit('zx: %s' % verbalize_error(e))
 
 

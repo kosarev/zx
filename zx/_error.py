@@ -18,6 +18,9 @@ class Error(Exception):
             self.id = id
 
 
+USER_ERRORS = Error, IOError
+
+
 def verbalize_error(e):
     if isinstance(e, Error):
         reason, = e.args
