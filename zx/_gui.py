@@ -161,8 +161,8 @@ class ScreenWindow(Device):
         self._window = Gtk.Window()
 
         self._KEY_HANDLERS = {
-            'ESCAPE': self.emulator._quit,
-            'F10': self.emulator._quit,
+            'ESCAPE': self.emulator.quit,
+            'F10': self.emulator.quit,
             'F1': self._show_help,
             'F2': self._save_snapshot,
             'F3': self._choose_and_load_file,
@@ -201,7 +201,7 @@ class ScreenWindow(Device):
         minimum_size = self.frame_width // 4, self.frame_height // 4
         self._window.set_size_request(*minimum_size)
         self._window.set_position(Gtk.WindowPosition.CENTER)
-        self._window.connect("delete-event", self.emulator._on_done)
+        self._window.connect('delete-event', self._on_done)
 
         self._window.show_all()
 
@@ -352,6 +352,9 @@ class ScreenWindow(Device):
             return True
         elif event.type == Gdk.EventType._2BUTTON_PRESS:
             self._toggle_fullscreen()
+
+    def _on_done(self, widget, context):
+        self.emulator.quit()
 
     def _on_window_state_event(self, widget, event):
         state = event.new_window_state

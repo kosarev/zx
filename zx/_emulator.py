@@ -50,7 +50,9 @@ class Emulator(object):
         self._emulation_time = Time()
         self._speed_factor = speed_factor
 
+        # TODO: Hide this flag. Its public use is deprecated.
         self.done = False
+
         self._is_paused_flag = False
         self._events_to_signal = Events.NO_EVENTS
 
@@ -83,9 +85,6 @@ class Emulator(object):
     def __exit__(self, type, value, tb):
         self.destroy()
 
-    def _on_done(self, widget, context):
-        self._quit()
-
     def _is_paused(self):
         return self._is_paused_flag
 
@@ -110,8 +109,7 @@ class Emulator(object):
                 image = snapshot
             f.write(image)
 
-    # TODO: Make this a public function and hide the 'done' flag.
-    def _quit(self):
+    def quit(self):
         self.done = True
 
     def _is_tape_paused(self):
