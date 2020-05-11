@@ -104,10 +104,10 @@ class Emulator(object):
         self._keyboard_state = KeyboardState()
         self._machine.set_on_input_callback(self._on_input)
 
-        self.tape_player = TapePlayer()
+        self._tape_player = TapePlayer()
 
-        self.playback_player = None
-        self.playback_samples = None
+        self._playback_player = None
+        self._playback_samples = None
 
         self._profile = profile
         if self._profile:
@@ -151,10 +151,10 @@ class Emulator(object):
         self.done = True
 
     def _is_tape_paused(self):
-        return self.tape_player.is_paused()
+        return self._tape_player.is_paused()
 
     def _pause_tape(self, is_paused=True):
-        self.tape_player.pause(is_paused)
+        self._tape_player.pause(is_paused)
         self._notify(DeviceEvent.TAPE_STATE_UPDATED)
 
     def _unpause_tape(self):
@@ -164,11 +164,11 @@ class Emulator(object):
         self._pause_tape(not self._is_tape_paused())
 
     def _load_tape_to_player(self, file):
-        self.tape_player.load_tape(file)
+        self._tape_player.load_tape(file)
         self._pause_tape()
 
     def _is_end_of_tape(self):
-        return self.tape_player.is_end()
+        return self._tape_player.is_end()
 
     def _handle_key_stroke(self, key_info, pressed):
         self._keyboard_state.handle_key_stroke(key_info, pressed)
@@ -194,9 +194,9 @@ class Emulator(object):
 
     def _on_input(self, addr):
         # Handle playbacks.
-        if self.playback_samples:
+        if self._playback_samples:
             sample = None
-            for sample in self.playback_samples:
+            for sample in self._playback_samples:
                 break
 
             if sample == 'END_OF_FRAME':
@@ -205,7 +205,7 @@ class Emulator(object):
                     'Given %d, used %d.' % (
                         self.playback_frame_count,
                         len(self.playback_chunk['frames']),
-                        len(self.playback_samples), sample_i),
+                        len(self._playback_samples), sample_i),
                     id='too_few_input_samples')
 
             # print('_on_input() returns %d' % sample)
@@ -219,7 +219,7 @@ class Emulator(object):
         #       instead of the tick of the beginning of the input
         #       cycle.
         tick = self._machine.get_ticks_since_int()
-        if self.tape_player.get_level_at_frame_tick(tick):
+        if self._tape_player.get_level_at_frame_tick(tick):
             n |= 0x40
 
         END_OF_TAPE = RunEvents.END_OF_TAPE
@@ -262,8 +262,8 @@ class Emulator(object):
         # self._machine.enable_trace()
 
     def _quit_playback_mode(self):
-        self.playback_player = None
-        self.playback_samples = None
+        self._playback_player = None
+        self._playback_samples = None
 
         self._machine.suppress_int(False)
         self._machine.allow_int_after_ei(False)
@@ -276,7 +276,7 @@ class Emulator(object):
         self.playback_sample_i = 0
 
         frame_count = 0
-        for chunk_i, chunk in enumerate(self.playback_player.get_chunks()):
+        for chunk_i, chunk in enumerate(self._playback_player.get_chunks()):
             if isinstance(chunk, MachineSnapshot):
                 self._machine.install_snapshot(chunk)
                 continue
@@ -320,8 +320,8 @@ class Emulator(object):
                 frame_count += 1
 
     def _run_quantum(self):
-        if self.playback_player:
-            creator_info = self.playback_player.find_recording_info_chunk()
+        if self._playback_player:
+            creator_info = self._playback_player.find_recording_info_chunk()
 
         if True:  # TODO
             self._notify(DeviceEvent.QUANTUM_RUN)
@@ -357,7 +357,7 @@ class Emulator(object):
                 # SPIN v0.5 skips executing instructions
                 # of the bytes-saving ROM procedure in
                 # fast save mode.
-                if (self.playback_samples and
+                if (self._playback_samples and
                         creator_info == self._SPIN_V0P5_INFO and
                         self._machine.get_pc() == 0x04d4):
                     sp = self._machine.get_sp()
@@ -371,13 +371,13 @@ class Emulator(object):
                 pixels = self._machine.get_frame_pixels()
                 self._notify(DeviceEvent.SCREEN_UPDATED, pixels)
 
-                self.tape_player.skip_rest_of_frame()
+                self._tape_player.skip_rest_of_frame()
                 self._emulation_time.advance(1 / 50)
 
                 if self._speed_factor:
                     time.sleep((1 / 50) * self._speed_factor)
 
-            if self.playback_samples and RunEvents.FETCHES_LIMIT_HIT in events:
+            if self._playback_samples and RunEvents.FETCHES_LIMIT_HIT in events:
                 # Some simulators, e.g., SPIN, may store an interrupt
                 # point in the middle of a IX- or IY-prefixed
                 # instruction, so we continue until such
@@ -388,7 +388,7 @@ class Emulator(object):
 
                 # SPIN doesn't update the fetch counter if the last
                 # instruction in frame is IN.
-                if (self.playback_samples and
+                if (self._playback_samples and
                         creator_info == self._SPIN_V0P5_INFO and
                         self.playback_sample_i + 1 <
                         len(self.playback_sample_values)):
@@ -396,7 +396,7 @@ class Emulator(object):
                     return
 
                 sample = None
-                for sample in self.playback_samples:
+                for sample in self._playback_samples:
                     break
                 if sample != 'END_OF_FRAME':
                     raise Error(
@@ -404,12 +404,12 @@ class Emulator(object):
                         'Given %d, used %d.' % (
                             self.playback_frame_count,
                             len(self.playback_chunk['frames']),
-                            len(self.playback_samples),
+                            len(self._playback_samples),
                             self.playback_sample_i + 1),
                         id='too_many_input_samples')
 
                 sample = None
-                for sample in self.playback_samples:
+                for sample in self._playback_samples:
                     break
                 if sample is None:
                     self.done = True
@@ -430,8 +430,8 @@ class Emulator(object):
         self._quit_playback_mode()
 
     def _load_input_recording(self, file):
-        self.playback_player = PlaybackPlayer(file)
-        creator_info = self.playback_player.find_recording_info_chunk()
+        self._playback_player = PlaybackPlayer(file)
+        creator_info = self._playback_player.find_recording_info_chunk()
 
         # SPIN v0.5 alters ROM to implement fast tape loading,
         # but that affects recorded RZX files.
@@ -442,9 +442,9 @@ class Emulator(object):
         self._machine.set_breakpoint(0x04d4)
 
         # Process frames in order.
-        self.playback_samples = self._get_playback_samples()
+        self._playback_samples = self._get_playback_samples()
         sample = None
-        for sample in self.playback_samples:
+        for sample in self._playback_samples:
             break
         assert sample == 'START_OF_FRAME'
 

@@ -374,7 +374,7 @@ class ScreenWindow(Device):
         tape_paused = self.emulator._is_tape_paused()
         draw = (draw_tape_pause_notification if tape_paused
                 else draw_tape_resume_notification)
-        tape_time = self.emulator.tape_player.get_time()
+        tape_time = self.emulator._tape_player.get_time()
         self._notification.set(draw, tape_time)
 
     def _on_quantum_run(self):
