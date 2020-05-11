@@ -10,6 +10,7 @@
 
 import os
 from ._data import ArchiveFileFormat
+from ._error import Error
 from ._rzx import RZXFileFormat
 from ._scr import SCRFileFormat
 from ._tap import TAPFileFormat

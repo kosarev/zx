@@ -16,3 +16,15 @@ class Error(Exception):
 
         if id:
             self.id = id
+
+
+def verbalize_error(e):
+    if isinstance(e, Error):
+        reason, = e.args
+        args = [reason]
+    elif isinstance(e, IOError):
+        code, reason = e.args
+        args = ['%s (code %s).' % (reason, code)]
+    else:
+        args = [type(e).__name__] + ['%s' % x for x in e.args]
+    return ': '.join(args)

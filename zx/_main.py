@@ -19,6 +19,7 @@ from ._data import SnapshotFormat
 from ._data import SoundFileFormat
 from ._emulator import Emulator
 from ._error import Error
+from ._error import verbalize_error
 from ._file import parse_file
 from ._rzx import make_rzx
 from ._rzx import RZXFile
@@ -53,11 +54,10 @@ def run(args):
         filename = args.pop(0)
         handle_extra_arguments(args)
 
-    app = Emulator()
-    if filename:
-        app._load_file(filename)
-    app.main()
-    app.destroy()
+    with Emulator() as app:
+        if filename:
+            app._load_file(filename)
+        app.main()
 
 
 def profile(args):
@@ -67,10 +67,9 @@ def profile(args):
     handle_extra_arguments(args)
 
     profile = Profile()
-    app = Emulator(profile=profile)
-    app._load_file(file_to_run)
-    app.main()
-    app.destroy()
+    with Emulator(profile=profile) as app:
+        app._load_file(file_to_run)
+        app.main()
 
     # TODO: Amend profile data by reading them out first instead
     # of overwriting.
@@ -130,16 +129,14 @@ def test_file(filename):
         os.rename(filename, dest_path)
         print('%r moved to %r' % (filename, dest_dir))
 
-    app = Emulator(speed_factor=None)
-    try:
-        app._run_file(filename)
-        if app.done:
-            return False
-        move('passed')
-    except Error as e:
-        move(e.id)
-
-    app.destroy()
+    with Emulator(speed_factor=None) as app:
+        try:
+            app._run_file(filename)
+            if app.done:
+                return False
+            move('passed')
+        except Error as e:
+            move(e.id)
 
     return True
 
@@ -152,12 +149,10 @@ def test(args):
 
 def fastforward(args):
     for filename in args:
-        app = Emulator(speed_factor=0)
-        app._run_file(filename)
-        if app.done:
-            break
-
-        app.destroy()
+        with Emulator(speed_factor=0) as app:
+            app._run_file(filename)
+            if app.done:
+                break
 
 
 def _convert_tape_to_snapshot(src, src_filename, src_format,
@@ -165,15 +160,9 @@ def _convert_tape_to_snapshot(src, src_filename, src_format,
     assert issubclass(src_format, SoundFileFormat), src_format
     assert issubclass(dest_format, SnapshotFormat), dest_format
 
-    app = Emulator(speed_factor=None)
-    # app = Emulator()
-
-    # Load the tape into memory automatically.
-    app.load_tape(src_filename)
-
-    # Save snapshot and quit.
-    app._save_snapshot_file(dest_format, dest_filename)
-    app.destroy()
+    with Emulator(speed_factor=None) as app:
+        app.load_tape(src_filename)
+        app._save_snapshot_file(dest_format, dest_filename)
 
 
 def _convert_tape_to_tape(src, src_filename, src_format,
@@ -189,10 +178,9 @@ def _convert_snapshot_to_snapshot(src, src_filename, src_format,
     assert issubclass(src_format, SnapshotFormat), src_format
     assert issubclass(dest_format, SnapshotFormat), dest_format
 
-    app = Emulator(speed_factor=None)
-    app._load_file(src_filename)
-    app._save_snapshot_file(dest_format, dest_filename)
-    app.destroy()
+    with Emulator(speed_factor=None) as app:
+        app._load_file(src_filename)
+        app._save_snapshot_file(dest_format, dest_filename)
 
 
 def convert_file(src_filename, dest_filename):
@@ -279,10 +267,8 @@ def handle_command_line(args):
 def main():
     try:
         handle_command_line(sys.argv[1:])
-    except Error as e:
-        print('zx: %s' % e.args)
-    except FileNotFoundError as e:
-        print('zx: %s: %r.' % (e.args[1], e.filename))
+    except BaseException as e:
+        sys.exit('zx: %s' % verbalize_error(e))
 
 
 if __name__ == "__main__":
