@@ -76,9 +76,12 @@ class Emulator(object):
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, tb):
+    def destroy(self):
         for device in self._devices:
             device.destroy()
+
+    def __exit__(self, type, value, tb):
+        self.destroy()
 
     def _on_done(self, widget, context):
         self._quit()
