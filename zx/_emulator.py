@@ -41,6 +41,43 @@ class PlaybackPlayer(object):
         return self._recording['chunks']
 
 
+class KeyboardState(object):
+    _state = [0xff] * 8
+
+    def read_port(self, addr):
+        n = 0xff
+        addr ^= 0xffff
+
+        if addr & (1 << 8):
+            n &= self._state[0]
+        if addr & (1 << 9):
+            n &= self._state[1]
+        if addr & (1 << 10):
+            n &= self._state[2]
+        if addr & (1 << 11):
+            n &= self._state[3]
+        if addr & (1 << 12):
+            n &= self._state[4]
+        if addr & (1 << 13):
+            n &= self._state[5]
+        if addr & (1 << 14):
+            n &= self._state[6]
+        if addr & (1 << 15):
+            n &= self._state[7]
+
+        return n
+
+    def handle_key_stroke(self, key_info, pressed):
+        # print(key_info['id'])
+        addr_line = key_info['address_line']
+        mask = 1 << key_info['port_bit']
+
+        if pressed:
+            self._state[addr_line - 8] &= mask ^ 0xff
+        else:
+            self._state[addr_line - 8] |= mask
+
+
 class Emulator(object):
     _SPIN_V0P5_INFO = {'id': 'info',
                        'creator': b'SPIN 0.5            ',
@@ -64,8 +101,7 @@ class Emulator(object):
 
         self._machine = Spectrum48()
 
-        # TODO: Move this to a separate class.
-        self.keyboard_state = [0xff] * 8
+        self._keyboard_state = KeyboardState()
         self._machine.set_on_input_callback(self._on_input)
 
         self.tape_player = TapePlayer()
@@ -135,14 +171,7 @@ class Emulator(object):
         return self.tape_player.is_end()
 
     def _handle_key_stroke(self, key_info, pressed):
-        # print(key_info['id'])
-        addr_line = key_info['address_line']
-        mask = 1 << key_info['port_bit']
-
-        if pressed:
-            self.keyboard_state[addr_line - 8] &= mask ^ 0xff
-        else:
-            self.keyboard_state[addr_line - 8] |= mask
+        self._keyboard_state.handle_key_stroke(key_info, pressed)
 
     def _generate_key_strokes(self, *keys):
         for key in keys:
@@ -184,23 +213,7 @@ class Emulator(object):
 
         # Scan keyboard.
         n = 0xbf
-        addr ^= 0xffff
-        if addr & (1 << 8):
-            n &= self.keyboard_state[0]
-        if addr & (1 << 9):
-            n &= self.keyboard_state[1]
-        if addr & (1 << 10):
-            n &= self.keyboard_state[2]
-        if addr & (1 << 11):
-            n &= self.keyboard_state[3]
-        if addr & (1 << 12):
-            n &= self.keyboard_state[4]
-        if addr & (1 << 13):
-            n &= self.keyboard_state[5]
-        if addr & (1 << 14):
-            n &= self.keyboard_state[6]
-        if addr & (1 << 15):
-            n &= self.keyboard_state[7]
+        n &= self._keyboard_state.read_port(addr)
 
         # TODO: Use the tick when the ear value is sampled
         #       instead of the tick of the beginning of the input
