@@ -12,7 +12,7 @@
 import time
 from ._data import MachineSnapshot
 from ._data import SoundFile
-from ._device import EmulatorEvent
+from ._device import DeviceEvent
 from ._error import Error
 from ._file import parse_file
 from ._gui import ScreenWindow
@@ -46,7 +46,7 @@ class Emulator(object):
                        'creator_major_version': 0,
                        'creator_minor_version': 5}
 
-    def __init__(self, speed_factor=1.0, profile=None):
+    def __init__(self, speed_factor=1.0, profile=None, devices=None):
         self._emulation_time = Time()
         self._speed_factor = speed_factor
 
@@ -55,8 +55,9 @@ class Emulator(object):
         self._events_to_signal = Events.NO_EVENTS
 
         # Don't even create the window on full throttle.
-        self._screen_window = (ScreenWindow(self)
-                               if self._speed_factor is not None else None)
+        self._devices = devices if devices is not None else []
+        if devices is None and self._speed_factor is not None:
+            self._devices = [ScreenWindow(self)]
 
         self._emulator = Spectrum48()
         self.processor_state = self._emulator  # TODO: Eliminate.
@@ -77,8 +78,8 @@ class Emulator(object):
         return self
 
     def __exit__(self, type, value, tb):
-        if self._screen_window:
-            self._screen_window.destroy()
+        for device in self._devices:
+            device.destroy()
 
     def _on_done(self, widget, context):
         self._quit()
@@ -87,12 +88,12 @@ class Emulator(object):
         return self._is_paused_flag
 
     def _notify(self, id, *args):
-        if self._screen_window:
-            self._screen_window._on_emulator_event(id, *args)
+        for device in self._devices:
+            device._on_emulator_event(id, *args)
 
     def _pause(self, is_paused=True):
         self._is_paused_flag = is_paused
-        self._notify(EmulatorEvent.PAUSE_STATE_UPDATED)
+        self._notify(DeviceEvent.PAUSE_STATE_UPDATED)
 
     def _toggle_pause(self):
         self._pause(not self._is_paused())
@@ -116,7 +117,7 @@ class Emulator(object):
 
     def _pause_tape(self, is_paused=True):
         self.tape_player.pause(is_paused)
-        self._notify(EmulatorEvent.TAPE_STATE_UPDATED)
+        self._notify(DeviceEvent.TAPE_STATE_UPDATED)
 
     def _unpause_tape(self):
         self._pause_tape(is_paused=False)
@@ -308,7 +309,7 @@ class Emulator(object):
             creator_info = self.playback_player.find_recording_info_chunk()
 
         if True:  # TODO
-            self._notify(EmulatorEvent.QUANTUM_RUN)
+            self._notify(DeviceEvent.QUANTUM_RUN)
 
             # TODO: For debug purposes.
             '''
@@ -353,7 +354,7 @@ class Emulator(object):
                 self._emulator.render_screen()
 
                 pixels = self._emulator.get_frame_pixels()
-                self._notify(EmulatorEvent.SCREEN_UPDATED, pixels)
+                self._notify(DeviceEvent.SCREEN_UPDATED, pixels)
 
                 self.tape_player.skip_rest_of_frame()
                 self._emulation_time.advance(1 / 50)

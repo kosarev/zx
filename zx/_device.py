@@ -11,7 +11,7 @@
 import enum
 
 
-class EmulatorEvent(enum.Enum):
+class DeviceEvent(enum.Enum):
     PAUSE_STATE_UPDATED = enum.auto()
     QUANTUM_RUN = enum.auto()
     SCREEN_UPDATED = enum.auto()

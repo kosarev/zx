@@ -11,7 +11,7 @@
 import cairo
 import gi
 from ._device import Device
-from ._device import EmulatorEvent
+from ._device import DeviceEvent
 from ._error import USER_ERRORS
 from ._error import verbalize_error
 from ._keyboard import KEYS_INFO
@@ -172,10 +172,10 @@ class ScreenWindow(Device):
         }
 
         self._EMULATOR_EVENT_HANDLERS = {
-            EmulatorEvent.PAUSE_STATE_UPDATED: self._on_updated_pause_state,
-            EmulatorEvent.QUANTUM_RUN: self._on_quantum_run,
-            EmulatorEvent.SCREEN_UPDATED: self._on_updated_screen,
-            EmulatorEvent.TAPE_STATE_UPDATED: self._on_updated_tape_state,
+            DeviceEvent.PAUSE_STATE_UPDATED: self._on_updated_pause_state,
+            DeviceEvent.QUANTUM_RUN: self._on_quantum_run,
+            DeviceEvent.SCREEN_UPDATED: self._on_updated_screen,
+            DeviceEvent.TAPE_STATE_UPDATED: self._on_updated_tape_state,
         }
 
         self._notification = Notification()
