@@ -25,6 +25,7 @@ from ._time import Time
 from ._z80snapshot import Z80SnapshotFormat
 
 
+# TODO: Rework to a time machine interface.
 class PlaybackPlayer(object):
     def __init__(self, file):
         assert isinstance(file, RZXFile)
@@ -63,6 +64,7 @@ class Emulator(object):
 
         self._machine = Spectrum48()
 
+        # TODO: Move this to a separate class.
         self.keyboard_state = [0xff] * 8
         self._machine.set_on_input_callback(self._on_input)
 
