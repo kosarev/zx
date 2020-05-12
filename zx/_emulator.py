@@ -16,6 +16,7 @@ from ._device import DeviceEvent
 from ._error import Error
 from ._file import parse_file
 from ._gui import ScreenWindow
+from ._keyboard import KeyboardState
 from ._keyboard import KEYS_INFO
 from ._machine import RunEvents
 from ._machine import Spectrum48
@@ -39,43 +40,6 @@ class PlaybackPlayer(object):
 
     def get_chunks(self):
         return self._recording['chunks']
-
-
-class KeyboardState(object):
-    _state = [0xff] * 8
-
-    def read_port(self, addr):
-        n = 0xff
-        addr ^= 0xffff
-
-        if addr & (1 << 8):
-            n &= self._state[0]
-        if addr & (1 << 9):
-            n &= self._state[1]
-        if addr & (1 << 10):
-            n &= self._state[2]
-        if addr & (1 << 11):
-            n &= self._state[3]
-        if addr & (1 << 12):
-            n &= self._state[4]
-        if addr & (1 << 13):
-            n &= self._state[5]
-        if addr & (1 << 14):
-            n &= self._state[6]
-        if addr & (1 << 15):
-            n &= self._state[7]
-
-        return n
-
-    def handle_key_stroke(self, key_info, pressed):
-        # print(key_info['id'])
-        addr_line = key_info['address_line']
-        mask = 1 << key_info['port_bit']
-
-        if pressed:
-            self._state[addr_line - 8] &= mask ^ 0xff
-        else:
-            self._state[addr_line - 8] |= mask
 
 
 class Emulator(object):
@@ -226,6 +190,8 @@ class Emulator(object):
         if END_OF_TAPE in self._events_to_signal and self._is_end_of_tape():
             self._machine.raise_events(END_OF_TAPE)
             self._events_to_signal &= ~END_OF_TAPE
+
+        # print('0x%04x 0x%02x' % (addr, n))
 
         return n
 
