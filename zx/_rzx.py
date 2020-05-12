@@ -218,7 +218,7 @@ def make_rzx(recording):
 
 class RZXFile(Data):
     def __init__(self, recording):
-        self._recording = recording
+        super().__init__(recording)
 
 
 class RZXFileFormat(FileFormat):

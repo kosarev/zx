@@ -29,7 +29,7 @@ from ._z80snapshot import Z80SnapshotFormat
 class PlaybackPlayer(object):
     def __init__(self, file):
         assert isinstance(file, RZXFile)
-        self._recording = file._recording
+        self._recording = file
 
     def find_recording_info_chunk(self):
         for chunk in self._recording['chunks']:
