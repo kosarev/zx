@@ -343,7 +343,8 @@ class Emulator(object):
                 if self._speed_factor:
                     time.sleep((1 / 50) * self._speed_factor)
 
-            if self._playback_samples and RunEvents.FETCHES_LIMIT_HIT in events:
+            if (self._playback_samples and
+                    RunEvents.FETCHES_LIMIT_HIT in events):
                 # Some simulators, e.g., SPIN, may store an interrupt
                 # point in the middle of a IX- or IY-prefixed
                 # instruction, so we continue until such
