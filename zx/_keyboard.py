@@ -27,15 +27,15 @@ class KeyInfo(object):
             self.port_bit = 4 - self.index_in_halfrow
 
 
-KEYS_INFO = dict()
+_KEY_IDS = [
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
+    'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P',
+    'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'ENTER',
+    'CAPS SHIFT', 'Z', 'X', 'C', 'V',
+    'B', 'N', 'M', 'SYMBOL SHIFT', 'BREAK SPACE']
 
-# Generate layout-related information.
-layout = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
-          'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P',
-          'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'ENTER',
-          'CAPS SHIFT', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'SYMBOL SHIFT',
-          'BREAK SPACE']
-for index, id in enumerate(layout):
+KEYS_INFO = dict()
+for index, id in enumerate(_KEY_IDS):
     KEYS_INFO[id] = KeyInfo(id, index)
 
 
