@@ -8,35 +8,40 @@
 #
 #   Published under the MIT license.
 
+from ._utils import tupilize
+
 
 class KeyInfo(object):
     def __init__(self, id, index):
         self.ID = id
         self.INDEX = index  # Left to right, then top to bottom.
-        self.HALFROW_INDEX = index // 5
-        self.INDEX_IN_HALFROW = index % 5
-        self.IS_LEFTSIDE = self.HALFROW_INDEX % 2 == 0
-        self.IS_RIGHTSIDE = not self.IS_LEFTSIDE
+        halfrow_index = index // 5
+        index_in_halfrow = index % 5
+        is_leftside = halfrow_index % 2 == 0
 
         # Compute port address lines and bit positions.
-        if self.IS_LEFTSIDE:
-            self.ADDRESS_LINE = 11 - self.HALFROW_INDEX // 2
-            self.PORT_BIT = self.INDEX_IN_HALFROW
+        if is_leftside:
+            self.ADDRESS_LINE = 11 - halfrow_index // 2
+            self.PORT_BIT = index_in_halfrow
         else:
-            self.ADDRESS_LINE = self.HALFROW_INDEX // 2 + 12
-            self.PORT_BIT = 4 - self.INDEX_IN_HALFROW
+            self.ADDRESS_LINE = halfrow_index // 2 + 12
+            self.PORT_BIT = 4 - index_in_halfrow
 
 
 _KEY_IDS = [
     '1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
     'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P',
     'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'ENTER',
-    'CAPS SHIFT', 'Z', 'X', 'C', 'V',
-    'B', 'N', 'M', 'SYMBOL SHIFT', 'BREAK SPACE']
+    ('CAPS SHIFT', 'CS'), 'Z', 'X', 'C', 'V',
+    'B', 'N', 'M', ('SYMBOL SHIFT', 'SS'), ('BREAK SPACE', 'SPACE')]
 
 KEYS_INFO = dict()
-for index, id in enumerate(_KEY_IDS):
-    KEYS_INFO[id] = KeyInfo(id, index)
+for index, ids in enumerate(_KEY_IDS):
+    ids = tupilize(ids)
+    id, *aliases = ids
+    info = KeyInfo(id, index)
+    for i in ids:
+        KEYS_INFO[i] = info
 
 
 class KeyboardState(object):

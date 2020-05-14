@@ -140,10 +140,6 @@ class Emulator(object):
     def _generate_key_strokes(self, *keys):
         for key in keys:
             strokes = key.split('+')
-
-            # TODO: Refine handling of aliases.
-            ALIASES = {'SS': 'SYMBOL SHIFT'}
-            strokes = [ALIASES.get(s, s) for s in strokes]
             # print(strokes)
 
             for id in strokes:

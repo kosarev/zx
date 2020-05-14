@@ -24,3 +24,9 @@ def _split16(nn):
     lo = nn & 0xff
     hi = (nn >> 8) & 0xff
     return lo, hi
+
+
+def tupilize(x):
+    if isinstance(x, (tuple, list)):
+        return tuple(x)
+    return x,
