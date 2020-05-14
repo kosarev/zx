@@ -11,20 +11,20 @@
 
 class KeyInfo(object):
     def __init__(self, id, index):
-        self.id = id
-        self.index = index  # Left to right, then top to bottom.
-        self.halfrow_index = index // 5
-        self.index_in_halfrow = index % 5
-        self.is_leftside = self.halfrow_index % 2 == 0
-        self.is_rightside = not self.is_leftside
+        self.ID = id
+        self.INDEX = index  # Left to right, then top to bottom.
+        self.HALFROW_INDEX = index // 5
+        self.INDEX_IN_HALFROW = index % 5
+        self.IS_LEFTSIDE = self.HALFROW_INDEX % 2 == 0
+        self.IS_RIGHTSIDE = not self.IS_LEFTSIDE
 
         # Compute port address lines and bit positions.
-        if self.is_leftside:
-            self.address_line = 11 - self.halfrow_index // 2
-            self.port_bit = self.index_in_halfrow
+        if self.IS_LEFTSIDE:
+            self.ADDRESS_LINE = 11 - self.HALFROW_INDEX // 2
+            self.PORT_BIT = self.INDEX_IN_HALFROW
         else:
-            self.address_line = self.halfrow_index // 2 + 12
-            self.port_bit = 4 - self.index_in_halfrow
+            self.ADDRESS_LINE = self.HALFROW_INDEX // 2 + 12
+            self.PORT_BIT = 4 - self.INDEX_IN_HALFROW
 
 
 _KEY_IDS = [
@@ -67,8 +67,8 @@ class KeyboardState(object):
 
     def handle_key_stroke(self, key_info, pressed):
         # print(key_info.id)
-        addr_line = key_info.address_line
-        mask = 1 << key_info.port_bit
+        addr_line = key_info.ADDRESS_LINE
+        mask = 1 << key_info.PORT_BIT
 
         if pressed:
             self._state[addr_line - 8] &= mask ^ 0xff
