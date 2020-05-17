@@ -111,7 +111,7 @@ class Emulator(object):
                 image = snapshot
             f.write(image)
 
-    def quit(self):
+    def stop(self):
         self.done = True
 
     def _is_tape_paused(self):
@@ -375,7 +375,7 @@ class Emulator(object):
                 for sample in self._playback_samples:
                     break
                 if sample is None:
-                    self.quit()
+                    self.stop()
                     return
 
                 assert sample == 'START_OF_FRAME'

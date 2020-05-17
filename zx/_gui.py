@@ -161,8 +161,8 @@ class ScreenWindow(Device):
         self._window = Gtk.Window()
 
         self._KEY_HANDLERS = {
-            'ESCAPE': self.emulator.quit,
-            'F10': self.emulator.quit,
+            'ESCAPE': self.emulator.stop,
+            'F10': self.emulator.stop,
             'F1': self._show_help,
             'F2': self._save_snapshot,
             'F3': self._choose_and_load_file,
@@ -354,7 +354,7 @@ class ScreenWindow(Device):
             self._toggle_fullscreen()
 
     def _on_done(self, widget, context):
-        self.emulator.quit()
+        self.emulator.stop()
 
     def _on_window_state_event(self, widget, event):
         state = event.new_window_state
