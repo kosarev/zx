@@ -8,8 +8,10 @@
 #
 #   Published under the MIT license.
 
+from ._except import EmulatorException
 
-class Error(Exception):
+
+class Error(EmulatorException):
     """Basic exception for the whole ZX module."""
     def __init__(self, reason, id=None):
         super().__init__(reason)
