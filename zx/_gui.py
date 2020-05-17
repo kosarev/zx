@@ -14,6 +14,7 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._error import USER_ERRORS
 from ._error import verbalize_error
+from ._except import EmulationExit
 from ._keyboard import KEYS_INFO
 from ._time import get_elapsed_time
 from ._time import get_timestamp
@@ -158,11 +159,13 @@ class ScreenWindow(Device):
     def __init__(self, emulator):
         super().__init__(emulator)
 
+        self._queued_exception = None
+
         self._window = Gtk.Window()
 
         self._KEY_HANDLERS = {
-            'ESCAPE': self.emulator.stop,
-            'F10': self.emulator.stop,
+            'ESCAPE': self._stop,
+            'F10': self._stop,
             'F1': self._show_help,
             'F2': self._save_snapshot,
             'F3': self._choose_and_load_file,
@@ -353,8 +356,11 @@ class ScreenWindow(Device):
         elif event.type == Gdk.EventType._2BUTTON_PRESS:
             self._toggle_fullscreen()
 
+    def _stop(self):
+        self._queued_exception = EmulationExit()
+
     def _on_done(self, widget, context):
-        self.emulator.stop()
+        self._stop()
 
     def _on_window_state_event(self, widget, event):
         state = event.new_window_state
@@ -378,6 +384,11 @@ class ScreenWindow(Device):
         self._notification.set(draw, tape_time)
 
     def _on_quantum_run(self):
+        if self._queued_exception is not None:
+            e = self._queued_exception
+            self._queued_exception = None
+            raise e
+
         while Gtk.events_pending():
             Gtk.main_iteration()
 

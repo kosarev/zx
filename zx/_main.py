@@ -14,13 +14,14 @@ import collections
 import os
 import sys
 from ._data import ArchiveFileFormat
-from ._file import detect_file_format
 from ._data import SnapshotFormat
 from ._data import SoundFileFormat
 from ._emulator import Emulator
 from ._error import Error
 from ._error import USER_ERRORS
 from ._error import verbalize_error
+from ._except import EmulationExit
+from ._file import detect_file_format
 from ._file import parse_file
 from ._rzx import make_rzx
 from ._rzx import RZXFile
@@ -133,11 +134,12 @@ def test_file(filename):
     with Emulator(speed_factor=None) as app:
         try:
             app._run_file(filename)
-            if app._done:
-                return False
             move('passed')
         except Error as e:
             move(e.id)
+        except:
+            # TODO: Refine.
+            return False
 
     return True
 
@@ -152,8 +154,6 @@ def fastforward(args):
     for filename in args:
         with Emulator(speed_factor=0) as app:
             app._run_file(filename)
-            if app._done:
-                break
 
 
 def _convert_tape_to_snapshot(src, src_filename, src_format,
@@ -268,6 +268,8 @@ def handle_command_line(args):
 def main():
     try:
         handle_command_line(sys.argv[1:])
+    except EmulationExit:
+        pass
     except USER_ERRORS as e:
         sys.exit('zx: %s' % verbalize_error(e))
 

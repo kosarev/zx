@@ -14,6 +14,7 @@ from ._data import MachineSnapshot
 from ._data import SoundFile
 from ._device import DeviceEvent
 from ._error import Error
+from ._except import EmulationExit
 from ._file import parse_file
 from ._gui import ScreenWindow
 from ._keyboard import KeyboardState
@@ -51,8 +52,6 @@ class Emulator(object):
     def __init__(self, speed_factor=1.0, profile=None, devices=None):
         self._emulation_time = Time()
         self._speed_factor = speed_factor
-
-        self._done = False
 
         self._is_paused_flag = False
         self._events_to_signal = RunEvents.NO_EVENTS
@@ -111,7 +110,7 @@ class Emulator(object):
             f.write(image)
 
     def stop(self):
-        self._done = True
+        raise EmulationExit()
 
     def _is_tape_paused(self):
         return self._tape_player.is_paused()
@@ -382,16 +381,19 @@ class Emulator(object):
 
     def _run(self, duration):
         end_time = self._emulation_time.get() + duration
-        self._done = False
-        while not self._done and self._emulation_time.get() < end_time:
+        while self._emulation_time.get() < end_time:
             self._run_quantum()
 
     def run(self):
-        self._done = False
-        while not self._done:
-            self._run_quantum()
+        # TODO: Remove this 'try', and let the exception to
+        # propagate further.
+        try:
+            while True:
+                self._run_quantum()
 
-        self._quit_playback_mode()
+            self._quit_playback_mode()
+        except EmulationExit:
+            pass
 
     def _load_input_recording(self, file):
         self._playback_player = PlaybackPlayer(file)
@@ -447,8 +449,7 @@ class Emulator(object):
 
         # Wait till the end of the tape.
         self._events_to_signal |= RunEvents.END_OF_TAPE
-        self._done = False
-        while not self._done and not self._is_end_of_tape():
+        while not self._is_end_of_tape():
             self._run_quantum()
 
     def set_breakpoint(self, addr):
