@@ -52,8 +52,7 @@ class Emulator(object):
         self._emulation_time = Time()
         self._speed_factor = speed_factor
 
-        # TODO: Hide this flag. Its public use is deprecated.
-        self.done = False
+        self._done = False
 
         self._is_paused_flag = False
         self._events_to_signal = RunEvents.NO_EVENTS
@@ -112,7 +111,7 @@ class Emulator(object):
             f.write(image)
 
     def stop(self):
-        self.done = True
+        self._done = True
 
     def _is_tape_paused(self):
         return self._tape_player.is_paused()
@@ -383,20 +382,16 @@ class Emulator(object):
 
     def _run(self, duration):
         end_time = self._emulation_time.get() + duration
-        self.done = False
-        while not self.done and self._emulation_time.get() < end_time:
+        self._done = False
+        while not self._done and self._emulation_time.get() < end_time:
             self._run_quantum()
 
     def run(self):
-        self.done = False
-        while not self.done:
+        self._done = False
+        while not self._done:
             self._run_quantum()
 
         self._quit_playback_mode()
-
-    # TODO: Deprecated. Remove.
-    def main(self):
-        self.run()
 
     def _load_input_recording(self, file):
         self._playback_player = PlaybackPlayer(file)
@@ -452,8 +447,8 @@ class Emulator(object):
 
         # Wait till the end of the tape.
         self._events_to_signal |= RunEvents.END_OF_TAPE
-        self.done = False
-        while not self.done and not self._is_end_of_tape():
+        self._done = False
+        while not self._done and not self._is_end_of_tape():
             self._run_quantum()
 
     def set_breakpoint(self, addr):

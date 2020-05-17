@@ -133,7 +133,7 @@ def test_file(filename):
     with Emulator(speed_factor=None) as app:
         try:
             app._run_file(filename)
-            if app.done:
+            if app._done:
                 return False
             move('passed')
         except Error as e:
@@ -152,7 +152,7 @@ def fastforward(args):
     for filename in args:
         with Emulator(speed_factor=0) as app:
             app._run_file(filename)
-            if app.done:
+            if app._done:
                 break
 
 
