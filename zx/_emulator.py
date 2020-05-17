@@ -375,7 +375,7 @@ class Emulator(object):
                 for sample in self._playback_samples:
                     break
                 if sample is None:
-                    self.done = True
+                    self.quit()
                     return
 
                 assert sample == 'START_OF_FRAME'
@@ -383,10 +383,12 @@ class Emulator(object):
 
     def _run(self, duration):
         end_time = self._emulation_time.get() + duration
+        self.done = False
         while not self.done and self._emulation_time.get() < end_time:
             self._run_quantum()
 
     def run(self):
+        self.done = False
         while not self.done:
             self._run_quantum()
 
@@ -450,6 +452,7 @@ class Emulator(object):
 
         # Wait till the end of the tape.
         self._events_to_signal |= RunEvents.END_OF_TAPE
+        self.done = False
         while not self.done and not self._is_end_of_tape():
             self._run_quantum()
 
