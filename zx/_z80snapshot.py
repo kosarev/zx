@@ -179,7 +179,7 @@ class Z80SnapshotFormat(SnapshotFormat):
         return collections.OrderedDict(page_no=fields['page_no'],
                                        image=raw_image)
 
-    def parse(self, image):
+    def parse(self, filename, image):
         # Parse headers.
         parser = BinaryParser(image)
         fields = collections.OrderedDict(id='z80_snapshot')

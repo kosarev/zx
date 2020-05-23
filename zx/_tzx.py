@@ -198,7 +198,7 @@ class TZXFileFormat(SoundFileFormat):
 
         return self._BLOCK_PARSERS[block_id](self, parser)
 
-    def parse(self, image):
+    def parse(self, filename, image):
         parser = BinaryParser(image)
 
         # Parse header.

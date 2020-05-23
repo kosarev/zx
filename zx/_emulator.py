@@ -25,6 +25,7 @@ from ._rzx import RZXFile
 from ._tape import TapePlayer
 from ._time import Time
 from ._z80snapshot import Z80SnapshotFormat
+from ._zxb import ZXBasicCompilerProgram
 
 
 # TODO: Rework to a time machine interface.
@@ -135,20 +136,27 @@ class Emulator(object):
     def _handle_key_stroke(self, key_info, pressed):
         self._keyboard_state.handle_key_stroke(key_info, pressed)
 
-    def _generate_key_strokes(self, *keys):
+    def _translate_key_strokes(self, keys):
         for key in keys:
+            if isinstance(key, int):
+                yield from str(key)
+            else:
+                yield key
+
+    def _generate_key_strokes(self, *keys):
+        for key in self._translate_key_strokes(keys):
             strokes = key.split('+')
             # print(strokes)
 
             for id in strokes:
                 # print(id)
                 self._handle_key_stroke(KEYS_INFO[id], pressed=True)
-                self._run(0.03)
+                self._run(0.05)
 
             for id in reversed(strokes):
                 # print(id)
                 self._handle_key_stroke(KEYS_INFO[id], pressed=False)
-                self._run(0.03)
+                self._run(0.05)
 
     def _on_input(self, addr):
         # Handle playbacks.
@@ -414,6 +422,26 @@ class Emulator(object):
             break
         assert sample == 'START_OF_FRAME'
 
+    def _reset_and_wait(self):
+        self._machine.set_pc(0x0000)
+        self._run(1.8)
+
+    def _load_zx_basic_compiler_program(self, file):
+        assert isinstance(file, ZXBasicCompilerProgram)
+
+        self._reset_and_wait()
+
+        # CLEAR <entry_point>
+        entry_point = file['entry_point']
+        self._generate_key_strokes('X', entry_point, 'ENTER')
+
+        self._machine.set_memory_block(entry_point, file['program_bytes'])
+
+        # RANDOMIZE USR <entry_point>
+        self._generate_key_strokes('T', 'CS+SS', 'L', entry_point, 'ENTER')
+
+        # assert 0, list(file)
+
     def _load_file(self, filename):
         file = parse_file(filename)
 
@@ -424,6 +452,8 @@ class Emulator(object):
             self._enter_playback_mode()
         elif isinstance(file, SoundFile):
             self._load_tape_to_player(file)
+        elif isinstance(file, ZXBasicCompilerProgram):
+            self._load_zx_basic_compiler_program(file)
         else:
             raise Error("Don't know how to load file %r." % filename)
 
@@ -437,8 +467,7 @@ class Emulator(object):
             raise Error('%r does not seem to be a tape file.' % filename)
 
         # Let the initialization complete.
-        self._machine.set_pc(0x0000)
-        self._run(1.8)
+        self._reset_and_wait()
 
         # Type in 'LOAD ""'.
         self._generate_key_strokes('J', 'SS+P', 'SS+P', 'ENTER')

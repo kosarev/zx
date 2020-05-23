@@ -19,7 +19,7 @@ class WAVFileFormat(SoundFileFormat):
     _NAME = 'WAV'
     _TICKS_FREQ = 3500000
 
-    def parse(self, image):
+    def parse(self, filename, image):
         # TODO
         raise Error('Parsing of WAV files is not supported yet.')
 

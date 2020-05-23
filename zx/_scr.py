@@ -52,7 +52,7 @@ class SCRFileFormat(SnapshotFormat):
 
     _FIELDS = ['6144s:dot_patterns', '768s:colour_attrs']
 
-    def parse(self, image):
+    def parse(self, filename, image):
         parser = BinaryParser(image)
         fields = collections.OrderedDict(id='scr_snapshot')
         fields.update(parser.parse(self._FIELDS))

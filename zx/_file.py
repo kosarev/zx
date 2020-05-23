@@ -18,6 +18,7 @@ from ._tzx import TZXFileFormat
 from ._wav import WAVFileFormat
 from ._z80snapshot import Z80SnapshotFormat
 from ._zip import ZIPFileFormat
+from ._zxb import ZXBasicCompilerSourceFormat
 
 
 def _open_file_or_url(path):
@@ -41,6 +42,7 @@ def _open_file_or_url(path):
 
 def detect_file_format(image, filename_extension):
     KNOWN_FORMATS = [
+        ('.zxb', None, ZXBasicCompilerSourceFormat),
         ('.rzx', b'RZX!', RZXFileFormat),
         ('.scr', None, SCRFileFormat),
         ('.tap', None, TAPFileFormat),
@@ -109,7 +111,7 @@ def _parse_file_image(filename, image):
 
         filename, format, image = candidates[0]
 
-    return format().parse(image)
+    return format().parse(filename, image)
 
 
 def parse_file(filename):

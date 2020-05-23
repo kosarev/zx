@@ -46,7 +46,7 @@ class BinaryParser(object):
             value = value[0]
         return value
 
-    def parse(self, format):
+    def parse(self, filename, format):
         res = dict()
         for field in format:
             if isinstance(field, str):

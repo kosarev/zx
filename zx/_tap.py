@@ -45,7 +45,7 @@ class TAPFileFormat(SoundFileFormat):
         size = parser.parse_field('<H', 'block_size')
         return parser.extract_block(size)
 
-    def parse(self, image):
+    def parse(self, filename, image):
         parser = BinaryParser(image)
 
         # Parse blocks.
