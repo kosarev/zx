@@ -265,9 +265,12 @@ def handle_command_line(args):
     COMMANDS[command](args[1:])
 
 
-def main():
+def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
+
     try:
-        handle_command_line(sys.argv[1:])
+        handle_command_line(args)
     except EmulationExit:
         pass
     except USER_ERRORS as e:
