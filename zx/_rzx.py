@@ -52,7 +52,7 @@ def parse_snapshot_block(image):
                     id='unknown_rzx_snapshot_format')
 
     format = Z80SnapshotFormat()
-    return format.parse(snapshot_image)
+    return format.parse(filename_extension, snapshot_image)
 
 
 def parse_input_recording_block(image):
