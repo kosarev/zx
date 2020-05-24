@@ -17,4 +17,3 @@ class EmulatorException(Exception):
 class EmulationExit(EmulatorException):
     def __init__(self):
         super().__init__()
-
