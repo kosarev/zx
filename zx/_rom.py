@@ -10,12 +10,12 @@
 
 
 import os
+import pkg_resources
 
 
 def load_image(filename):
-    current_dir = os.path.dirname(__file__)
-    filename = os.path.join(current_dir, 'roms', filename)
-    with open(filename, mode='rb') as f:
+    path = pkg_resources.resource_filename('zx', 'roms/Spectrum48.rom')
+    with open(path, mode='rb') as f:
         return f.read()
 
 

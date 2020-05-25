@@ -60,7 +60,7 @@ setup(name='zx',
           'pycairo',
           'pygobject',
       ],
-      data_files=[('share/zx/roms', ['zx/roms/Spectrum48.rom'])],
+      package_data={'zx': ['roms/*']},
       entry_points={
           'console_scripts': [
               'zx = zx:main',
