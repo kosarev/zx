@@ -90,10 +90,20 @@ $ zx https://www.worldofspectrum.org/pub/sinclair/games/e/EricTheFloaters.tzx.zi
 ```
 
 
-### Converting files
+### Supported formats
 
-Supported formats: `.rzx`, `.scr`, `.tap`, `.tzx`, `.wav`,
-`.z80`, `.zip`.
+Snapshots: `.z80`.
+
+Tapes: `.tap`, `.tzx`, `.wav`.
+
+Playbacks: `.rzx`.
+
+Screenshots: `.scr`.
+
+Archives: `.zip`.
+
+
+### Converting files
 
 ```shell
 $ zx jack.tzx jack.wav
