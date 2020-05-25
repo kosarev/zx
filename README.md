@@ -100,6 +100,8 @@ Playbacks: `.rzx`.
 
 Screenshots: `.scr`.
 
+[ZX Basic compiler](https://github.com/boriel/zxbasic) sources: `.zxb`.
+
 Archives: `.zip`.
 
 
