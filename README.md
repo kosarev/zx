@@ -32,10 +32,24 @@ ZX Spectrum Emulator written in a mix of Python and C++.
 
 ### Installation and running
 
+For the latest release:
 ```shell
-$ pip install zx
+$ sudo pip3 install zx
 ```
 
+Or directly from the repository for current development version:
+```shell
+$ sudo pip3 install git+https://github.com/kosarev/zx
+```
+
+Local development setups are also supported:
+```shell
+$ git clone --recursive https://github.com/kosarev/zx
+$ cd zx
+$ python3 setup.py develop --prefix ~/.local
+```
+
+Running:
 ```shell
 $ zx
 ```
