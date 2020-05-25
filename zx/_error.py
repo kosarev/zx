@@ -30,6 +30,8 @@ def verbalize_error(e):
     elif isinstance(e, IOError):
         code, reason = e.args
         args = ['%s (code %s).' % (reason, code)]
+        if isinstance(e, FileNotFoundError):
+            args.insert(0, e.filename)
     else:
         args = [type(e).__name__] + ['%s' % x for x in e.args]
     return ': '.join(args)
