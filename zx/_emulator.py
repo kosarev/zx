@@ -159,12 +159,12 @@ class Emulator(object):
             for id in strokes:
                 # print(id)
                 self._handle_key_stroke(KEYS_INFO[id], pressed=True)
-                self.__run(0.05, speed_factor=0)
+                self.run(duration=0.05, speed_factor=0)
 
             for id in reversed(strokes):
                 # print(id)
                 self._handle_key_stroke(KEYS_INFO[id], pressed=False)
-                self.__run(0.05, speed_factor=0)
+                self.run(duration=0.05, speed_factor=0)
 
     def __on_input(self, addr):
         # Handle playbacks.
@@ -399,20 +399,20 @@ class Emulator(object):
                 assert sample == 'START_OF_FRAME'
                 self.__machine.on_handle_active_int()
 
-    # TODO: Combine with run().
-    def __run(self, duration, speed_factor=None):
-        end_time = self._emulation_time.get() + duration
-        while self._emulation_time.get() < end_time:
-            self.__run_quantum(speed_factor=speed_factor)
+    def run(self, duration=None, speed_factor=None):
+        end_time = None
+        if duration is not None:
+            end_time = self._emulation_time.get() + duration
 
-    def run(self, speed_factor=None):
         # TODO: Remove this 'try', and let the exception to
         # propagate further.
         try:
-            while True:
+            while (end_time is None or
+                   self._emulation_time.get() < end_time):
                 self.__run_quantum(speed_factor=speed_factor)
 
-            self._quit_playback_mode()
+            if duration is None:
+                self._quit_playback_mode()
         except EmulationExit:
             pass
 
@@ -437,7 +437,7 @@ class Emulator(object):
 
     def __reset_and_wait(self):
         self.__machine.set_pc(0x0000)
-        self.__run(1.8, speed_factor=0)
+        self.run(duration=1.8, speed_factor=0)
 
     def __load_zx_basic_compiler_program(self, file):
         assert isinstance(file, ZXBasicCompilerProgram)
