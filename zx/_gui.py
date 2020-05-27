@@ -315,14 +315,20 @@ class ScreenWindow(Device):
             (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
              Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
 
+        filename = None
         if dialog.run() == Gtk.ResponseType.OK:
             filename = dialog.get_filename()
+
+        # Close the dialog window before trying to load the file
+        # as that loading may take significant time, e.g., if it
+        # implies simulation of key strokes, etc.
+        dialog.destroy()
+
+        if filename is not None:
             try:
                 self.emulator._load_file(filename)
             except USER_ERRORS as e:
                 self._error_box('File error', verbalize_error(e))
-
-        dialog.destroy()
 
     def _toggle_fullscreen(self):
         if self._is_fullscreen:
