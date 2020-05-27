@@ -159,12 +159,12 @@ class Emulator(object):
             for id in strokes:
                 # print(id)
                 self._handle_key_stroke(KEYS_INFO[id], pressed=True)
-                self.__run(0.05)
+                self.__run(0.05, speed_factor=0)
 
             for id in reversed(strokes):
                 # print(id)
                 self._handle_key_stroke(KEYS_INFO[id], pressed=False)
-                self.__run(0.05)
+                self.__run(0.05, speed_factor=0)
 
     def __on_input(self, addr):
         # Handle playbacks.
@@ -296,7 +296,10 @@ class Emulator(object):
 
                 frame_count += 1
 
-    def __run_quantum(self):
+    def __run_quantum(self, speed_factor=None):
+        if speed_factor is None:
+            speed_factor = self.__speed_factor
+
         if self.__playback_player:
             creator_info = self.__playback_player.find_recording_info_chunk()
 
@@ -317,8 +320,8 @@ class Emulator(object):
 
             if self._is_paused():
                 # Give the CPU some spare time.
-                if self.__speed_factor:
-                    time.sleep((1 / 50) * self.__speed_factor)
+                if speed_factor:
+                    time.sleep((1 / 50) * speed_factor)
                 return
 
             events = RunEvents(self.__machine.run())
@@ -351,8 +354,8 @@ class Emulator(object):
                 self._tape_player.skip_rest_of_frame()
                 self._emulation_time.advance(1 / 50)
 
-                if self.__speed_factor:
-                    time.sleep((1 / 50) * self.__speed_factor)
+                if speed_factor:
+                    time.sleep((1 / 50) * speed_factor)
 
             if (self.__playback_samples and
                     RunEvents.FETCHES_LIMIT_HIT in events):
@@ -396,17 +399,18 @@ class Emulator(object):
                 assert sample == 'START_OF_FRAME'
                 self.__machine.on_handle_active_int()
 
-    def __run(self, duration):
+    # TODO: Combine with run().
+    def __run(self, duration, speed_factor=None):
         end_time = self._emulation_time.get() + duration
         while self._emulation_time.get() < end_time:
-            self.__run_quantum()
+            self.__run_quantum(speed_factor=speed_factor)
 
-    def run(self):
+    def run(self, speed_factor=None):
         # TODO: Remove this 'try', and let the exception to
         # propagate further.
         try:
             while True:
-                self.__run_quantum()
+                self.__run_quantum(speed_factor=speed_factor)
 
             self._quit_playback_mode()
         except EmulationExit:
@@ -433,7 +437,7 @@ class Emulator(object):
 
     def __reset_and_wait(self):
         self.__machine.set_pc(0x0000)
-        self.__run(1.8)
+        self.__run(1.8, speed_factor=0)
 
     def __load_zx_basic_compiler_program(self, file):
         assert isinstance(file, ZXBasicCompilerProgram)
@@ -490,7 +494,7 @@ class Emulator(object):
         # Wait till the end of the tape.
         self.__events_to_signal |= RunEvents.END_OF_TAPE
         while not self.__is_end_of_tape():
-            self.__run_quantum()
+            self.__run_quantum(speed_factor=0)
 
     def set_breakpoint(self, addr):
         self.__machine.set_breakpoint(addr)
