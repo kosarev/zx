@@ -404,17 +404,9 @@ class Emulator(object):
         if duration is not None:
             end_time = self._emulation_time.get() + duration
 
-        # TODO: Remove this 'try', and let the exception to
-        # propagate further.
-        try:
-            while (end_time is None or
-                   self._emulation_time.get() < end_time):
-                self.__run_quantum(speed_factor=speed_factor)
-
-            if duration is None:
-                self._quit_playback_mode()
-        except EmulationExit:
-            pass
+        while (end_time is None or
+               self._emulation_time.get() < end_time):
+            self.__run_quantum(speed_factor=speed_factor)
 
     def __load_input_recording(self, file):
         self.__playback_player = PlaybackPlayer(file)
