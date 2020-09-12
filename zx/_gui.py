@@ -156,6 +156,13 @@ class Screencast(object):
 class ScreenWindow(Device):
     _SCREEN_AREA_BACKGROUND_COLOUR = rgb('#1e1e1e')
 
+    _GTK_KEYS_TO_ZX_KEYS = {
+        'RETURN': 'ENTER',
+        'ALT_L': 'CAPS SHIFT',
+        'SHIFT_L': 'CAPS SHIFT',
+        'ALT_R': 'SYMBOL SHIFT',
+        'SHIFT_R': 'SYMBOL SHIFT'}
+
     def __init__(self, emulator):
         super().__init__(emulator)
 
@@ -216,18 +223,6 @@ class ScreenWindow(Device):
         self.pattern = cairo.SurfacePattern(self.frame)
         if not SCREENCAST:
             self.pattern.set_filter(cairo.FILTER_NEAREST)
-
-        self.keys = {'RETURN': KEYS['ENTER'],
-                     'ALT_L': KEYS['CAPS SHIFT'],
-                     'SHIFT_L': KEYS['CAPS SHIFT'],
-                     'ALT_R': KEYS['SYMBOL SHIFT'],
-                     'SHIFT_R': KEYS['SYMBOL SHIFT'],
-                     'SPACE': KEYS['BREAK SPACE']}
-        for id in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-                   'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
-                   'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
-                   'U', 'V', 'W', 'X', 'Y', 'Z']:
-            self.keys[id] = KEYS[id]
 
         self._window.connect('key-press-event', self._on_key_press)
         self._window.connect('key-release-event', self._on_key_release)
@@ -343,11 +338,12 @@ class ScreenWindow(Device):
         if pressed and key_id in self._KEY_HANDLERS:
             self._KEY_HANDLERS[key_id]()
 
-        key_info = self.keys.get(key_id, None)
-        if key_info:
+        zx_key_id = self._GTK_KEYS_TO_ZX_KEYS.get(key_id, key_id)
+        key = KEYS.get(zx_key_id, None)
+        if key:
             self.emulator._pause(False)
             self.emulator._quit_playback_mode()
-            self.emulator._handle_key_stroke(key_info, pressed)
+            self.emulator._handle_key_stroke(key, pressed)
 
     def _on_key_press(self, widget, event):
         self._on_key(event, pressed=True)
