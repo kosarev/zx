@@ -11,7 +11,7 @@
 from ._utils import tupilize
 
 
-class KeyInfo(object):
+class Key(object):
     def __init__(self, id, index):
         self.ID = id
         self.INDEX = index  # Left to right, then top to bottom.
@@ -35,13 +35,13 @@ _KEY_IDS = [
     ('CAPS SHIFT', 'CS'), 'Z', 'X', 'C', 'V',
     'B', 'N', 'M', ('SYMBOL SHIFT', 'SS'), ('BREAK SPACE', 'SPACE')]
 
-KEYS_INFO = dict()
+KEYS = dict()
 for index, ids in enumerate(_KEY_IDS):
     ids = tupilize(ids)
     id, *aliases = ids
-    info = KeyInfo(id, index)
+    info = Key(id, index)
     for i in ids:
-        KEYS_INFO[i] = info
+        KEYS[i] = info
 
 
 class KeyboardState(object):

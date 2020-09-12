@@ -18,7 +18,7 @@ from ._except import EmulationExit
 from ._file import parse_file
 from ._gui import ScreenWindow
 from ._keyboard import KeyboardState
-from ._keyboard import KEYS_INFO
+from ._keyboard import KEYS
 from ._machine import RunEvents
 from ._machine import Spectrum48
 from ._rzx import RZXFile
@@ -158,12 +158,12 @@ class Emulator(object):
 
             for id in strokes:
                 # print(id)
-                self._handle_key_stroke(KEYS_INFO[id], pressed=True)
+                self._handle_key_stroke(KEYS[id], pressed=True)
                 self.run(duration=0.05, speed_factor=0)
 
             for id in reversed(strokes):
                 # print(id)
-                self._handle_key_stroke(KEYS_INFO[id], pressed=False)
+                self._handle_key_stroke(KEYS[id], pressed=False)
                 self.run(duration=0.05, speed_factor=0)
 
     def __on_input(self, addr):

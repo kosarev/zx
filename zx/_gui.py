@@ -15,7 +15,7 @@ from ._device import DeviceEvent
 from ._error import USER_ERRORS
 from ._error import verbalize_error
 from ._except import EmulationExit
-from ._keyboard import KEYS_INFO
+from ._keyboard import KEYS
 from ._time import get_elapsed_time
 from ._time import get_timestamp
 from ._utils import div_ceil
@@ -217,17 +217,17 @@ class ScreenWindow(Device):
         if not SCREENCAST:
             self.pattern.set_filter(cairo.FILTER_NEAREST)
 
-        self.keys = {'RETURN': KEYS_INFO['ENTER'],
-                     'ALT_L': KEYS_INFO['CAPS SHIFT'],
-                     'SHIFT_L': KEYS_INFO['CAPS SHIFT'],
-                     'ALT_R': KEYS_INFO['SYMBOL SHIFT'],
-                     'SHIFT_R': KEYS_INFO['SYMBOL SHIFT'],
-                     'SPACE': KEYS_INFO['BREAK SPACE']}
+        self.keys = {'RETURN': KEYS['ENTER'],
+                     'ALT_L': KEYS['CAPS SHIFT'],
+                     'SHIFT_L': KEYS['CAPS SHIFT'],
+                     'ALT_R': KEYS['SYMBOL SHIFT'],
+                     'SHIFT_R': KEYS['SYMBOL SHIFT'],
+                     'SPACE': KEYS['BREAK SPACE']}
         for id in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
                    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
                    'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
                    'U', 'V', 'W', 'X', 'Y', 'Z']:
-            self.keys[id] = KEYS_INFO[id]
+            self.keys[id] = KEYS[id]
 
         self._window.connect('key-press-event', self._on_key_press)
         self._window.connect('key-release-event', self._on_key_release)
@@ -269,7 +269,7 @@ class ScreenWindow(Device):
         self.area.queue_draw()
 
     def _show_help(self):
-        KEYS = [
+        KEYS_HELP = [
             ('F1', 'Show help.'),
             ('F2', 'Save snapshot.'),
             ('F3', 'Load snapshot or tape file.'),
@@ -279,7 +279,7 @@ class ScreenWindow(Device):
             ('PAUSE', 'Pause/resume emulation.'),
         ]
 
-        for entry in KEYS:
+        for entry in KEYS_HELP:
             print('%7s  %s' % entry)
 
     def _save_snapshot(self):
