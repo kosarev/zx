@@ -237,13 +237,13 @@ static inline machine_emulator &cast_emulator(PyObject *p) {
     return cast_object(p)->emulator;
 }
 
-PyObject *get_state_image(PyObject *self, PyObject *args) {
+PyObject *get_state_view(PyObject *self, PyObject *args) {
     auto &state = cast_emulator(self).get_machine_state();
     return PyMemoryView_FromMemory(reinterpret_cast<char*>(&state),
                                    sizeof(state), PyBUF_WRITE);
 }
 
-PyObject *get_memory(PyObject *self, PyObject *args) {
+PyObject *get_memory_view(PyObject *self, PyObject *args) {
     auto &memory = cast_emulator(self).get_memory();
     return PyMemoryView_FromMemory(reinterpret_cast<char*>(memory),
                                    sizeof(memory), PyBUF_WRITE);
@@ -305,10 +305,10 @@ PyObject *on_handle_active_int(PyObject *self, PyObject *args) {
 }
 
 PyMethodDef methods[] = {
-    {"get_state_image", get_state_image, METH_NOARGS,
+    {"_get_state_view", get_state_view, METH_NOARGS,
      "Return a MemoryView object that exposes the internal state of the "
      "emulated machine."},
-    {"get_memory", get_memory, METH_NOARGS,
+    {"_get_memory_view", get_memory_view, METH_NOARGS,
      "Return a MemoryView object that exposes the memory of the emulated "
      "machine."},
     {"render_screen", render_screen, METH_NOARGS,

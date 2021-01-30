@@ -248,7 +248,8 @@ class Spectrum48(_Spectrum48Base, MachineState):
 
     def __init__(self):
         self.machine_kind = 'ZX Spectrum 48K'
-        MachineState.__init__(self, self.get_state_image(), self.get_memory())
+        MachineState.__init__(self, self._get_state_view(),
+                              self._get_memory_view())
 
         # Install ROM.
         self.set_memory_block(0x0000, get_rom_image(self.machine_kind))
