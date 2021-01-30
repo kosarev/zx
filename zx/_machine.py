@@ -10,7 +10,6 @@
 
 
 import enum
-import struct
 from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
 from ._emulatorbase import _Spectrum48Base
