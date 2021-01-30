@@ -2,7 +2,7 @@
 /*  ZX Spectrum Emulation Module for Python.
     https://github.com/kosarev/zx
 
-    Copyright (C) 2017-2019 Ivan Kosarev.
+    Copyright (C) 2017-2021 Ivan Kosarev.
     ivan@kosarev.info
 
     Published under the MIT license.
@@ -77,9 +77,9 @@ struct __attribute__((packed)) machine_state {
     least_u8 trace_enabled = false;
 };
 
-class machine_emulator : public zx::spectrum48 {
+class machine_emulator : public zx::spectrum48<machine_emulator> {
 public:
-    typedef zx::spectrum48 base;
+    typedef zx::spectrum48<machine_emulator> base;
 
     machine_emulator() {
         retrieve_state();
@@ -191,7 +191,8 @@ protected:
         set_iregp_kind(static_cast<z80::iregp>(state.index_rp_kind));
     }
 
-    fast_u8 on_input(fast_u16 addr) override {
+public:
+    fast_u8 on_input(fast_u16 addr) {
         const fast_u8 default_value = 0xbf;
         if(!on_input_callback)
             return default_value;

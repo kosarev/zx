@@ -2,7 +2,7 @@
 /*  ZX Spectrum Emulator.
     https://github.com/kosarev/zx
 
-    Copyright (C) 2017-2019 Ivan Kosarev.
+    Copyright (C) 2017-2021 Ivan Kosarev.
     ivan@kosarev.info
 
     Published under the MIT license.
@@ -108,9 +108,10 @@ private:
     char output_buff[max_output_buff_size];
 };
 
-class spectrum48 : public z80::z80_cpu<spectrum48> {
+template<typename D>
+class spectrum48 : public z80::z80_cpu<D> {
 public:
-    typedef z80_cpu<spectrum48> base;
+    typedef z80::z80_cpu<D> base;
     typedef fast_u32 ticks_type;
 
     spectrum48() {
@@ -120,8 +121,6 @@ public:
             rnd = (rnd * 0x74392cef) ^ (rnd >> 16);
         }
     }
-
-    virtual ~spectrum48();
 
     events_mask get_events() const { return events; }
 
@@ -188,7 +187,7 @@ public:
     }
 
     fast_u8 on_fetch_cycle() {
-        handle_memory_contention(get_pc());
+        handle_memory_contention(self().get_pc());
         return base::on_fetch_cycle();
     }
 
@@ -275,7 +274,7 @@ public:
 
     fast_u8 on_input_cycle(fast_u16 addr) {
         handle_port_contention(addr);
-        fast_u8 n = on_input(addr);
+        fast_u8 n = self().on_input(addr);
 
         if(FILE *trace = get_trace_file()) {
             std::fprintf(trace, "read_port %04x %02x\n",
@@ -313,8 +312,10 @@ public:
         base::on_set_pc(pc);
     }
 
-    // TODO: Get rid of all virtuals and remove the .cpp file.
-    virtual fast_u8 on_input(fast_u16 addr);
+    fast_u8 on_input(fast_u16 addr) {
+        z80::unused(addr);
+        return 0xbf;
+    }
 
     void on_output_cycle(fast_u16 addr, fast_u8 n) {
         if((addr & 0xff) == 0xfe) {
@@ -687,10 +688,10 @@ public:
         if(!trace)
             return;
 
-        if(get_iregp_kind() != z80::iregp::hl)
+        if(self().get_iregp_kind() != z80::iregp::hl)
             return;
 
-        fast_u16 pc = get_pc();
+        fast_u16 pc = self().get_pc();
         bool new_rom_instr =
             pc < 0x4000 && !is_marked_addr(pc, visited_instr_mark);
 
@@ -702,16 +703,16 @@ public:
             "%02x%02x%02x%02x%02x%02x%02x%02x %s%s\n",
             static_cast<unsigned>(ticks_since_int),
             static_cast<unsigned>(pc),
-            static_cast<unsigned>(get_af()),
-            static_cast<unsigned>(get_bc()),
-            static_cast<unsigned>(get_de()),
-            static_cast<unsigned>(get_hl()),
-            static_cast<unsigned>(get_ix()),
-            static_cast<unsigned>(get_iy()),
-            static_cast<unsigned>(get_sp()),
-            static_cast<unsigned>(get_wz()),
-            static_cast<unsigned>(get_ir()),
-            static_cast<unsigned>(get_iff1()),
+            static_cast<unsigned>(self().get_af()),
+            static_cast<unsigned>(self().get_bc()),
+            static_cast<unsigned>(self().get_de()),
+            static_cast<unsigned>(self().get_hl()),
+            static_cast<unsigned>(self().get_ix()),
+            static_cast<unsigned>(self().get_iy()),
+            static_cast<unsigned>(self().get_sp()),
+            static_cast<unsigned>(self().get_wz()),
+            static_cast<unsigned>(self().get_ir()),
+            static_cast<unsigned>(self().get_iff1()),
             static_cast<unsigned>(on_read((pc + 0) & 0xffff)),
             static_cast<unsigned>(on_read((pc + 1) & 0xffff)),
             static_cast<unsigned>(on_read((pc + 2) & 0xffff)),
@@ -726,7 +727,7 @@ public:
 
     void on_step() {
         trace_state();
-        mark_addr(get_pc(), visited_instr_mark);
+        mark_addr(self().get_pc(), visited_instr_mark);
         base::on_step();
     }
 
@@ -737,7 +738,7 @@ public:
                 std::fprintf(trace, "INT accepted\n");
             } else {
                 std::fprintf(trace, "INT ignored (int_disabled=%u, iff1=%u)\n",
-                             is_int_disabled(), get_iff1());
+                             self().is_int_disabled(), self().get_iff1());
             }
             std::fflush(trace);
         }
@@ -745,6 +746,8 @@ public:
     }
 
 protected:
+    using base::self;
+
     pixel_type translate_color(unsigned c) {
         uint_fast32_t r = 0;
         r |= (c & red_mask)   << (16 - red_bit);

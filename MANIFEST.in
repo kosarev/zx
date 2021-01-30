@@ -1,4 +1,4 @@
 include LICENSE
-include zx.h zx.cpp z80/z80.h
+include zx.h z80/z80.h
 include zx/roms *.rom
 recursive-include test *.py

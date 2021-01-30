@@ -2,7 +2,7 @@
 /*  ZX Spectrum Emulator.
     https://github.com/kosarev/zx
 
-    Copyright (C) 2017-2019 Ivan Kosarev.
+    Copyright (C) 2017-2021 Ivan Kosarev.
     ivan@kosarev.info
 
     Published under the MIT license.
@@ -360,7 +360,8 @@ private:
     static const unsigned spectrum_key_symbol_shift = 0x1f;
     static const unsigned spectrum_key_break_space = 0x0f;
 
-    fast_u8 on_input(fast_u16 addr) override {
+public:
+    fast_u8 on_input(fast_u16 addr) {
         fast_u8 n = 0xbf;  // TODO
         if(!(addr & 1)) {
             // Scan keyboard.
@@ -376,6 +377,7 @@ private:
         return n;
     }
 
+private:
     void update_window() {
         ::XPutImage(display, window, gc, image, 0, 0, 0, 0,
                     window_width, window_height);
@@ -400,10 +402,13 @@ private:
     keyboard_state_type keyboard_state;
 };
 
+class x11_spectrum48 : public x11_emulator<zx::spectrum48<x11_spectrum48>>
+{};
+
 }  // anonymous namespace
 
 int main(int argc, const char *argv[]) {
-    x11_emulator<zx::spectrum48> emu;
+    x11_spectrum48 emu;
     emu.load_rom("/usr/share/spectrum-roms/48.rom");
 
     if(argc == 2 && std::strcmp(argv[1], "test") == 0) {

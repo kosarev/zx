@@ -40,7 +40,7 @@ zx_emulatorbase_module = Extension(
                         '-O3',
                         '-UNDEBUG',  # TODO
                         ],
-    sources=['zx.cpp', 'zx/_emulatorbase.cpp'],
+    sources=['zx/_emulatorbase.cpp'],
     language='c++')
 
 
