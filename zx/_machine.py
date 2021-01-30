@@ -46,25 +46,6 @@ class _ImageParser(object):
         return self.parse_block(4)
 
 
-class StateImage(object):
-    def __init__(self, image):
-        self._fields = {}
-        self._image = image
-
-    def define_fields(self, fields):
-        self._fields.update(fields)
-
-    def get(self, field_id):
-        offset, format = self._fields[field_id]
-        size = struct.calcsize(format)
-        return struct.unpack(format, self._image[offset:offset + size])[0]
-
-    def set(self, field_id, field_value):
-        offset, format = self._fields[field_id]
-        size = struct.calcsize(format)
-        self._image[offset:offset + size] = struct.pack(format, field_value)
-
-
 def _make16(b0, b1):
     return b0 + (b1 << 8)
 
@@ -84,8 +65,6 @@ def _split32(n):
 
 class ProcessorState(object):
     def __init__(self, image):
-        StateImage.__init__(self, image)
-
         p = _ImageParser(image)
         self.__bc = p.parse16()
         self.__de = p.parse16()
