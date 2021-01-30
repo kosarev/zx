@@ -359,7 +359,7 @@ class Emulator(object):
 
             if (self.__playback_samples and
                     RunEvents.FETCHES_LIMIT_HIT in events):
-                # Some simulators, e.g., SPIN, may store an interrupt
+                # Some emulators, e.g., SPIN, may store an interrupt
                 # point in the middle of a IX- or IY-prefixed
                 # instruction, so we continue until such
                 # instruction, if any, is completed.

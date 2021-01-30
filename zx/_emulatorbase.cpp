@@ -307,9 +307,9 @@ PyObject *on_handle_active_int(PyObject *self, PyObject *args) {
 PyMethodDef methods[] = {
     {"get_state_image", get_state_image, METH_NOARGS,
      "Return a MemoryView object that exposes the internal state of the "
-     "simulated machine."},
+     "emulated machine."},
     {"get_memory", get_memory, METH_NOARGS,
-     "Return a MemoryView object that exposes the memory of the simulated "
+     "Return a MemoryView object that exposes the memory of the emulated "
      "machine."},
     {"render_screen", render_screen, METH_NOARGS,
      "Render current screen frame and return a MemoryView object that exposes "
