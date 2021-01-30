@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import distutils.sysconfig, os
+import distutils.sysconfig
 import inspect
+import os
 # from distutils.core import Extension
 from setuptools import Extension, setup
 
@@ -12,7 +13,7 @@ ZX_MINOR_VERSION = 7
 ZX_PATCH_VERSION = 0
 
 
-here = os.path.abspath(os.path.dirname(inspect.getsource(lambda:0)))
+here = os.path.abspath(os.path.dirname(inspect.getsource(lambda: 0)))
 
 with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
@@ -38,7 +39,7 @@ zx_emulatorbase_module = Extension(
     extra_compile_args=['-std=c++11', '-Wall', '-fno-exceptions', '-fno-rtti',
                         '-O3',
                         '-UNDEBUG',  # TODO
-                       ],
+                        ],
     sources=['zx.cpp', 'zx/_emulatorbase.cpp'],
     language='c++')
 

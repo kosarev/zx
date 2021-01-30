@@ -178,7 +178,7 @@ class drawing_generator(object):
                                'delay of %d ticks!' % delay)
 
             if delay == 10:
-                label = self.add_label();
+                label = self.add_label()
                 self.add_instr('jp %s' % label, 10)
                 self.add_line(label + ':')
                 break

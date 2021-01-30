@@ -9,7 +9,8 @@
 #   Published under the MIT license.
 
 
-import gc, unittest
+import gc
+import unittest
 
 
 ''' XFAIL

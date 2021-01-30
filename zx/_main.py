@@ -137,7 +137,7 @@ def test_file(filename):
             move('passed')
         except Error as e:
             move(e.id)
-        except:
+        except Exception as e:
             # TODO: Refine.
             return False
 
