@@ -26,6 +26,26 @@ class RunEvents(enum.IntFlag):
     END_OF_TAPE = 1 << 5
 
 
+class _ImageParser(object):
+    def __init__(self, image):
+        self.__image = image
+
+    def parse_block(self, size):
+        assert len(self.__image) >= size
+        block = self.__image[0:size]
+        self.__image = self.__image[size:]
+        return block
+
+    def parse8(self):
+        return self.parse_block(1)
+
+    def parse16(self):
+        return self.parse_block(2)
+
+    def parse32(self):
+        return self.parse_block(4)
+
+
 class StateImage(object):
     def __init__(self, image):
         self._fields = {}
@@ -45,110 +65,189 @@ class StateImage(object):
         self._image[offset:offset + size] = struct.pack(format, field_value)
 
 
-class ProcessorState(StateImage):
-    _PROCESSOR_FIELDS = {
-        'bc': (0, '<H'),
-        'de': (2, '<H'),
-        'hl': (4, '<H'),
-        'af': (6, '<H'), 'f': (6, 'B'), 'a': (7, 'B'),
-        'ix': (8, '<H'),
-        'iy': (10, '<H'),
+def _make16(b0, b1):
+    return b0 + (b1 << 8)
 
-        'alt_bc': (12, '<H'),
-        'alt_de': (14, '<H'),
-        'alt_hl': (16, '<H'),
-        'alt_af': (18, '<H'), 'alt_f': (18, 'B'), 'alt_a': (19, 'B'),
 
-        'pc': (20, '<H'),
-        'sp': (22, '<H'),
-        'ir': (24, '<H'), 'r': (24, 'B'), 'i': (25, 'B'),
-        'wz': (26, '<H'),
+def _split16(n):
+    return bytes(((n >> 0) & 0xff, (n >> 8) & 0xff))
 
-        'iff1': (28, 'B'),
-        'iff2': (29, 'B'),
-        'int_mode': (30, 'B'),
-        'index_rp_kind': (31, 'B'),
-    }
 
+def _make32(b0, b1, b2, b3):
+    return b0 + (b1 << 8) + (b2 << 16) + (b3 << 24)
+
+
+def _split32(n):
+    return bytes(((n >> 0) & 0xff, (n >> 8) & 0xff,
+                  (n >> 16) & 0xff, (n >> 23) & 0xff))
+
+
+class ProcessorState(object):
     def __init__(self, image):
         StateImage.__init__(self, image)
-        self.define_fields(self._PROCESSOR_FIELDS)
 
-    def get_bc(self):
-        return self.get('bc')
+        p = _ImageParser(image)
+        self.__bc = p.parse16()
+        self.__de = p.parse16()
+        self.__hl = p.parse16()
+        self.__af = p.parse16()
+        self.__ix = p.parse16()
+        self.__iy = p.parse16()
+        self.__alt_bc = p.parse16()
+        self.__alt_de = p.parse16()
+        self.__alt_hl = p.parse16()
+        self.__alt_af = p.parse16()
+        self.__pc = p.parse16()
+        self.__sp = p.parse16()
+        self.__ir = p.parse16()
+        self.__wz = p.parse16()
+        self.__iff1 = p.parse8()
+        self.__iff2 = p.parse8()
+        self.__int_mode = p.parse8()
+        self.__iregp_kind = p.parse8()
 
-    def get_de(self):
-        return self.get('de')
+    @property
+    def bc(self):
+        return _make16(*self.__bc)
 
-    def get_hl(self):
-        return self.get('hl')
+    @bc.setter
+    def bc(self, value):
+        self.__bc[:] = _split16(value)
 
-    def get_a(self):
-        return self.get('a')
+    @property
+    def de(self):
+        return _make16(*self.__de)
 
-    def get_f(self):
-        return self.get('f')
+    @de.setter
+    def de(self, value):
+        self.__de[:] = _split16(value)
 
-    def get_ix(self):
-        return self.get('ix')
+    @property
+    def hl(self):
+        return _make16(*self.__hl)
 
-    def get_iy(self):
-        return self.get('iy')
+    @hl.setter
+    def hl(self, value):
+        self.__hl[:] = _split16(value)
 
-    def get_alt_bc(self):
-        return self.get('alt_bc')
+    @property
+    def af(self):
+        return _make16(*self.__af)
 
-    def get_alt_de(self):
-        return self.get('alt_de')
+    @af.setter
+    def af(self, value):
+        self.__af[:] = _split16(value)
 
-    def get_alt_hl(self):
-        return self.get('alt_hl')
+    @property
+    def ix(self):
+        return _make16(*self.__ix)
 
-    def get_alt_a(self):
-        return self.get('alt_a')
+    @ix.setter
+    def ix(self, value):
+        self.__ix[:] = _split16(value)
 
-    def get_alt_f(self):
-        return self.get('alt_f')
+    @property
+    def iy(self):
+        return _make16(*self.__iy)
 
-    def get_alt_af(self):
-        return self.get('alt_af')
+    @iy.setter
+    def iy(self, value):
+        self.__iy[:] = _split16(value)
 
-    def get_pc(self):
-        return self.get('pc')
+    @property
+    def alt_bc(self):
+        return _make16(*self.__alt_bc)
 
-    def set_pc(self, pc):
-        self.set('pc', pc)
+    @alt_bc.setter
+    def alt_bc(self, value):
+        self.__alt_bc[:] = _split16(value)
 
-    def get_sp(self):
-        return self.get('sp')
+    @property
+    def alt_de(self):
+        return _make16(*self.__alt_de)
 
-    def set_sp(self, sp):
-        self.set('sp', sp)
+    @alt_de.setter
+    def alt_de(self, value):
+        self.__alt_de[:] = _split16(value)
 
-    def get_i(self):
-        return self.get('i')
+    @property
+    def alt_hl(self):
+        return _make16(*self.__alt_hl)
 
-    def get_r_reg(self):
-        return self.get('r')
+    @alt_hl.setter
+    def alt_hl(self, value):
+        self.__alt_hl[:] = _split16(value)
 
-    def get_iff1(self):
-        return self.get('iff1')
+    @property
+    def alt_af(self):
+        return _make16(*self.__alt_af)
 
-    def get_iff2(self):
-        return self.get('iff2')
+    @alt_af.setter
+    def alt_af(self, value):
+        self.__alt_af[:] = _split16(value)
 
-    def get_int_mode(self):
-        return self.get('int_mode')
+    @property
+    def pc(self):
+        return _make16(*self.__pc)
 
-    def get_iregp_kind(self):
-        n = self.get('index_rp_kind')
+    @pc.setter
+    def pc(self, value):
+        self.__pc[:] = _split16(value)
+
+    @property
+    def sp(self):
+        return _make16(*self.__sp)
+
+    @sp.setter
+    def sp(self, value):
+        self.__sp[:] = _split16(value)
+
+    @property
+    def ir(self):
+        return _make16(*self.__ir)
+
+    @ir.setter
+    def ir(self, value):
+        self.__ir[:] = _split16(value)
+
+    @property
+    def iff1(self):
+        return bool(self.__iff1[0])
+
+    @iff1.setter
+    def iff1(self, value):
+        self.__iff1[0] = value
+
+    @property
+    def iff2(self):
+        return bool(self.__iff2[0])
+
+    @iff2.setter
+    def iff2(self, value):
+        self.__iff2[0] = value
+
+    @property
+    def int_mode(self):
+        return self.__int_mode[0]
+
+    @int_mode.setter
+    def int_mode(self, value):
+        self.__int_mode[0] = value
+
+    @property
+    def iregp_kind(self):
+        n = self.__iregp_kind[0]
         return {0: 'hl', 1: 'ix', 2: 'iy'}[n]
+
+    @iregp_kind.setter
+    def iregp_kind(self, value):
+        self.__iregp_kind[0] = value
 
     def install_snapshot(self, snapshot):
         assert isinstance(snapshot, ProcessorSnapshot)
         for field, value in snapshot.items():
             if field != 'id':
-                self.set(field, value)
+                setattr(self, field, value)
 
 
 class MemoryState(object):
@@ -173,39 +272,48 @@ class MemoryState(object):
 
 
 class MachineState(ProcessorState, MemoryState):
-    _MACHINE_FIELDS = {
-        'ticks_since_int': (32, '<L'),
-        'fetches_to_stop': (36, '<L'),
-        'events': (40, '<L'),
-        'int_suppressed':  (44, 'B'),
-        'int_after_ei_allowed': (45, 'B'),
-        'border_color': (46, 'B'),
-        'trace_enabled': (47, 'B'),
-    }
+    def __init__(self, image):
+        p = _ImageParser(image)
+        ProcessorState.__init__(self, p.parse_block(32))
 
-    def __init__(self, machine_image):
-        ProcessorState.__init__(self, machine_image)
-        MemoryState.__init__(self, machine_image[48:])
-        self.define_fields(self._MACHINE_FIELDS)
+        self.__ticks_since_int = p.parse32()
+        self.__fetches_to_stop = p.parse32()
+        self.__events = p.parse32()
+        self.__int_suppressed = p.parse8()
+        self.__int_after_ei_allowed = p.parse8()
+        self.__border_color = p.parse8()
+        self.__trace_enabled = p.parse8()
+
+        MemoryState.__init__(self, image[48:])
 
     def clone(self):
         return MachineState(self._image[:], self._memory_image[:])
 
-    def is_suppressed_int(self):
-        return bool(self.get('int_suppressed'))
+    @property
+    def suppress_interrupts(self):
+        return bool(self.__is_suppressed_int[0])
 
-    def suppress_int(self, suppress=True):
-        self.set('int_suppressed', int(suppress))
+    @suppress_interrupts.setter
+    def suppress_interrupts(self, suppress):
+        self.__int_suppressed[0] = int(suppress)
 
-    def allow_int_after_ei(self, allow=True):
-        self.set('int_after_ei_allowed', int(allow))
+    @property
+    def allow_int_after_ei(self):
+        return bool(self.__int_after_ei_allowed[0])
 
-    def get_fetches_limit(self):
+    @allow_int_after_ei.setter
+    def allow_int_after_ei(self, allow):
+        self.__int_after_ei_allowed[0] = int(allow)
+
+    @property
+    def fetches_limit(self):
         return self.get('fetches_to_stop')
 
-    def set_fetches_limit(self, fetches_to_stop):
-        self.set('fetches_to_stop', fetches_to_stop)
+    @fetches_limit.setter
+    def fetches_limit(self, fetches_to_stop):
+        self.__fetches_to_stop[:] = _split32(fetches_to_stop)
 
+    ''' TODO
     def get_events(self):
         return self.get('events')
 
@@ -214,13 +322,17 @@ class MachineState(ProcessorState, MemoryState):
 
     def raise_events(self, events):
         self.set_events(self.get_events() | events)
+    '''
 
-    def get_ticks_since_int(self):
-        return self.get('ticks_since_int')
+    @property
+    def ticks_since_int(self):
+        return _make32(*self.__ticks_since_int)
 
-    def set_ticks_since_int(self, ticks):
-        self.set('ticks_since_int', ticks)
+    @ticks_since_int.setter
+    def ticks_since_int(self, ticks):
+        self.__ticks_since_int[:] = _split32(ticks)
 
+    ''' TODO
     def get_border_color(self):
         return self.get('border_color')
 
@@ -229,6 +341,7 @@ class MachineState(ProcessorState, MemoryState):
 
     def enable_trace(self, enable=True):
         self.set('trace_enabled', int(enable))
+    '''
 
     def install_snapshot(self, snapshot):
         assert isinstance(snapshot, MachineSnapshot)
@@ -238,7 +351,7 @@ class MachineState(ProcessorState, MemoryState):
             elif field == 'memory_blocks':
                 self.set_memory_blocks(value)
             else:
-                self.set(field, value)
+                setattr(self, field, value)
 
 
 class Spectrum48(_Spectrum48Base, MachineState):

@@ -192,7 +192,7 @@ class Emulator(object):
         # TODO: Use the tick when the ear value is sampled
         #       instead of the tick of the beginning of the input
         #       cycle.
-        tick = self.__machine.get_ticks_since_int()
+        tick = self.__machine.ticks_since_int
         if self._tape_player.get_level_at_frame_tick(tick):
             n |= 0x40
 
@@ -233,8 +233,8 @@ class Emulator(object):
     def __enter_playback_mode(self):
         # Interrupts are supposed to be controlled by the
         # recording.
-        self.__machine.suppress_int()
-        self.__machine.allow_int_after_ei()
+        self.__machine.suppress_interrupts = True
+        self.__machine.allow_int_after_ei = True
         # self.__machine.enable_trace()
 
     # TODO: Double-underscore or make public.
@@ -242,8 +242,8 @@ class Emulator(object):
         self.__playback_player = None
         self.__playback_samples = None
 
-        self.__machine.suppress_int(False)
-        self.__machine.allow_int_after_ei(False)
+        self.__machine.suppress_interrupts = False
+        self.__machine.allow_int_after_ei = False
 
     def __get_playback_samples(self):
         # TODO: Have a class describing playback state.
@@ -261,13 +261,13 @@ class Emulator(object):
             if chunk['id'] != 'port_samples':
                 continue
 
-            self.__machine.set_ticks_since_int(chunk['first_tick'])
+            self.__machine.ticks_since_int = chunk['first_tick']
 
             for frame_i, frame in enumerate(chunk['frames']):
                 num_of_fetches, samples = frame
                 # print(num_of_fetches, samples)
 
-                self.__machine.set_fetches_limit(num_of_fetches)
+                self.__machine.fetches_limit = num_of_fetches
                 # print(num_of_fetches, samples, flush=True)
 
                 # print('START_OF_FRAME', flush=True)
@@ -363,7 +363,7 @@ class Emulator(object):
                 # point in the middle of a IX- or IY-prefixed
                 # instruction, so we continue until such
                 # instruction, if any, is completed.
-                if self.__machine.get_iregp_kind() != 'hl':
+                if self.__machine.iregp_kind != 'hl':
                     self.__machine.set_fetches_limit(1)
                     return
 
