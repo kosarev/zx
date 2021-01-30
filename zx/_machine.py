@@ -183,9 +183,9 @@ class MachineState(ProcessorState, MemoryState):
         'trace_enabled': (47, 'B'),
     }
 
-    def __init__(self, machine_image, memory_image):
+    def __init__(self, machine_image):
         ProcessorState.__init__(self, machine_image)
-        MemoryState.__init__(self, memory_image)
+        MemoryState.__init__(self, machine_image[48:])
         self.define_fields(self._MACHINE_FIELDS)
 
     def clone(self):
@@ -248,8 +248,7 @@ class Spectrum48(_Spectrum48Base, MachineState):
 
     def __init__(self):
         self.machine_kind = 'ZX Spectrum 48K'
-        MachineState.__init__(self, self._get_state_view(),
-                              self._get_memory_view())
+        MachineState.__init__(self, self._get_state_view())
 
         # Install ROM.
         self.set_memory_block(0x0000, get_rom_image(self.machine_kind))

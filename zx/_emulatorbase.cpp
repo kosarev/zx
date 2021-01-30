@@ -250,12 +250,6 @@ PyObject *get_state_view(PyObject *self, PyObject *args) {
                                    sizeof(state), PyBUF_WRITE);
 }
 
-PyObject *get_memory_view(PyObject *self, PyObject *args) {
-    auto &memory = cast_emulator(self).on_get_memory();
-    return PyMemoryView_FromMemory(reinterpret_cast<char*>(memory),
-                                   sizeof(memory), PyBUF_WRITE);
-}
-
 PyObject *render_screen(PyObject *self, PyObject *args) {
     auto &emulator = cast_emulator(self);
     emulator.render_screen();
@@ -315,9 +309,6 @@ PyMethodDef methods[] = {
     {"_get_state_view", get_state_view, METH_NOARGS,
      "Return a MemoryView object that exposes the internal state of the "
      "emulated machine."},
-    {"_get_memory_view", get_memory_view, METH_NOARGS,
-     "Return a MemoryView object that exposes the memory of the emulated "
-     "machine."},
     {"render_screen", render_screen, METH_NOARGS,
      "Render current screen frame and return a MemoryView object that exposes "
      "a buffer that contains rendered data."},
