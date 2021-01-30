@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2019 Ivan Kosarev.
+#   Copyright (C) 2017-2021 Ivan Kosarev.
 #   ivan@kosarev.info
 #
 #   Published under the MIT license.
@@ -13,7 +13,7 @@ import enum
 import struct
 from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
-from ._emulatorbase import Spectrum48Base
+from ._emulatorbase import _Spectrum48Base
 from ._rom import get_rom_image
 from ._utils import make16
 
@@ -241,7 +241,7 @@ class MachineState(ProcessorState, MemoryState):
                 self.set(field, value)
 
 
-class Spectrum48(Spectrum48Base, MachineState):
+class Spectrum48(_Spectrum48Base, MachineState):
     # Memory marks.
     _NO_MARKS = 0
     _BREAKPOINT_MARK = 1 << 0
