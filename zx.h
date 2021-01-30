@@ -116,7 +116,7 @@ public:
 
     spectrum48() {
         uint_fast32_t rnd = 0xde347a01;
-        for(auto &cell : memory_image) {
+        for(auto &cell : self().on_get_memory()) {
             cell = static_cast<least_u8>(rnd);
             rnd = (rnd * 0x74392cef) ^ (rnd >> 16);
         }
@@ -144,12 +144,12 @@ public:
 
     void set_memory_byte(fast_u16 addr, fast_u8 n) {
         assert(addr < memory_image_size);
-        memory_image[addr] = static_cast<least_u8>(n);
+        self().on_get_memory()[addr] = static_cast<least_u8>(n);
     }
 
     fast_u8 on_read(fast_u16 addr) {
         assert(addr < memory_image_size);
-        return memory_image[addr];
+        return self().on_get_memory()[addr];
     }
 
     void on_write(fast_u16 addr, fast_u8 n) {
@@ -363,8 +363,6 @@ public:
 
     static const unsigned memory_image_size = 0x10000;  // 64K bytes.
     typedef least_u8 memory_image_type[memory_image_size];
-
-    memory_image_type &get_memory() { return memory_image; }
 
     static const ticks_type ticks_per_frame = 69888;
     static const ticks_type ticks_per_line = 224;
@@ -695,7 +693,7 @@ public:
         bool new_rom_instr =
             pc < 0x4000 && !is_marked_addr(pc, visited_instr_mark);
 
-        disassembler disasm(pc, memory_image);
+        disassembler disasm(pc, self().on_get_memory());
         std::fprintf(trace,
             "%7u "
             "PC:%04x AF:%04x BC:%04x DE:%04x HL:%04x IX:%04x IY:%04x "
@@ -782,7 +780,6 @@ protected:
 
 private:
     screen_chunks_type screen_chunks;
-    memory_image_type memory_image;
     least_u8 memory_marks[memory_image_size] = {};
 };
 

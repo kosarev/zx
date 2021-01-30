@@ -377,6 +377,10 @@ public:
         return n;
     }
 
+    zx::memory_image_type &on_get_memory() {
+        return memory;
+    }
+
 private:
     void update_window() {
         ::XPutImage(display, window, gc, image, 0, 0, 0, 0,
@@ -400,6 +404,7 @@ private:
     static const unsigned num_of_keyboard_ports = 8;
     typedef least_u8 keyboard_state_type[num_of_keyboard_ports];
     keyboard_state_type keyboard_state;
+    zx::memory_image_type memory;
 };
 
 class x11_spectrum48 : public x11_emulator<zx::spectrum48<x11_spectrum48>>

@@ -75,6 +75,8 @@ struct __attribute__((packed)) machine_state {
     least_u8 int_after_ei_allowed = false;
     least_u8 border_color = 7;
     least_u8 trace_enabled = false;
+
+    zx::memory_image_type memory;
 };
 
 class machine_emulator : public zx::spectrum48<machine_emulator> {
@@ -192,6 +194,10 @@ protected:
     }
 
 public:
+    memory_image_type &on_get_memory() {
+        return state.memory;
+    }
+
     fast_u8 on_input(fast_u16 addr) {
         const fast_u8 default_value = 0xbf;
         if(!on_input_callback)
@@ -245,7 +251,7 @@ PyObject *get_state_view(PyObject *self, PyObject *args) {
 }
 
 PyObject *get_memory_view(PyObject *self, PyObject *args) {
-    auto &memory = cast_emulator(self).get_memory();
+    auto &memory = cast_emulator(self).on_get_memory();
     return PyMemoryView_FromMemory(reinterpret_cast<char*>(memory),
                                    sizeof(memory), PyBUF_WRITE);
 }
