@@ -271,9 +271,6 @@ class MachineState(Z80State, MemoryState):
 
         MemoryState.__init__(self, image[48:])
 
-    def clone(self):
-        return MachineState(self._image[:], self._memory_image[:])
-
     @property
     def suppress_interrupts(self):
         return bool(self.__is_suppressed_int[0])

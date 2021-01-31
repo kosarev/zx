@@ -310,7 +310,7 @@ class Emulator(object):
             '''
             frame_count += 1
             if frame_count == -12820:
-                frame_state = self.__machine.clone()
+                frame_state = MachineState(self.__machine.image)
                 self.__save_crash_rzx(player, frame_state, chunk_i, frame_i)
                 assert 0
 
