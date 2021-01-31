@@ -12,6 +12,7 @@
 import enum
 from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
+from ._device import PauseStateUpdated
 from ._emulatorbase import _Spectrum48Base
 from ._except import EmulationExit
 from ._rom import get_rom_image
@@ -353,6 +354,8 @@ class Spectrum48(_Spectrum48Base, MachineState):
         # Install ROM.
         self.write(0x0000, get_rom_image(self.machine_kind))
 
+        self.__paused = False
+
     def destroy(self):
         for device in self.devices:
             device.destroy()
@@ -369,6 +372,15 @@ class Spectrum48(_Spectrum48Base, MachineState):
     def notify_devices(self, event):
         for device in self.devices:
             device.on_event(event)
+
+    @property
+    def paused(self):
+        return self.__paused
+
+    @paused.setter
+    def paused(self, value):
+        self.__paused = value
+        self.notify_devices(PauseStateUpdated())
 
     def set_breakpoints(self, addr, size):
         self.mark_addrs(addr, size, self._BREAKPOINT_MARK)

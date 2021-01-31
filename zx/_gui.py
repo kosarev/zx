@@ -181,7 +181,7 @@ class ScreenWindow(Device):
             'F3': self._choose_and_load_file,
             'F6': self.machine._toggle_tape_pause,
             'F11': self._toggle_fullscreen,
-            'PAUSE': self.machine._toggle_pause,
+            'PAUSE': self.__toggle_pause,
         }
 
         self._EVENT_HANDLERS = {
@@ -344,7 +344,7 @@ class ScreenWindow(Device):
         zx_key_id = self._GTK_KEYS_TO_ZX_KEYS.get(key_id, key_id)
         key = KEYS.get(zx_key_id, None)
         if key:
-            self.machine._pause(False)
+            self.machine.paused = False
             self.machine._quit_playback_mode()
             self.machine._handle_key_stroke(key, pressed)
 
@@ -356,7 +356,7 @@ class ScreenWindow(Device):
 
     def _on_click(self, widget, event):
         if event.type == Gdk.EventType.BUTTON_PRESS:
-            self.machine._toggle_pause()
+            self.machine.paused ^= True
             return True
         elif event.type == Gdk.EventType._2BUTTON_PRESS:
             self._toggle_fullscreen()
@@ -375,7 +375,7 @@ class ScreenWindow(Device):
         self._EVENT_HANDLERS[type(event)](event)
 
     def _on_updated_pause_state(self, event):
-        if self.machine._is_paused():
+        if self.machine.paused:
             self._notification.set(draw_pause_notification,
                                    self.machine._emulation_time)
         else:
@@ -398,6 +398,9 @@ class ScreenWindow(Device):
             Gtk.main_iteration()
 
         self.area.queue_draw()
+
+    def __toggle_pause(self):
+        self.machine.paused ^= True
 
     def destroy(self):
         self._window.destroy()

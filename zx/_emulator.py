@@ -60,7 +60,6 @@ class Emulator(Spectrum48):
         self._emulation_time = Time()
         self.__speed_factor = speed_factor
 
-        self.__is_paused_flag = False
         self.__events_to_signal = RunEvents.NO_EVENTS
 
         # Don't even create the window on full throttle.
@@ -83,19 +82,6 @@ class Emulator(Spectrum48):
         self.__profile = profile
         if self.__profile:
             self.set_breakpoints(0, 0x10000)
-
-    # TODO: Double-underscore or make public.
-    def _is_paused(self):
-        return self.__is_paused_flag
-
-    # TODO: Double-underscore or make public.
-    def _pause(self, is_paused=True):
-        self.__is_paused_flag = is_paused
-        self.notify_devices(PauseStateUpdated())
-
-    # TODO: Double-underscore or make public.
-    def _toggle_pause(self):
-        self._pause(not self._is_paused())
 
     # TODO: Double-underscore or make public.
     def _save_snapshot_file(self, format, filename):
@@ -306,7 +292,7 @@ class Emulator(Spectrum48):
                 self.enable_trace()
             '''
 
-            if self._is_paused():
+            if self.paused:
                 # Give the CPU some spare time.
                 if speed_factor:
                     time.sleep((1 / 50) * speed_factor)
