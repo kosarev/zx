@@ -28,11 +28,16 @@ class RunEvents(enum.IntFlag):
 class _ImageParser(object):
     def __init__(self, image):
         self.__image = image
+        self.__pos = 0
+
+    @property
+    def parsed_image(self):
+        return self.__image[:self.__pos]
 
     def parse_block(self, size):
-        assert len(self.__image) >= size
-        block = self.__image[0:size]
-        self.__image = self.__image[size:]
+        block = self.__image[self.__pos:self.__pos + size]
+        self.__pos += size
+        assert len(block) == size
         return block
 
     def parse8(self):
@@ -83,6 +88,8 @@ class ProcessorState(object):
         self.__iff2 = p.parse8()
         self.__int_mode = p.parse8()
         self.__iregp_kind = p.parse8()
+
+        self.image = p.parsed_image
 
     @property
     def bc(self):
