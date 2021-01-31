@@ -67,7 +67,7 @@ def _split32(n):
                   (n >> 16) & 0xff, (n >> 23) & 0xff))
 
 
-class ProcessorState(object):
+class Z80State(object):
     def __init__(self, image):
         p = _ImageParser(image)
         self.__bc = p.parse16()
@@ -256,10 +256,10 @@ class MemoryState(object):
         return make16(hi=self.read8(addr + 1), lo=self.read8(addr))
 
 
-class MachineState(ProcessorState, MemoryState):
+class MachineState(Z80State, MemoryState):
     def __init__(self, image):
         p = _ImageParser(image)
-        ProcessorState.__init__(self, p.parse_block(32))
+        Z80State.__init__(self, p.parse_block(32))
 
         self.__ticks_since_int = p.parse32()
         self.__fetches_to_stop = p.parse32()
@@ -332,7 +332,7 @@ class MachineState(ProcessorState, MemoryState):
         assert isinstance(snapshot, MachineSnapshot)
         for field, value in snapshot.get_unified_snapshot().items():
             if field == 'processor_snapshot':
-                ProcessorState.install_snapshot(self, value)
+                Z80State.install_snapshot(self, value)
             elif field == 'memory_blocks':
                 self.set_memory_blocks(value)
             else:
