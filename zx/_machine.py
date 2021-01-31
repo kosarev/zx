@@ -387,3 +387,6 @@ class Spectrum48(_Spectrum48Base, MachineState):
 
     def set_breakpoint(self, addr):
         self.set_breakpoints(addr, 1)
+
+    def on_breakpoint(self):
+        raise EmulatorException('Breakpoint triggered.')

@@ -461,6 +461,3 @@ class Emulator(Spectrum48):
         self.__events_to_signal |= RunEvents.END_OF_TAPE
         while not self.__is_end_of_tape():
             self.__run_quantum(speed_factor=0)
-
-    def on_breakpoint(self):
-        raise EmulatorException('Breakpoint triggered.')
