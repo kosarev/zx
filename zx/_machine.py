@@ -366,6 +366,10 @@ class Spectrum48(_Spectrum48Base, MachineState):
     def stop(self):
         raise EmulationExit()
 
+    def notify_devices(self, event):
+        for device in self.devices:
+            device.on_event(event)
+
     def set_breakpoints(self, addr, size):
         self.mark_addrs(addr, size, self._BREAKPOINT_MARK)
 

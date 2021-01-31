@@ -11,11 +11,25 @@
 import enum
 
 
-class DeviceEvent(enum.Enum):
-    PAUSE_STATE_UPDATED = enum.auto()
-    QUANTUM_RUN = enum.auto()
-    SCREEN_UPDATED = enum.auto()
-    TAPE_STATE_UPDATED = enum.auto()
+class DeviceEvent(object):
+    pass
+
+
+class PauseStateUpdated(DeviceEvent):
+    pass
+
+
+class QuantumRun(DeviceEvent):
+    pass
+
+
+class ScreenUpdated(DeviceEvent):
+    def __init__(self, pixels):
+        self.pixels = pixels
+
+
+class TapeStateUpdated(DeviceEvent):
+    pass
 
 
 class Device(object):

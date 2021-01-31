@@ -11,7 +11,10 @@
 import cairo
 import gi
 from ._device import Device
-from ._device import DeviceEvent
+from ._device import PauseStateUpdated
+from ._device import QuantumRun
+from ._device import ScreenUpdated
+from ._device import TapeStateUpdated
 from ._error import USER_ERRORS
 from ._error import verbalize_error
 from ._except import EmulationExit
@@ -181,11 +184,11 @@ class ScreenWindow(Device):
             'PAUSE': self.emulator._toggle_pause,
         }
 
-        self._EMULATOR_EVENT_HANDLERS = {
-            DeviceEvent.PAUSE_STATE_UPDATED: self._on_updated_pause_state,
-            DeviceEvent.QUANTUM_RUN: self._on_quantum_run,
-            DeviceEvent.SCREEN_UPDATED: self._on_updated_screen,
-            DeviceEvent.TAPE_STATE_UPDATED: self._on_updated_tape_state,
+        self._EVENT_HANDLERS = {
+            PauseStateUpdated: self._on_updated_pause_state,
+            QuantumRun: self._on_quantum_run,
+            ScreenUpdated: self._on_updated_screen,
+            TapeStateUpdated: self._on_updated_tape_state,
         }
 
         self._notification = Notification()
@@ -259,8 +262,8 @@ class ScreenWindow(Device):
 
         self._screencast.on_draw(context.get_group_target())
 
-    def _on_updated_screen(self, pixels):
-        self.frame_data[:] = pixels
+    def _on_updated_screen(self, event):
+        self.frame_data[:] = event.pixels
         self.area.queue_draw()
 
     def _show_help(self):
@@ -368,24 +371,24 @@ class ScreenWindow(Device):
         state = event.new_window_state
         self._is_fullscreen = bool(state & Gdk.WindowState.FULLSCREEN)
 
-    def _on_emulator_event(self, id, *args):
-        self._EMULATOR_EVENT_HANDLERS[id](*args)
+    def on_event(self, event):
+        self._EVENT_HANDLERS[type(event)](event)
 
-    def _on_updated_pause_state(self):
+    def _on_updated_pause_state(self, event):
         if self.emulator._is_paused():
             self._notification.set(draw_pause_notification,
                                    self.emulator._emulation_time)
         else:
             self._notification.clear()
 
-    def _on_updated_tape_state(self):
+    def _on_updated_tape_state(self, event):
         tape_paused = self.emulator._is_tape_paused()
         draw = (draw_tape_pause_notification if tape_paused
                 else draw_tape_resume_notification)
         tape_time = self.emulator._tape_player.get_time()
         self._notification.set(draw, tape_time)
 
-    def _on_quantum_run(self):
+    def _on_quantum_run(self, event):
         if self._queued_exception is not None:
             e = self._queued_exception
             self._queued_exception = None

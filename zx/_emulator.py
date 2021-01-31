@@ -12,7 +12,10 @@
 import time
 from ._data import MachineSnapshot
 from ._data import SoundFile
-from ._device import DeviceEvent
+from ._device import PauseStateUpdated
+from ._device import QuantumRun
+from ._device import ScreenUpdated
+from ._device import TapeStateUpdated
 from ._error import Error
 from ._except import EmulatorException
 from ._file import parse_file
@@ -85,14 +88,10 @@ class Emulator(Spectrum48):
     def _is_paused(self):
         return self.__is_paused_flag
 
-    def __notify(self, id, *args):
-        for device in self.__devices:
-            device._on_emulator_event(id, *args)
-
     # TODO: Double-underscore or make public.
     def _pause(self, is_paused=True):
         self.__is_paused_flag = is_paused
-        self.__notify(DeviceEvent.PAUSE_STATE_UPDATED)
+        self.notify_devices(PauseStateUpdated())
 
     # TODO: Double-underscore or make public.
     def _toggle_pause(self):
@@ -115,7 +114,7 @@ class Emulator(Spectrum48):
 
     def __pause_tape(self, is_paused=True):
         self._tape_player.pause(is_paused)
-        self.__notify(DeviceEvent.TAPE_STATE_UPDATED)
+        self.notify_devices(TapeStateUpdated())
 
     def __unpause_tape(self):
         self.__pause_tape(is_paused=False)
@@ -293,7 +292,7 @@ class Emulator(Spectrum48):
             creator_info = self.__playback_player.find_recording_info_chunk()
 
         if True:  # TODO
-            self.__notify(DeviceEvent.QUANTUM_RUN)
+            self.notify_devices(QuantumRun())
 
             # TODO: For debug purposes.
             '''
@@ -338,7 +337,7 @@ class Emulator(Spectrum48):
                 self.render_screen()
 
                 pixels = self.get_frame_pixels()
-                self.__notify(DeviceEvent.SCREEN_UPDATED, pixels)
+                self.notify_devices(ScreenUpdated(pixels))
 
                 self._tape_player.skip_rest_of_frame()
                 self._emulation_time.advance(1 / 50)
