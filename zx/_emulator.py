@@ -15,6 +15,7 @@ from ._data import SoundFile
 from ._device import DeviceEvent
 from ._error import Error
 from ._except import EmulationExit
+from ._except import EmulatorException
 from ._file import parse_file
 from ._gui import ScreenWindow
 from ._keyboard import KeyboardState
@@ -488,4 +489,4 @@ class Emulator(Spectrum48):
             self.__run_quantum(speed_factor=0)
 
     def on_breakpoint(self):
-        raise Error('Breakpoint triggered.')
+        raise EmulatorException('Breakpoint triggered.')
