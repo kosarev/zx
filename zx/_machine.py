@@ -238,16 +238,17 @@ class Z80State(object):
 class MemoryState(object):
     def __init__(self, image):
         assert len(image) == 0x10000
-        self.image = image
+        self.__image = image
+        self.image = self.__image
 
     def read(self, addr, size):
-        return self.image[addr:addr + size]
+        return self.__image[addr:addr + size]
 
     def write(self, addr, block):
-        self.image[addr:addr + len(block)] = block
+        self.__image[addr:addr + len(block)] = block
 
     def read8(self, addr):
-        return self.image[addr]
+        return self.__image[addr]
 
     def read16(self, addr):
         return _make16(*self.read(addr, 2))
@@ -256,7 +257,9 @@ class MemoryState(object):
 class MachineState(Z80State, MemoryState):
     def __init__(self, image):
         p = _ImageParser(image)
-        Z80State.__init__(self, p.parse_block(32))
+
+        self.z80_image = p.parse_block(32)
+        Z80State.__init__(self, self.z80_image)
 
         self.__ticks_since_int = p.parse32()
         self.__fetches_to_stop = p.parse32()
@@ -266,7 +269,10 @@ class MachineState(Z80State, MemoryState):
         self.__border_color = p.parse8()
         self.__trace_enabled = p.parse8()
 
-        MemoryState.__init__(self, image[48:])
+        self.memory_image = p.parse_block(0x10000)
+        MemoryState.__init__(self, self.memory_image)
+
+        self.image = p.parsed_image
 
     @property
     def suppress_interrupts(self):
