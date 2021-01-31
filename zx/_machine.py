@@ -344,8 +344,8 @@ class MachineState(Z80State, MemoryState):
 
 class Spectrum48(_Spectrum48Base, MachineState):
     # Memory marks.
-    _NO_MARKS = 0
-    _BREAKPOINT_MARK = 1 << 0
+    __NO_MARKS = 0
+    __BREAKPOINT_MARK = 1 << 0
 
     def __init__(self):
         self.machine_kind = 'ZX Spectrum 48K'
@@ -383,7 +383,7 @@ class Spectrum48(_Spectrum48Base, MachineState):
         self.notify_devices(PauseStateUpdated())
 
     def set_breakpoints(self, addr, size):
-        self.mark_addrs(addr, size, self._BREAKPOINT_MARK)
+        self.mark_addrs(addr, size, self.__BREAKPOINT_MARK)
 
     def set_breakpoint(self, addr):
         self.set_breakpoints(addr, 1)
