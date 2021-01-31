@@ -65,11 +65,8 @@ class Emulator(Spectrum48):
         if devices is None and self.__speed_factor is not None:
             self.__devices = [ScreenWindow(self)]
 
-        # TODO: Eliminate.
-        self.__machine = self
-
         self.__keyboard_state = KeyboardState()
-        self.__machine.set_on_input_callback(self.__on_input)
+        self.set_on_input_callback(self.__on_input)
 
         # TODO: Double-underscore or make public.
         self._tape_player = TapePlayer()
@@ -79,7 +76,7 @@ class Emulator(Spectrum48):
 
         self.__profile = profile
         if self.__profile:
-            self.__machine.set_breakpoints(0, 0x10000)
+            self.set_breakpoints(0, 0x10000)
 
     def __enter__(self):
         return self
@@ -111,7 +108,7 @@ class Emulator(Spectrum48):
     # TODO: Double-underscore or make public.
     def _save_snapshot_file(self, format, filename):
         with open(filename, 'wb') as f:
-            snapshot = format().make_snapshot(self.__machine)
+            snapshot = format().make_snapshot(self)
             # TODO: make_snapshot() shall always return a snapshot object.
             if issubclass(type(snapshot), MachineSnapshot):
                 image = snapshot.get_file_image()
@@ -195,13 +192,13 @@ class Emulator(Spectrum48):
         # TODO: Use the tick when the ear value is sampled
         #       instead of the tick of the beginning of the input
         #       cycle.
-        tick = self.__machine.ticks_since_int
+        tick = self.ticks_since_int
         if self._tape_player.get_level_at_frame_tick(tick):
             n |= 0x40
 
         END_OF_TAPE = RunEvents.END_OF_TAPE
         if END_OF_TAPE in self.__events_to_signal and self.__is_end_of_tape():
-            self.__machine.raise_events(END_OF_TAPE)
+            self.raise_events(END_OF_TAPE)
             self.__events_to_signal &= ~END_OF_TAPE
 
         # print('0x%04x 0x%02x' % (addr, n))
@@ -236,17 +233,17 @@ class Emulator(Spectrum48):
     def __enter_playback_mode(self):
         # Interrupts are supposed to be controlled by the
         # recording.
-        self.__machine.suppress_interrupts = True
-        self.__machine.allow_int_after_ei = True
-        # self.__machine.enable_trace()
+        self.suppress_interrupts = True
+        self.allow_int_after_ei = True
+        # self.enable_trace()
 
     # TODO: Double-underscore or make public.
     def _quit_playback_mode(self):
         self.__playback_player = None
         self.__playback_samples = None
 
-        self.__machine.suppress_interrupts = False
-        self.__machine.allow_int_after_ei = False
+        self.suppress_interrupts = False
+        self.allow_int_after_ei = False
 
     def __get_playback_samples(self):
         # TODO: Have a class describing playback state.
@@ -258,28 +255,27 @@ class Emulator(Spectrum48):
         frame_count = 0
         for chunk_i, chunk in enumerate(self.__playback_player.get_chunks()):
             if isinstance(chunk, MachineSnapshot):
-                self.__machine.install_snapshot(chunk)
+                self.install_snapshot(chunk)
                 continue
 
             if chunk['id'] != 'port_samples':
                 continue
 
-            self.__machine.ticks_since_int = chunk['first_tick']
+            self.ticks_since_int = chunk['first_tick']
 
             for frame_i, frame in enumerate(chunk['frames']):
                 num_of_fetches, samples = frame
                 # print(num_of_fetches, samples)
 
-                self.__machine.fetches_limit = num_of_fetches
+                self.fetches_limit = num_of_fetches
                 # print(num_of_fetches, samples, flush=True)
 
                 # print('START_OF_FRAME', flush=True)
                 yield 'START_OF_FRAME'
 
                 for sample_i, sample in enumerate(samples):
-                    # print(self.__machine.get_fetches_limit())
-                    # fetch = num_of_fetches -
-                    #         self.__machine.get_fetches_limit()
+                    # print(self.fetches_limit)
+                    # fetch = num_of_fetches - self.fetches_limit
                     # print('Input at fetch', fetch, 'of', num_of_fetches)
                     # TODO: print('read_port 0x%04x 0x%02x' % (addr, n),
                     #             flush=True)
@@ -313,12 +309,12 @@ class Emulator(Spectrum48):
             '''
             frame_count += 1
             if frame_count == -12820:
-                frame_state = MachineState(self.__machine.image)
+                frame_state = MachineState(bytes(self.image))
                 self.__save_crash_rzx(player, frame_state, chunk_i, frame_i)
                 assert 0
 
             if frame_count == -65952 - 1000:
-                self.__machine.enable_trace()
+                self.enable_trace()
             '''
 
             if self._is_paused():
@@ -334,7 +330,7 @@ class Emulator(Spectrum48):
                 self.on_breakpoint()
 
                 if self.__profile:
-                    pc = self.__machine.get_pc()
+                    pc = self.pc
                     self.__profile.add_instr_addr(pc)
 
                 # SPIN v0.5 skips executing instructions
@@ -342,16 +338,16 @@ class Emulator(Spectrum48):
                 # fast save mode.
                 if (self.__playback_samples and
                         creator_info == self._SPIN_V0P5_INFO and
-                        self.__machine.get_pc() == 0x04d4):
-                    sp = self.__machine.get_sp()
-                    ret_addr = self.__machine.read16(sp)
-                    self.__machine.set_sp(sp + 2)
-                    self.__machine.set_pc(ret_addr)
+                        self.pc == 0x04d4):
+                    sp = self.sp
+                    ret_addr = self.read16(sp)
+                    self.sp = sp + 2
+                    self.pc = ret_addr
 
             if RunEvents.END_OF_FRAME in events:
-                self.__machine.render_screen()
+                self.render_screen()
 
-                pixels = self.__machine.get_frame_pixels()
+                pixels = self.get_frame_pixels()
                 self.__notify(DeviceEvent.SCREEN_UPDATED, pixels)
 
                 self._tape_player.skip_rest_of_frame()
@@ -366,8 +362,8 @@ class Emulator(Spectrum48):
                 # point in the middle of a IX- or IY-prefixed
                 # instruction, so we continue until such
                 # instruction, if any, is completed.
-                if self.__machine.iregp_kind != 'hl':
-                    self.__machine.set_fetches_limit(1)
+                if self.iregp_kind != 'hl':
+                    self.fetches_limit = 1
                     return
 
                 # SPIN doesn't update the fetch counter if the last
@@ -376,7 +372,7 @@ class Emulator(Spectrum48):
                         creator_info == self._SPIN_V0P5_INFO and
                         self.playback_sample_i + 1 <
                         len(self.playback_sample_values)):
-                    self.__machine.set_fetches_limit(1)
+                    self.fetches_limit = 1
                     return
 
                 sample = None
@@ -400,7 +396,7 @@ class Emulator(Spectrum48):
                     return
 
                 assert sample == 'START_OF_FRAME'
-                self.__machine.on_handle_active_int()
+                self.on_handle_active_int()
 
     def run(self, duration=None, speed_factor=None):
         end_time = None
@@ -418,10 +414,10 @@ class Emulator(Spectrum48):
         # SPIN v0.5 alters ROM to implement fast tape loading,
         # but that affects recorded RZX files.
         if creator_info == self._SPIN_V0P5_INFO:
-            self.__machine.write(0x1f47, b'\xf5')
+            self.write(0x1f47, b'\xf5')
 
         # The bytes-saving ROM procedure needs special processing.
-        self.__machine.set_breakpoint(0x04d4)
+        self.set_breakpoint(0x04d4)
 
         # Process frames in order.
         self.__playback_samples = self.__get_playback_samples()
@@ -431,7 +427,7 @@ class Emulator(Spectrum48):
         assert sample == 'START_OF_FRAME'
 
     def __reset_and_wait(self):
-        self.__machine.set_pc(0x0000)
+        self.pc = 0x0000
         self.run(duration=1.8, speed_factor=0)
 
     def __load_zx_basic_compiler_program(self, file):
@@ -443,7 +439,7 @@ class Emulator(Spectrum48):
         entry_point = file['entry_point']
         self.__generate_key_strokes('X', entry_point, 'ENTER')
 
-        self.__machine.write(entry_point, file['program_bytes'])
+        self.write(entry_point, file['program_bytes'])
 
         # RANDOMIZE USR <entry_point>
         self.__generate_key_strokes('T', 'CS+SS', 'L', entry_point, 'ENTER')
@@ -455,7 +451,7 @@ class Emulator(Spectrum48):
         file = parse_file(filename)
 
         if isinstance(file, MachineSnapshot):
-            self.__machine.install_snapshot(file)
+            self.install_snapshot(file)
         elif isinstance(file, RZXFile):
             self.__load_input_recording(file)
             self.__enter_playback_mode()
@@ -493,7 +489,3 @@ class Emulator(Spectrum48):
 
     def on_breakpoint(self):
         raise Error('Breakpoint triggered.')
-
-    # TODO: Should we just inherit this?
-    def read(self, addr, size):
-        return self.__machine.read(addr, size)
