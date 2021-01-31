@@ -44,13 +44,15 @@ class PlaybackPlayer(object):
         return self._recording['chunks']
 
 
-class Emulator(object):
+class Emulator(Spectrum48):
     _SPIN_V0P5_INFO = {'id': 'info',
                        'creator': b'SPIN 0.5            ',
                        'creator_major_version': 0,
                        'creator_minor_version': 5}
 
     def __init__(self, speed_factor=1.0, profile=None, devices=None):
+        super().__init__()
+
         # TODO: Double-underscore or make public.
         self._emulation_time = Time()
         self.__speed_factor = speed_factor
@@ -63,7 +65,8 @@ class Emulator(object):
         if devices is None and self.__speed_factor is not None:
             self.__devices = [ScreenWindow(self)]
 
-        self.__machine = Spectrum48()
+        # TODO: Eliminate.
+        self.__machine = self
 
         self.__keyboard_state = KeyboardState()
         self.__machine.set_on_input_callback(self.__on_input)
@@ -324,7 +327,7 @@ class Emulator(object):
                     time.sleep((1 / 50) * speed_factor)
                 return
 
-            events = RunEvents(self.__machine.run())
+            events = RunEvents(super().run())
             # TODO: print(events)
 
             if RunEvents.BREAKPOINT_HIT in events:
@@ -487,9 +490,6 @@ class Emulator(object):
         self.__events_to_signal |= RunEvents.END_OF_TAPE
         while not self.__is_end_of_tape():
             self.__run_quantum(speed_factor=0)
-
-    def set_breakpoint(self, addr):
-        self.__machine.set_breakpoint(addr)
 
     def on_breakpoint(self):
         raise Error('Breakpoint triggered.')
