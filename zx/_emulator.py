@@ -492,7 +492,7 @@ class Emulator(object):
         self.__machine.set_breakpoint(addr)
 
     def on_breakpoint(self):
-        pass
+        raise Error('Breakpoint triggered.')
 
     # TODO: Should we just inherit this?
     def read(self, addr, size):
