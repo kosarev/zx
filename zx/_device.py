@@ -33,5 +33,5 @@ class TapeStateUpdated(DeviceEvent):
 
 
 class Device(object):
-    def __init__(self, emulator):
-        self.emulator = emulator
+    def __init__(self, machine):
+        self.machine = machine

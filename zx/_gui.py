@@ -179,9 +179,9 @@ class ScreenWindow(Device):
             'F1': self._show_help,
             'F2': self._save_snapshot,
             'F3': self._choose_and_load_file,
-            'F6': self.emulator._toggle_tape_pause,
+            'F6': self.machine._toggle_tape_pause,
             'F11': self._toggle_fullscreen,
-            'PAUSE': self.emulator._toggle_pause,
+            'PAUSE': self.machine._toggle_pause,
         }
 
         self._EVENT_HANDLERS = {
@@ -290,8 +290,8 @@ class ScreenWindow(Device):
         dialog.set_do_overwrite_confirmation(True)
         if dialog.run() == Gtk.ResponseType.OK:
             try:
-                self.emulator._save_snapshot_file(Z80SnapshotFormat,
-                                                  dialog.get_filename())
+                self.machine._save_snapshot_file(Z80SnapshotFormat,
+                                                 dialog.get_filename())
             except USER_ERRORS as e:
                 self._error_box('File error', verbalize_error(e))
 
@@ -324,7 +324,7 @@ class ScreenWindow(Device):
 
         if filename is not None:
             try:
-                self.emulator._load_file(filename)
+                self.machine._load_file(filename)
             except USER_ERRORS as e:
                 self._error_box('File error', verbalize_error(e))
 
@@ -344,9 +344,9 @@ class ScreenWindow(Device):
         zx_key_id = self._GTK_KEYS_TO_ZX_KEYS.get(key_id, key_id)
         key = KEYS.get(zx_key_id, None)
         if key:
-            self.emulator._pause(False)
-            self.emulator._quit_playback_mode()
-            self.emulator._handle_key_stroke(key, pressed)
+            self.machine._pause(False)
+            self.machine._quit_playback_mode()
+            self.machine._handle_key_stroke(key, pressed)
 
     def _on_key_press(self, widget, event):
         self._on_key(event, pressed=True)
@@ -356,7 +356,7 @@ class ScreenWindow(Device):
 
     def _on_click(self, widget, event):
         if event.type == Gdk.EventType.BUTTON_PRESS:
-            self.emulator._toggle_pause()
+            self.machine._toggle_pause()
             return True
         elif event.type == Gdk.EventType._2BUTTON_PRESS:
             self._toggle_fullscreen()
@@ -375,17 +375,17 @@ class ScreenWindow(Device):
         self._EVENT_HANDLERS[type(event)](event)
 
     def _on_updated_pause_state(self, event):
-        if self.emulator._is_paused():
+        if self.machine._is_paused():
             self._notification.set(draw_pause_notification,
-                                   self.emulator._emulation_time)
+                                   self.machine._emulation_time)
         else:
             self._notification.clear()
 
     def _on_updated_tape_state(self, event):
-        tape_paused = self.emulator._is_tape_paused()
+        tape_paused = self.machine._is_tape_paused()
         draw = (draw_tape_pause_notification if tape_paused
                 else draw_tape_resume_notification)
-        tape_time = self.emulator._tape_player.get_time()
+        tape_time = self.machine._tape_player.get_time()
         self._notification.set(draw, tape_time)
 
     def _on_quantum_run(self, event):
