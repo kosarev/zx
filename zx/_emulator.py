@@ -14,7 +14,6 @@ from ._data import MachineSnapshot
 from ._data import SoundFile
 from ._device import DeviceEvent
 from ._error import Error
-from ._except import EmulationExit
 from ._except import EmulatorException
 from ._file import parse_file
 from ._gui import ScreenWindow
@@ -66,6 +65,9 @@ class Emulator(Spectrum48):
         if devices is None and self.__speed_factor is not None:
             self.__devices = [ScreenWindow(self)]
 
+        # TODO: Eliminate the undescored version.
+        self.devices = self.__devices
+
         self.__keyboard_state = KeyboardState()
         self.set_on_input_callback(self.__on_input)
 
@@ -78,16 +80,6 @@ class Emulator(Spectrum48):
         self.__profile = profile
         if self.__profile:
             self.set_breakpoints(0, 0x10000)
-
-    def __enter__(self):
-        return self
-
-    def destroy(self):
-        for device in self.__devices:
-            device.destroy()
-
-    def __exit__(self, type, value, tb):
-        self.destroy()
 
     # TODO: Double-underscore or make public.
     def _is_paused(self):
@@ -116,9 +108,6 @@ class Emulator(Spectrum48):
             else:
                 image = snapshot
             f.write(image)
-
-    def stop(self):
-        raise EmulationExit()
 
     # TODO: Double-underscore or make public.
     def _is_tape_paused(self):

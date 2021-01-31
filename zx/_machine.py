@@ -13,6 +13,7 @@ import enum
 from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
 from ._emulatorbase import _Spectrum48Base
+from ._except import EmulationExit
 from ._rom import get_rom_image
 from ._utils import make16
 
@@ -351,6 +352,19 @@ class Spectrum48(_Spectrum48Base, MachineState):
 
         # Install ROM.
         self.write(0x0000, get_rom_image(self.machine_kind))
+
+    def destroy(self):
+        for device in self.devices:
+            device.destroy()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, tb):
+        self.destroy()
+
+    def stop(self):
+        raise EmulationExit()
 
     def set_breakpoints(self, addr, size):
         self.mark_addrs(addr, size, self._BREAKPOINT_MARK)
