@@ -415,7 +415,7 @@ class Emulator(object):
         # SPIN v0.5 alters ROM to implement fast tape loading,
         # but that affects recorded RZX files.
         if creator_info == self._SPIN_V0P5_INFO:
-            self.__machine.set_memory_block(0x1f47, b'\xf5')
+            self.__machine.write(0x1f47, b'\xf5')
 
         # The bytes-saving ROM procedure needs special processing.
         self.__machine.set_breakpoint(0x04d4)
@@ -440,7 +440,7 @@ class Emulator(object):
         entry_point = file['entry_point']
         self.__generate_key_strokes('X', entry_point, 'ENTER')
 
-        self.__machine.set_memory_block(entry_point, file['program_bytes'])
+        self.__machine.write(entry_point, file['program_bytes'])
 
         # RANDOMIZE USR <entry_point>
         self.__generate_key_strokes('T', 'CS+SS', 'L', entry_point, 'ENTER')
@@ -494,5 +494,6 @@ class Emulator(object):
     def on_breakpoint(self):
         pass
 
-    def get_memory_view(self, addr, size):
-        return self.__machine.get_memory_block(addr, size)
+    # TODO: Should we just inherit this?
+    def read(self, addr, size):
+        return self.__machine.read(addr, size)

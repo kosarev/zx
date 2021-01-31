@@ -237,23 +237,20 @@ class Z80State(object):
 
 class MemoryState(object):
     def __init__(self, image):
-        self._memory_image = image
+        assert len(image) == 0x10000
+        self.image = image
 
-    def get_memory_block(self, addr, size):
-        return self._memory_image[addr:addr + size]
+    def read(self, addr, size):
+        return self.image[addr:addr + size]
 
-    def set_memory_block(self, addr, block):
-        self._memory_image[addr:addr + len(block)] = block
-
-    def set_memory_blocks(self, blocks):
-        for addr, block in blocks:
-            self.set_memory_block(addr, block)
+    def write(self, addr, block):
+        self.image[addr:addr + len(block)] = block
 
     def read8(self, addr):
-        return self._memory_image[addr]
+        return self.image[addr]
 
     def read16(self, addr):
-        return make16(hi=self.read8(addr + 1), lo=self.read8(addr))
+        return _make16(*self.read(addr, 2))
 
 
 class MachineState(Z80State, MemoryState):
@@ -331,7 +328,8 @@ class MachineState(Z80State, MemoryState):
             if field == 'processor_snapshot':
                 Z80State.install_snapshot(self, value)
             elif field == 'memory_blocks':
-                self.set_memory_blocks(value)
+                for addr, block in value:
+                    self.write(addr, block)
             else:
                 setattr(self, field, value)
 
@@ -346,7 +344,7 @@ class Spectrum48(_Spectrum48Base, MachineState):
         MachineState.__init__(self, self._get_state_view())
 
         # Install ROM.
-        self.set_memory_block(0x0000, get_rom_image(self.machine_kind))
+        self.write(0x0000, get_rom_image(self.machine_kind))
 
     def set_breakpoints(self, addr, size):
         self.mark_addrs(addr, size, self._BREAKPOINT_MARK)

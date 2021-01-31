@@ -59,5 +59,5 @@ class SCRFileFormat(SnapshotFormat):
         return _SCRSnapshot(SCRFileFormat, fields)
 
     def make_snapshot(self, state):
-        screen = state.get_memory_block(0x4000, 6 * 1024 + 768)
+        screen = state.read(0x4000, 6 * 1024 + 768)
         return self.parse(screen)

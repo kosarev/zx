@@ -270,6 +270,6 @@ class Z80SnapshotFormat(SnapshotFormat):
             iff1=state.get_iff1(), iff2=state.get_iff2(), flags2=flags2)
 
         # Write memory snapshot.
-        writer.write_block(state.get_memory_block(0x4000, size=48 * 1024))
+        writer.write_block(state.read(0x4000, size=48 * 1024))
 
         return writer.get_image()
