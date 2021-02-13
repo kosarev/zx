@@ -227,8 +227,8 @@ class ScreenWindow(Device):
         if not SCREENCAST:
             self.pattern.set_filter(cairo.FILTER_NEAREST)
 
-        self._window.connect('key-press-event', self._on_key_press)
-        self._window.connect('key-release-event', self._on_key_release)
+        self._window.connect('key-press-event', self._on_key_event)
+        self._window.connect('key-release-event', self._on_key_event)
         self._window.connect('button-press-event', self._on_click)
         self._window.connect('window-state-event', self._on_window_state_event)
 
@@ -334,7 +334,9 @@ class ScreenWindow(Device):
         else:
             self._window.fullscreen()
 
-    def _on_key(self, event, pressed):
+    def _on_key_event(self, widget, event):
+        pressed = event.type == Gdk.EventType.KEY_PRESS
+
         key_id = Gdk.keyval_name(event.keyval).upper()
         # print(key_id)
 
@@ -347,12 +349,6 @@ class ScreenWindow(Device):
             self.machine.paused = False
             self.machine._quit_playback_mode()
             self.machine._handle_key_stroke(key, pressed)
-
-    def _on_key_press(self, widget, event):
-        self._on_key(event, pressed=True)
-
-    def _on_key_release(self, widget, event):
-        self._on_key(event, pressed=False)
 
     def _on_click(self, widget, event):
         if event.type == Gdk.EventType.BUTTON_PRESS:
