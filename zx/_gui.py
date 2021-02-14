@@ -201,7 +201,7 @@ class ScreenWindow(Device):
             'F1': self._show_help,
             'F2': self._save_snapshot,
             'F3': self._choose_and_load_file,
-            'F6': self.xmachine._toggle_tape_pause,
+            'F6': self.__toggle_tape_pause,
             'F11': self._toggle_fullscreen,
             'PAUSE': self.__toggle_pause,
         }
@@ -437,6 +437,9 @@ class ScreenWindow(Device):
 
     def __toggle_pause(self):
         self.xmachine.paused ^= True
+
+    def __toggle_tape_pause(self):
+        self.xmachine._toggle_tape_pause()
 
     def destroy(self):
         self._window.destroy()
