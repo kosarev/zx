@@ -173,6 +173,11 @@ class _ClickEvent(object):
         self.type = type
 
 
+class _ExceptionEvent(object):
+    def __init__(self, exception):
+        self.exception = exception
+
+
 class ScreenWindow(Device):
     _SCREEN_AREA_BACKGROUND_COLOUR = rgb('#1e1e1e')
 
@@ -188,14 +193,11 @@ class ScreenWindow(Device):
 
         self.__events = []
 
-        # TODO: Use the queue of events instead.
-        self._queued_exception = None
-
         self._window = Gtk.Window()
 
         self._KEY_HANDLERS = {
-            'ESCAPE': self._stop,
-            'F10': self._stop,
+            'ESCAPE': self.__stop,
+            'F10': self.__stop,
             'F1': self._show_help,
             'F2': self._save_snapshot,
             'F3': self._choose_and_load_file,
@@ -206,6 +208,7 @@ class ScreenWindow(Device):
 
         self._EVENT_HANDLERS = {
             _ClickEvent: self.__on_click,
+            _ExceptionEvent: self.__on_exception,
             _KeyEvent: self.__on_key,
             PauseStateUpdated: self._on_updated_pause_state,
             QuantumRun: self._on_quantum_run,
@@ -393,8 +396,11 @@ class ScreenWindow(Device):
         elif event.type == _ClickType.Double:
             self._toggle_fullscreen()
 
-    def _stop(self):
-        self._queued_exception = EmulationExit()
+    def __on_exception(self, event):
+        raise event.exception
+
+    def __stop(self):
+        self.__queue_event(_ExceptionEvent(EmulationExit()))
 
     def _on_done(self, widget, context):
         self._stop()
@@ -428,11 +434,6 @@ class ScreenWindow(Device):
 
         while self.__events:
             self.on_event(self.__events.pop(0))
-
-        if self._queued_exception is not None:
-            e = self._queued_exception
-            self._queued_exception = None
-            raise e
 
     def __toggle_pause(self):
         self.machine.paused ^= True
