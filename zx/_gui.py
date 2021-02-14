@@ -201,7 +201,7 @@ class ScreenWindow(Device):
             'F1': self._show_help,
             'F2': self._save_snapshot,
             'F3': self._choose_and_load_file,
-            'F6': self.machine._toggle_tape_pause,
+            'F6': self.xmachine._toggle_tape_pause,
             'F11': self._toggle_fullscreen,
             'PAUSE': self.__toggle_pause,
         }
@@ -315,8 +315,8 @@ class ScreenWindow(Device):
         dialog.set_do_overwrite_confirmation(True)
         if dialog.run() == Gtk.ResponseType.OK:
             try:
-                self.machine._save_snapshot_file(Z80SnapshotFormat,
-                                                 dialog.get_filename())
+                self.xmachine._save_snapshot_file(Z80SnapshotFormat,
+                                                  dialog.get_filename())
             except USER_ERRORS as e:
                 self._error_box('File error', verbalize_error(e))
 
@@ -349,7 +349,7 @@ class ScreenWindow(Device):
 
         if filename is not None:
             try:
-                self.machine._load_file(filename)
+                self.xmachine._load_file(filename)
             except USER_ERRORS as e:
                 self._error_box('File error', verbalize_error(e))
 
@@ -376,9 +376,9 @@ class ScreenWindow(Device):
         zx_key_id = self._GTK_KEYS_TO_ZX_KEYS.get(event.id, event.id)
         key = KEYS.get(zx_key_id, None)
         if key:
-            self.machine.paused = False
-            self.machine._quit_playback_mode()
-            self.machine._handle_key_stroke(key, event.pressed)
+            self.xmachine.paused = False
+            self.xmachine._quit_playback_mode()
+            self.xmachine._handle_key_stroke(key, event.pressed)
 
     def __on_gdk_click(self, widget, event):
         TYPES = {
@@ -392,7 +392,7 @@ class ScreenWindow(Device):
 
     def __on_click(self, event):
         if event.type == _ClickType.Single:
-            self.machine.paused ^= True
+            self.xmachine.paused ^= True
         elif event.type == _ClickType.Double:
             self._toggle_fullscreen()
 
@@ -413,17 +413,17 @@ class ScreenWindow(Device):
         self._EVENT_HANDLERS[type(event)](event)
 
     def _on_updated_pause_state(self, event):
-        if self.machine.paused:
+        if self.xmachine.paused:
             self._notification.set(draw_pause_notification,
-                                   self.machine._emulation_time)
+                                   self.xmachine._emulation_time)
         else:
             self._notification.clear()
 
     def _on_updated_tape_state(self, event):
-        tape_paused = self.machine._is_tape_paused()
+        tape_paused = self.xmachine._is_tape_paused()
         draw = (draw_tape_pause_notification if tape_paused
                 else draw_tape_resume_notification)
-        tape_time = self.machine._tape_player.get_time()
+        tape_time = self.xmachine._tape_player.get_time()
         self._notification.set(draw, tape_time)
 
     def _on_quantum_run(self, event):
@@ -436,7 +436,7 @@ class ScreenWindow(Device):
             self.on_event(self.__events.pop(0))
 
     def __toggle_pause(self):
-        self.machine.paused ^= True
+        self.xmachine.paused ^= True
 
     def destroy(self):
         self._window.destroy()
