@@ -205,6 +205,7 @@ class ScreenWindow(Device):
         }
 
         self._EVENT_HANDLERS = {
+            _ClickEvent: self.__on_click,
             _KeyEvent: self.__on_key,
             PauseStateUpdated: self._on_updated_pause_state,
             QuantumRun: self._on_quantum_run,
@@ -382,14 +383,13 @@ class ScreenWindow(Device):
             Gdk.EventType._2BUTTON_PRESS: _ClickType.Double,
         }
 
-        if event.type not in TYPES:
-            return
+        if event.type in TYPES:
+            self.__queue_event(_ClickEvent(TYPES[event.type]))
+            return True
 
-        event = _ClickEvent(TYPES[event.type])
-
+    def __on_click(self, event):
         if event.type == _ClickType.Single:
             self.machine.paused ^= True
-            return True
         elif event.type == _ClickType.Double:
             self._toggle_fullscreen()
 
