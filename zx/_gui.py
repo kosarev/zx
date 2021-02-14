@@ -240,7 +240,7 @@ class ScreenWindow(Device):
         self._window.connect('key-press-event', self.__on_gdk_key)
         self._window.connect('key-release-event', self.__on_gdk_key)
         self._window.connect('button-press-event', self._on_click)
-        self._window.connect('window-state-event', self._on_window_state_event)
+        self._window.connect('window-state-event', self.__on_window_state_event)
 
     def _on_draw_area(self, widget, context):
         window_size = self._window.get_size()
@@ -378,7 +378,7 @@ class ScreenWindow(Device):
     def _on_done(self, widget, context):
         self._stop()
 
-    def _on_window_state_event(self, widget, event):
+    def __on_window_state_event(self, widget, event):
         state = event.new_window_state
         self._is_fullscreen = bool(state & Gdk.WindowState.FULLSCREEN)
 
