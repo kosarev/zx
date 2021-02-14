@@ -175,6 +175,9 @@ class ScreenWindow(Device):
     def __init__(self, emulator):
         super().__init__(emulator)
 
+        self.__events = []
+
+        # TODO: Use the queue of events instead.
         self._queued_exception = None
 
         self._window = Gtk.Window()
@@ -191,6 +194,7 @@ class ScreenWindow(Device):
         }
 
         self._EVENT_HANDLERS = {
+            _KeyEvent: self.__on_key,
             PauseStateUpdated: self._on_updated_pause_state,
             QuantumRun: self._on_quantum_run,
             ScreenUpdated: self._on_updated_screen,
@@ -233,8 +237,8 @@ class ScreenWindow(Device):
         if not SCREENCAST:
             self.pattern.set_filter(cairo.FILTER_NEAREST)
 
-        self._window.connect('key-press-event', self._on_key_event)
-        self._window.connect('key-release-event', self._on_key_event)
+        self._window.connect('key-press-event', self.__on_gdk_key)
+        self._window.connect('key-release-event', self.__on_gdk_key)
         self._window.connect('button-press-event', self._on_click)
         self._window.connect('window-state-event', self._on_window_state_event)
 
@@ -340,13 +344,17 @@ class ScreenWindow(Device):
         else:
             self._window.fullscreen()
 
-    def _on_key_event(self, widget, event):
+    def __queue_event(self, event):
+        self.__events.append(event)
+
+    def __on_gdk_key(self, widgen, event):
         # TODO: Do not upper the case here. Ignore unknown key.
         # Translate to our own key ids.
-        event = _KeyEvent(
+        self.__queue_event(_KeyEvent(
             Gdk.keyval_name(event.keyval).upper(),
-            event.type == Gdk.EventType.KEY_PRESS)
+            event.type == Gdk.EventType.KEY_PRESS))
 
+    def __on_key(self, event):
         if event.pressed and event.id in self._KEY_HANDLERS:
             self._KEY_HANDLERS[event.id]()
 
@@ -392,15 +400,18 @@ class ScreenWindow(Device):
         self._notification.set(draw, tape_time)
 
     def _on_quantum_run(self, event):
-        if self._queued_exception is not None:
-            e = self._queued_exception
-            self._queued_exception = None
-            raise e
+        self.area.queue_draw()
 
         while Gtk.events_pending():
             Gtk.main_iteration()
 
-        self.area.queue_draw()
+        while self.__events:
+            self.on_event(self.__events.pop(0))
+
+        if self._queued_exception is not None:
+            e = self._queued_exception
+            self._queued_exception = None
+            raise e
 
     def __toggle_pause(self):
         self.machine.paused ^= True
