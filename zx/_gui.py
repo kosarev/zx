@@ -156,6 +156,12 @@ class Screencast(object):
         self._counter += 1
 
 
+class _KeyEvent(object):
+    def __init__(self, id, pressed):
+        self.id = id
+        self.pressed = pressed
+
+
 class ScreenWindow(Device):
     _SCREEN_AREA_BACKGROUND_COLOUR = rgb('#1e1e1e')
 
@@ -335,22 +341,21 @@ class ScreenWindow(Device):
             self._window.fullscreen()
 
     def _on_key_event(self, widget, event):
-        pressed = event.type == Gdk.EventType.KEY_PRESS
-
         # TODO: Do not upper the case here. Ignore unknown key.
         # Translate to our own key ids.
-        key_id = Gdk.keyval_name(event.keyval).upper()
-        # print(key_id)
+        event = _KeyEvent(
+            Gdk.keyval_name(event.keyval).upper(),
+            event.type == Gdk.EventType.KEY_PRESS)
 
-        if pressed and key_id in self._KEY_HANDLERS:
-            self._KEY_HANDLERS[key_id]()
+        if event.pressed and event.id in self._KEY_HANDLERS:
+            self._KEY_HANDLERS[event.id]()
 
-        zx_key_id = self._GTK_KEYS_TO_ZX_KEYS.get(key_id, key_id)
+        zx_key_id = self._GTK_KEYS_TO_ZX_KEYS.get(event.id, event.id)
         key = KEYS.get(zx_key_id, None)
         if key:
             self.machine.paused = False
             self.machine._quit_playback_mode()
-            self.machine._handle_key_stroke(key, pressed)
+            self.machine._handle_key_stroke(key, event.pressed)
 
     def _on_click(self, widget, event):
         if event.type == Gdk.EventType.BUTTON_PRESS:
