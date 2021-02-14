@@ -337,6 +337,8 @@ class ScreenWindow(Device):
     def _on_key_event(self, widget, event):
         pressed = event.type == Gdk.EventType.KEY_PRESS
 
+        # TODO: Do not upper the case here. Ignore unknown key.
+        # Translate to our own key ids.
         key_id = Gdk.keyval_name(event.keyval).upper()
         # print(key_id)
 
