@@ -9,6 +9,7 @@
 #   Published under the MIT license.
 
 import cairo
+import enum
 import gi
 from ._device import Device
 from ._device import PauseStateUpdated
@@ -162,6 +163,16 @@ class _KeyEvent(object):
         self.pressed = pressed
 
 
+class _ClickType(enum.Enum):
+    Single = enum.auto()
+    Double = enum.auto()
+
+
+class _ClickEvent(object):
+    def __init__(self, type):
+        self.type = type
+
+
 class ScreenWindow(Device):
     _SCREEN_AREA_BACKGROUND_COLOUR = rgb('#1e1e1e')
 
@@ -239,7 +250,7 @@ class ScreenWindow(Device):
 
         self._window.connect('key-press-event', self.__on_gdk_key)
         self._window.connect('key-release-event', self.__on_gdk_key)
-        self._window.connect('button-press-event', self._on_click)
+        self._window.connect('button-press-event', self.__on_gdk_click)
         self._window.connect('window-state-event', self.__on_window_state_event)
 
     def _on_draw_area(self, widget, context):
@@ -365,11 +376,21 @@ class ScreenWindow(Device):
             self.machine._quit_playback_mode()
             self.machine._handle_key_stroke(key, event.pressed)
 
-    def _on_click(self, widget, event):
-        if event.type == Gdk.EventType.BUTTON_PRESS:
+    def __on_gdk_click(self, widget, event):
+        TYPES = {
+            Gdk.EventType.BUTTON_PRESS: _ClickType.Single,
+            Gdk.EventType._2BUTTON_PRESS: _ClickType.Double,
+        }
+
+        if event.type not in TYPES:
+            return
+
+        event = _ClickEvent(TYPES[event.type])
+
+        if event.type == _ClickType.Single:
             self.machine.paused ^= True
             return True
-        elif event.type == Gdk.EventType._2BUTTON_PRESS:
+        elif event.type == _ClickType.Double:
             self._toggle_fullscreen()
 
     def _stop(self):
