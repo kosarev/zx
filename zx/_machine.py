@@ -342,6 +342,21 @@ class MachineState(Z80State, MemoryState):
                 setattr(self, field, value)
 
 
+class Dispatcher(object):
+    def __init__(self, devices=None):
+        if devices is None:
+            devices = []
+
+        self.__devices = list(devices)
+
+    def __iter__(self):
+        yield from self.__devices
+
+    def notify(self, event):
+        for device in self:
+            device.on_event(event)
+
+
 class Spectrum48(_Spectrum48Base, MachineState):
     # Memory marks.
     __NO_MARKS = 0
@@ -369,10 +384,6 @@ class Spectrum48(_Spectrum48Base, MachineState):
     def stop(self):
         raise EmulationExit()
 
-    def notify_devices(self, event):
-        for device in self.devices:
-            device.on_event(event)
-
     @property
     def paused(self):
         return self.__paused
@@ -380,7 +391,7 @@ class Spectrum48(_Spectrum48Base, MachineState):
     @paused.setter
     def paused(self, value):
         self.__paused = value
-        self.notify_devices(PauseStateUpdated())
+        self.devices.notify(PauseStateUpdated())
 
     def set_breakpoints(self, addr, size):
         self.mark_addrs(addr, size, self.__BREAKPOINT_MARK)

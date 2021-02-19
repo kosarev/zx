@@ -22,6 +22,7 @@ from ._file import parse_file
 from ._gui import ScreenWindow
 from ._keyboard import KeyboardState
 from ._keyboard import KEYS
+from ._machine import Dispatcher
 from ._machine import RunEvents
 from ._machine import Spectrum48
 from ._rzx import RZXFile
@@ -63,12 +64,10 @@ class Emulator(Spectrum48):
         self.__events_to_signal = RunEvents.NO_EVENTS
 
         # Don't even create the window on full throttle.
-        self.__devices = devices if devices is not None else []
         if devices is None and self.__speed_factor is not None:
-            self.__devices = [ScreenWindow(self)]
+            devices = Dispatcher([ScreenWindow(self)])
 
-        # TODO: Eliminate the undescored version.
-        self.devices = self.__devices
+        self.devices = devices
 
         self.__keyboard_state = KeyboardState()
         self.set_on_input_callback(self.__on_input)
@@ -100,7 +99,7 @@ class Emulator(Spectrum48):
 
     def __pause_tape(self, is_paused=True):
         self._tape_player.pause(is_paused)
-        self.notify_devices(TapeStateUpdated())
+        self.devices.notify(TapeStateUpdated())
 
     def __unpause_tape(self):
         self.__pause_tape(is_paused=False)
@@ -278,7 +277,7 @@ class Emulator(Spectrum48):
             creator_info = self.__playback_player.find_recording_info_chunk()
 
         if True:  # TODO
-            self.notify_devices(QuantumRun())
+            self.devices.notify(QuantumRun())
 
             # TODO: For debug purposes.
             '''
@@ -323,7 +322,7 @@ class Emulator(Spectrum48):
                 self.render_screen()
 
                 pixels = self.get_frame_pixels()
-                self.notify_devices(ScreenUpdated(pixels))
+                self.devices.notify(ScreenUpdated(pixels))
 
                 self._tape_player.skip_rest_of_frame()
                 self._emulation_time.advance(1 / 50)
