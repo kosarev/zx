@@ -32,6 +32,10 @@ class TapeStateUpdated(DeviceEvent):
     pass
 
 
+class ToggleEmulationPause(DeviceEvent):
+    pass
+
+
 class ToggleTapePause(DeviceEvent):
     pass
 

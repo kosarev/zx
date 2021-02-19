@@ -13,6 +13,7 @@ import enum
 from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
 from ._device import PauseStateUpdated
+from ._device import ToggleEmulationPause
 from ._device import ToggleTapePause
 from ._emulatorbase import _Spectrum48Base
 from ._except import EmulationExit
@@ -412,5 +413,7 @@ class Spectrum48(_Spectrum48Base, MachineState):
         raise EmulatorException('Breakpoint triggered.')
 
     def on_event(self, event, devices):
-        if isinstance(event, ToggleTapePause):
+        if isinstance(event, ToggleEmulationPause):
+            self.paused ^= True
+        elif isinstance(event, ToggleTapePause):
             self._toggle_tape_pause()

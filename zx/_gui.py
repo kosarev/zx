@@ -16,6 +16,7 @@ from ._device import PauseStateUpdated
 from ._device import QuantumRun
 from ._device import ScreenUpdated
 from ._device import TapeStateUpdated
+from ._device import ToggleEmulationPause
 from ._device import ToggleTapePause
 from ._error import USER_ERRORS
 from ._error import verbalize_error
@@ -393,7 +394,7 @@ class ScreenWindow(Device):
 
     def __on_click(self, event, devices):
         if event.type == _ClickType.Single:
-            self.xmachine.paused ^= True
+            self.__toggle_pause(devices)
         elif event.type == _ClickType.Double:
             self._toggle_fullscreen(devices)
 
@@ -438,8 +439,8 @@ class ScreenWindow(Device):
         while self.__events:
             devices.notify(self.__events.pop(0))
 
-    def __toggle_pause(self):
-        self.xmachine.paused ^= True
+    def __toggle_pause(self, devices):
+        devices.notify(ToggleEmulationPause())
 
     def __toggle_tape_pause(self, devices):
         devices.notify(ToggleTapePause())
