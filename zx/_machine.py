@@ -13,6 +13,7 @@ import enum
 from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
 from ._device import PauseStateUpdated
+from ._device import ToggleTapePause
 from ._emulatorbase import _Spectrum48Base
 from ._except import EmulationExit
 from ._rom import get_rom_image
@@ -354,7 +355,12 @@ class Dispatcher(object):
 
     def notify(self, event):
         for device in self:
-            device.on_event(event)
+            device.on_event(event, self)
+
+    # TODO: Do that with events?
+    def destroy(self):
+        for device in self:
+            device.destroy()
 
 
 class Spectrum48(_Spectrum48Base, MachineState):
@@ -372,8 +378,11 @@ class Spectrum48(_Spectrum48Base, MachineState):
         self.__paused = False
 
     def destroy(self):
-        for device in self.devices:
-            device.destroy()
+        devices = self.devices
+        self.devices = None
+
+        if devices:
+            devices.destroy()
 
     def __enter__(self):
         return self
@@ -401,3 +410,7 @@ class Spectrum48(_Spectrum48Base, MachineState):
 
     def on_breakpoint(self):
         raise EmulatorException('Breakpoint triggered.')
+
+    def on_event(self, event, devices):
+        if isinstance(event, ToggleTapePause):
+            self._toggle_tape_pause()

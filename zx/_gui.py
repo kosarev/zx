@@ -16,6 +16,7 @@ from ._device import PauseStateUpdated
 from ._device import QuantumRun
 from ._device import ScreenUpdated
 from ._device import TapeStateUpdated
+from ._device import ToggleTapePause
 from ._error import USER_ERRORS
 from ._error import verbalize_error
 from ._except import EmulationExit
@@ -196,8 +197,8 @@ class ScreenWindow(Device):
         self._window = Gtk.Window()
 
         self._KEY_HANDLERS = {
-            'ESCAPE': self.__stop,
-            'F10': self.__stop,
+            'ESCAPE': self.__on_exit,
+            'F10': self.__on_exit,
             'F1': self._show_help,
             'F2': self._save_snapshot,
             'F3': self._choose_and_load_file,
@@ -287,11 +288,11 @@ class ScreenWindow(Device):
 
         self._screencast.on_draw(context.get_group_target())
 
-    def _on_updated_screen(self, event):
+    def _on_updated_screen(self, event, devices):
         self.frame_data[:] = event.pixels
         self.area.queue_draw()
 
-    def _show_help(self):
+    def _show_help(self, devices):
         KEYS_HELP = [
             ('F1', 'Show help.'),
             ('F2', 'Save snapshot.'),
@@ -305,7 +306,7 @@ class ScreenWindow(Device):
         for entry in KEYS_HELP:
             print('%7s  %s' % entry)
 
-    def _save_snapshot(self):
+    def _save_snapshot(self, devices):
         # TODO: Add file filters.
         dialog = Gtk.FileChooserDialog(
             'Save snapshot', self._window,
@@ -330,7 +331,7 @@ class ScreenWindow(Device):
         dialog.run()
         dialog.destroy()
 
-    def _choose_and_load_file(self):
+    def _choose_and_load_file(self, devices):
         # TODO: Add file filters.
         dialog = Gtk.FileChooserDialog(
             'Load file', self._window,
@@ -353,7 +354,7 @@ class ScreenWindow(Device):
             except USER_ERRORS as e:
                 self._error_box('File error', verbalize_error(e))
 
-    def _toggle_fullscreen(self):
+    def _toggle_fullscreen(self, devices):
         if self._is_fullscreen:
             self._window.unfullscreen()
         else:
@@ -369,9 +370,9 @@ class ScreenWindow(Device):
             Gdk.keyval_name(event.keyval).upper(),
             event.type == Gdk.EventType.KEY_PRESS))
 
-    def __on_key(self, event):
+    def __on_key(self, event, devices):
         if event.pressed and event.id in self._KEY_HANDLERS:
-            self._KEY_HANDLERS[event.id]()
+            self._KEY_HANDLERS[event.id](devices)
 
         zx_key_id = self._GTK_KEYS_TO_ZX_KEYS.get(event.id, event.id)
         key = KEYS.get(zx_key_id, None)
@@ -390,16 +391,16 @@ class ScreenWindow(Device):
             self.__queue_event(_ClickEvent(TYPES[event.type]))
             return True
 
-    def __on_click(self, event):
+    def __on_click(self, event, devices):
         if event.type == _ClickType.Single:
             self.xmachine.paused ^= True
         elif event.type == _ClickType.Double:
-            self._toggle_fullscreen()
+            self._toggle_fullscreen(devices)
 
-    def __on_exception(self, event):
+    def __on_exception(self, event, devices):
         raise event.exception
 
-    def __stop(self):
+    def __on_exit(self, devices):
         self.__queue_event(_ExceptionEvent(EmulationExit()))
 
     def _on_done(self, widget, context):
@@ -409,37 +410,39 @@ class ScreenWindow(Device):
         state = event.new_window_state
         self._is_fullscreen = bool(state & Gdk.WindowState.FULLSCREEN)
 
-    def on_event(self, event):
-        self._EVENT_HANDLERS[type(event)](event)
+    def on_event(self, event, devices):
+        event_type = type(event)
+        if event_type in self._EVENT_HANDLERS:
+            self._EVENT_HANDLERS[event_type](event, devices)
 
-    def _on_updated_pause_state(self, event):
+    def _on_updated_pause_state(self, event, devices):
         if self.xmachine.paused:
             self._notification.set(draw_pause_notification,
                                    self.xmachine._emulation_time)
         else:
             self._notification.clear()
 
-    def _on_updated_tape_state(self, event):
+    def _on_updated_tape_state(self, event, devices):
         tape_paused = self.xmachine._is_tape_paused()
         draw = (draw_tape_pause_notification if tape_paused
                 else draw_tape_resume_notification)
         tape_time = self.xmachine._tape_player.get_time()
         self._notification.set(draw, tape_time)
 
-    def _on_quantum_run(self, event):
+    def _on_quantum_run(self, event, devices):
         self.area.queue_draw()
 
         while Gtk.events_pending():
             Gtk.main_iteration()
 
         while self.__events:
-            self.on_event(self.__events.pop(0))
+            devices.notify(self.__events.pop(0))
 
     def __toggle_pause(self):
         self.xmachine.paused ^= True
 
-    def __toggle_tape_pause(self):
-        self.xmachine._toggle_tape_pause()
+    def __toggle_tape_pause(self, devices):
+        devices.notify(ToggleTapePause())
 
     def destroy(self):
         self._window.destroy()
