@@ -19,6 +19,10 @@ class GetTapePlayerTime(DeviceEvent):
     pass
 
 
+class IsTapePlayerPaused(DeviceEvent):
+    pass
+
+
 class PauseStateUpdated(DeviceEvent):
     pass
 

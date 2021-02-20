@@ -13,6 +13,7 @@ import enum
 from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
 from ._device import GetTapePlayerTime
+from ._device import IsTapePlayerPaused
 from ._device import PauseStateUpdated
 from ._device import ToggleEmulationPause
 from ._device import ToggleTapePause
@@ -416,10 +417,12 @@ class Spectrum48(_Spectrum48Base, MachineState):
         raise EmulatorException('Breakpoint triggered.')
 
     def on_event(self, event, devices, result):
-        if isinstance(event, ToggleEmulationPause):
+        if isinstance(event, GetTapePlayerTime):
+            return self._tape_player.get_time()
+        elif isinstance(event, IsTapePlayerPaused):
+            return self._is_tape_paused()
+        elif isinstance(event, ToggleEmulationPause):
             self.paused ^= True
         elif isinstance(event, ToggleTapePause):
             self._toggle_tape_pause()
-        elif isinstance(event, GetTapePlayerTime):
-            return self._tape_player.get_time()
         return result

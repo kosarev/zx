@@ -13,6 +13,7 @@ import enum
 import gi
 from ._device import Device
 from ._device import GetTapePlayerTime
+from ._device import IsTapePlayerPaused
 from ._device import PauseStateUpdated
 from ._device import QuantumRun
 from ._device import ScreenUpdated
@@ -426,7 +427,7 @@ class ScreenWindow(Device):
             self._notification.clear()
 
     def _on_updated_tape_state(self, event, devices):
-        tape_paused = self.xmachine._is_tape_paused()
+        tape_paused = devices.notify(IsTapePlayerPaused())
         draw = (draw_tape_pause_notification if tape_paused
                 else draw_tape_resume_notification)
         tape_time = devices.notify(GetTapePlayerTime())
