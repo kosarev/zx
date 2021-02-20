@@ -15,6 +15,10 @@ class DeviceEvent(object):
     pass
 
 
+class GetEmulationTime(DeviceEvent):
+    pass
+
+
 # TODO: Combine these into Get/SetState kind of events.
 class GetTapePlayerTime(DeviceEvent):
     pass

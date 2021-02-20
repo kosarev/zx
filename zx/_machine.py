@@ -12,6 +12,7 @@
 import enum
 from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
+from ._device import GetEmulationTime
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
 from ._device import PauseStateUpdated
@@ -356,6 +357,8 @@ class Dispatcher(object):
     def __iter__(self):
         yield from self.__devices
 
+    # TODO: Since this now can return values, it needs a
+    # different name.
     def notify(self, event):
         result = None
         for device in self:
@@ -417,7 +420,9 @@ class Spectrum48(_Spectrum48Base, MachineState):
         raise EmulatorException('Breakpoint triggered.')
 
     def on_event(self, event, devices, result):
-        if isinstance(event, GetTapePlayerTime):
+        if isinstance(event, GetEmulationTime):
+            return self._emulation_time
+        elif isinstance(event, GetTapePlayerTime):
             return self._tape_player.get_time()
         elif isinstance(event, IsTapePlayerPaused):
             return self._is_tape_paused()
