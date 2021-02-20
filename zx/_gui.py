@@ -368,7 +368,7 @@ class ScreenWindow(Device):
     def __queue_event(self, event):
         self.__events.append(event)
 
-    def __on_gdk_key(self, widgen, event):
+    def __on_gdk_key(self, widget, event):
         # TODO: Do not upper the case here. Ignore unknown key.
         # Translate to our own key ids.
         self.__queue_event(_KeyEvent(
@@ -405,7 +405,7 @@ class ScreenWindow(Device):
         self.__queue_event(_ExceptionEvent(EmulationExit()))
 
     def _on_done(self, widget, context):
-        self._stop()
+        self.__queue_event(_ExceptionEvent(EmulationExit()))
 
     def __on_window_state_event(self, widget, event):
         state = event.new_window_state
