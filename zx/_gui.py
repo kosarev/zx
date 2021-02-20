@@ -12,6 +12,7 @@ import cairo
 import enum
 import gi
 from ._device import Device
+from ._device import GetTapePlayerTime
 from ._device import PauseStateUpdated
 from ._device import QuantumRun
 from ._device import ScreenUpdated
@@ -411,10 +412,11 @@ class ScreenWindow(Device):
         state = event.new_window_state
         self._is_fullscreen = bool(state & Gdk.WindowState.FULLSCREEN)
 
-    def on_event(self, event, devices):
+    def on_event(self, event, devices, result):
         event_type = type(event)
         if event_type in self._EVENT_HANDLERS:
             self._EVENT_HANDLERS[event_type](event, devices)
+        return result
 
     def _on_updated_pause_state(self, event, devices):
         if self.xmachine.paused:
@@ -427,7 +429,7 @@ class ScreenWindow(Device):
         tape_paused = self.xmachine._is_tape_paused()
         draw = (draw_tape_pause_notification if tape_paused
                 else draw_tape_resume_notification)
-        tape_time = self.xmachine._tape_player.get_time()
+        tape_time = devices.notify(GetTapePlayerTime())
         self._notification.set(draw, tape_time)
 
     def _on_quantum_run(self, event, devices):

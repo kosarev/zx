@@ -15,6 +15,10 @@ class DeviceEvent(object):
     pass
 
 
+class GetTapePlayerTime(DeviceEvent):
+    pass
+
+
 class PauseStateUpdated(DeviceEvent):
     pass
 
