@@ -12,6 +12,7 @@ import cairo
 import enum
 import gi
 from ._device import Device
+from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
@@ -421,7 +422,7 @@ class ScreenWindow(Device):
         return result
 
     def _on_updated_pause_state(self, event, devices):
-        if self.xmachine.paused:
+        if devices.notify(GetEmulationPauseState()):
             time = devices.notify(GetEmulationTime())
             self._notification.set(draw_pause_notification, time)
         else:

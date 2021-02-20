@@ -15,6 +15,10 @@ class DeviceEvent(object):
     pass
 
 
+class GetEmulationPauseState(DeviceEvent):
+    pass
+
+
 class GetEmulationTime(DeviceEvent):
     pass
 
