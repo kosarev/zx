@@ -16,6 +16,7 @@ from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
+from ._device import KeyStroke
 from ._device import PauseStateUpdated
 from ._device import QuantumRun
 from ._device import ScreenUpdated
@@ -25,7 +26,6 @@ from ._device import ToggleTapePause
 from ._error import USER_ERRORS
 from ._error import verbalize_error
 from ._except import EmulationExit
-from ._keyboard import KEYS
 from ._time import get_elapsed_time
 from ._time import get_timestamp
 from ._utils import div_ceil
@@ -380,11 +380,7 @@ class ScreenWindow(Device):
             self._KEY_HANDLERS[event.id](devices)
 
         zx_key_id = self._GTK_KEYS_TO_ZX_KEYS.get(event.id, event.id)
-        key = KEYS.get(zx_key_id, None)
-        if key:
-            self.xmachine.paused = False
-            self.xmachine._quit_playback_mode()
-            self.xmachine._handle_key_stroke(key, event.pressed)
+        devices.notify(KeyStroke(zx_key_id, event.pressed))
 
     def __on_gdk_click(self, widget, event):
         TYPES = {

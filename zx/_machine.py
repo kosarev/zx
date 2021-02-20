@@ -16,11 +16,13 @@ from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
+from ._device import KeyStroke
 from ._device import PauseStateUpdated
 from ._device import ToggleEmulationPause
 from ._device import ToggleTapePause
 from ._emulatorbase import _Spectrum48Base
 from ._except import EmulationExit
+from ._keyboard import KEYS
 from ._rom import get_rom_image
 from ._utils import make16
 
@@ -429,6 +431,12 @@ class Spectrum48(_Spectrum48Base, MachineState):
             return self._tape_player.get_time()
         elif isinstance(event, IsTapePlayerPaused):
             return self._is_tape_paused()
+        elif isinstance(event, KeyStroke):
+            key = KEYS.get(event.id, None)
+            if key:
+                self.paused = False
+                self._quit_playback_mode()
+                self._handle_key_stroke(key, event.pressed)
         elif isinstance(event, ToggleEmulationPause):
             self.paused ^= True
         elif isinstance(event, ToggleTapePause):
