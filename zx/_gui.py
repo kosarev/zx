@@ -17,6 +17,7 @@ from ._device import GetEmulationTime
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
 from ._device import KeyStroke
+from ._device import LoadFile
 from ._device import PauseStateUpdated
 from ._device import QuantumRun
 from ._device import ScreenUpdated
@@ -355,7 +356,7 @@ class ScreenWindow(Device):
 
         if filename is not None:
             try:
-                self.xmachine._load_file(filename)
+                devices.notify(LoadFile(filename))
             except USER_ERRORS as e:
                 self._error_box('File error', verbalize_error(e))
 

@@ -17,6 +17,7 @@ from ._device import GetEmulationTime
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
 from ._device import KeyStroke
+from ._device import LoadFile
 from ._device import PauseStateUpdated
 from ._device import ToggleEmulationPause
 from ._device import ToggleTapePause
@@ -437,6 +438,8 @@ class Spectrum48(_Spectrum48Base, MachineState):
                 self.paused = False
                 self._quit_playback_mode()
                 self._handle_key_stroke(key, event.pressed)
+        elif isinstance(event, LoadFile):
+            self._load_file(event.filename)
         elif isinstance(event, ToggleEmulationPause):
             self.paused ^= True
         elif isinstance(event, ToggleTapePause):
