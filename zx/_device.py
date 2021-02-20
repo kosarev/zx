@@ -51,6 +51,11 @@ class QuantumRun(DeviceEvent):
     pass
 
 
+class SaveSnapshot(DeviceEvent):
+    def __init__(self, filename):
+        self.filename = filename
+
+
 class ScreenUpdated(DeviceEvent):
     def __init__(self, pixels):
         self.pixels = pixels

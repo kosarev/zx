@@ -236,22 +236,22 @@ class Z80SnapshotFormat(SnapshotFormat):
         #       the middle of IX- and IY-prefixed instructions, so
         #       such situations need some additional processing.
         # TODO: Check for similar problems with other state attributes.
-        assert state.get_iregp_kind() == 'hl'
+        assert state.iregp_kind == 'hl'
 
         flags1 = 0
         flags2 = 0
 
         # Bit 7 of the stored R value is not signigicant and
         # shall be taken from bit 0 of flags1.
-        r = state.get_r_reg()
+        r = state.r
         flags1 |= (r & 0x80) >> 7
         r &= 0x7f
 
-        border_color = state.get_border_color()
+        border_color = state.border_color
         assert 0 <= border_color <= 7
         flags1 |= border_color << 1
 
-        int_mode = state.get_int_mode()
+        int_mode = state.int_mode
         assert int_mode in [0, 1, 2]  # TODO
         flags2 |= int_mode
 
@@ -260,14 +260,14 @@ class Z80SnapshotFormat(SnapshotFormat):
         writer = BinaryWriter()
         writer.write(
             self._PRIMARY_HEADER,
-            a=state.get_a(), f=state.get_f(), bc=state.get_bc(),
-            hl=state.get_hl(), pc=state.get_pc(), sp=state.get_sp(),
-            i=state.get_i(), r=r, flags1=flags1, de=state.get_de(),
-            alt_bc=state.get_alt_bc(), alt_de=state.get_alt_de(),
-            alt_hl=state.get_alt_hl(),
-            alt_a=state.get_alt_a(), alt_f=state.get_alt_f(),
-            iy=state.get_iy(), ix=state.get_ix(),
-            iff1=state.get_iff1(), iff2=state.get_iff2(), flags2=flags2)
+            a=state.a, f=state.f, bc=state.bc,
+            hl=state.hl, pc=state.pc, sp=state.sp,
+            i=state.i, r=r, flags1=flags1, de=state.de,
+            alt_bc=state.alt_bc, alt_de=state.alt_de,
+            alt_hl=state.alt_hl,
+            alt_a=state.alt_a, alt_f=state.alt_f,
+            iy=state.iy, ix=state.ix,
+            iff1=state.iff1, iff2=state.iff2, flags2=flags2)
 
         # Write memory snapshot.
         writer.write_block(state.read(0x4000, size=48 * 1024))

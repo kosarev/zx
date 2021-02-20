@@ -20,6 +20,7 @@ from ._device import KeyStroke
 from ._device import LoadFile
 from ._device import PauseStateUpdated
 from ._device import QuantumRun
+from ._device import SaveSnapshot
 from ._device import ScreenUpdated
 from ._device import TapeStateUpdated
 from ._device import ToggleEmulationPause
@@ -30,7 +31,6 @@ from ._except import EmulationExit
 from ._time import get_elapsed_time
 from ._time import get_timestamp
 from ._utils import div_ceil
-from ._z80snapshot import Z80SnapshotFormat
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk  # nopep8
 
@@ -322,8 +322,7 @@ class ScreenWindow(Device):
         dialog.set_do_overwrite_confirmation(True)
         if dialog.run() == Gtk.ResponseType.OK:
             try:
-                self.xmachine._save_snapshot_file(Z80SnapshotFormat,
-                                                  dialog.get_filename())
+                devices.notify(SaveSnapshot(dialog.get_filename()))
             except USER_ERRORS as e:
                 self._error_box('File error', verbalize_error(e))
 

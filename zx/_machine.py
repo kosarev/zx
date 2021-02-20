@@ -19,6 +19,7 @@ from ._device import IsTapePlayerPaused
 from ._device import KeyStroke
 from ._device import LoadFile
 from ._device import PauseStateUpdated
+from ._device import SaveSnapshot
 from ._device import ToggleEmulationPause
 from ._device import ToggleTapePause
 from ._emulatorbase import _Spectrum48Base
@@ -26,6 +27,7 @@ from ._except import EmulationExit
 from ._keyboard import KEYS
 from ._rom import get_rom_image
 from ._utils import make16
+from ._z80snapshot import Z80SnapshotFormat
 
 
 class RunEvents(enum.IntFlag):
@@ -135,6 +137,14 @@ class Z80State(object):
         self.__af[:] = _split16(value)
 
     @property
+    def a(self):
+        return self.__af[1]
+
+    @property
+    def f(self):
+        return self.__af[0]
+
+    @property
     def ix(self):
         return _make16(*self.__ix)
 
@@ -183,6 +193,14 @@ class Z80State(object):
         self.__alt_af[:] = _split16(value)
 
     @property
+    def alt_a(self):
+        return self.__alt_af[1]
+
+    @property
+    def alt_f(self):
+        return self.__alt_af[0]
+
+    @property
     def pc(self):
         return _make16(*self.__pc)
 
@@ -201,6 +219,14 @@ class Z80State(object):
     @property
     def ir(self):
         return _make16(*self.__ir)
+
+    @property
+    def i(self):
+        return self.__ir[1]
+
+    @property
+    def r(self):
+        return self.__ir[0]
 
     @ir.setter
     def ir(self, value):
@@ -328,10 +354,15 @@ class MachineState(Z80State, MemoryState):
     def ticks_since_int(self, ticks):
         self.__ticks_since_int[:] = _split32(ticks)
 
-    ''' TODO
-    def get_border_color(self):
-        return self.get('border_color')
+    @property
+    def border_color(self):
+        return self.__border_color[0]
 
+    @border_color.setter
+    def border_color(self, value):
+        self.__border_color[0] = value
+
+    ''' TODO
     def set_border_color(self, color):
         self.set('border_color', color)
 
@@ -348,6 +379,7 @@ class MachineState(Z80State, MemoryState):
                 for addr, block in value:
                     self.write(addr, block)
             else:
+                # print(field)
                 setattr(self, field, value)
 
 
@@ -440,6 +472,8 @@ class Spectrum48(_Spectrum48Base, MachineState):
                 self._handle_key_stroke(key, event.pressed)
         elif isinstance(event, LoadFile):
             self._load_file(event.filename)
+        elif isinstance(event, SaveSnapshot):
+            self._save_snapshot_file(Z80SnapshotFormat, event.filename)
         elif isinstance(event, ToggleEmulationPause):
             self.paused ^= True
         elif isinstance(event, ToggleTapePause):
