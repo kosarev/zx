@@ -65,7 +65,7 @@ class Emulator(Spectrum48):
 
         # Don't even create the window on full throttle.
         if devices is None and self.__speed_factor is not None:
-            devices = Dispatcher([self, ScreenWindow(self)])
+            devices = Dispatcher([self, ScreenWindow()])
 
         self.devices = devices
 

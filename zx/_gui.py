@@ -195,8 +195,8 @@ class ScreenWindow(Device):
         'ALT_R': 'SYMBOL SHIFT',
         'SHIFT_R': 'SYMBOL SHIFT'}
 
-    def __init__(self, emulator):
-        super().__init__(emulator)
+    def __init__(self):
+        super().__init__()
 
         self.__events = []
 

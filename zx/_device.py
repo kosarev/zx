@@ -74,5 +74,4 @@ class ToggleTapePause(DeviceEvent):
 
 
 class Device(object):
-    def __init__(self, xmachine):
-        self.xmachine = xmachine
+    pass
