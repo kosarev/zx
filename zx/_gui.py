@@ -438,7 +438,7 @@ class ScreenWindow(Device):
             Gtk.main_iteration()
 
         while self.__events:
-            devices.notify(self.__events.pop(0))
+            self.on_event(self.__events.pop(0), devices, None)
 
     def __toggle_pause(self, devices):
         devices.notify(ToggleEmulationPause())
