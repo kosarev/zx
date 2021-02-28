@@ -14,6 +14,7 @@ from ._data import MachineSnapshot
 from ._data import SoundFile
 from ._device import EndOfFrame
 from ._device import GetTapeLevel
+from ._device import IsTapePlayerStopped
 from ._device import PauseStateUpdated
 from ._device import QuantumRun
 from ._device import ScreenUpdated
@@ -69,9 +70,14 @@ class Emulator(Spectrum48):
         # this field.
         self._tape_player = TapePlayer()
 
-        # Don't even create the window on full throttle.
-        if devices is None and self.__speed_factor is not None:
-            devices = Dispatcher([self, ScreenWindow(), self._tape_player])
+        if devices is None:
+            devices = [self, self._tape_player]
+
+            # Don't even create the window on full throttle.
+            if self.__speed_factor is not None:
+                devices.append(ScreenWindow())
+
+            devices = Dispatcher(devices)
 
         self.devices = devices
 
@@ -114,8 +120,9 @@ class Emulator(Spectrum48):
         self._tape_player.load_tape(file)
         self.__pause_tape()
 
+    # TODO: Do we still need?
     def __is_end_of_tape(self):
-        return self._tape_player.is_end()
+        return self.devices.notify(IsTapePlayerStopped())
 
     # TODO: Double-underscore or make public.
     def _handle_key_stroke(self, key_info, pressed):

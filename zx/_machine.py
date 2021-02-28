@@ -335,16 +335,17 @@ class MachineState(Z80State, MemoryState):
     def fetches_limit(self, fetches_to_stop):
         self.__fetches_to_stop[:] = _split32(fetches_to_stop)
 
-    ''' TODO
+    # TODO: Can we do without this?
     def get_events(self):
-        return self.get('events')
+        return _make32(*self.__events)
 
+    # TODO: Can we do without this?
     def set_events(self, events):
-        self.set('events', events)
+        self.__events[:] = _split32(events)
 
+    # TODO: Can we do without this?
     def raise_events(self, events):
         self.set_events(self.get_events() | events)
-    '''
 
     @property
     def ticks_since_int(self):

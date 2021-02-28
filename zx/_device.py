@@ -41,6 +41,10 @@ class IsTapePlayerPaused(DeviceEvent):
     pass
 
 
+class IsTapePlayerStopped(DeviceEvent):
+    pass
+
+
 class KeyStroke(DeviceEvent):
     def __init__(self, id, pressed):
         self.id = id
