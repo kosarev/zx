@@ -13,6 +13,7 @@ import time
 from ._data import MachineSnapshot
 from ._data import SoundFile
 from ._device import EndOfFrame
+from ._device import GetTapeLevel
 from ._device import PauseStateUpdated
 from ._device import QuantumRun
 from ._device import ScreenUpdated
@@ -168,8 +169,7 @@ class Emulator(Spectrum48):
         # TODO: Use the tick when the ear value is sampled
         #       instead of the tick of the beginning of the input
         #       cycle.
-        tick = self.ticks_since_int
-        if self._tape_player.get_level_at_frame_tick(tick):
+        if self.devices.notify(GetTapeLevel(self.ticks_since_int)):
             n |= 0x40
 
         END_OF_TAPE = RunEvents.END_OF_TAPE

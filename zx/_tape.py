@@ -11,6 +11,7 @@
 
 from ._device import Device
 from ._device import EndOfFrame
+from ._device import GetTapeLevel
 from ._time import Time
 
 
@@ -172,4 +173,6 @@ class TapePlayer(Device):
     def on_event(self, event, devices, result):
         if isinstance(event, EndOfFrame):
             self.skip_rest_of_frame()
+        elif isinstance(event, GetTapeLevel):
+            return self.get_level_at_frame_tick(event.frame_tick)
         return result
