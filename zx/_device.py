@@ -15,6 +15,10 @@ class DeviceEvent(object):
     pass
 
 
+class EndOfFrame(DeviceEvent):
+    pass
+
+
 class GetEmulationPauseState(DeviceEvent):
     pass
 

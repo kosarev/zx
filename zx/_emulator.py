@@ -12,6 +12,7 @@
 import time
 from ._data import MachineSnapshot
 from ._data import SoundFile
+from ._device import EndOfFrame
 from ._device import PauseStateUpdated
 from ._device import QuantumRun
 from ._device import ScreenUpdated
@@ -325,7 +326,7 @@ class Emulator(Spectrum48):
                 pixels = self.get_frame_pixels()
                 self.devices.notify(ScreenUpdated(pixels))
 
-                self._tape_player.skip_rest_of_frame()
+                self.devices.notify(EndOfFrame())
                 self._emulation_time.advance(1 / 50)
 
                 if speed_factor:
