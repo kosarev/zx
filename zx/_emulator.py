@@ -63,17 +63,18 @@ class Emulator(Spectrum48):
 
         self.__events_to_signal = RunEvents.NO_EVENTS
 
+        # TODO: Communicate with tape players via events; remove
+        # this field.
+        self._tape_player = TapePlayer()
+
         # Don't even create the window on full throttle.
         if devices is None and self.__speed_factor is not None:
-            devices = Dispatcher([self, ScreenWindow()])
+            devices = Dispatcher([self, ScreenWindow(), self._tape_player])
 
         self.devices = devices
 
         self.__keyboard_state = KeyboardState()
         self.set_on_input_callback(self.__on_input)
-
-        # TODO: Double-underscore or make public.
-        self._tape_player = TapePlayer()
 
         self.__playback_player = None
         self.__playback_samples = None

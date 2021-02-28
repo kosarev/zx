@@ -448,3 +448,4 @@ class ScreenWindow(Device):
 
     def destroy(self):
         self._window.destroy()
+        super().destroy()

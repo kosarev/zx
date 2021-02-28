@@ -9,6 +9,7 @@
 #   Published under the MIT license.
 
 
+from ._device import Device
 from ._time import Time
 
 
@@ -82,7 +83,7 @@ def tag_last_pulse(pulses):
             yield level, pulse, ids
 
 
-class TapePlayer(object):
+class TapePlayer(Device):
     def __init__(self):
         self._is_paused = True
         self._pulses = None
@@ -166,3 +167,6 @@ class TapePlayer(object):
 
         assert self._tick >= self._ticks_per_frame
         self._tick -= self._ticks_per_frame
+
+    def on_event(self, event, devices, result):
+        return result

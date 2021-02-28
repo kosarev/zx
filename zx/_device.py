@@ -74,4 +74,5 @@ class ToggleTapePause(DeviceEvent):
 
 
 class Device(object):
-    pass
+    def destroy(self):
+        pass
