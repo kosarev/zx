@@ -362,9 +362,6 @@ class MachineState(Z80State, MemoryState):
         self.__border_color[0] = value
 
     ''' TODO
-    def set_border_color(self, color):
-        self.set('border_color', color)
-
     def enable_trace(self, enable=True):
         self.set('trace_enabled', int(enable))
     '''
