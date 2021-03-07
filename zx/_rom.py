@@ -12,6 +12,7 @@
 import os
 import pkg_resources
 
+
 def _get_resource_path(path):
     return pkg_resources.resource_filename('zx', path)
 
