@@ -53,6 +53,7 @@ class PlaybackPlayer(object):
         return self._recording['chunks']
 
 
+# TODO: Eliminate this class. Move everything to Spectrum48.
 class Emulator(Spectrum48):
     _SPIN_V0P5_INFO = {'id': 'info',
                        'creator': b'SPIN 0.5            ',
