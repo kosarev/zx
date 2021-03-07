@@ -14,6 +14,7 @@ from ._data import MachineSnapshot
 from ._data import SoundFile
 from ._device import EndOfFrame
 from ._device import GetTapeLevel
+from ._device import IsTapePlayerPaused
 from ._device import IsTapePlayerStopped
 from ._device import LoadTape
 from ._device import PauseStateUpdated
@@ -105,7 +106,7 @@ class Emulator(Spectrum48):
 
     # TODO: Double-underscore or make public.
     def _is_tape_paused(self):
-        return self._tape_player.is_paused()
+        return bool(self.devices.notify(IsTapePlayerPaused()))
 
     def __pause_tape(self, is_paused=True):
         self.devices.notify(PauseUnpauseTape(is_paused))

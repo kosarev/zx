@@ -12,6 +12,7 @@
 from ._device import Device
 from ._device import EndOfFrame
 from ._device import GetTapeLevel
+from ._device import IsTapePlayerPaused
 from ._device import IsTapePlayerStopped
 from ._device import LoadTape
 from ._device import PauseUnpauseTape
@@ -179,6 +180,8 @@ class TapePlayer(Device):
             self.skip_rest_of_frame()
         elif isinstance(event, GetTapeLevel):
             return self.get_level_at_frame_tick(event.frame_tick)
+        elif isinstance(event, IsTapePlayerPaused):
+            return self.is_paused()
         elif isinstance(event, IsTapePlayerStopped):
             return self.is_end()
         elif isinstance(event, LoadTape):
