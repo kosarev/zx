@@ -65,6 +65,11 @@ class PauseStateUpdated(DeviceEvent):
     pass
 
 
+class PauseUnpauseTape(DeviceEvent):
+    def __init__(self, pause):
+        self.pause = pause
+
+
 class QuantumRun(DeviceEvent):
     pass
 

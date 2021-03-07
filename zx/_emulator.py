@@ -17,9 +17,9 @@ from ._device import GetTapeLevel
 from ._device import IsTapePlayerStopped
 from ._device import LoadTape
 from ._device import PauseStateUpdated
+from ._device import PauseUnpauseTape
 from ._device import QuantumRun
 from ._device import ScreenUpdated
-from ._device import TapeStateUpdated
 from ._error import Error
 from ._except import EmulatorException
 from ._file import parse_file
@@ -108,8 +108,7 @@ class Emulator(Spectrum48):
         return self._tape_player.is_paused()
 
     def __pause_tape(self, is_paused=True):
-        self._tape_player.pause(is_paused)
-        self.devices.notify(TapeStateUpdated())
+        self.devices.notify(PauseUnpauseTape(is_paused))
 
     def __unpause_tape(self):
         self.__pause_tape(is_paused=False)

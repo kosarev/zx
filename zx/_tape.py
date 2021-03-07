@@ -14,6 +14,8 @@ from ._device import EndOfFrame
 from ._device import GetTapeLevel
 from ._device import IsTapePlayerStopped
 from ._device import LoadTape
+from ._device import PauseUnpauseTape
+from ._device import TapeStateUpdated
 from ._time import Time
 
 
@@ -181,4 +183,10 @@ class TapePlayer(Device):
             return self.is_end()
         elif isinstance(event, LoadTape):
             self.load_tape(event.file)
+        elif isinstance(event, PauseUnpauseTape):
+            self.pause(event.pause)
+
+            # TODO: Only notify if the state is actually changed.
+            devices.notify(TapeStateUpdated())
+
         return result
