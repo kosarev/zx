@@ -45,6 +45,11 @@ class IsTapePlayerStopped(DeviceEvent):
     pass
 
 
+class LoadTape(DeviceEvent):
+    def __init__(self, file):
+        self.file = file
+
+
 class KeyStroke(DeviceEvent):
     def __init__(self, id, pressed):
         self.id = id

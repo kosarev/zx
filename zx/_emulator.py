@@ -15,6 +15,7 @@ from ._data import SoundFile
 from ._device import EndOfFrame
 from ._device import GetTapeLevel
 from ._device import IsTapePlayerStopped
+from ._device import LoadTape
 from ._device import PauseStateUpdated
 from ._device import QuantumRun
 from ._device import ScreenUpdated
@@ -117,7 +118,7 @@ class Emulator(Spectrum48):
         self.__pause_tape(not self._is_tape_paused())
 
     def __load_tape_to_player(self, file):
-        self._tape_player.load_tape(file)
+        self.devices.notify(LoadTape(file))
         self.__pause_tape()
 
     # TODO: Do we still need?

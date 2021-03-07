@@ -13,6 +13,7 @@ from ._device import Device
 from ._device import EndOfFrame
 from ._device import GetTapeLevel
 from ._device import IsTapePlayerStopped
+from ._device import LoadTape
 from ._time import Time
 
 
@@ -178,4 +179,6 @@ class TapePlayer(Device):
             return self.get_level_at_frame_tick(event.frame_tick)
         elif isinstance(event, IsTapePlayerStopped):
             return self.is_end()
+        elif isinstance(event, LoadTape):
+            self.load_tape(event.file)
         return result
