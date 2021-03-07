@@ -14,7 +14,6 @@ from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
 from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
-from ._device import GetTapePlayerTime
 from ._device import KeyStroke
 from ._device import LoadFile
 from ._device import PauseStateUpdated
@@ -460,8 +459,6 @@ class Spectrum48(_Spectrum48Base, MachineState):
             return self.paused
         elif isinstance(event, GetEmulationTime):
             return self._emulation_time
-        elif isinstance(event, GetTapePlayerTime):
-            return self._tape_player.get_time()
         elif isinstance(event, KeyStroke):
             key = KEYS.get(event.id, None)
             if key:
