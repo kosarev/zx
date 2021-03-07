@@ -23,7 +23,7 @@ from ._device import ToggleTapePause
 from ._emulatorbase import _Spectrum48Base
 from ._except import EmulationExit
 from ._keyboard import KEYS
-from ._rom import get_rom_image
+from ._rom import load_rom_image
 from ._utils import make16
 from ._z80snapshot import Z80SnapshotFormat
 
@@ -412,11 +412,10 @@ class Spectrum48(_Spectrum48Base, MachineState):
     __BREAKPOINT_MARK = 1 << 0
 
     def __init__(self):
-        self.machine_kind = 'ZX Spectrum 48K'
         MachineState.__init__(self, self._get_state_view())
 
         # Install ROM.
-        self.write(0x0000, get_rom_image(self.machine_kind))
+        self.write(0x0000, load_rom_image('Spectrum48.rom'))
 
         self.__paused = False
 

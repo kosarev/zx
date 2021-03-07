@@ -12,13 +12,11 @@
 import os
 import pkg_resources
 
+def _get_resource_path(path):
+    return pkg_resources.resource_filename('zx', path)
 
-def load_image(filename):
-    path = pkg_resources.resource_filename('zx', 'roms/Spectrum48.rom')
-    with open(path, mode='rb') as f:
+
+def load_rom_image(filename):
+    path = os.path.join('roms', filename)
+    with open(_get_resource_path(path), mode='rb') as f:
         return f.read()
-
-
-def get_rom_image(machine_kind):
-    rom_filenames = {'ZX Spectrum 48K': 'Spectrum48.rom'}
-    return load_image(rom_filenames[machine_kind])
