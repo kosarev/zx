@@ -68,12 +68,8 @@ class Emulator(Spectrum48):
 
         self.__events_to_signal = RunEvents.NO_EVENTS
 
-        # TODO: Communicate with tape players via events; remove
-        # this field.
-        self._tape_player = TapePlayer()
-
         if devices is None:
-            devices = [self, self._tape_player]
+            devices = [self, TapePlayer()]
 
             # Don't even create the window on full throttle.
             if self.__speed_factor is not None:
