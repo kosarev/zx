@@ -17,6 +17,7 @@ from ._device import EndOfFrame
 from ._device import GetTapeLevel
 from ._device import IsTapePlayerPaused
 from ._device import IsTapePlayerStopped
+from ._device import KeyStroke
 from ._device import LoadTape
 from ._device import PauseStateUpdated
 from ._device import PauseUnpauseTape
@@ -125,10 +126,6 @@ class Emulator(Spectrum48):
     def __is_end_of_tape(self):
         return self.devices.notify(IsTapePlayerStopped())
 
-    # TODO: Double-underscore or make public.
-    def _handle_key_stroke(self, key_info, pressed):
-        self.__keyboard_state.handle_key_stroke(key_info, pressed)
-
     def __translate_key_strokes(self, keys):
         for key in keys:
             if isinstance(key, int):
@@ -143,12 +140,12 @@ class Emulator(Spectrum48):
 
             for id in strokes:
                 # print(id)
-                self._handle_key_stroke(KEYS[id], pressed=True)
+                self.devices.notify(KeyStroke(KEYS[id].ID, pressed=True))
                 self.run(duration=0.05, speed_factor=0)
 
             for id in reversed(strokes):
                 # print(id)
-                self._handle_key_stroke(KEYS[id], pressed=False)
+                self.devices.notify(KeyStroke(KEYS[id].ID, pressed=False))
                 self.run(duration=0.05, speed_factor=0)
 
     def __on_input(self, addr):
