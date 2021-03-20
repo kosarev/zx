@@ -74,6 +74,11 @@ class QuantumRun(DeviceEvent):
     pass
 
 
+class ReadPort(DeviceEvent):
+    def __init__(self, addr):
+        self.addr = addr
+
+
 class SaveSnapshot(DeviceEvent):
     def __init__(self, filename):
         self.filename = filename

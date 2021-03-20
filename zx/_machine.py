@@ -391,8 +391,7 @@ class Dispatcher(object):
 
     # TODO: Since this now can return values, it needs a
     # different name.
-    def notify(self, event):
-        result = None
+    def notify(self, event, result=None):
         for device in self:
             result = device.on_event(event, self, result)
         return result

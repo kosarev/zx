@@ -21,6 +21,7 @@ from ._device import LoadTape
 from ._device import PauseStateUpdated
 from ._device import PauseUnpauseTape
 from ._device import QuantumRun
+from ._device import ReadPort
 from ._device import ScreenUpdated
 from ._error import Error
 from ._except import EmulatorException
@@ -171,7 +172,7 @@ class Emulator(Spectrum48):
 
         # Scan keyboard.
         n = 0xbf
-        n &= self.__keyboard_state.read_port(addr)
+        n &= self.devices.notify(ReadPort(addr), 0xff)
 
         # TODO: Use the tick when the ear value is sampled
         #       instead of the tick of the beginning of the input

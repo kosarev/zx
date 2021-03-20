@@ -10,6 +10,7 @@
 
 from ._device import Device
 from ._device import KeyStroke
+from ._device import ReadPort
 from ._utils import tupilize
 
 
@@ -87,4 +88,6 @@ class Keyboard(Device):
             key = KEYS.get(event.id, None)
             if key:
                 self.handle_key_stroke(key, event.pressed)
+        elif isinstance(event, ReadPort):
+            result &= self.read_port(event.addr)
         return result
