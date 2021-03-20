@@ -8,6 +8,8 @@
 #
 #   Published under the MIT license.
 
+from ._device import Device
+from ._device import KeyStroke
 from ._utils import tupilize
 
 
@@ -44,7 +46,7 @@ for index, ids in enumerate(_KEY_IDS):
         KEYS[i] = info
 
 
-class Keyboard(object):
+class Keyboard(Device):
     _state = [0xff] * 8
 
     def read_port(self, addr):
@@ -79,3 +81,10 @@ class Keyboard(object):
             self._state[addr_line - 8] &= mask ^ 0xff
         else:
             self._state[addr_line - 8] |= mask
+
+    def on_event(self, event, devices, result):
+        if isinstance(event, KeyStroke):
+            key = KEYS.get(event.id, None)
+            if key:
+                self.handle_key_stroke(key, event.pressed)
+        return result

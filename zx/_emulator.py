@@ -9,6 +9,7 @@
 #
 #   Published under the MIT license.
 
+# TODO: Remove unused imports.
 import time
 from ._data import MachineSnapshot
 from ._data import SoundFile
@@ -69,8 +70,10 @@ class Emulator(Spectrum48):
 
         self.__events_to_signal = RunEvents.NO_EVENTS
 
+        self.__keyboard_state = Keyboard()
+
         if devices is None:
-            devices = [self, TapePlayer()]
+            devices = [self, TapePlayer(), self.__keyboard_state]
 
             # Don't even create the window on full throttle.
             if self.__speed_factor is not None:
@@ -80,7 +83,6 @@ class Emulator(Spectrum48):
 
         self.devices = devices
 
-        self.__keyboard_state = Keyboard()
         self.set_on_input_callback(self.__on_input)
 
         self.__playback_player = None
