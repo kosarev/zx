@@ -72,10 +72,8 @@ class Emulator(Spectrum48):
 
         self.__events_to_signal = RunEvents.NO_EVENTS
 
-        self.__keyboard_state = Keyboard()
-
         if devices is None:
-            devices = [self, TapePlayer(), self.__keyboard_state]
+            devices = [self, TapePlayer(), Keyboard()]
 
             # Don't even create the window on full throttle.
             if self.__speed_factor is not None:
