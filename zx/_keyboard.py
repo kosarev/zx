@@ -44,7 +44,7 @@ for index, ids in enumerate(_KEY_IDS):
         KEYS[i] = info
 
 
-class KeyboardState(object):
+class Keyboard(object):
     _state = [0xff] * 8
 
     def read_port(self, addr):

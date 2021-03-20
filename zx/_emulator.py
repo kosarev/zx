@@ -25,7 +25,7 @@ from ._error import Error
 from ._except import EmulatorException
 from ._file import parse_file
 from ._gui import ScreenWindow
-from ._keyboard import KeyboardState
+from ._keyboard import Keyboard
 from ._keyboard import KEYS
 from ._machine import Dispatcher
 from ._machine import RunEvents
@@ -80,7 +80,7 @@ class Emulator(Spectrum48):
 
         self.devices = devices
 
-        self.__keyboard_state = KeyboardState()
+        self.__keyboard_state = Keyboard()
         self.set_on_input_callback(self.__on_input)
 
         self.__playback_player = None
