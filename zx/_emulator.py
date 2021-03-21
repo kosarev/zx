@@ -86,7 +86,6 @@ class Emulator(Spectrum48):
         self.set_on_input_callback(self.__on_input)
 
         self.__playback_player = None
-        self.__playback_samples = None
 
         self.__profile = profile
         if self.__profile:
@@ -148,9 +147,9 @@ class Emulator(Spectrum48):
 
     def __on_input(self, addr):
         # Handle playbacks.
-        if self.__playback_samples:
+        if self.__playback_player:
             sample = None
-            for sample in self.__playback_samples:
+            for sample in self.__playback_player.samples:
                 break
 
             if sample == 'END_OF_FRAME':
@@ -159,7 +158,7 @@ class Emulator(Spectrum48):
                     'Given %d, used %d.' % (
                         self.playback_frame_count,
                         len(self.playback_chunk['frames']),
-                        len(self.__playback_samples), sample_i),
+                        len(self.__playback_player.samples), sample_i),
                     id='too_few_input_samples')
 
             # print('__on_input() returns %d' % sample)
@@ -219,7 +218,6 @@ class Emulator(Spectrum48):
     # TODO: Double-underscore or make public.
     def _quit_playback_mode(self):
         self.__playback_player = None
-        self.__playback_samples = None
 
         self.suppress_interrupts = False
         self.allow_int_after_ei = False
@@ -315,7 +313,7 @@ class Emulator(Spectrum48):
                 # SPIN v0.5 skips executing instructions
                 # of the bytes-saving ROM procedure in
                 # fast save mode.
-                if (self.__playback_samples and
+                if (self.__playback_player.samples and
                         creator_info == self._SPIN_V0P5_INFO and
                         self.pc == 0x04d4):
                     sp = self.sp
@@ -335,7 +333,7 @@ class Emulator(Spectrum48):
                 if speed_factor:
                     time.sleep((1 / 50) * speed_factor)
 
-            if (self.__playback_samples and
+            if (self.__playback_player and
                     RunEvents.FETCHES_LIMIT_HIT in events):
                 # Some emulators, e.g., SPIN, may store an interrupt
                 # point in the middle of a IX- or IY-prefixed
@@ -347,7 +345,7 @@ class Emulator(Spectrum48):
 
                 # SPIN doesn't update the fetch counter if the last
                 # instruction in frame is IN.
-                if (self.__playback_samples and
+                if (self.__playback_player.samples and
                         creator_info == self._SPIN_V0P5_INFO and
                         self.playback_sample_i + 1 <
                         len(self.playback_sample_values)):
@@ -355,7 +353,7 @@ class Emulator(Spectrum48):
                     return
 
                 sample = None
-                for sample in self.__playback_samples:
+                for sample in self.__playback_player.samples:
                     break
                 if sample != 'END_OF_FRAME':
                     raise Error(
@@ -363,12 +361,12 @@ class Emulator(Spectrum48):
                         'Given %d, used %d.' % (
                             self.playback_frame_count,
                             len(self.playback_chunk['frames']),
-                            len(self.__playback_samples),
+                            len(self.__playback_player.samples),
                             self.playback_sample_i + 1),
                         id='too_many_input_samples')
 
                 sample = None
-                for sample in self.__playback_samples:
+                for sample in self.__playback_player.samples:
                     break
                 if sample is None:
                     self.stop()
@@ -399,9 +397,9 @@ class Emulator(Spectrum48):
         self.set_breakpoint(0x04d4)
 
         # Process frames in order.
-        self.__playback_samples = self.__get_playback_samples()
+        self.__playback_player.samples = self.__get_playback_samples()
         sample = None
-        for sample in self.__playback_samples:
+        for sample in self.__playback_player.samples:
             break
         assert sample == 'START_OF_FRAME'
 
