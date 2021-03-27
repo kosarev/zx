@@ -42,7 +42,9 @@ from ._zxb import ZXBasicCompilerProgram
 
 # TODO: Rework to a time machine interface.
 class PlaybackPlayer(object):
-    def __init__(self, file):
+    def __init__(self, machine, file):
+        self.__machine = machine
+
         assert isinstance(file, RZXFile)
         self._recording = file
 
@@ -54,6 +56,56 @@ class PlaybackPlayer(object):
 
     def get_chunks(self):
         return self._recording['chunks']
+
+    def get_playback_samples(self):
+        # TODO: Have a class describing playback state.
+        self.playback_frame_count = 0
+        self.playback_chunk = 0
+        self.playback_sample_values = []
+        self.playback_sample_i = 0
+
+        frame_count = 0
+        for chunk_i, chunk in enumerate(self.get_chunks()):
+            if isinstance(chunk, MachineSnapshot):
+                self.__machine.install_snapshot(chunk)
+                continue
+
+            if chunk['id'] != 'port_samples':
+                continue
+
+            self.__machine.ticks_since_int = chunk['first_tick']
+
+            for frame_i, frame in enumerate(chunk['frames']):
+                num_of_fetches, samples = frame
+                # print(num_of_fetches, samples)
+
+                self.__machine.fetches_limit = num_of_fetches
+                # print(num_of_fetches, samples, flush=True)
+
+                # print('START_OF_FRAME', flush=True)
+                yield 'START_OF_FRAME'
+
+                for sample_i, sample in enumerate(samples):
+                    # print(self.fetches_limit)
+                    # fetch = num_of_fetches - self.fetches_limit
+                    # print('Input at fetch', fetch, 'of', num_of_fetches)
+                    # TODO: print('read_port 0x%04x 0x%02x' % (addr, n),
+                    #             flush=True)
+
+                    # TODO: Have a class describing playback state.
+                    self.playback_frame_count = frame_count
+                    self.playback_chunk = chunk
+                    self.playback_sample_values = samples
+                    self.playback_sample_i = sample_i
+                    # print(frame_count, chunk_i, frame_i, sample_i, sample,
+                    #       flush=True)
+
+                    yield sample
+
+                # print('END_OF_FRAME', flush=True)
+                yield 'END_OF_FRAME'
+
+                frame_count += 1
 
 
 # TODO: Eliminate this class. Move everything to Spectrum48.
@@ -156,8 +208,8 @@ class Emulator(Spectrum48):
                 raise Error(
                     'Too few input samples at frame %d of %d. '
                     'Given %d, used %d.' % (
-                        self.playback_frame_count,
-                        len(self.playback_chunk['frames']),
+                        self.__playback_player.playback_frame_count,
+                        len(self.__playback_player.playback_chunk['frames']),
                         len(self.__playback_player.samples), sample_i),
                     id='too_few_input_samples')
 
@@ -221,56 +273,6 @@ class Emulator(Spectrum48):
 
         self.suppress_interrupts = False
         self.allow_int_after_ei = False
-
-    def __get_playback_samples(self):
-        # TODO: Have a class describing playback state.
-        self.playback_frame_count = 0
-        self.playback_chunk = 0
-        self.playback_sample_values = []
-        self.playback_sample_i = 0
-
-        frame_count = 0
-        for chunk_i, chunk in enumerate(self.__playback_player.get_chunks()):
-            if isinstance(chunk, MachineSnapshot):
-                self.install_snapshot(chunk)
-                continue
-
-            if chunk['id'] != 'port_samples':
-                continue
-
-            self.ticks_since_int = chunk['first_tick']
-
-            for frame_i, frame in enumerate(chunk['frames']):
-                num_of_fetches, samples = frame
-                # print(num_of_fetches, samples)
-
-                self.fetches_limit = num_of_fetches
-                # print(num_of_fetches, samples, flush=True)
-
-                # print('START_OF_FRAME', flush=True)
-                yield 'START_OF_FRAME'
-
-                for sample_i, sample in enumerate(samples):
-                    # print(self.fetches_limit)
-                    # fetch = num_of_fetches - self.fetches_limit
-                    # print('Input at fetch', fetch, 'of', num_of_fetches)
-                    # TODO: print('read_port 0x%04x 0x%02x' % (addr, n),
-                    #             flush=True)
-
-                    # TODO: Have a class describing playback state.
-                    self.playback_frame_count = frame_count
-                    self.playback_chunk = chunk
-                    self.playback_sample_values = samples
-                    self.playback_sample_i = sample_i
-                    # print(frame_count, chunk_i, frame_i, sample_i, sample,
-                    #       flush=True)
-
-                    yield sample
-
-                # print('END_OF_FRAME', flush=True)
-                yield 'END_OF_FRAME'
-
-                frame_count += 1
 
     def __run_quantum(self, speed_factor=None):
         if speed_factor is None:
@@ -347,8 +349,8 @@ class Emulator(Spectrum48):
                 # instruction in frame is IN.
                 if (self.__playback_player.samples and
                         creator_info == self._SPIN_V0P5_INFO and
-                        self.playback_sample_i + 1 <
-                        len(self.playback_sample_values)):
+                        self.__playback_player.playback_sample_i + 1 <
+                        len(self.__playback_player.playback_sample_values)):
                     self.fetches_limit = 1
                     return
 
@@ -359,10 +361,11 @@ class Emulator(Spectrum48):
                     raise Error(
                         'Too many input samples at frame %d of %d. '
                         'Given %d, used %d.' % (
-                            self.playback_frame_count,
-                            len(self.playback_chunk['frames']),
+                            self.__playback_player.playback_frame_count,
+                            len(self.__playback_player.
+                                playback_chunk['frames']),
                             len(self.__playback_player.samples),
-                            self.playback_sample_i + 1),
+                            self.__playback_player.playback_sample_i + 1),
                         id='too_many_input_samples')
 
                 sample = None
@@ -385,7 +388,7 @@ class Emulator(Spectrum48):
             self.__run_quantum(speed_factor=speed_factor)
 
     def __load_input_recording(self, file):
-        self.__playback_player = PlaybackPlayer(file)
+        self.__playback_player = PlaybackPlayer(self, file)
         creator_info = self.__playback_player.find_recording_info_chunk()
 
         # SPIN v0.5 alters ROM to implement fast tape loading,
@@ -397,7 +400,8 @@ class Emulator(Spectrum48):
         self.set_breakpoint(0x04d4)
 
         # Process frames in order.
-        self.__playback_player.samples = self.__get_playback_samples()
+        self.__playback_player.samples = (
+            self.__playback_player.get_playback_samples())
         sample = None
         for sample in self.__playback_player.samples:
             break
