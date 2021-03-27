@@ -20,6 +20,8 @@ class PlaybackPlayer(object):
         assert isinstance(file, RZXFile)
         self._recording = file
 
+        self.samples = self.__get_playback_samples()
+
     def find_recording_info_chunk(self):
         for chunk in self._recording['chunks']:
             if chunk['id'] == 'info':
@@ -29,7 +31,7 @@ class PlaybackPlayer(object):
     def get_chunks(self):
         return self._recording['chunks']
 
-    def get_playback_samples(self):
+    def __get_playback_samples(self):
         # TODO: Have a class describing playback state.
         self.playback_frame_count = 0
         self.playback_chunk = 0

@@ -333,8 +333,6 @@ class Emulator(Spectrum48):
         self.set_breakpoint(0x04d4)
 
         # Process frames in order.
-        self.__playback_player.samples = (
-            self.__playback_player.get_playback_samples())
         sample = None
         for sample in self.__playback_player.samples:
             break
