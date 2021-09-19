@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/kosarev/zx.svg?branch=master)](https://travis-ci.org/kosarev/zx)
+[![Build Status](https://app.travis-ci.com/kosarev/zx.svg?branch=master)](https://app.travis-ci.com/kosarev/zx)
 
 # zx
 ZX Spectrum Emulator written in a mix of Python and C++.
