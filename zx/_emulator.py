@@ -51,7 +51,7 @@ class Emulator(Spectrum48):
     def __init__(self, speed_factor=1.0, profile=None, devices=None):
         super().__init__()
 
-        self.__frame_count = 0
+        self.frame_count = 0
         # TODO: Double-underscore or make public.
         self._emulation_time = Time()
         self.__speed_factor = speed_factor
@@ -70,7 +70,6 @@ class Emulator(Spectrum48):
         self.devices = devices
 
         self.set_on_input_callback(self.__on_input)
-        self.set_on_output_callback(self.__on_output)
 
         self.__playback_player = None
 
@@ -117,7 +116,7 @@ class Emulator(Spectrum48):
             else:
                 yield key
 
-    def __generate_key_strokes(self, *keys):
+    def generate_key_strokes(self, *keys):
         for key in self.__translate_key_strokes(keys):
             strokes = key.split('+')
             # print(strokes)
@@ -125,12 +124,12 @@ class Emulator(Spectrum48):
             for id in strokes:
                 # print(id)
                 self.devices.notify(KeyStroke(KEYS[id].ID, pressed=True))
-                self.run(duration=0.05, speed_factor=0)
+                self.run(duration=0.1, speed_factor=0)
 
             for id in reversed(strokes):
                 # print(id)
                 self.devices.notify(KeyStroke(KEYS[id].ID, pressed=False))
-                self.run(duration=0.05, speed_factor=0)
+                self.run(duration=0.1, speed_factor=0)
 
     def __on_input(self, addr):
         # Handle playbacks.
@@ -169,11 +168,6 @@ class Emulator(Spectrum48):
         # print('0x%04x 0x%02x' % (addr, n))
 
         return n
-
-    def __on_output(self, addr, value):
-        # print(self.__frame_count, self.ticks_since_int,
-        #       f'{addr:#06x}', value)
-        pass
 
     def __save_crash_rzx(self, player, state, chunk_i, frame_i):
         snapshot = Z80SnapshotFormat().make(state)
@@ -270,7 +264,7 @@ class Emulator(Spectrum48):
                 self.devices.notify(ScreenUpdated(pixels))
 
                 self.devices.notify(EndOfFrame())
-                self.__frame_count += 1
+                self.frame_count += 1
                 self._emulation_time.advance(1 / 50)
 
                 if speed_factor:
@@ -346,23 +340,23 @@ class Emulator(Spectrum48):
             break
         assert sample == 'START_OF_FRAME'
 
-    def __reset_and_wait(self):
+    def reset_and_wait(self):
         self.pc = 0x0000
         self.run(duration=1.8, speed_factor=0)
 
     def __load_zx_basic_compiler_program(self, file):
         assert isinstance(file, ZXBasicCompilerProgram)
 
-        self.__reset_and_wait()
+        self.reset_and_wait()
 
         # CLEAR <entry_point>
         entry_point = file['entry_point']
-        self.__generate_key_strokes('X', entry_point, 'ENTER')
+        self.generate_key_strokes('X', entry_point, 'ENTER')
 
         self.write(entry_point, file['program_bytes'])
 
         # RANDOMIZE USR <entry_point>
-        self.__generate_key_strokes('T', 'CS+SS', 'L', entry_point, 'ENTER')
+        self.generate_key_strokes('T', 'CS+SS', 'L', entry_point, 'ENTER')
 
         # assert 0, list(file)
 
@@ -393,10 +387,10 @@ class Emulator(Spectrum48):
             raise Error('%r does not seem to be a tape file.' % filename)
 
         # Let the initialization complete.
-        self.__reset_and_wait()
+        self.reset_and_wait()
 
         # Type in 'LOAD ""'.
-        self.__generate_key_strokes('J', 'SS+P', 'SS+P', 'ENTER')
+        self.generate_key_strokes('J', 'SS+P', 'SS+P', 'ENTER')
 
         # Load and run the tape.
         self.__load_tape_to_player(tape)
