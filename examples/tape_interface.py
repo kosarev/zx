@@ -43,7 +43,7 @@ class MySpectrum48(zx.Emulator):
             self.__last_half_period_count += 1
         else:
             if self.__report:
-                print(f'Beginning level {self.__last_ear_level}, '
+                print(f'Beginning level {self.__last_half_period_level}, '
                       f'{self.__last_half_period_count} half-period(s) '
                       f'of {self.__last_half_period_duration} ticks each.')
 
