@@ -51,6 +51,7 @@ class Emulator(Spectrum48):
     def __init__(self, speed_factor=1.0, profile=None, devices=None):
         super().__init__()
 
+        self.__frame_count = 0
         # TODO: Double-underscore or make public.
         self._emulation_time = Time()
         self.__speed_factor = speed_factor
@@ -170,7 +171,8 @@ class Emulator(Spectrum48):
         return n
 
     def __on_output(self, addr, value):
-        # print(f'{addr:#06x}', value)
+        # print(self.__frame_count, self.ticks_since_int,
+        #       f'{addr:#06x}', value)
         pass
 
     def __save_crash_rzx(self, player, state, chunk_i, frame_i):
@@ -268,6 +270,7 @@ class Emulator(Spectrum48):
                 self.devices.notify(ScreenUpdated(pixels))
 
                 self.devices.notify(EndOfFrame())
+                self.__frame_count += 1
                 self._emulation_time.advance(1 / 50)
 
                 if speed_factor:
