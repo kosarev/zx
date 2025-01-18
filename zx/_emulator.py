@@ -69,6 +69,7 @@ class Emulator(Spectrum48):
         self.devices = devices
 
         self.set_on_input_callback(self.__on_input)
+        self.set_on_output_callback(self.__on_output)
 
         self.__playback_player = None
 
@@ -167,6 +168,10 @@ class Emulator(Spectrum48):
         # print('0x%04x 0x%02x' % (addr, n))
 
         return n
+
+    def __on_output(self, addr, value):
+        # print(f'{addr:#06x}', value)
+        pass
 
     def __save_crash_rzx(self, player, state, chunk_i, frame_i):
         snapshot = Z80SnapshotFormat().make(state)

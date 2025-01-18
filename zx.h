@@ -318,6 +318,8 @@ public:
     }
 
     void on_output_cycle(fast_u16 addr, fast_u8 n) {
+        self().on_output(addr, n);
+
         if((addr & 0xff) == 0xfe) {
             // TODO: Render to (current_tick + 1) and then update
             // the border color as the new value is sampled at

@@ -140,6 +140,12 @@ public:
         return old_callback;
     }
 
+    PyObject *set_on_output_callback(PyObject *callback) {
+        PyObject *old_callback = on_output_callback;
+        on_output_callback = callback;
+        return old_callback;
+    }
+
 protected:
     Spectrum48::processor_state get_processor_state() {
         Spectrum48::processor_state state;
@@ -225,10 +231,24 @@ public:
         return z80::mask8(PyLong_AsUnsignedLong(result));
     }
 
+    void on_output(fast_u16 addr, fast_u8 value) {
+        if(!on_output_callback)
+            return;
+
+        PyObject *args = Py_BuildValue("(i,i)", addr, value);
+        decref_guard arg_guard(args);
+
+        retrieve_state();
+        PyObject *result = PyObject_CallObject(on_output_callback, args);
+        decref_guard result_guard(result);
+        install_state();
+    }
+
 private:
     machine_state state;
     pixels_buffer_type pixels;
     PyObject *on_input_callback = nullptr;
+    PyObject *on_output_callback = nullptr;
 };
 
 struct object_instance {
@@ -292,6 +312,23 @@ static PyObject *set_on_input_callback(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
+static PyObject *set_on_output_callback(PyObject *self, PyObject *args) {
+    PyObject *new_callback;
+    if(!PyArg_ParseTuple(args, "O:set_callback", &new_callback))
+        return nullptr;
+
+    if(!PyCallable_Check(new_callback)) {
+        PyErr_SetString(PyExc_TypeError, "parameter must be callable");
+        return nullptr;
+    }
+
+    auto &emulator = cast_emulator(self);
+    PyObject *old_callback = emulator.set_on_output_callback(new_callback);
+    Py_XINCREF(new_callback);
+    Py_XDECREF(old_callback);
+    Py_RETURN_NONE;
+}
+
 PyObject *run(PyObject *self, PyObject *args) {
     auto &emulator = cast_emulator(self);
     events_mask events = emulator.run();
@@ -320,6 +357,8 @@ PyMethodDef methods[] = {
      "processing on reading, writing or executing them."},
     {"set_on_input_callback", set_on_input_callback, METH_VARARGS,
      "Set a callback function handling reading from ports."},
+    {"set_on_output_callback", set_on_output_callback, METH_VARARGS,
+     "Set a callback function handling writing to ports."},
     {"run", run, METH_NOARGS,
      "Run emulator until one or several events are signaled."},
     {"on_handle_active_int", on_handle_active_int, METH_NOARGS,
