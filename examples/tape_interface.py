@@ -44,6 +44,8 @@ class MySpectrum48(zx.Emulator):
         self.__last_half_period_level = 1
         self.__last_half_period_durations = DurationSet()
 
+        self.__bits = []
+
     def __on_output(self, addr, value):
         if addr & 0xff != 0xfe:
             return
@@ -58,9 +60,8 @@ class MySpectrum48(zx.Emulator):
 
         half_period_count = self.__last_half_period_durations.count
         average_duration = self.__last_half_period_durations.average
-        duration_delta = abs(average_duration - duration)
         DURATION_TOLERANCE = 10
-        if duration_delta > DURATION_TOLERANCE:
+        if abs(average_duration - duration) > DURATION_TOLERANCE:
             if self.__report:
                 if half_period_count == 1:
                     print(f'Beginning level {self.__last_half_period_level}, '
@@ -73,6 +74,21 @@ class MySpectrum48(zx.Emulator):
                           f'({self.__last_half_period_durations.min}-'
                           f'{self.__last_half_period_durations.max}) '
                           f'ticks each.')
+
+                    if abs(average_duration - 855) < DURATION_TOLERANCE:
+                        self.bits.extend([0] * (half_period_count // 2))
+                    elif abs(average_duration - 1710) < DURATION_TOLERANCE:
+                        self.bits.extend([1] * (half_period_count // 2))
+                    else:
+                        self.bits = []
+
+                    while len(self.bits) >= 8:
+                        byte = int(''.join(str(b) for b in self.bits[:8]), 2)
+                        value = f'{byte:08b} = {byte:#02x}'
+                        if 0x20 <= byte < 0x80:
+                            value += f" '{chr(byte)}'"
+                        print(value)
+                        self.bits[:8] = []
 
             self.__last_half_period_level = ear_level
             self.__last_half_period_durations = DurationSet()
