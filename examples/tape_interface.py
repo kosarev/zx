@@ -23,34 +23,36 @@ class MySpectrum48(zx.Emulator):
         self.__report = False
         self.__last_ear_level = 1
         self.__last_ear_level_tick = 0
-        self.__last_period_level = 1
-        self.__last_period_duration = 0
-        self.__last_period_count = 0
+        self.__last_half_period_level = 1
+        self.__last_half_period_duration = 0
+        self.__last_half_period_count = 0
 
     def __on_output(self, addr, value):
         if addr & 0xff != 0xfe:
             return
 
-        TICKS_PER_FRAME = 69888  # TODO
         ear_level = (value >> 3) & 1
-        if self.__last_ear_level != ear_level:
-            tick = self.frame_count * TICKS_PER_FRAME + self.ticks_since_int
-            duration = tick - self.__last_ear_level_tick
+        if self.__last_ear_level == ear_level:
+            return
 
-            if self.__last_period_duration == duration:
-                self.__last_period_count += 1
-            else:
-                if self.__report:
-                    print(f'Beginning level {self.__last_ear_level}, '
-                          f'{self.__last_period_count} period(s) '
-                          f'of {self.__last_period_duration} ticks each.')
+        TICKS_PER_FRAME = 69888  # TODO
+        tick = self.frame_count * TICKS_PER_FRAME + self.ticks_since_int
+        duration = tick - self.__last_ear_level_tick
 
-                self.__last_period_level = ear_level
-                self.__last_period_count = 1
-                self.__last_period_duration = duration
+        if self.__last_half_period_duration == duration:
+            self.__last_half_period_count += 1
+        else:
+            if self.__report:
+                print(f'Beginning level {self.__last_ear_level}, '
+                      f'{self.__last_half_period_count} half-period(s) '
+                      f'of {self.__last_half_period_duration} ticks each.')
 
-            self.__last_ear_level = ear_level
-            self.__last_ear_level_tick = tick
+            self.__last_half_period_level = ear_level
+            self.__last_half_period_duration = duration
+            self.__last_half_period_count = 1
+
+        self.__last_ear_level = ear_level
+        self.__last_ear_level_tick = tick
 
     def measure_tape_interface_parameters(self):
         self.reset_and_wait()
@@ -65,7 +67,7 @@ class MySpectrum48(zx.Emulator):
         self.__report = True
         self.generate_key_strokes('ENTER')
 
-        # Run for 5 seconds and report some tape periods.
+        # Run for 5 seconds and report some tape half-periods.
         super().run(duration=5)
 
 
