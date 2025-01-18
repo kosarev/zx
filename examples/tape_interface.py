@@ -87,7 +87,7 @@ class MySpectrum48(zx.Emulator):
 
                     while len(self.bits) >= 8:
                         byte = int(''.join(str(b) for b in self.bits[:8]), 2)
-                        value = f'{byte:08b} = {byte:#02x}'
+                        value = f'{byte:08b} = {byte:#04x}'
                         if 0x20 <= byte < 0x80:
                             value += f" '{chr(byte)}'"
                         print(value)
