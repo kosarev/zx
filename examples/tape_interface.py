@@ -9,6 +9,9 @@
 #
 #   Published under the MIT license.
 
+# A simple program that creates an instance of the emulator, initiates
+# saving a Basic program and measures and decodes generated tape impulses.
+
 import zx
 
 # Change to see the emulator screen.
