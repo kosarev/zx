@@ -33,6 +33,10 @@ def _get_sync_pulses(first_sync_pulse_len=667,
     yield second_sync_pulse_len, ('SECOND_SYNC_PULSE',)
 
 
+def _get_end_pulse(pulse_len=945):
+    yield pulse_len, ('END_PULSE',)
+
+
 def _get_data_bits(data):
     for byte in data:
         for i in range(8):
@@ -56,7 +60,8 @@ def get_block_pulses(data,
                      second_sync_pulse_len=735,
                      zero_bit_pulse_len=855,
                      one_bit_pulse_len=1710,
-                     pilot_tone_len=None):
+                     pilot_tone_len=None,
+                     end_pulse_len=945):
     # Generate pilot tone.
     if pilot_tone_len is None:
         is_header = data[0] < 128
@@ -75,6 +80,9 @@ def get_block_pulses(data,
                                  zero_bit_pulse_len,
                                  one_bit_pulse_len):
         yield pulse
+
+    # End pulse.
+    yield from _get_end_pulse(pulse_len=end_pulse_len)
 
 
 def tag_last_pulse(pulses):

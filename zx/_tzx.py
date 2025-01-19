@@ -42,6 +42,8 @@ class TZXFile(SoundFile):
                         zero_bit_pulse_len=block['zero_bit_pulse_len'],
                         one_bit_pulse_len=block['one_bit_pulse_len'],
                         pilot_tone_len=block['pilot_tone_len'])
+                    # TODO: Should we generate the end pulse here?
+                    #       end_pulse_len=...
                 elif id == '0x14 (Pure Data Block)':
                     pulses = get_data_pulses(
                         data=data,
