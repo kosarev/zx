@@ -12,7 +12,7 @@
 from ._binary import BinaryParser
 from ._data import SoundFile
 from ._data import SoundFileFormat
-from ._tape import get_block_pulses, tag_last_pulse
+from ._tape import get_block_pulses, tag_last_pulse, get_end_pulse
 
 
 class TAPFile(SoundFile):
@@ -27,6 +27,11 @@ class TAPFile(SoundFile):
         for data in blocks:
             # The block itself.
             for pulse, id in get_block_pulses(data):
+                yield level, pulse, id
+                level = not level
+
+            # End pulse.
+            for pulse, id in get_end_pulse():
                 yield level, pulse, id
                 level = not level
 

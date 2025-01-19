@@ -13,7 +13,8 @@ from ._binary import BinaryParser
 from ._data import SoundFile
 from ._data import SoundFileFormat
 from ._error import Error
-from ._tape import get_block_pulses, get_data_pulses, tag_last_pulse
+from ._tape import (get_block_pulses, get_data_pulses, tag_last_pulse,
+                    get_end_pulse)
 
 
 class TZXFile(SoundFile):
@@ -87,6 +88,16 @@ class TZXFile(SoundFile):
                 pass
             else:
                 assert 0, block  # TODO
+
+        # Some codes are sensitive to keeping the existing tape level
+        # after the last block. For example, the Ms Pacman TZX at
+        # https://www.worldofspectrum.org//pub/sinclair/games/m/Ms.Pac-Man.tzx.zip  # noqa
+        # md5sum 67149beea737fb45998fba7472b3f449  Ms Pacman.tzx
+        # requires ~15,000 more ticks at the same tape level.
+        # It might make no difference for emulators, however it does
+        # make a difference when loading WAV files on real machines.
+        for pulse, ids in get_end_pulse(50000):
+            yield level, pulse, ids
 
     def get_pulses(self):
         return tag_last_pulse(self._generate_pulses())
