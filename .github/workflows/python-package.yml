@@ -35,6 +35,6 @@ jobs:
         python -m pip install pycodestyle pytest pycairo pygobject numpy
         python -m pip install --upgrade setuptools wheel
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        pycodestyle --exclude=z80 .
+        pycodestyle --exclude=z80,venv .
         pip install .
         pytest
