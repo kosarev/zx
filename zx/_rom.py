@@ -9,15 +9,10 @@
 #   Published under the MIT license.
 
 
+import importlib
 import os
-import pkg_resources
-
-
-def _get_resource_path(path):
-    return pkg_resources.resource_filename('zx', path)
 
 
 def load_rom_image(filename):
-    path = os.path.join('roms', filename)
-    with open(_get_resource_path(path), mode='rb') as f:
-        return f.read()
+    path = importlib.resources.files('zx').joinpath('roms', filename)
+    return path.read_bytes()
