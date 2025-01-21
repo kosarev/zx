@@ -28,7 +28,7 @@ jobs:
       run: |
         sudo apt-get install -y libcairo2-dev python-gi-dev libgirepository1.0-dev
         python -m pip install --upgrade pip
-        python -m pip install pycodestyle pytest pycairo
+        python -m pip install pycodestyle pytest pycairo pygobject numpy
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with pycodestyle
       run: |
