@@ -10,7 +10,7 @@
 
 
 from ._binary import BinaryParser, BinaryWriter
-from ._data import Data
+from ._data import DataRecord
 from ._data import FileFormat
 from ._error import Error
 from ._z80snapshot import Z80SnapshotFormat
@@ -216,7 +216,7 @@ def make_rzx(recording):
     return writer.get_image()
 
 
-class RZXFile(Data):
+class RZXFile(DataRecord):
     def __init__(self, recording):
         super().__init__(recording)
 

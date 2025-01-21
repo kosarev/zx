@@ -9,7 +9,7 @@
 #   Published under the MIT license.
 
 
-class Data(object):
+class DataRecord(object):
     def __init__(self, fields):
         self._fields = fields
 
@@ -31,10 +31,10 @@ class Data(object):
             yield field
 
 
-class File(Data):
+class File(DataRecord):
     def __init__(self, format, fields):
         self._format = format
-        Data.__init__(self, fields)
+        DataRecord.__init__(self, fields)
 
     def get_format(self):
         return self._format
@@ -70,5 +70,5 @@ class UnifiedSnapshot(MachineSnapshot):
 
 
 # TODO: Move to the z80 project.
-class ProcessorSnapshot(Data):
+class ProcessorSnapshot(DataRecord):
     pass
