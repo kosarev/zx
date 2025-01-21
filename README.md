@@ -1,7 +1,7 @@
-[![Build Status](https://app.travis-ci.com/kosarev/zx.svg?branch=master)](https://app.travis-ci.com/kosarev/zx)
-
 # zx
 ZX Spectrum Emulator written in a mix of Python and C++.
+
+![Python package CI](https://github.com/kosarev/zx/actions/workflows/python-package.yml/badge.svg)
 
 ![Elven](https://raw.githubusercontent.com/kosarev/zx/master/screenshots/elven.png "Elven Warrior")
 
