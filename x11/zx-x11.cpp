@@ -3,7 +3,7 @@
     https://github.com/kosarev/zx
 
     Copyright (C) 2017-2021 Ivan Kosarev.
-    ivan@kosarev.info
+    mail@ivankosarev.com
 
     Published under the MIT license.
 */
@@ -123,7 +123,7 @@ public:
         wm_hints.input = True;
         wm_hints.icon_pixmap = 0;
 
-        const char pclass[] = "ivan@kosarev.info/ZXEmulatorWindowClass";
+        const char pclass[] = "mail@ivankosarev.com/ZXEmulatorWindowClass";
         ::XClassHint class_hint;
         class_hint.res_name = const_cast<char*>(argv[0]);
         class_hint.res_class = const_cast<char*>(pclass);
