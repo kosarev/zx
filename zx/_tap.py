@@ -18,13 +18,13 @@ from ._tape import get_block_pulses, tag_last_pulse, get_end_pulse
 class TAPFile(SoundFile):
     _TICKS_FREQ = 3500000
 
-    def __init__(self, fields):
-        SoundFile.__init__(self, TAPFileFormat, fields)
+    def __init__(self, *, blocks):
+        SoundFile.__init__(self, TAPFileFormat, blocks=blocks)
 
     def _generate_pulses(self):
         level = False
-        blocks = self['blocks']
-        for data in blocks:
+        last_block = len(self.blocks) - 1
+        for i, data in enumerate(self.blocks):
             # The block itself.
             for pulse, id in get_block_pulses(data):
                 yield level, pulse, id
@@ -36,7 +36,7 @@ class TAPFile(SoundFile):
                 level = not level
 
             # Pause. Skip, if it's the last block.
-            if data is not blocks[-1]:
+            if i != last_block:
                 yield level, self._TICKS_FREQ, ('PAUSE',)  # 1s.
 
     def get_pulses(self):
@@ -58,4 +58,4 @@ class TAPFileFormat(SoundFileFormat):
         while not parser.is_eof():
             blocks.append(self._parse_block(parser))
 
-        return TAPFile({'blocks': blocks})
+        return TAPFile(blocks=blocks)

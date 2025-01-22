@@ -24,11 +24,11 @@ _V2_FORMAT = '2.x'
 _V3_FORMAT = '3.x'
 
 
-def _get_format_version(fields):
-    if 'ticks_count_low' in fields:
+def _get_format_version(snap):
+    if 'ticks_count_low' in snap:
         return _V3_FORMAT
 
-    if 'pc2' in fields:
+    if 'pc2' in snap:
         return _V2_FORMAT
 
     return _V1_FORMAT
@@ -40,34 +40,34 @@ class Z80Snapshot(MachineSnapshot):
     def get_unified_snapshot(self):
         # Bit 7 of the stored R value is not significant and
         # shall be taken from bit 0 of flags1.
-        flags1 = self['flags1']
-        r = (self['r'] & 0x7f) | ((flags1 & 0x1) << 7)
+        flags1 = self.flags1
+        r = (self.r & 0x7f) | ((flags1 & 0x1) << 7)
 
-        flags2 = self['flags2']
+        flags2 = self.flags2
         int_mode = flags2 & 0x3
         if int_mode not in [0, 1, 2]:
             raise Error('Invalid interrupt mode %d.' % int_mode)
 
-        format_version = _get_format_version(self._fields)
+        format_version = _get_format_version(self)
 
-        pc = self['pc'] if format_version == _V1_FORMAT else self['pc2']
+        pc = self.pc if format_version == _V1_FORMAT else self.pc2
 
         processor_fields = {
-            'bc': self['bc'],
-            'de': self['de'],
-            'hl': self['hl'],
-            'af': make16(hi=self['a'], lo=self['f']),
-            'ix': self['ix'],
-            'iy': self['iy'],
-            'alt_bc': self['alt_bc'],
-            'alt_de': self['alt_de'],
-            'alt_hl': self['alt_hl'],
-            'alt_af': make16(hi=self['alt_a'], lo=self['alt_f']),
+            'bc': self.bc,
+            'de': self.de,
+            'hl': self.hl,
+            'af': make16(hi=self.a, lo=self.f),
+            'ix': self.ix,
+            'iy': self.iy,
+            'alt_bc': self.alt_bc,
+            'alt_de': self.alt_de,
+            'alt_hl': self.alt_hl,
+            'alt_af': make16(hi=self.alt_a, lo=self.alt_f),
             'pc': pc,
-            'sp': self['sp'],
-            'ir': make16(hi=self['i'], lo=r),
-            'iff1': 0 if self['iff1'] == 0 else 1,
-            'iff2': 0 if self['iff2'] == 0 else 1,
+            'sp': self.sp,
+            'ir': make16(hi=self.i, lo=r),
+            'iff1': 0 if self.iff1 == 0 else 1,
+            'iff2': 0 if self.iff2 == 0 else 1,
             'int_mode': int_mode,
         }
 
@@ -75,7 +75,7 @@ class Z80Snapshot(MachineSnapshot):
         quarter_tstates = ticks_per_frame // 4
 
         fields = {
-            'processor_snapshot': ProcessorSnapshot(processor_fields),
+            'processor_snapshot': ProcessorSnapshot(**processor_fields),
             'border_color': (flags1 >> 1) & 0x7,
 
             # Give the snapshot a chance to execute at least one
@@ -95,8 +95,8 @@ class Z80Snapshot(MachineSnapshot):
         if format_version == _V1_FORMAT:
             machine_kind = 'ZX Spectrum 48K'
         else:
-            hardware_mode = self['hardware_mode']
-            flags3 = self['flags3']
+            hardware_mode = self.hardware_mode
+            flags3 = self.flags3
             flags3_bit7 = (flags3 & 0x80) >> 7
             if hardware_mode == 0 and not flags3_bit7:
                 machine_kind = 'ZX Spectrum 48K'
@@ -107,15 +107,15 @@ class Z80Snapshot(MachineSnapshot):
         # Handle memory blocks.
         memory_blocks = fields.setdefault('memory_blocks', [])
         if 'memory_snapshot' in self:
-            memory_blocks.append((0x4000, self['memory_snapshot']))
+            memory_blocks.append((0x4000, self.memory_snapshot))
         else:
             assert machine_kind == 'ZX Spectrum 48K', machine_kind  # TODO
-            for block in self['memory_blocks']:
+            for block in self.memory_blocks:
                 page_no = block['page_no']
                 image = block['image']
                 memory_blocks.append((self._MEMORY_PAGE_ADDRS[page_no], image))
 
-        return UnifiedSnapshot(Z80SnapshotFormat, fields)
+        return UnifiedSnapshot(Z80SnapshotFormat, **fields)
 
 
 class Z80SnapshotFormat(SnapshotFormat):
@@ -227,7 +227,7 @@ class Z80SnapshotFormat(SnapshotFormat):
                 block = self._parse_memory_block(parser)
                 memory_blocks.append(block)
 
-        return Z80Snapshot(Z80SnapshotFormat, fields)
+        return Z80Snapshot(Z80SnapshotFormat, **fields)
 
     # TODO: Rework to generate an internal representation of the
     #       format and then generate its binary version.
@@ -254,6 +254,13 @@ class Z80SnapshotFormat(SnapshotFormat):
         int_mode = state.int_mode
         assert int_mode in [0, 1, 2]  # TODO
         flags2 |= int_mode
+
+        # TODO: Null PC is an indicator of presence of extra headers.
+        # The PC value would need to be encoded in these headers.
+        # TODO: However, it is also possible to have an old-format
+        # snapshots with null PC values. We should support these too.
+        if state.pc == 0:
+            raise Error('Making snashots with null PC is not supported yet.')
 
         # Write v1 header.
         # TODO: Support other versions.

@@ -217,11 +217,11 @@ def make_rzx(recording):
 
 
 class RZXFile(DataRecord):
-    def __init__(self, recording):
-        super().__init__(recording)
+    def __init__(self, **recording):
+        super().__init__(**recording)
 
 
 class RZXFileFormat(FileFormat):
     def parse(self, filename, image):
         recording = _parse_rzx(image)
-        return RZXFile(recording)
+        return RZXFile(**recording)

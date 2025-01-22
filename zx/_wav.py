@@ -19,11 +19,14 @@ from ._tape import tag_last_pulse
 class WAVFile(SoundFile):
     __TICKS_FREQ = 3500000  # TODO
 
-    def __init__(self, fields):
-        SoundFile.__init__(self, WAVFileFormat, fields)
+    def __init__(self, *, sample_size, num_channels, frame_rate,
+                 num_frames, frames):
+        SoundFile.__init__(self, WAVFileFormat, sample_size=sample_size,
+                           num_channels=num_channels, frame_rate=frame_rate,
+                           num_frames=num_frames, frames=frames)
 
     def _generate_pulses(self):
-        num_channels = self['num_channels']
+        num_channels = self.num_channels
         assert num_channels in (1, 2)
         if num_channels == 2:
             # TODO: Combine the channels into one.
@@ -31,9 +34,9 @@ class WAVFile(SoundFile):
 
         # Get samples as a numpy array.
         import numpy
-        sample_size = self['sample_size']
-        num_frames = self['num_frames']
-        frames = self['frames']
+        sample_size = self.sample_size
+        num_frames = self.num_frames
+        frames = self.frames
         # 8-bit samples are unsigned and 16-bit ones are signed.
         dtype = {1: numpy.uint8, 2: numpy.int16}[sample_size]
         samples = numpy.frombuffer(frames, dtype, num_frames)
@@ -46,7 +49,7 @@ class WAVFile(SoundFile):
         edge_indexes = numpy.where(samples[1:] != samples[:-1])[0]
 
         # Produce pulses.
-        rate = self['frame_rate']
+        rate = self.frame_rate
         level = samples[0]
         tick = 0
         for i in edge_indexes:
@@ -67,12 +70,12 @@ class WAVFileFormat(SoundFileFormat):
     def parse(self, filename, image):
         with wave.open(io.BytesIO(image), 'rb') as f:
             num_frames = f.getnframes()
-            return WAVFile({
-                'sample_size': f.getsampwidth(),
-                'num_channels': f.getnchannels(),
-                'frame_rate': f.getframerate(),
-                'num_frames': num_frames,
-                'frames': f.readframes(num_frames)})
+            return WAVFile(
+                sample_size=f.getsampwidth(),
+                num_channels=f.getnchannels(),
+                frame_rate=f.getframerate(),
+                num_frames=num_frames,
+                frames=f.readframes(num_frames))
 
     def save_from_pulses(self, filename, pulses):
         with wave.open(filename, 'wb') as f:

@@ -20,12 +20,15 @@ from ._tape import (get_block_pulses, get_data_pulses, tag_last_pulse,
 class TZXFile(SoundFile):
     _TICKS_FREQ = 3500000
 
-    def __init__(self, fields):
-        SoundFile.__init__(self, TZXFileFormat, fields)
+    def __init__(self, *, major_revision, minor_revision, blocks):
+        SoundFile.__init__(self, TZXFileFormat,
+                           major_revision=major_revision,
+                           minor_revision=minor_revision,
+                           blocks=blocks)
 
     def _generate_pulses(self):
         level = False
-        for block in self['blocks']:
+        for block in self.blocks:
             id = block['id']
             if id in ['0x10 (Standard Speed Data Block)',
                       '0x11 (Turbo Speed Data Block)',
@@ -214,18 +217,19 @@ class TZXFileFormat(SoundFileFormat):
     def parse(self, filename, image):
         parser = BinaryParser(image)
 
-        # Parse header.
-        header = parser.parse([('signature', '8s'),
-                               ('major_revision', 'B'),
-                               ('minor_revision', 'B')])
-        tzx_signature = b'ZXTape!\x1a'
-        if header['signature'] != tzx_signature:
+        signature = parser.parse_field('8s', 'signature')
+        TZX_SIGNATURE = b'ZXTape!\x1a'
+        if signature != TZX_SIGNATURE:
             raise Error('Bad TZX file signature %r; expected %r.' % (
-                        header['signature'], tzx_signature))
+                        signature, TZX_SIGNATURE))
+
+        # Parse header.
+        header = parser.parse([('major_revision', 'B'),
+                               ('minor_revision', 'B')])
 
         # Parse blocks.
         blocks = []
         while not parser.is_eof():
             blocks.append(self._parse_block(parser))
 
-        return TZXFile({**header, 'blocks': blocks})
+        return TZXFile(**header, blocks=blocks)

@@ -87,8 +87,7 @@ def dump(args):
     filename = args.pop(0)
     handle_extra_arguments(args)
 
-    file = parse_file(filename)
-    print(file)
+    print(parse_file(filename).dump())
 
 
 def looks_like_filename(s):

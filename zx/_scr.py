@@ -30,18 +30,18 @@ class _SCRSnapshot(MachineSnapshot):
         }
 
         fields = {
-            'processor_snapshot': ProcessorSnapshot(processor_fields),
+            'processor_snapshot': ProcessorSnapshot(**processor_fields),
             'border_color': 0,
         }
 
         memory_blocks = fields.setdefault('memory_blocks', [])
-        memory_blocks.append((0x4000, self['dot_patterns']))
-        memory_blocks.append((0x4000 + 6144, self['colour_attrs']))
+        memory_blocks.append((0x4000, self.dot_patterns))
+        memory_blocks.append((0x4000 + 6144, self.colour_attrs))
 
         # LOOP_ADDR: jp LOOP_ADDR
         memory_blocks.append((LOOP_ADDR, b'\xc3' + bytes(_split16(LOOP_ADDR))))
 
-        return UnifiedSnapshot(SCRFileFormat, fields)
+        return UnifiedSnapshot(SCRFileFormat, **fields)
 
     def get_file_image(self):
         return self['dot_patterns'] + self['colour_attrs']
@@ -56,8 +56,8 @@ class SCRFileFormat(SnapshotFormat):
         parser = BinaryParser(image)
         fields = collections.OrderedDict(id='scr_snapshot')
         fields.update(parser.parse(self._FIELDS))
-        return _SCRSnapshot(SCRFileFormat, fields)
+        return _SCRSnapshot(SCRFileFormat, **fields)
 
     def make_snapshot(self, state):
         screen = state.read(0x4000, 6 * 1024 + 768)
-        return self.parse(screen)
+        return self.parse('<filename>', screen)

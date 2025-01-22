@@ -10,31 +10,27 @@
 
 
 class DataRecord(object):
-    def __init__(self, fields):
-        self._fields = fields
+    def __init__(self, **fields):
+        self.__fields = tuple(fields)
+        for id, value in fields.items():
+            setattr(self, id, value)
 
     def __contains__(self, id):
-        return id in self._fields
-
-    def __getitem__(self, id):
-        return self._fields[id]
-
-    def __repr__(self):
-        return repr(self._fields)
+        return id in self.__fields
 
     def __iter__(self):
-        for id in self._fields:
-            yield id
+        for id in self.__fields:
+            yield id, getattr(self, id)
 
-    def items(self):
-        for field in self._fields.items():
-            yield field
+    def dump(self):
+        import yaml
+        return yaml.dump(self)
 
 
 class File(DataRecord):
-    def __init__(self, format, fields):
+    def __init__(self, format, **fields):
         self._format = format
-        DataRecord.__init__(self, fields)
+        DataRecord.__init__(self, **fields)
 
     def get_format(self):
         return self._format

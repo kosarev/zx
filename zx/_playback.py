@@ -23,13 +23,13 @@ class PlaybackPlayer(object):
         self.samples = self.__get_playback_samples()
 
     def find_recording_info_chunk(self):
-        for chunk in self._recording['chunks']:
+        for chunk in self._recording.chunks:
             if chunk['id'] == 'info':
                 return chunk
         assert 0  # TODO
 
     def get_chunks(self):
-        return self._recording['chunks']
+        return self._recording.chunks
 
     def __get_playback_samples(self):
         # TODO: Have a class describing playback state.
