@@ -9,7 +9,7 @@
 #   Published under the MIT license.
 
 
-import importlib
+import importlib.resources
 import os
 
 
