@@ -6,7 +6,7 @@ import pytest
 
 def test_basic():
     # Create a SCR snapshot.
-    mach = zx.Emulator()
+    mach = zx.Emulator(speed_factor=None)
     scr = zx._scr.SCRFileFormat().make_snapshot(mach)
 
     # Dump.

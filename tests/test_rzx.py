@@ -6,7 +6,7 @@ import pytest
 
 def test_basic():
     # Create a simple RZX.
-    mach = zx.Emulator()
+    mach = zx.Emulator(speed_factor=None)
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
     snapshot = zx._z80snapshot.Z80SnapshotFormat().make_snapshot(mach)
 

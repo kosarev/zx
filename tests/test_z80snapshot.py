@@ -6,7 +6,7 @@ import pytest
 
 def test_basic():
     # Create a Z80 snapshot.
-    mach = zx.Emulator()
+    mach = zx.Emulator(speed_factor=None)
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
     HL = 0x1234
     mach.hl = HL
