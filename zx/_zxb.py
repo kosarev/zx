@@ -19,9 +19,7 @@ class ZXBasicCompilerProgram(File):
     pass
 
 
-class ZXBasicCompilerSourceFormat(FileFormat):
-    _NAME = 'ZXB'
-
+class ZXBasicCompilerSourceFormat(FileFormat, name='ZXB'):
     def parse(self, filename, image):
         try:
             import zxb

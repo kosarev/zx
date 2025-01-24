@@ -37,24 +37,31 @@ class File(DataRecord):
 
 
 class FileFormat(object):
+    def __init_subclass__(cls, *, name):
+        assert name is None or name.isupper()
+        cls._NAME = name
+
     def get_name(self):
         return self._NAME
 
 
-class ArchiveFileFormat(FileFormat):
-    pass
+class ArchiveFileFormat(FileFormat, name=None):
+    def __init_subclass__(cls, *, name):
+        super().__init_subclass__(name=name)
 
 
 class SoundFile(File):
     pass
 
 
-class SoundFileFormat(FileFormat):
-    pass
+class SoundFileFormat(FileFormat, name=None):
+    def __init_subclass__(cls, *, name):
+        super().__init_subclass__(name=name)
 
 
-class SnapshotFormat(FileFormat):
-    pass
+class SnapshotFormat(FileFormat, name=None):
+    def __init_subclass__(cls, *, name):
+        super().__init_subclass__(name=name)
 
 
 class MachineSnapshot(File):

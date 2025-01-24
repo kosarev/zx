@@ -63,8 +63,7 @@ class WAVFile(SoundFile):
         return tag_last_pulse(self._generate_pulses())
 
 
-class WAVFileFormat(SoundFileFormat):
-    _NAME = 'WAV'
+class WAVFileFormat(SoundFileFormat, name='WAV'):
     _TICKS_FREQ = 3500000  # TODO
 
     def parse(self, filename, image):

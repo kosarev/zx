@@ -106,9 +106,7 @@ class TZXFile(SoundFile):
         return tag_last_pulse(self._generate_pulses())
 
 
-class TZXFileFormat(SoundFileFormat):
-    _NAME = 'TZX'
-
+class TZXFileFormat(SoundFileFormat, name='TZX'):
     def _parse_standard_speed_data_block(self, parser):
         block = parser.parse([('pause_after_block_in_ms', '<H'),
                               ('data_size', '<H')])

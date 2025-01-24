@@ -221,7 +221,7 @@ class RZXFile(DataRecord):
         super().__init__(**recording)
 
 
-class RZXFileFormat(FileFormat):
+class RZXFileFormat(FileFormat, name='RZX'):
     def parse(self, filename, image):
         recording = _parse_rzx(image)
         return RZXFile(**recording)

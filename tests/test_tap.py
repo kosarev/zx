@@ -11,7 +11,9 @@ def test_basic():
     # Parse a TAP file.
     data = b'123'
     block = len(data).to_bytes(2, 'little') + data
-    tap = zx._tap.TAPFileFormat().parse('file.tap', block)
+    format = zx._tap.TAPFileFormat()
+    assert format._NAME == 'TAP'
+    tap = format.parse('file.tap', block)
 
     # Generate pulses.
     tuple(tap.get_pulses())

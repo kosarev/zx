@@ -15,9 +15,7 @@ import zx
 from ._data import ArchiveFileFormat
 
 
-class ZIPFileFormat(ArchiveFileFormat):
-    _NAME = 'ZIP'
-
+class ZIPFileFormat(ArchiveFileFormat, name='ZIP'):
     def read_files(self, image):
         file = io.BytesIO(image)
         with zipfile.ZipFile(file, 'r') as zf:

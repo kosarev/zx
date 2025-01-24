@@ -16,7 +16,9 @@ def test_basic():
         f.writeframes(b'\x00\xff' * 1000)
     wav_image = buff.getvalue()
 
-    wav = zx._wav.WAVFileFormat().parse('x.wav', wav_image)
+    format = zx._wav.WAVFileFormat()
+    assert format._NAME == 'WAV'
+    wav = format.parse('x.wav', wav_image)
 
     # Dump.
     assert 'zx._wav.WAVFileFormat' in wav.dump()

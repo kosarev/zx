@@ -118,9 +118,7 @@ class Z80Snapshot(MachineSnapshot):
         return UnifiedSnapshot(Z80SnapshotFormat, **fields)
 
 
-class Z80SnapshotFormat(SnapshotFormat):
-    _NAME = 'Z80'
-
+class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
     _PRIMARY_HEADER = [
         'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',
         'B:flags1', '<H:de', '<H:alt_bc', '<H:alt_de', '<H:alt_hl',

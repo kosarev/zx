@@ -43,9 +43,7 @@ class TAPFile(SoundFile):
         return tag_last_pulse(self._generate_pulses())
 
 
-class TAPFileFormat(SoundFileFormat):
-    _NAME = 'TAP'
-
+class TAPFileFormat(SoundFileFormat, name='TAP'):
     def _parse_block(self, parser):
         size = parser.parse_field('<H', 'block_size')
         return parser.extract_block(size)

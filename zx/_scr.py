@@ -47,9 +47,7 @@ class _SCRSnapshot(MachineSnapshot):
         return self['dot_patterns'] + self['colour_attrs']
 
 
-class SCRFileFormat(SnapshotFormat):
-    _NAME = 'SCR'
-
+class SCRFileFormat(SnapshotFormat, name='SCR'):
     _FIELDS = ['6144s:dot_patterns', '768s:colour_attrs']
 
     def parse(self, filename, image):
