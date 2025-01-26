@@ -10,11 +10,11 @@
 
 
 class EmulatorException(Exception):
-    def __init__(self, reason):
+    def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
 
 
 class EmulationExit(EmulatorException):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__('Emulation stopped.')

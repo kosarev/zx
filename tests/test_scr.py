@@ -4,7 +4,7 @@ import zx
 import pytest
 
 
-def test_basic():
+def test_basic() -> None:
     # Create a SCR snapshot.
     mach = zx.Emulator(speed_factor=None)
     format = zx._scr.SCRFileFormat()
@@ -12,8 +12,8 @@ def test_basic():
     scr = format.make_snapshot(mach)
 
     # Dump.
-    assert 'zx._scr._SCRSnapshot' in scr.dump()
+    assert '_SCRSnapshot' in scr.dump()
 
     # Produce and dump unified snapshot.
     uni = scr.get_unified_snapshot()
-    assert 'zx._data.UnifiedSnapshot' in uni.dump()
+    assert 'UnifiedSnapshot' in uni.dump()

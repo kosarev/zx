@@ -8,13 +8,15 @@
 #
 #   Published under the MIT license.
 
+import typing
 from ._data import MachineSnapshot
+from ._machine import MachineState
 from ._rzx import RZXFile
 
 
 # TODO: Rework to a time machine interface.
 class PlaybackPlayer(object):
-    def __init__(self, machine, file):
+    def __init__(self, machine: MachineState, file: RZXFile) -> None:
         self.__machine = machine
 
         assert isinstance(file, RZXFile)
@@ -22,19 +24,19 @@ class PlaybackPlayer(object):
 
         self.samples = self.__get_playback_samples()
 
-    def find_recording_info_chunk(self):
+    def find_recording_info_chunk(self) -> dict[str, typing.Any]:
         for chunk in self._recording.chunks:
             if chunk['id'] == 'info':
                 return chunk
         assert 0  # TODO
 
-    def get_chunks(self):
+    def get_chunks(self) -> list[dict[str, typing.Any]]:
         return self._recording.chunks
 
-    def __get_playback_samples(self):
+    def __get_playback_samples(self) -> typing.Iterable[str]:
         # TODO: Have a class describing playback state.
         self.playback_frame_count = 0
-        self.playback_chunk = 0
+        self.playback_chunk: None | dict[str, typing.Any] = None
         self.playback_sample_values = []
         self.playback_sample_i = 0
 
@@ -47,9 +49,13 @@ class PlaybackPlayer(object):
             if chunk['id'] != 'port_samples':
                 continue
 
-            self.__machine.ticks_since_int = chunk['first_tick']
+            first_tick = chunk['first_tick']
+            assert isinstance(first_tick, int)
+            self.__machine.ticks_since_int = first_tick
 
-            for frame_i, frame in enumerate(chunk['frames']):
+            frames = chunk['frames']
+            assert isinstance(frames, list)
+            for frame_i, frame in enumerate(frames):
                 num_of_fetches, samples = frame
                 # print(num_of_fetches, samples)
 

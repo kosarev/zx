@@ -9,14 +9,17 @@
 #   Published under the MIT license.
 
 
+import typing
 import io
 import zipfile
 import zx
+from ._binary import Bytes
 from ._data import ArchiveFileFormat
 
 
 class ZIPFileFormat(ArchiveFileFormat, name='ZIP'):
-    def read_files(self, image):
+    def read_files(self, image: Bytes) -> (
+            typing.Iterable[tuple[str, Bytes]]):
         file = io.BytesIO(image)
         with zipfile.ZipFile(file, 'r') as zf:
             for name in zf.namelist():

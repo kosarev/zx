@@ -8,14 +8,19 @@
 #
 #   Published under the MIT license.
 
+import typing
 from ._device import Device
+from ._device import DeviceEvent
 from ._device import KeyStroke
 from ._device import ReadPort
+from ._device import Dispatcher
 from ._utils import tupilize
 
 
+# TODO: Redesign.
 class Key(object):
-    def __init__(self, id, index):
+    def __init__(self, id: str, index: int) -> None:
+        # TODO: Lowercase.
         self.ID = id
         self.INDEX = index  # Left to right, then top to bottom.
         halfrow_index = index // 5
@@ -50,7 +55,7 @@ for index, ids in enumerate(_KEY_IDS):
 class Keyboard(Device):
     _state = [0xff] * 8
 
-    def read_port(self, addr):
+    def read_port(self, addr: int) -> int:
         n = 0xff
         addr ^= 0xffff
 
@@ -73,7 +78,7 @@ class Keyboard(Device):
 
         return n
 
-    def handle_key_stroke(self, key_info, pressed):
+    def handle_key_stroke(self, key_info: Key, pressed: bool) -> None:
         # print(key_info.id)
         addr_line = key_info.ADDRESS_LINE
         mask = 1 << key_info.PORT_BIT
@@ -83,7 +88,8 @@ class Keyboard(Device):
         else:
             self._state[addr_line - 8] |= mask
 
-    def on_event(self, event, devices, result):
+    def on_event(self, event: DeviceEvent, devices: Dispatcher,
+                 result: typing.Any) -> typing.Any:
         if isinstance(event, KeyStroke):
             key = KEYS.get(event.id, None)
             if key:

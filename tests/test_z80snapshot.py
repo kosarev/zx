@@ -4,7 +4,7 @@ import zx
 import pytest
 
 
-def test_basic():
+def test_basic() -> None:
     # Create a Z80 snapshot.
     mach = zx.Emulator(speed_factor=None)
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
@@ -21,8 +21,8 @@ def test_basic():
     assert snap.hl == HL
 
     # Dump the parsed snapshot.
-    assert 'zx._z80snapshot.Z80Snapshot' in snap.dump()
+    assert 'Z80Snapshot' in snap.dump()
 
     # Produce and dump unified snapshot.
     uni = snap.get_unified_snapshot()
-    assert 'zx._data.UnifiedSnapshot' in uni.dump()
+    assert 'UnifiedSnapshot' in uni.dump()

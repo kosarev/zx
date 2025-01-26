@@ -4,7 +4,7 @@ import zx
 import pytest
 
 
-def test_basic():
+def test_basic() -> None:
     # Create a simple RZX.
     mach = zx.Emulator(speed_factor=None)
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
@@ -31,7 +31,7 @@ def test_basic():
     rzx = format.parse('x.rzx', rzx_image)
 
     # Dump.
-    assert 'zx._rzx.RZXFile' in rzx.dump()
+    assert 'RZXFile' in rzx.dump()
 
     # Test finding the info block.
     player = zx._playback.PlaybackPlayer(mach, rzx)

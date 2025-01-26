@@ -9,7 +9,8 @@
 #   Published under the MIT license.
 
 
-from ._binary import BinaryParser
+import typing
+from ._binary import Bytes, BinaryParser
 from ._data import SoundFile
 from ._data import SoundFileFormat
 from ._error import Error
@@ -20,13 +21,17 @@ from ._tape import (get_block_pulses, get_data_pulses, tag_last_pulse,
 class TZXFile(SoundFile):
     _TICKS_FREQ = 3500000
 
-    def __init__(self, *, major_revision, minor_revision, blocks):
+    blocks: list[dict[str, typing.Any]]
+
+    def __init__(self, *, major_revision: int, minor_revision: int,
+                 blocks: list[dict[str, typing.Any]]) -> None:
         SoundFile.__init__(self, TZXFileFormat,
                            major_revision=major_revision,
                            minor_revision=minor_revision,
                            blocks=blocks)
 
-    def _generate_pulses(self):
+    def _generate_pulses(self) -> (
+            typing.Iterable[tuple[bool, int, tuple[str, ...]]]):
         level = False
         for block in self.blocks:
             id = block['id']
@@ -102,12 +107,13 @@ class TZXFile(SoundFile):
         for pulse, ids in get_end_pulse(50000):
             yield level, pulse, ids
 
-    def get_pulses(self):
+    def get_pulses(self) -> typing.Iterable[tuple[bool, int, tuple[str, ...]]]:
         return tag_last_pulse(self._generate_pulses())
 
 
 class TZXFileFormat(SoundFileFormat, name='TZX'):
-    def _parse_standard_speed_data_block(self, parser):
+    def _parse_standard_speed_data_block(
+            self, parser: BinaryParser) -> dict[str, typing.Any]:
         block = parser.parse([('pause_after_block_in_ms', '<H'),
                               ('data_size', '<H')])
         block.update({'id': '0x10 (Standard Speed Data Block)',
@@ -115,7 +121,8 @@ class TZXFileFormat(SoundFileFormat, name='TZX'):
         del block['data_size']
         return block
 
-    def _parse_turbo_speed_data_block(self, parser):
+    def _parse_turbo_speed_data_block(
+            self, parser: BinaryParser) -> dict[str, typing.Any]:
         block = parser.parse([('pilot_pulse_len', '<H'),
                               ('first_sync_pulse_len', '<H'),
                               ('second_sync_pulse_len', '<H'),
@@ -134,7 +141,8 @@ class TZXFileFormat(SoundFileFormat, name='TZX'):
                       'data': parser.extract_block(data_size)})
         return block
 
-    def _parse_pure_data_block(self, parser):
+    def _parse_pure_data_block(
+            self, parser: BinaryParser) -> dict[str, typing.Any]:
         block = parser.parse([('zero_bit_pulse_len', '<H'),
                               ('one_bit_pulse_len', '<H'),
                               ('used_bits_in_last_byte', '<B'),
@@ -149,20 +157,25 @@ class TZXFileFormat(SoundFileFormat, name='TZX'):
                       'data': parser.extract_block(data_size)})
         return block
 
-    def _parse_group_start(self, parser):
+    def _parse_group_start(
+            self, parser: BinaryParser) -> dict[str, typing.Any]:
         length = parser.parse_field('B', 'name_length')
+        assert isinstance(length, int)
         name = parser.extract_block(length)
         # print('Group start: %r.' % name)
         return {'id': '0x21 (Group Start)',
                 'name': name}
 
-    def _parse_group_end(self, parser):
+    def _parse_group_end(
+            self, parser: BinaryParser) -> dict[str, typing.Any]:
         # TODO: Check for a matching group start?
         # print('Group end.')
         return {'id': '0x22 (Group End)'}
 
-    def _parse_text_description(self, parser):
+    def _parse_text_description(
+            self, parser: BinaryParser) -> dict[str, typing.Any]:
         size = parser.parse_field('B', 'text_size')
+        assert isinstance(size, int)
         text = parser.extract_block(size)
         return {'id': '0x30 (Text Description)',
                 'text': text}
@@ -180,12 +193,16 @@ class TZXFileFormat(SoundFileFormat, name='TZX'):
         0xFF: 'Comment(s)',
     }
 
-    def _parse_archive_info(self, parser):
+    def _parse_archive_info(
+            self, parser: BinaryParser) -> dict[str, typing.Any]:
         block_size = parser.parse_field('<H', 'block_size')
         num_of_strings = parser.parse_field('B', 'num_of_strings')
+        assert isinstance(num_of_strings, int)
         for _ in range(num_of_strings):
             id = parser.parse_field('B', 'id')
+            assert isinstance(id, int)
             length = parser.parse_field('B', 'length')
+            assert isinstance(length, int)
             body = parser.extract_block(length)
 
             if id not in self._ARCHIVE_INFO_STRING_IDS:
@@ -205,14 +222,15 @@ class TZXFileFormat(SoundFileFormat, name='TZX'):
         0x32: _parse_archive_info,
     }
 
-    def _parse_block(self, parser):
+    def _parse_block(self, parser: BinaryParser) -> dict[str, typing.Any]:
         block_id = parser.parse_field('B', 'block_id')
+        assert isinstance(block_id, int)
         if block_id not in self._BLOCK_PARSERS:
             raise Error('Unsupported TZX block id 0x%x.' % block_id)
 
         return self._BLOCK_PARSERS[block_id](self, parser)
 
-    def parse(self, filename, image):
+    def parse(self, filename: str, image: Bytes) -> TZXFile:
         parser = BinaryParser(image)
 
         signature = parser.parse_field('8s', 'signature')

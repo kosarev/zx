@@ -10,13 +10,19 @@
 #   Published under the MIT license.
 
 
+import typing
 import collections
 import os
 import sys
 from ._data import ArchiveFileFormat
 from ._data import SnapshotFormat
 from ._data import SoundFileFormat
+from ._data import SoundFile
+from ._data import FileFormat
+from ._data import File
+from ._data import MachineSnapshot
 from ._emulator import Emulator
+from ._emulator import Profile
 from ._error import Error
 from ._error import USER_ERRORS
 from ._error import verbalize_error
@@ -27,30 +33,18 @@ from ._rzx import make_rzx
 from ._rzx import RZXFile
 
 
-# Stores information about the running code.
-class Profile(object):
-    _annots = dict()
-
-    def add_instr_addr(self, addr):
-        self._annots[addr] = 'instr'
-
-    def __iter__(self):
-        for addr in sorted(self._annots):
-            yield addr, self._annots[addr]
-
-
-def pop_argument(args, error):
+def pop_argument(args: list[str], error: str) -> str:
     if not args:
         raise Error(error)
     return args.pop(0)
 
 
-def handle_extra_arguments(args):
+def handle_extra_arguments(args: list[str]) -> None:
     if args:
         raise Error('Extra argument %r.' % args[0])
 
 
-def run(args):
+def run(args: list[str]) -> None:
     filename = None
     if args:
         filename = args.pop(0)
@@ -62,7 +56,7 @@ def run(args):
         app.run()
 
 
-def profile(args):
+def profile(args: list[str]) -> None:
     file_to_run = pop_argument(args, "The file to run is not specified.")
     profile_filename = pop_argument(args, "The profile filename is not "
                                           "specified.")
@@ -76,11 +70,12 @@ def profile(args):
     # TODO: Amend profile data by reading them out first instead
     # of overwriting.
     with open(profile_filename, 'wt') as f:
-        for addr, annot in profile:
+        # TODO: mypy false positive.
+        for addr, annot in profile:  # type: ignore[attr-defined]
             print('@0x%04x %s' % (addr, annot), file=f)
 
 
-def dump(args):
+def dump(args: list[str]) -> None:
     if not args:
         raise Error('The file to dump is not specified.')
 
@@ -90,11 +85,11 @@ def dump(args):
     print(parse_file(filename).dump())
 
 
-def looks_like_filename(s):
+def looks_like_filename(s: str) -> bool:
     return '.' in s
 
 
-def usage():
+def usage() -> None:
     print('Usage:')
     print('  zx [run] [<file>]')
     print('  zx [convert] <from-file> <to-filename>')
@@ -104,10 +99,10 @@ def usage():
     sys.exit()
 
 
-def test_file(filename):
+def test_file(filename: str) -> bool:
     print('%r' % filename)
 
-    def move(dest_dir):
+    def move(dest_dir: str) -> None:
         os.makedirs(dest_dir, exist_ok=True)
 
         # Make sure the destination filename is unique.
@@ -118,12 +113,11 @@ def test_file(filename):
                 break
 
             dest_filename, ext = os.path.splitext(dest_filename)
-            dest_filename = dest_filename.rsplit('--', maxsplit=1)
-            if len(dest_filename) == 1:
-                dest_filename = dest_filename[0] + '--2'
+            r = dest_filename.rsplit('--', maxsplit=1)
+            if len(r) == 1:
+                dest_filename = r[0] + '--2'
             else:
-                dest_filename = (dest_filename[0] + '--' +
-                                 str(int(dest_filename[1]) + 1))
+                dest_filename = (r[0] + '--' + str(int(r[1]) + 1))
 
             dest_filename = dest_filename + ext
 
@@ -143,20 +137,22 @@ def test_file(filename):
     return True
 
 
-def test(args):
+def test(args: list[str]) -> None:
     for filename in args:
         if not test_file(filename):
             break
 
 
-def fastforward(args):
+def fastforward(args: list[str]) -> None:
     for filename in args:
         with Emulator(speed_factor=0) as app:
             app._run_file(filename)
 
 
-def _convert_tape_to_snapshot(src, src_filename, src_format,
-                              dest_filename, dest_format):
+def _convert_tape_to_snapshot(src: File, src_filename: str,
+                              src_format: type[FileFormat],
+                              dest_filename: str,
+                              dest_format: type[FileFormat]) -> None:
     assert issubclass(src_format, SoundFileFormat), src_format
     assert issubclass(dest_format, SnapshotFormat), dest_format
 
@@ -165,16 +161,21 @@ def _convert_tape_to_snapshot(src, src_filename, src_format,
         app._save_snapshot_file(dest_format, dest_filename)
 
 
-def _convert_tape_to_tape(src, src_filename, src_format,
-                          dest_filename, dest_format):
+def _convert_tape_to_tape(src: File, src_filename: str,
+                          src_format: type[FileFormat],
+                          dest_filename: str,
+                          dest_format: type[FileFormat]) -> None:
+    assert isinstance(src, SoundFile)
     assert issubclass(src_format, SoundFileFormat), src_format
     assert issubclass(dest_format, SoundFileFormat), dest_format
-
     dest_format().save_from_pulses(dest_filename, src.get_pulses())
 
 
-def _convert_snapshot_to_snapshot(src, src_filename, src_format,
-                                  dest_filename, dest_format):
+def _convert_snapshot_to_snapshot(src: File,
+                                  src_filename: str,
+                                  src_format: type[FileFormat],
+                                  dest_filename: str,
+                                  dest_format: type[FileFormat]) -> None:
     assert issubclass(src_format, SnapshotFormat), src_format
     assert issubclass(dest_format, SnapshotFormat), dest_format
 
@@ -183,7 +184,7 @@ def _convert_snapshot_to_snapshot(src, src_filename, src_format,
         app._save_snapshot_file(dest_format, dest_filename)
 
 
-def convert_file(src_filename, dest_filename):
+def convert_file(src_filename: str, dest_filename: str) -> None:
     src = parse_file(src_filename)
     src_format = src.get_format()
     # print(src, '->', dest_filename)
@@ -194,7 +195,10 @@ def convert_file(src_filename, dest_filename):
         raise Error('Cannot determine the format of file %r.' % (
                         dest_filename))
 
-    CONVERTERS = [
+    CONVERTERS: list[tuple[
+            type[FileFormat], type[FileFormat],
+            typing.Callable[[File, str, type[FileFormat],
+                             str, type[FileFormat]], None]]] = [
         (SoundFileFormat, SoundFileFormat,
          _convert_tape_to_tape),
         (SoundFileFormat, SnapshotFormat,
@@ -213,7 +217,7 @@ def convert_file(src_filename, dest_filename):
                 dest_format().get_name()))
 
 
-def convert(args):
+def convert(args: list[str]) -> None:
     if not args:
         raise Error('The file to convert from is not specified.')
     src_filename = args.pop(0)
@@ -227,7 +231,7 @@ def convert(args):
     convert_file(src_filename, dest_filename)
 
 
-def handle_command_line(args):
+def handle_command_line(args: list[str]) -> None:
     # Guess the command by the arguments.
     if (not args or
             len(args) == 1 and looks_like_filename(args[0])):
@@ -264,7 +268,7 @@ def handle_command_line(args):
     COMMANDS[command](args[1:])
 
 
-def main(args=None):
+def main(args: None | list[str] = None) -> None:
     if args is None:
         args = sys.argv[1:]
 

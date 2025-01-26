@@ -13,6 +13,6 @@ import importlib.resources
 import os
 
 
-def load_rom_image(filename):
+def load_rom_image(filename: str) -> bytes:
     path = importlib.resources.files('zx').joinpath('roms', filename)
     return path.read_bytes()

@@ -9,8 +9,10 @@
 #   Published under the MIT license.
 
 
+import typing
 import io
 import wave
+from ._binary import Bytes
 from ._data import SoundFile, SoundFileFormat
 from ._error import Error
 from ._tape import tag_last_pulse
@@ -19,13 +21,20 @@ from ._tape import tag_last_pulse
 class WAVFile(SoundFile):
     __TICKS_FREQ = 3500000  # TODO
 
-    def __init__(self, *, sample_size, num_channels, frame_rate,
-                 num_frames, frames):
+    sample_size: int
+    num_channels: int
+    frame_rate: int
+    num_frames: int
+    frames: Bytes
+
+    def __init__(self, *, sample_size: int, num_channels: int, frame_rate: int,
+                 num_frames: int, frames: Bytes) -> None:
         SoundFile.__init__(self, WAVFileFormat, sample_size=sample_size,
                            num_channels=num_channels, frame_rate=frame_rate,
                            num_frames=num_frames, frames=frames)
 
-    def _generate_pulses(self):
+    def _generate_pulses(self) -> (
+            typing.Iterable[tuple[bool, int, tuple[str, ...]]]):
         num_channels = self.num_channels
         assert num_channels in (1, 2)
         if num_channels == 2:
@@ -59,14 +68,15 @@ class WAVFile(SoundFile):
             level = not level
             tick = t
 
-    def get_pulses(self):
+    def get_pulses(self) -> (
+            typing.Iterable[tuple[bool, int, tuple[str, ...]]]):
         return tag_last_pulse(self._generate_pulses())
 
 
 class WAVFileFormat(SoundFileFormat, name='WAV'):
     _TICKS_FREQ = 3500000  # TODO
 
-    def parse(self, filename, image):
+    def parse(self, filename: str, image: Bytes) -> WAVFile:
         with wave.open(io.BytesIO(image), 'rb') as f:
             num_frames = f.getnframes()
             return WAVFile(
@@ -76,7 +86,9 @@ class WAVFileFormat(SoundFileFormat, name='WAV'):
                 num_frames=num_frames,
                 frames=f.readframes(num_frames))
 
-    def save_from_pulses(self, filename, pulses):
+    def save_from_pulses(self, filename: str,
+                         pulses: typing.Iterable[
+                             tuple[bool, int, tuple[str, ...]]]) -> None:
         with wave.open(filename, 'wb') as f:
             f.setnchannels(1)
             f.setsampwidth(1)

@@ -8,7 +8,9 @@
 #
 #   Published under the MIT license.
 
+import typing
 import enum
+from ._data import SoundFile
 
 
 class DeviceEvent(object):
@@ -28,7 +30,7 @@ class GetEmulationTime(DeviceEvent):
 
 
 class GetTapeLevel(DeviceEvent):
-    def __init__(self, frame_tick):
+    def __init__(self, frame_tick: int) -> None:
         self.frame_tick = frame_tick
 
 
@@ -46,18 +48,18 @@ class IsTapePlayerStopped(DeviceEvent):
 
 
 class LoadTape(DeviceEvent):
-    def __init__(self, file):
+    def __init__(self, file: SoundFile):
         self.file = file
 
 
 class KeyStroke(DeviceEvent):
-    def __init__(self, id, pressed):
+    def __init__(self, id: str, pressed: bool):
         self.id = id
         self.pressed = pressed
 
 
 class LoadFile(DeviceEvent):
-    def __init__(self, filename):
+    def __init__(self, filename: str):
         self.filename = filename
 
 
@@ -66,7 +68,7 @@ class PauseStateUpdated(DeviceEvent):
 
 
 class PauseUnpauseTape(DeviceEvent):
-    def __init__(self, pause):
+    def __init__(self, pause: bool):
         self.pause = pause
 
 
@@ -75,17 +77,17 @@ class QuantumRun(DeviceEvent):
 
 
 class ReadPort(DeviceEvent):
-    def __init__(self, addr):
+    def __init__(self, addr: int):
         self.addr = addr
 
 
 class SaveSnapshot(DeviceEvent):
-    def __init__(self, filename):
+    def __init__(self, filename: str):
         self.filename = filename
 
 
 class ScreenUpdated(DeviceEvent):
-    def __init__(self, pixels):
+    def __init__(self, pixels: bytes):
         self.pixels = pixels
 
 
@@ -102,5 +104,31 @@ class ToggleTapePause(DeviceEvent):
 
 
 class Device(object):
-    def destroy(self):
+    def destroy(self) -> None:
         pass
+
+
+class Dispatcher(object):
+    __devices: typing.Iterable[Device]
+
+    def __init__(self, devices: None | list[Device] = None) -> None:
+        if devices is None:
+            devices = []
+
+        self.__devices = list(devices)
+
+    def __iter__(self) -> typing.Iterable[Device]:
+        yield from self.__devices
+
+    # TODO: Since this now can return values, it needs a
+    # different name.
+    def notify(self, event: DeviceEvent,
+               result: typing.Any = None) -> typing.Any:
+        for device in self:  # type: ignore  # TODO: mypy false positive.
+            result = device.on_event(event, self, result)
+        return result
+
+    # TODO: Do that with events?
+    def destroy(self) -> None:
+        for device in self:  # type: ignore  # TODO: mypy false positive.
+            device.destroy()

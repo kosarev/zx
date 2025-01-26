@@ -9,7 +9,8 @@
 #   Published under the MIT license.
 
 
-from ._binary import BinaryParser
+import typing
+from ._binary import Bytes, BinaryParser
 from ._data import SoundFile
 from ._data import SoundFileFormat
 from ._tape import get_block_pulses, tag_last_pulse, get_end_pulse
@@ -18,10 +19,15 @@ from ._tape import get_block_pulses, tag_last_pulse, get_end_pulse
 class TAPFile(SoundFile):
     _TICKS_FREQ = 3500000
 
-    def __init__(self, *, blocks):
+    blocks: typing.Sequence[Bytes]
+
+    def __init__(self, *, blocks: typing.Sequence[Bytes]) -> None:
         SoundFile.__init__(self, TAPFileFormat, blocks=blocks)
 
-    def _generate_pulses(self):
+    # TODO: Produce a typing.Sequence instead of using generators,
+    #       once we can represent pulses in a more compact manner.
+    def _generate_pulses(self) -> (
+            typing.Iterable[tuple[bool, int, tuple[str, ...]]]):
         level = False
         last_block = len(self.blocks) - 1
         for i, data in enumerate(self.blocks):
@@ -39,16 +45,20 @@ class TAPFile(SoundFile):
             if i != last_block:
                 yield level, self._TICKS_FREQ, ('PAUSE',)  # 1s.
 
-    def get_pulses(self):
-        return tag_last_pulse(self._generate_pulses())
+    def get_pulses(self) -> (
+            typing.Iterable[tuple[bool, int, tuple[str, ...]]]):
+        pulses: typing.Iterable[tuple[bool, int, tuple[str, ...]]] = (
+            tag_last_pulse(self._generate_pulses()))
+        return pulses
 
 
 class TAPFileFormat(SoundFileFormat, name='TAP'):
-    def _parse_block(self, parser):
+    def _parse_block(self, parser: BinaryParser) -> Bytes:
         size = parser.parse_field('<H', 'block_size')
+        assert isinstance(size, int)
         return parser.extract_block(size)
 
-    def parse(self, filename, image):
+    def parse(self, filename: str, image: Bytes) -> TAPFile:
         parser = BinaryParser(image)
 
         # Parse blocks.

@@ -9,14 +9,17 @@
 #   Published under the MIT license.
 
 
-from ._binary import BinaryParser, BinaryWriter
+import typing
+from ._binary import Bytes, BinaryParser, BinaryWriter
 from ._data import DataRecord
 from ._data import FileFormat
+from ._data import File
 from ._error import Error
 from ._z80snapshot import Z80SnapshotFormat
+from ._z80snapshot import Z80Snapshot
 
 
-def parse_creator_info_block(image):
+def parse_creator_info_block(image: Bytes) -> dict[str, typing.Any]:
     parser = BinaryParser(image)
     chunk = parser.parse([('creator', '20s'),
                           ('creator_major_version', '<H'),
@@ -25,13 +28,14 @@ def parse_creator_info_block(image):
     return chunk
 
 
-def parse_snapshot_block(image):
+def parse_snapshot_block(image: Bytes) -> Z80Snapshot:
     parser = BinaryParser(image)
     header = parser.parse([('flags', '<L'),
                            ('filename_extension', '4s'),
                            ('uncompressed_length', '<L')])
 
     flags = header['flags']
+    assert isinstance(flags, int)
     descriptor = bool(flags & 0x1)
     compressed = bool(flags & 0x2)
 
@@ -47,15 +51,16 @@ def parse_snapshot_block(image):
 
     # TODO: Support other snapshot formats.
     filename_extension = header['filename_extension']
+    assert isinstance(filename_extension, bytes)
     if filename_extension not in [b'z80\x00', b'Z80\x00']:
         raise Error('Unknown RZX snapshot format %r.' % filename_extension,
                     id='unknown_rzx_snapshot_format')
 
     format = Z80SnapshotFormat()
-    return format.parse(filename_extension, snapshot_image)
+    return format.parse(filename_extension.decode(), snapshot_image)
 
 
-def parse_input_recording_block(image):
+def parse_input_recording_block(image: Bytes) -> dict[str, typing.Any]:
     parser = BinaryParser(image)
     header = parser.parse([('num_of_frames', '<L'),
                            ('reserved', 'B'),
@@ -63,6 +68,7 @@ def parse_input_recording_block(image):
                            ('flags', '<L')])
 
     flags = header['flags']
+    assert isinstance(flags, int)
     protected = bool(flags & 0x1)
     compressed = bool(flags & 0x2)
 
@@ -76,13 +82,14 @@ def parse_input_recording_block(image):
     recording_parser = BinaryParser(recording_image)
 
     NUM_OF_SAMPLES_IN_REPEATED_FRAME = 0xffff
-    frames = []
+    frames: list[typing.Any] = []
     while not recording_parser.is_eof():
         recording_header = recording_parser.parse([
             ('num_of_fetches', '<H'),
             ('num_of_port_samples', '<H')])
 
         num_of_samples = recording_header['num_of_port_samples']
+        assert isinstance(num_of_samples, int)
         num_of_fetches = recording_header['num_of_fetches']
 
         if num_of_samples == NUM_OF_SAMPLES_IN_REPEATED_FRAME:
@@ -93,7 +100,6 @@ def parse_input_recording_block(image):
             frame = (num_of_fetches, prev_samples)
         else:
             samples = recording_parser.extract_block(num_of_samples)
-            samples = bytes(samples)
             frame = (num_of_fetches, samples)
 
         # Ignore empty frames.
@@ -117,20 +123,22 @@ RZX_BLOCK_PARSERS = {
 }
 
 
-def parse_block(parser):
+def parse_block(parser: BinaryParser) -> typing.Any:
     # Parse block header.
     block = parser.parse([('id', 'B'),
                           ('length', '<L')])
 
     # Extract block payload image.
     block_length = block['length']
+    assert isinstance(block_length, int)
     if block_length < 5:
-        raise ZXError('RZX block length is too small: %d' % block_length)
+        raise Error('RZX block length is too small: %d' % block_length)
     payload_size = block_length - 5
     payload_image = parser.extract_block(payload_size)
 
     # Parse payload image.
     block_id = block['id']
+    assert isinstance(block_id, int)
 
     # TODO: Handle unknown blocks.
     if block_id not in RZX_BLOCK_PARSERS:
@@ -140,7 +148,7 @@ def parse_block(parser):
     return RZX_BLOCK_PARSERS[block_id](payload_image)
 
 
-def _parse_rzx(image):
+def _parse_rzx(image: Bytes) -> dict[str, typing.Any]:
     parser = BinaryParser(image)
 
     # Unpack header.
@@ -161,7 +169,7 @@ def _parse_rzx(image):
     return {'id': 'input_recording', 'chunks': chunks}
 
 
-def make_rzx(recording):
+def make_rzx(recording: dict[str, typing.Any]) -> Bytes:
     assert recording['id'] == 'input_recording'
 
     writer = BinaryWriter()
@@ -216,12 +224,14 @@ def make_rzx(recording):
     return writer.get_image()
 
 
-class RZXFile(DataRecord):
-    def __init__(self, **recording):
+class RZXFile(File):
+    chunks: list[dict[str, int | str | dict[str, tuple[int, list[int]]]]]
+
+    def __init__(self, **recording: typing.Any) -> None:
         super().__init__(**recording)
 
 
 class RZXFileFormat(FileFormat, name='RZX'):
-    def parse(self, filename, image):
+    def parse(self, filename: str, image: Bytes) -> RZXFile:
         recording = _parse_rzx(image)
-        return RZXFile(**recording)
+        return RZXFile(format=RZXFileFormat, **recording)

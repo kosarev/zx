@@ -8,8 +8,10 @@
 #
 #   Published under the MIT license.
 
+import typing
 import os
-from ._data import ArchiveFileFormat
+from ._binary import Bytes
+from ._data import ArchiveFileFormat, File, FileFormat
 from ._error import Error
 from ._rzx import RZXFileFormat
 from ._scr import SCRFileFormat
@@ -21,7 +23,7 @@ from ._zip import ZIPFileFormat
 from ._zxb import ZXBasicCompilerSourceFormat
 
 
-def _open_file_or_url(path):
+def _open_file_or_url(path: str) -> typing.Any:
     if path.startswith(('http:', 'https:', 'ftp:')):
         import urllib.request
         import urllib.error
@@ -40,7 +42,8 @@ def _open_file_or_url(path):
     return open(path, 'rb')
 
 
-def detect_file_format(image, filename_extension):
+def detect_file_format(image: None | bytes,
+                       filename_extension: str) -> None | type[FileFormat]:
     KNOWN_FORMATS = [
         ('.zxb', None, ZXBasicCompilerSourceFormat),
         ('.rzx', b'RZX!', RZXFileFormat),
@@ -73,8 +76,9 @@ def detect_file_format(image, filename_extension):
     return None
 
 
-def _parse_archive(format, image):
-    candidates = []
+def _parse_archive(format: type[ArchiveFileFormat], image: Bytes) -> (
+        list[tuple[str, type[FileFormat], Bytes]]):
+    candidates: list[tuple[str, type[FileFormat], Bytes]] = []
     for member_name, member_image in format().read_files(image):
         base, ext = os.path.splitext(member_name)
         member_format = detect_file_format(member_image, ext)
@@ -92,7 +96,7 @@ def _parse_archive(format, image):
     return candidates
 
 
-def _parse_file_image(filename, image):
+def _parse_file_image(filename: str, image: Bytes) -> File:
     base, ext = os.path.splitext(filename)
     format = detect_file_format(image, ext)
     if not format:
@@ -114,7 +118,7 @@ def _parse_file_image(filename, image):
     return format().parse(filename, image)
 
 
-def parse_file(filename):
+def parse_file(filename: str) -> File:
     with _open_file_or_url(filename) as f:
         image = f.read()
 

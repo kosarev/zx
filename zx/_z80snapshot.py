@@ -9,7 +9,11 @@
 #   Published under the MIT license.
 
 
+from __future__ import annotations
+
+import typing
 import collections
+from ._binary import Bytes
 from ._binary import BinaryParser, BinaryWriter
 from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
@@ -24,7 +28,8 @@ _V2_FORMAT = '2.x'
 _V3_FORMAT = '3.x'
 
 
-def _get_format_version(snap):
+def _get_format_version(
+        snap: (Z80Snapshot | collections.OrderedDict[str, typing.Any])) -> str:
     if 'ticks_count_low' in snap:
         return _V3_FORMAT
 
@@ -37,7 +42,38 @@ def _get_format_version(snap):
 class Z80Snapshot(MachineSnapshot):
     _MEMORY_PAGE_ADDRS = {4: 0x8000, 5: 0xc000, 8: 0x4000}
 
-    def get_unified_snapshot(self):
+    a: int
+    f: int
+    alt_a: int
+    alt_f: int
+    i: int
+    r: int
+    bc: int
+    de: int
+    hl: int
+    alt_bc: int
+    alt_de: int
+    alt_hl: int
+    ix: int
+    iy: int
+    pc: int
+    pc2: int
+    sp: int
+    iff1: bool
+    iff2: bool
+
+    flags1: int
+    flags2: int
+    flags3: int
+
+    ticks_count_low: int
+    ticks_count_high: int
+    hardware_mode: int
+
+    memory_snapshot: Bytes
+    memory_blocks: list[tuple[int, bytes]]
+
+    def get_unified_snapshot(self) -> UnifiedSnapshot:
         # Bit 7 of the stored R value is not significant and
         # shall be taken from bit 0 of flags1.
         flags1 = self.flags1
@@ -84,8 +120,8 @@ class Z80Snapshot(MachineSnapshot):
         }
 
         if 'ticks_count_high' in self:
-            ticks_high = self['ticks_count_high']
-            ticks_low = self['ticks_count_low']
+            ticks_high = self.ticks_count_high
+            ticks_low = self.ticks_count_low
             ticks_since_int = (((ticks_high + 1) % 4 + 1) * quarter_tstates -
                                (ticks_low + 1))
             fields['ticks_since_int'] = ticks_since_int
@@ -105,17 +141,20 @@ class Z80Snapshot(MachineSnapshot):
                             id='unsupported_machine')
 
         # Handle memory blocks.
-        memory_blocks = fields.setdefault('memory_blocks', [])
+        memory_blocks: list[tuple[int, Bytes] |
+                            dict[str, Bytes]] = []
         if 'memory_snapshot' in self:
             memory_blocks.append((0x4000, self.memory_snapshot))
         else:
             assert machine_kind == 'ZX Spectrum 48K', machine_kind  # TODO
             for block in self.memory_blocks:
+                assert isinstance(block, dict)
                 page_no = block['page_no']
                 image = block['image']
                 memory_blocks.append((self._MEMORY_PAGE_ADDRS[page_no], image))
 
-        return UnifiedSnapshot(Z80SnapshotFormat, **fields)
+        return UnifiedSnapshot(Z80SnapshotFormat, **fields,
+                               memory_blocks=memory_blocks)
 
 
 class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
@@ -147,7 +186,8 @@ class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
 
     _RAW_MEMORY_BLOCK_SIZE_VALUE = 0xffff
 
-    def _uncompress(self, compressed_image, uncompressed_size):
+    def _uncompress(self, compressed_image: Bytes,
+                    uncompressed_size: int) -> Bytes:
         MARKER = 0xed
         input = list(compressed_image)
         output = []
@@ -165,7 +205,8 @@ class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
 
         return bytes(output)
 
-    def _parse_memory_block(self, parser):
+    def _parse_memory_block(self, parser: BinaryParser) -> (
+            collections.OrderedDict[str, typing.Any]):
         BLOCK_SIZE = 16 * 1024
         fields = parser.parse(self._MEMORY_BLOCK_HEADER)
         compressed_size = fields['compressed_size']
@@ -177,10 +218,11 @@ class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
         return collections.OrderedDict(page_no=fields['page_no'],
                                        image=raw_image)
 
-    def parse(self, filename, image):
+    def parse(self, filename: str, image: Bytes) -> Z80Snapshot:
         # Parse headers.
         parser = BinaryParser(image)
-        fields = collections.OrderedDict(id='z80_snapshot')
+        fields: collections.OrderedDict[str, typing.Any] = (
+            collections.OrderedDict(id='z80_snapshot'))
         fields.update(parser.parse(self._PRIMARY_HEADER))
 
         if fields['pc'] == 0:
@@ -229,7 +271,9 @@ class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
 
     # TODO: Rework to generate an internal representation of the
     #       format and then generate its binary version.
-    def make_snapshot(self, state):
+    # TODO: Rename to to_bytes()? Snapshot is ambiguous in this context.
+    #       Or just employ __bytes__()?
+    def make_snapshot(self, state) -> bytes:  # type: ignore[no-untyped-def]
         # TODO: The z80 format cannot represent processor states in
         #       the middle of IX- and IY-prefixed instructions, so
         #       such situations need some additional processing.

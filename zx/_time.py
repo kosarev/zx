@@ -12,21 +12,23 @@ import time
 
 
 class Time(object):
-    def __init__(self):
+    _seconds: float
+
+    def __init__(self) -> None:
         self._seconds = 0
 
-    def get(self):
+    def get(self) -> float:
         return self._seconds
 
-    def advance(self, s):
+    def advance(self, s: float) -> None:
         self._seconds += s
 
 
-def get_timestamp():
+def get_timestamp() -> float:
     # TODO: We can use this since Python 3.7.
     # return time.time_ns() / (10 ** 9)
     return time.time()
 
 
-def get_elapsed_time(timestamp):
+def get_elapsed_time(timestamp: float) -> float:
     return get_timestamp() - timestamp

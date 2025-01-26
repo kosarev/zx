@@ -8,28 +8,32 @@
 #
 #   Published under the MIT license.
 
+import typing
 import os
 import tempfile
+from ._binary import Bytes
 from ._data import File
 from ._data import FileFormat
 from ._error import Error
 
 
 class ZXBasicCompilerProgram(File):
-    pass
+    entry_point: int
+    program_bytes: bytes
 
 
 class ZXBasicCompilerSourceFormat(FileFormat, name='ZXB'):
-    def parse(self, filename, image):
+    def parse(self, filename: str,
+              image: Bytes) -> ZXBasicCompilerProgram:
         try:
-            import zxb
+            import zxb  # type: ignore[import-not-found]
         except ModuleNotFoundError:
             raise Error('The ZX Basic compiler does not seem to be installed.')
 
         fields = {}
 
-        class Emitter(zxb.CodeEmitter):
-            def emit(self, **args):
+        class Emitter(zxb.CodeEmitter):  # type: ignore[misc]
+            def emit(self, **args: typing.Any) -> None:
                 fields.update(args)
 
         with tempfile.TemporaryDirectory() as dir:
@@ -43,4 +47,4 @@ class ZXBasicCompilerSourceFormat(FileFormat, name='ZXB'):
 
         fields['program_bytes'] = bytes(fields['program_bytes'])
 
-        return ZXBasicCompilerProgram(ZXBasicCompilerSourceFormat, fields)
+        return ZXBasicCompilerProgram(ZXBasicCompilerSourceFormat, **fields)

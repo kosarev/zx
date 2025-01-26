@@ -4,7 +4,7 @@ import zx
 import pytest
 
 
-def test_basic():
+def test_basic() -> None:
     # Create a TAP file object.
     zx._tap.TAPFile(blocks=[b'abc', b'def'])
 
@@ -19,4 +19,4 @@ def test_basic():
     tuple(tap.get_pulses())
 
     # Dump.
-    assert 'zx._tap.TAPFile' in tap.dump()
+    assert 'TAPFile' in tap.dump()

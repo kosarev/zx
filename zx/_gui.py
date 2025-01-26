@@ -8,10 +8,12 @@
 #
 #   Published under the MIT license.
 
+import typing
 import cairo
 import enum
-import gi
+import gi  # type: ignore
 from ._device import Device
+from ._device import DeviceEvent
 from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
 from ._device import GetTapePlayerTime
@@ -25,14 +27,14 @@ from ._device import ScreenUpdated
 from ._device import TapeStateUpdated
 from ._device import ToggleEmulationPause
 from ._device import ToggleTapePause
+from ._device import Dispatcher
 from ._error import USER_ERRORS
 from ._error import verbalize_error
 from ._except import EmulationExit
-from ._time import get_elapsed_time
-from ._time import get_timestamp
+from ._time import get_elapsed_time, get_timestamp, Time
 from ._utils import div_ceil
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk  # nopep8
+from gi.repository import Gtk, Gdk  # type: ignore  # nopep8
 
 
 SCREENCAST = False
@@ -40,7 +42,7 @@ SCREENCAST = False
 PI = 3.1415926535
 
 
-def rgb(color, alpha=1):
+def rgb(color: str, alpha: float = 1) -> tuple[float, float, float, float]:
     assert color.startswith('#')
     assert len(color) == 7
     r = int(color[1:3], 16)
@@ -49,7 +51,15 @@ def rgb(color, alpha=1):
     return r / 0xff, g / 0xff, b / 0xff, alpha
 
 
-def _draw_pause_sign(context, x, y, size, alpha):
+_Surface = cairo.Surface
+_Context: typing.TypeAlias = 'cairo.Context[_Surface]'
+_DrawProc = typing.Callable[[_Context, float, float, float, float, float],
+                            None]
+_Widget: typing.TypeAlias = Gtk.DrawingArea
+
+
+def _draw_pause_sign(context: _Context, x: float, y: float, size: float,
+                     alpha: float) -> None:
     w = 0.1 * size
     h = 0.4 * size
     d = 0.15 * size
@@ -58,7 +68,8 @@ def _draw_pause_sign(context, x, y, size, alpha):
     context.fill()
 
 
-def _draw_tape_sign(context, x, y, size, alpha, t=0):
+def _draw_tape_sign(context: _Context, x: float, y: float, size: float,
+                    alpha: float, t: float = 0) -> None:
     R = 0.10
     D = 0.33 - R
     H = 0.6
@@ -87,20 +98,24 @@ def _draw_tape_sign(context, x, y, size, alpha, t=0):
     context.stroke()
 
 
-def _draw_notification_circle(context, x, y, size, alpha):
+def _draw_notification_circle(context: _Context, x: float, y: float,
+                              size: float, alpha: float) -> None:
     context.arc(x, y, size / 2, 0, 2 * PI)
     context.set_source_rgba(*rgb('#1e1e1e', alpha))
     context.fill()
 
 
-def draw_pause_notification(context, x, y, size, alpha=1, t=0):
+def draw_pause_notification(context: _Context, x: float, y: float, size: float,
+                            alpha: float = 1, t: float = 0) -> None:
     _draw_notification_circle(context, x, y, size, alpha)
 
     context.set_source_rgba(*rgb('#ffffff', alpha))
     _draw_pause_sign(context, x, y, size, alpha)
 
 
-def draw_tape_pause_notification(context, x, y, size, alpha=1, t=0):
+def draw_tape_pause_notification(context: _Context, x: float, y: float,
+                                 size: float, alpha: float = 1,
+                                 t: float = 0) -> None:
     _draw_notification_circle(context, x, y, size, alpha)
 
     context.set_source_rgba(*rgb('#ffffff', alpha))
@@ -108,7 +123,9 @@ def draw_tape_pause_notification(context, x, y, size, alpha=1, t=0):
     _draw_pause_sign(context, x, y + size * 0.23, size * 0.5, alpha)
 
 
-def draw_tape_resume_notification(context, x, y, size, alpha=1, t=0):
+def draw_tape_resume_notification(context: _Context, x: float, y: float,
+                                  size: float, alpha: float = 1,
+                                  t: float = 0) -> None:
     _draw_notification_circle(context, x, y, size, alpha)
 
     context.set_source_rgba(*rgb('#ffffff', alpha))
@@ -116,19 +133,23 @@ def draw_tape_resume_notification(context, x, y, size, alpha=1, t=0):
 
 
 class Notification(object):
-    def __init__(self):
+    _timestamp: None | float
+    _draw: None | _DrawProc
+
+    def __init__(self) -> None:
         self.clear()
 
-    def set(self, draw, time):
+    def set(self, draw: _DrawProc, time: Time) -> None:
         self._timestamp = get_timestamp()
         self._draw = draw
         self._time = time
 
-    def clear(self):
+    def clear(self) -> None:
         self._timestamp = None
         self._draw = None
 
-    def draw(self, window_size, screen_size, context):
+    def draw(self, window_size: tuple[int, int], screen_size: tuple[int, int],
+             context: _Context) -> None:
         if not self._timestamp:
             return
 
@@ -146,16 +167,19 @@ class Notification(object):
             self.clear()
             return
 
+        assert self._draw is not None
         self._draw(context, x + size / 2, y + size / 2, size, alpha,
                    self._time.get())
 
 
 # TODO: A quick solution for making screencasts.
 class Screencast(object):
-    def __init__(self):
+    _counter: int
+
+    def __init__(self) -> None:
         self._counter = 0
 
-    def on_draw(self, surface):
+    def on_draw(self, surface: _Surface) -> None:
         if not SCREENCAST:
             return
 
@@ -164,8 +188,8 @@ class Screencast(object):
         self._counter += 1
 
 
-class _KeyEvent(object):
-    def __init__(self, id, pressed):
+class _KeyEvent(DeviceEvent):
+    def __init__(self, id: str, pressed: bool) -> None:
         self.id = id
         self.pressed = pressed
 
@@ -175,13 +199,13 @@ class _ClickType(enum.Enum):
     Double = enum.auto()
 
 
-class _ClickEvent(object):
-    def __init__(self, type):
+class _ClickEvent(DeviceEvent):
+    def __init__(self, type: _ClickType) -> None:
         self.type = type
 
 
-class _ExceptionEvent(object):
-    def __init__(self, exception):
+class _ExceptionEvent(DeviceEvent):
+    def __init__(self, exception: Exception) -> None:
         self.exception = exception
 
 
@@ -195,14 +219,16 @@ class ScreenWindow(Device):
         'ALT_R': 'SYMBOL SHIFT',
         'SHIFT_R': 'SYMBOL SHIFT'}
 
-    def __init__(self):
+    __events: list[DeviceEvent]
+
+    def __init__(self) -> None:
         super().__init__()
 
         self.__events = []
 
         self._window = Gtk.Window()
 
-        self._KEY_HANDLERS = {
+        self._KEY_HANDLERS: dict[str, typing.Callable[[Dispatcher], None]] = {
             'ESCAPE': self.__on_exit,
             'F10': self.__on_exit,
             'F1': self._show_help,
@@ -213,7 +239,9 @@ class ScreenWindow(Device):
             'PAUSE': self.__toggle_pause,
         }
 
-        self._EVENT_HANDLERS = {
+        self._EVENT_HANDLERS: dict[type[DeviceEvent],
+                                   typing.Callable[[DeviceEvent, Dispatcher],
+                                                   None]] = {
             _ClickEvent: self.__on_click,
             _ExceptionEvent: self.__on_exception,
             _KeyEvent: self.__on_key,
@@ -265,7 +293,7 @@ class ScreenWindow(Device):
         self._window.connect('window-state-event',
                              self.__on_window_state_event)
 
-    def _on_draw_area(self, widget, context):
+    def _on_draw_area(self, widget: _Widget, context: _Context) -> None:
         window_size = self._window.get_size()
         window_width, window_height = window_size
         width = min(window_width,
@@ -295,11 +323,14 @@ class ScreenWindow(Device):
 
         self._screencast.on_draw(context.get_group_target())
 
-    def _on_updated_screen(self, event, devices):
+    # TODO: Rename devices -> dispatcher.
+    def _on_updated_screen(self, event: DeviceEvent,
+                           devices: Dispatcher) -> typing.Any:
+        assert isinstance(event, ScreenUpdated)
         self.frame_data[:] = event.pixels
         self.area.queue_draw()
 
-    def _show_help(self, devices):
+    def _show_help(self, devices: Dispatcher) -> None:
         KEYS_HELP = [
             ('F1', 'Show help.'),
             ('F2', 'Save snapshot.'),
@@ -313,7 +344,7 @@ class ScreenWindow(Device):
         for entry in KEYS_HELP:
             print('%7s  %s' % entry)
 
-    def _save_snapshot(self, devices):
+    def _save_snapshot(self, devices: Dispatcher) -> None:
         # TODO: Add file filters.
         dialog = Gtk.FileChooserDialog(
             'Save snapshot', self._window,
@@ -329,7 +360,7 @@ class ScreenWindow(Device):
 
         dialog.destroy()
 
-    def _error_box(self, title, message):
+    def _error_box(self, title: str, message: str) -> None:
         dialog = Gtk.MessageDialog(
             self._window, 0, Gtk.MessageType.ERROR,
             Gtk.ButtonsType.OK, title)
@@ -337,7 +368,7 @@ class ScreenWindow(Device):
         dialog.run()
         dialog.destroy()
 
-    def _choose_and_load_file(self, devices):
+    def _choose_and_load_file(self, devices: Dispatcher) -> None:
         # TODO: Add file filters.
         dialog = Gtk.FileChooserDialog(
             'Load file', self._window,
@@ -360,30 +391,31 @@ class ScreenWindow(Device):
             except USER_ERRORS as e:
                 self._error_box('File error', verbalize_error(e))
 
-    def _toggle_fullscreen(self, devices):
+    def _toggle_fullscreen(self, devices: Dispatcher) -> None:
         if self._is_fullscreen:
             self._window.unfullscreen()
         else:
             self._window.fullscreen()
 
-    def __queue_event(self, event):
+    def __queue_event(self, event: DeviceEvent) -> None:
         self.__events.append(event)
 
-    def __on_gdk_key(self, widget, event):
+    def __on_gdk_key(self, widget: _Widget, event: Gdk.EventKey) -> None:
         # TODO: Do not upper the case here. Ignore unknown key.
         # Translate to our own key ids.
         self.__queue_event(_KeyEvent(
             Gdk.keyval_name(event.keyval).upper(),
             event.type == Gdk.EventType.KEY_PRESS))
 
-    def __on_key(self, event, devices):
+    def __on_key(self, event: DeviceEvent, devices: Dispatcher) -> typing.Any:
+        assert isinstance(event, _KeyEvent)
         if event.pressed and event.id in self._KEY_HANDLERS:
             self._KEY_HANDLERS[event.id](devices)
 
         zx_key_id = self._GTK_KEYS_TO_ZX_KEYS.get(event.id, event.id)
         devices.notify(KeyStroke(zx_key_id, event.pressed))
 
-    def __on_gdk_click(self, widget, event):
+    def __on_gdk_click(self, widget: _Widget, event: Gdk.EventButton) -> bool:
         TYPES = {
             Gdk.EventType.BUTTON_PRESS: _ClickType.Single,
             Gdk.EventType._2BUTTON_PRESS: _ClickType.Double,
@@ -393,46 +425,59 @@ class ScreenWindow(Device):
             self.__queue_event(_ClickEvent(TYPES[event.type]))
             return True
 
-    def __on_click(self, event, devices):
+        return False
+
+    def __on_click(self, event: DeviceEvent,
+                   devices: Dispatcher) -> typing.Any:
+        assert isinstance(event, _ClickEvent)
         if event.type == _ClickType.Single:
             self.__toggle_pause(devices)
         elif event.type == _ClickType.Double:
             self._toggle_fullscreen(devices)
 
-    def __on_exception(self, event, devices):
+    def __on_exception(self, event: DeviceEvent,
+                       devices: Dispatcher) -> typing.Any:
+        assert isinstance(event, _ExceptionEvent,)
         raise event.exception
 
-    def __on_exit(self, devices):
+    def __on_exit(self, devices: Dispatcher) -> None:
         self.__queue_event(_ExceptionEvent(EmulationExit()))
 
-    def _on_done(self, widget, context):
+    def _on_done(self, widget: _Widget, context: _Context) -> None:
         self.__queue_event(_ExceptionEvent(EmulationExit()))
 
-    def __on_window_state_event(self, widget, event):
+    def __on_window_state_event(self, widget: _Widget,
+                                event: Gdk.EventWindowState) -> None:
         state = event.new_window_state
         self._is_fullscreen = bool(state & Gdk.WindowState.FULLSCREEN)
 
-    def on_event(self, event, devices, result):
+    def on_event(self, event: DeviceEvent, devices: Dispatcher,
+                 result: typing.Any) -> typing.Any:
         event_type = type(event)
         if event_type in self._EVENT_HANDLERS:
             self._EVENT_HANDLERS[event_type](event, devices)
         return result
 
-    def _on_updated_pause_state(self, event, devices):
+    def _on_updated_pause_state(self, event: DeviceEvent,
+                                devices: Dispatcher) -> None:
+        assert isinstance(event, PauseStateUpdated)
         if devices.notify(GetEmulationPauseState()):
             time = devices.notify(GetEmulationTime())
             self._notification.set(draw_pause_notification, time)
         else:
             self._notification.clear()
 
-    def _on_updated_tape_state(self, event, devices):
+    def _on_updated_tape_state(self, event: DeviceEvent,
+                               devices: Dispatcher) -> None:
+        assert isinstance(event, TapeStateUpdated)
         tape_paused = devices.notify(IsTapePlayerPaused())
         draw = (draw_tape_pause_notification if tape_paused
                 else draw_tape_resume_notification)
         tape_time = devices.notify(GetTapePlayerTime())
         self._notification.set(draw, tape_time)
 
-    def _on_quantum_run(self, event, devices):
+    def _on_quantum_run(self, event: DeviceEvent, devices: Dispatcher) -> None:
+        assert isinstance(event, QuantumRun)
         self.area.queue_draw()
 
         while Gtk.events_pending():
@@ -441,12 +486,12 @@ class ScreenWindow(Device):
         while self.__events:
             self.on_event(self.__events.pop(0), devices, None)
 
-    def __toggle_pause(self, devices):
+    def __toggle_pause(self, devices: Dispatcher) -> None:
         devices.notify(ToggleEmulationPause())
 
-    def __toggle_tape_pause(self, devices):
+    def __toggle_tape_pause(self, devices: Dispatcher) -> None:
         devices.notify(ToggleTapePause())
 
-    def destroy(self):
+    def destroy(self) -> None:
         self._window.destroy()
         super().destroy()

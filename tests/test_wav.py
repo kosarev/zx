@@ -6,7 +6,7 @@ import wave
 import zx
 
 
-def test_basic():
+def test_basic() -> None:
     # Create a WAV file image.
     buff = io.BytesIO()
     with wave.open(buff, 'wb') as f:
@@ -21,7 +21,7 @@ def test_basic():
     wav = format.parse('x.wav', wav_image)
 
     # Dump.
-    assert 'zx._wav.WAVFileFormat' in wav.dump()
+    assert 'WAVFile' in wav.dump()
 
     # Generate pulses.
     tuple(wav.get_pulses())

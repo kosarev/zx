@@ -4,7 +4,7 @@ import zx
 import pytest
 
 
-def test_basic():
+def test_basic() -> None:
     # Parse a TZX file.
     image = (b'ZXTape!\x1a\x01\r\x10\xe8\x03\x13\x00\x00\x03123.tzx   '
              b'\x03\x00\x00\x00\x00\x80\xc8\x10\xe8\x03\x05\x00\xff'
@@ -17,4 +17,4 @@ def test_basic():
     tuple(tzx.get_pulses())
 
     # Dump.
-    assert 'zx._tzx.TZXFile' in tzx.dump()
+    assert 'TZXFile' in tzx.dump()

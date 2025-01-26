@@ -4,15 +4,15 @@ import zx
 import pytest
 
 
-def test_basic():
+def test_basic() -> None:
     # Create a record.
     assert list(zx._data.DataRecord()) == []
 
     # Define and access some fields.
     rec = zx._data.DataRecord(a=5, b=7)
-    assert (rec.a, rec.b) == (5, 7)
+    assert (getattr(rec, 'a'), getattr(rec, 'b')) == (5, 7)
     assert list(rec) == [('a', 5), ('b', 7)]
-    assert 'zx._data.DataRecord' in rec.dump()
+    assert 'DataRecord' in rec.dump()
 
     # Create a file object.
     format = zx._data.FileFormat

@@ -14,7 +14,7 @@ from ._except import EmulatorException
 class Error(EmulatorException):
     # TODO: Use the class name itself instead of the 'id'.
     """Basic exception for the whole ZX module."""
-    def __init__(self, reason, id=None):
+    def __init__(self, reason: str, id: None | str = None):
         super().__init__(reason)
 
         if id:
@@ -24,7 +24,7 @@ class Error(EmulatorException):
 USER_ERRORS = Error, IOError
 
 
-def verbalize_error(e):
+def verbalize_error(e: Error | IOError) -> str:
     if isinstance(e, Error):
         reason, = e.args
         args = [reason]
