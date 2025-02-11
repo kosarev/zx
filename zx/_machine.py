@@ -399,7 +399,7 @@ class Spectrum48(_Spectrum48Base, MachineState):  # type: ignore[misc]
     __NO_MARKS = 0
     __BREAKPOINT_MARK = 1 << 0
 
-    devices: None | Dispatcher
+    devices: Dispatcher
 
     def __init__(self) -> None:
         MachineState.__init__(self, self._get_state_view())
@@ -410,11 +410,7 @@ class Spectrum48(_Spectrum48Base, MachineState):  # type: ignore[misc]
         self.__paused = False
 
     def destroy(self) -> None:
-        devices = self.devices
-        self.devices = None
-
-        if devices:
-            devices.destroy()
+        self.devices.destroy()
 
     def __enter__(self) -> 'Spectrum48':
         return self

@@ -30,8 +30,10 @@ class ZXBasicCompilerSourceFormat(FileFormat, name='ZXB'):
         except ModuleNotFoundError:
             raise Error('The ZX Basic compiler does not seem to be installed.')
 
-        fields = {}
+        fields: dict[str, typing.Any] = {}
 
+        assert 0  # TODO
+        '''
         class Emitter(zxb.CodeEmitter):  # type: ignore[misc]
             def emit(self, **args: typing.Any) -> None:
                 fields.update(args)
@@ -46,5 +48,6 @@ class ZXBasicCompilerSourceFormat(FileFormat, name='ZXB'):
                 raise Error('ZX Basic compiler returned %d.' % status)
 
         fields['program_bytes'] = bytes(fields['program_bytes'])
+        '''
 
         return ZXBasicCompilerProgram(ZXBasicCompilerSourceFormat, **fields)

@@ -47,7 +47,7 @@ setup(name='zx',
           'pycairo',
           'pygobject',
       ],
-      package_data={'zx': ['roms/*']},
+      package_data={'zx': ['roms/*', 'py.typed']},
       entry_points={
           'console_scripts': [
               'zx = zx:main',
