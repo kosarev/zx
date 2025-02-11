@@ -416,7 +416,7 @@ class Spectrum48(_Spectrum48Base, MachineState):  # type: ignore[misc]
         if devices:
             devices.destroy()
 
-    def __enter__(self) -> typing.Self:
+    def __enter__(self) -> 'Spectrum48':
         return self
 
     def __exit__(self, xtype: None | type[BaseException],

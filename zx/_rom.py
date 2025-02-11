@@ -14,5 +14,5 @@ import os
 
 
 def load_rom_image(filename: str) -> bytes:
-    path = importlib.resources.files('zx').joinpath('roms', filename)
+    path = importlib.resources.files('zx').joinpath('roms').joinpath(filename)
     return path.read_bytes()
