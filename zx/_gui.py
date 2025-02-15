@@ -262,6 +262,7 @@ class ScreenWindow(Device):
 
         self.area = Gtk.DrawingArea()
         self.area.connect('draw', self._on_draw_area)
+        self.area.connect('button-press-event', self.__on_gdk_click)
         self._window.add(self.area)
 
         self._window.set_title('ZX Spectrum Emulator')
@@ -287,9 +288,10 @@ class ScreenWindow(Device):
         if not SCREENCAST:
             self.pattern.set_filter(cairo.FILTER_NEAREST)
 
+        self.area.add_events(Gdk.EventMask.BUTTON_PRESS_MASK |
+                             Gdk.EventMask.BUTTON_RELEASE_MASK)
         self._window.connect('key-press-event', self.__on_gdk_key)
         self._window.connect('key-release-event', self.__on_gdk_key)
-        self._window.connect('button-press-event', self.__on_gdk_click)
         self._window.connect('window-state-event',
                              self.__on_window_state_event)
 
