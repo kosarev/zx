@@ -104,6 +104,10 @@ class ToggleTapePause(DeviceEvent):
 
 
 class Device(object):
+    def on_event(self, event: DeviceEvent, devices: 'Dispatcher',
+                 result: typing.Any) -> typing.Any:
+        pass
+
     def destroy(self) -> None:
         pass
 
@@ -117,18 +121,18 @@ class Dispatcher(object):
 
         self.__devices = list(devices)
 
-    def __iter__(self) -> typing.Iterable[Device]:
+    def __iter__(self) -> typing.Iterator[Device]:
         yield from self.__devices
 
     # TODO: Since this now can return values, it needs a
     # different name.
     def notify(self, event: DeviceEvent,
                result: typing.Any = None) -> typing.Any:
-        for device in self:  # type: ignore  # TODO: mypy false positive.
+        for device in self:
             result = device.on_event(event, self, result)
         return result
 
     # TODO: Do that with events?
     def destroy(self) -> None:
-        for device in self:  # type: ignore  # TODO: mypy false positive.
+        for device in self:
             device.destroy()
