@@ -17,6 +17,7 @@ from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
 from ._device import DeviceEvent
 from ._device import Dispatcher
+from ._device import Destroy
 from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
 from ._device import KeyStroke
@@ -409,16 +410,13 @@ class Spectrum48(_Spectrum48Base, MachineState):  # type: ignore[misc]
 
         self.__paused = False
 
-    def destroy(self) -> None:
-        self.devices.destroy()
-
     def __enter__(self) -> 'Spectrum48':
         return self
 
     def __exit__(self, xtype: None | type[BaseException],
                  value: None | BaseException,
                  traceback: None | types.TracebackType) -> None:
-        self.destroy()
+        self.devices.notify(Destroy())
 
     def stop(self) -> None:
         raise EmulationExit()

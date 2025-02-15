@@ -492,6 +492,5 @@ class ScreenWindow(Device):
     def __toggle_tape_pause(self, devices: Dispatcher) -> None:
         devices.notify(ToggleTapePause())
 
-    def destroy(self) -> None:
+    def __on_destroy(self, event: DeviceEvent, devices: Dispatcher) -> None:
         self._window.destroy()
-        super().destroy()

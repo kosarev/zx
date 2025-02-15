@@ -17,6 +17,10 @@ class DeviceEvent(object):
     pass
 
 
+class Destroy(DeviceEvent):
+    pass
+
+
 class EndOfFrame(DeviceEvent):
     pass
 
@@ -108,9 +112,6 @@ class Device(object):
                  result: typing.Any) -> typing.Any:
         pass
 
-    def destroy(self) -> None:
-        pass
-
 
 class Dispatcher(object):
     __devices: typing.Iterable[Device]
@@ -131,8 +132,3 @@ class Dispatcher(object):
         for device in self:
             result = device.on_event(event, self, result)
         return result
-
-    # TODO: Do that with events?
-    def destroy(self) -> None:
-        for device in self:
-            device.destroy()
