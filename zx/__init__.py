@@ -14,4 +14,4 @@ from ._except import EmulationExit
 from ._except import EmulatorException
 from ._main import main
 
-__all__ = ['main']
+__all__ = ['Emulator', 'main']
