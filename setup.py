@@ -46,6 +46,8 @@ setup(name='zx',
       install_requires=[
           'pycairo',
           'pygobject',
+          'pyyaml',
+          'numpy',
       ],
       package_data={'zx': ['roms/*', 'py.typed']},
       entry_points={
