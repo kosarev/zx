@@ -40,14 +40,16 @@ $ pip install zx
 
 Or directly from the repository for current development version:
 ```shell
-$ sudo pip3 install git+https://github.com/kosarev/zx
+$ pip install --upgrade setuptools wheel
+$ pip install git+https://github.com/kosarev/zx
 ```
 
 Local development setups are also supported:
 ```shell
 $ git clone --recursive https://github.com/kosarev/zx
 $ cd zx
-$ python3 setup.py develop --prefix ~/.local
+$ pip install --upgrade setuptools wheel
+$ pip install --editable .
 ```
 
 Running:
