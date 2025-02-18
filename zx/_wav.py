@@ -36,10 +36,6 @@ class WAVFile(SoundFile):
     def _generate_pulses(self) -> (
             typing.Iterable[tuple[bool, int, tuple[str, ...]]]):
         num_channels = self.num_channels
-        assert num_channels in (1, 2)
-        if num_channels == 2:
-            # TODO: Combine the channels into one.
-            raise Error('Stereo WAV inputs are not supported yet.')
 
         # Get samples as a numpy array.
         import numpy
@@ -49,6 +45,12 @@ class WAVFile(SoundFile):
         # 8-bit samples are unsigned and 16-bit ones are signed.
         dtype = {1: numpy.uint8, 2: numpy.int16}[sample_size]
         samples = numpy.frombuffer(frames, dtype, num_frames)
+
+        assert num_channels in (1, 2)
+        if num_channels == 2:
+            # Combine the channels into one.
+            samples = samples.reshape(num_frames // 2, 2)
+            samples = samples.mean(axis=1, dtype=dtype)
 
         # Turn it into an array of low and high levels.
         threshold = {1: 2**(sample_size * 8 - 1), 2: 0}[sample_size]
