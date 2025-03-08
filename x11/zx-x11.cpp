@@ -220,7 +220,7 @@ public:
         assert(port_no >= 8 && port_no <= 15);
 
         unsigned bit_no = (key >> 4);
-        assert(bit_no >= 0 && bit_no <= 4);
+        assert(bit_no <= 4);
 
         least_u8 &port = keyboard_state[port_no - 8];
         fast_u8 mask = 1u << bit_no;
