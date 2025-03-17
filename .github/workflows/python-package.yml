@@ -31,7 +31,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libcairo2-dev python-gi-dev libgirepository1.0-dev gir1.2-gtk-3.0
         python -m pip install --upgrade pip
-        python -m pip install pycodestyle pytest pycairo pygobject numpy pyyaml mypy types-PyYAML
+        python -m pip install pycodestyle pytest pycairo numpy pyyaml mypy types-PyYAML
         python -m pip install --upgrade setuptools wheel
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Run pycodestyle and mypy
