@@ -45,7 +45,7 @@ setup(name='zx',
       packages=['zx'],
       install_requires=[
           'pycairo',
-          'pygobject',
+          'pygobject==3.50.0',
           'pyyaml',
           'numpy',
       ],
