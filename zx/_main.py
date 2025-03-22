@@ -82,7 +82,7 @@ def dump(args: list[str]) -> None:
     filename = args.pop(0)
     handle_extra_arguments(args)
 
-    print(parse_file(filename).dump())
+    print(parse_file(filename).dumps())
 
 
 def looks_like_filename(s: str) -> bool:

@@ -21,8 +21,8 @@ def test_basic() -> None:
     assert snap.hl == HL
 
     # Dump the parsed snapshot.
-    assert 'Z80Snapshot' in snap.dump()
+    assert 'Z80Snapshot' in snap.dumps()
 
     # Produce and dump unified snapshot.
     uni = snap.get_unified_snapshot()
-    assert 'UnifiedSnapshot' in uni.dump()
+    assert 'UnifiedSnapshot' in uni.dumps()

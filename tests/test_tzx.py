@@ -17,4 +17,4 @@ def test_basic() -> None:
     tuple(tzx.get_pulses())
 
     # Dump.
-    assert 'TZXFile' in tzx.dump()
+    assert 'TZXFile' in tzx.dumps()

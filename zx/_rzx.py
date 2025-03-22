@@ -166,11 +166,12 @@ def _parse_rzx(image: Bytes) -> dict[str, typing.Any]:
     while not parser.is_eof():
         chunks.append(parse_block(parser))
 
-    return {'id': 'input_recording', 'chunks': chunks}
+    return {'chunks': chunks}
 
 
 def make_rzx(recording: dict[str, typing.Any]) -> Bytes:
-    assert recording['id'] == 'input_recording'
+    # TODO: Turn this into a DataRecord instead.
+    # assert recording['id'] == 'input_recording'
 
     writer = BinaryWriter()
     signature = b'RZX!'

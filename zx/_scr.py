@@ -57,7 +57,7 @@ class SCRFileFormat(SnapshotFormat, name='SCR'):
 
     def parse(self, filename: str, image: Bytes) -> _SCRSnapshot:
         parser = BinaryParser(image)
-        fields = collections.OrderedDict(id='scr_snapshot')
+        fields = collections.OrderedDict()
         fields.update(parser.parse(self._FIELDS))
         return _SCRSnapshot(SCRFileFormat, **fields)
 

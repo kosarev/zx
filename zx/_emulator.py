@@ -208,7 +208,6 @@ class Emulator(Spectrum48):
 
         assert 0  # TODO
         crash_recording = {
-            'id': 'input_recording',
             'chunks': [
                 player.find_recording_info_chunk(),
                 {

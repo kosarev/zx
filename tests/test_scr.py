@@ -12,8 +12,8 @@ def test_basic() -> None:
     scr = format.make_snapshot(mach)
 
     # Dump.
-    assert '_SCRSnapshot' in scr.dump()
+    assert '_SCRSnapshot' in scr.dumps()
 
     # Produce and dump unified snapshot.
     uni = scr.get_unified_snapshot()
-    assert 'UnifiedSnapshot' in uni.dump()
+    assert 'UnifiedSnapshot' in uni.dumps()

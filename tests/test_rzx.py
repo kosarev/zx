@@ -31,7 +31,7 @@ def test_basic() -> None:
     rzx = format.parse('x.rzx', rzx_image)
 
     # Dump.
-    assert 'RZXFile' in rzx.dump()
+    assert 'RZXFile' in rzx.dumps()
 
     # Test finding the info block.
     player = zx._playback.PlaybackPlayer(mach, rzx)

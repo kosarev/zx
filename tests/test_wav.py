@@ -21,7 +21,7 @@ def test_basic() -> None:
     wav = format.parse('x.wav', wav_image)
 
     # Dump.
-    assert 'WAVFile' in wav.dump()
+    assert 'WAVFile' in wav.dumps()
 
     # Generate pulses.
     tuple(wav.get_pulses())

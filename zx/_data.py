@@ -30,34 +30,28 @@ class DataRecord(object):
         for id in self.__fields:
             yield id, getattr(self, id)
 
-    def dump(self) -> str:
-        def dump_bytes(b: Bytes) -> str:
-            h = b.hex()
-            c = ''.join(chr(c) if 0x20 < c < 0x7f else '.' for c in b)
-            return f'{h:64}  {c}'
+    def to_json(self) -> typing.Any:
+        def convert(v: typing.Any) -> typing.Any:
+            if isinstance(v, (int, str)):
+                return v
+            if isinstance(v, bytes):
+                return v.decode('latin-1')
+            if isinstance(v, (tuple, list)):
+                return [convert(e) for e in v]
+            if isinstance(v, dict):
+                return {id: convert(v) for id, v in v.items()}
+            if isinstance(v, DataRecord):
+                return v.to_json()
+            raise TypeError(f'cannot serialize a {type(v)}')
 
-        def to_yaml(n: typing.Any) -> typing.Any:
-            if isinstance(n, (int, str)):
-                return n
-            if isinstance(n, (tuple, list)):
-                return [to_yaml(e) for e in n]
-            if isinstance(n, (bytes, Bytes)):
-                return '\n'.join(dump_bytes(n[i:i+32])
-                                 for i in range(0, len(n), 32))
-            if isinstance(n, dict):
-                # TODO: We should never use dict values.
-                return {id: to_yaml(value) for id, value in n.items()}
-            if isinstance(n, DataRecord):
-                return {type(n).__qualname__:
-                        {id: to_yaml(value) for id, value in n}}
-            assert 0, type(n)
+        return {id: convert(v) for id, v in self}
 
-        # TODO: pyaml seems to either not emit strings in blocks or
-        #       produce !!int kind of tags on every number.
-        #       Should we just generate the string outselves without
-        #       using pyyaml?
-        import yaml
-        return yaml.safe_dump(to_yaml(self), default_style='|').rstrip()
+    def dumps(self) -> str:
+        d = dict(type=type(self).__qualname__,
+                 creator_tool='https://pypi.org/project/zx',
+                 contents=self.to_json())
+        import json
+        return json.dumps(d, indent=2)
 
 
 class File(DataRecord):

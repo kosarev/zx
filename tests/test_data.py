@@ -12,7 +12,7 @@ def test_basic() -> None:
     rec = zx._data.DataRecord(a=5, b=7)
     assert (getattr(rec, 'a'), getattr(rec, 'b')) == (5, 7)
     assert list(rec) == [('a', 5), ('b', 7)]
-    assert 'DataRecord' in rec.dump()
+    assert 'DataRecord' in rec.dumps()
 
     # Create a file object.
     format = zx._data.FileFormat

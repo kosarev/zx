@@ -19,4 +19,4 @@ def test_basic() -> None:
     tuple(tap.get_pulses())
 
     # Dump.
-    assert 'TAPFile' in tap.dump()
+    assert 'TAPFile' in tap.dumps()

@@ -222,7 +222,7 @@ class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
         # Parse headers.
         parser = BinaryParser(image)
         fields: collections.OrderedDict[str, typing.Any] = (
-            collections.OrderedDict(id='z80_snapshot'))
+            collections.OrderedDict())
         fields.update(parser.parse(self._PRIMARY_HEADER))
 
         if fields['pc'] == 0:
