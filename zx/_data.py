@@ -35,7 +35,9 @@ class DataRecord(object):
             if isinstance(v, (int, str)):
                 return v
             if isinstance(v, bytes):
-                return v.decode('latin-1')
+                s = v.decode('latin-1')
+                a = [s[i:i+0x10] for i in range(0, len(v), 0x10)]
+                return a[0] if len(a) == 1 else a
             if isinstance(v, (tuple, list)):
                 return [convert(e) for e in v]
             if isinstance(v, dict):
