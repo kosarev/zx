@@ -14,6 +14,6 @@ from ._except import EmulationExit
 from ._except import EmulatorException
 from ._main import main
 
-__version__ = '0.9.0'
+__version__ = '0.10.0'
 
 __all__ = ['Emulator', 'main']
