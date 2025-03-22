@@ -37,7 +37,7 @@ zx_emulatorbase_module = Extension(
 # TODO: Do we have a name for the emulator?
 setup(name='zx',
       version=version,
-      description='ZX Spectrum Emulator for Researchers and Developers',
+      description='ZX Spectrum Emulator in Python and C++',
       long_description=long_description,
       long_description_content_type='text/markdown',
       author='Ivan Kosarev',

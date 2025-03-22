@@ -1,5 +1,5 @@
 # zx
-ZX Spectrum Emulator written in a mix of Python and C++.
+ZX Spectrum Emulator in Python and C++
 
 ![Python package CI](https://github.com/kosarev/zx/actions/workflows/python-package.yml/badge.svg)
 
