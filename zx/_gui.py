@@ -221,7 +221,7 @@ class ScreenWindow(Device):
 
     __events: list[DeviceEvent]
 
-    def __init__(self) -> None:
+    def __init__(self, frame_size: tuple[int, int]) -> None:
         super().__init__()
 
         self.__events = []
@@ -255,8 +255,7 @@ class ScreenWindow(Device):
         self._screencast = Screencast()
 
         # TODO: Hide members like this.
-        self.frame_width = 48 + 256 + 48
-        self.frame_height = 48 + 192 + 40
+        self.frame_width, self.frame_height = frame_size
 
         self.scale = 1 if SCREENCAST else 2
 

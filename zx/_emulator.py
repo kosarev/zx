@@ -60,6 +60,8 @@ class Profile(object):
 
 # TODO: Eliminate this class. Move everything to Spectrum48.
 class Emulator(Spectrum48):
+    FRAME_SIZE = 48 + 256 + 48, 48 + 192 + 40
+
     _SPIN_V0P5_INFO = {'id': 'info',
                        'creator': b'SPIN 0.5            ',
                        'creator_major_version': 0,
@@ -86,7 +88,7 @@ class Emulator(Spectrum48):
 
             # Don't even create the window on full throttle.
             if self.__speed_factor is not None:
-                devices.append(ScreenWindow())
+                devices.append(ScreenWindow(self.FRAME_SIZE))
 
         dispatcher = Dispatcher(devices)
 
