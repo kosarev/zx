@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import zx
 from ._binary import Bytes
 
 import typing
@@ -50,7 +51,7 @@ class DataRecord(object):
 
     def dumps(self) -> str:
         d = dict(type=type(self).__qualname__,
-                 creator_tool='https://pypi.org/project/zx',
+                 creator_tool=f'https://pypi.org/project/zx/{zx.__version__}',
                  contents=self.to_json())
         import json
         return json.dumps(d, indent=2)

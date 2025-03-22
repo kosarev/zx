@@ -6,12 +6,18 @@ import os
 from setuptools import Extension, setup
 
 
-ZX_MAJOR_VERSION = 0
-ZX_MINOR_VERSION = 9
-ZX_PATCH_VERSION = 0
-
-
 here = os.path.abspath(os.path.dirname(inspect.getsource(lambda: 0)))
+
+with open(os.path.join(here, 'zx/__init__.py')) as f:
+    s, = [s for s in f.readlines() if '__version__' in s]
+    s, eq, v = s.split()
+    assert s == '__version__' and eq == '='
+    assert v[0] == '\'' and v[-1] == '\''
+    v = v[1:-1].split('.')
+    ZX_MAJOR_VERSION = int(v[0])
+    ZX_MINOR_VERSION = int(v[1])
+    ZX_PATCH_VERSION = int(v[2])
+    version = f'{ZX_MAJOR_VERSION}.{ZX_MINOR_VERSION}.{ZX_PATCH_VERSION}'
 
 with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
@@ -19,9 +25,6 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
 
 zx_emulatorbase_module = Extension(
     name='zx._emulatorbase',
-    define_macros=[('ZX_MAJOR_VERSION', '%d' % ZX_MAJOR_VERSION),
-                   ('ZX_MINOR_VERSION', '%d' % ZX_MINOR_VERSION),
-                   ('ZX_PATCH_VERSION', '%d' % ZX_PATCH_VERSION)],
     extra_compile_args=['-std=c++11', '-Wall', '-fno-exceptions', '-fno-rtti',
                         '-O3',
                         '-UNDEBUG',  # TODO
@@ -33,8 +36,7 @@ zx_emulatorbase_module = Extension(
 # TODO: Update the URL once we have a published documentation.
 # TODO: Do we have a name for the emulator?
 setup(name='zx',
-      version='%d.%d.%d' % (ZX_MAJOR_VERSION, ZX_MINOR_VERSION,
-                            ZX_PATCH_VERSION),
+      version=version,
       description='ZX Spectrum Emulator for Researchers and Developers',
       long_description=long_description,
       long_description_content_type='text/markdown',
