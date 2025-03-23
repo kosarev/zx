@@ -96,8 +96,9 @@ class SoundFileFormat(FileFormat, name=None):
     def __init_subclass__(cls, *, name: str):
         super().__init_subclass__(name=name)
 
+    @classmethod
     def save_from_pulses(
-            self, filename: str,
+            cls, filename: str,
             pulses: typing.Iterable[tuple[bool, int,
                                           tuple[str, ...]]]) -> None:
         raise NotImplementedError

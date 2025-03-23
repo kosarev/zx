@@ -89,7 +89,8 @@ class WAVFileFormat(SoundFileFormat, name='WAV'):
                 num_frames=num_frames,
                 frames=f.readframes(num_frames))
 
-    def save_from_pulses(self, filename: str,
+    @classmethod
+    def save_from_pulses(cls, filename: str,
                          pulses: typing.Iterable[
                              tuple[bool, int, tuple[str, ...]]]) -> None:
         with wave.open(filename, 'wb') as f:
@@ -102,7 +103,7 @@ class WAVFileFormat(SoundFileFormat, name='WAV'):
             LOW = 0
             HIGH = 0xff
             for level, duration, tags in pulses:
-                duration = int(duration * frame_rate / self._TICKS_FREQ)
+                duration = int(duration * frame_rate / cls._TICKS_FREQ)
                 sample = HIGH if level else LOW
                 frame = bytes([sample])
                 f.writeframes(frame * duration)
