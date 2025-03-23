@@ -276,7 +276,8 @@ class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
     #       format and then generate its binary version.
     # TODO: Rename to to_bytes()? Snapshot is ambiguous in this context.
     #       Or just employ __bytes__()?
-    def make_snapshot(self, state) -> bytes:  # type: ignore[no-untyped-def]
+    @classmethod
+    def make_snapshot(cls, state) -> bytes:  # type: ignore[no-untyped-def]
         # TODO: The z80 format cannot represent processor states in
         #       the middle of IX- and IY-prefixed instructions, so
         #       such situations need some additional processing.
@@ -311,7 +312,7 @@ class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
         # TODO: Support other versions.
         writer = BinaryWriter()
         writer.write(
-            self._PRIMARY_HEADER,
+            cls._PRIMARY_HEADER,
             a=state.a, f=state.f, bc=state.bc,
             hl=state.hl, pc=state.pc, sp=state.sp,
             i=state.i, r=r, flags1=flags1, de=state.de,

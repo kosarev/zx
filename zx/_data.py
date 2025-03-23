@@ -108,7 +108,8 @@ class SnapshotFormat(FileFormat, name=None):
         super().__init_subclass__(name=name)
 
     # TODO: Should always return snapshots?
-    def make_snapshot(self, state: MachineState) -> bytes | MachineSnapshot:
+    @classmethod
+    def make_snapshot(cls, state: MachineState) -> bytes | MachineSnapshot:
         raise NotImplementedError
 
 

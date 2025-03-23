@@ -62,6 +62,7 @@ class SCRFileFormat(SnapshotFormat, name='SCR'):
         fields.update(parser.parse(cls._FIELDS))
         return _SCRSnapshot(SCRFileFormat, **fields)
 
-    def make_snapshot(self, state: MachineState) -> _SCRSnapshot:
+    @classmethod
+    def make_snapshot(cls, state: MachineState) -> _SCRSnapshot:
         screen = state.read(0x4000, 6 * 1024 + 768)
-        return self.parse('<filename>', screen)
+        return cls.parse('<filename>', screen)
