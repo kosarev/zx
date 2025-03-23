@@ -53,17 +53,19 @@ class TAPFile(SoundFile):
 
 
 class TAPFileFormat(SoundFileFormat, name='TAP'):
-    def _parse_block(self, parser: BinaryParser) -> Bytes:
+    @classmethod
+    def _parse_block(cls, parser: BinaryParser) -> Bytes:
         size = parser.parse_field('<H', 'block_size')
         assert isinstance(size, int)
         return parser.extract_block(size)
 
-    def parse(self, filename: str, image: Bytes) -> TAPFile:
+    @classmethod
+    def parse(cls, filename: str, image: Bytes) -> TAPFile:
         parser = BinaryParser(image)
 
         # Parse blocks.
         blocks = []
         while not parser.is_eof():
-            blocks.append(self._parse_block(parser))
+            blocks.append(cls._parse_block(parser))
 
         return TAPFile(blocks=blocks)

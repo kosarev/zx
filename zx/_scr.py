@@ -55,10 +55,11 @@ class _SCRSnapshot(MachineSnapshot):
 class SCRFileFormat(SnapshotFormat, name='SCR'):
     _FIELDS = ['6144s:dot_patterns', '768s:colour_attrs']
 
-    def parse(self, filename: str, image: Bytes) -> _SCRSnapshot:
+    @classmethod
+    def parse(cls, filename: str, image: Bytes) -> _SCRSnapshot:
         parser = BinaryParser(image)
         fields = collections.OrderedDict()
-        fields.update(parser.parse(self._FIELDS))
+        fields.update(parser.parse(cls._FIELDS))
         return _SCRSnapshot(SCRFileFormat, **fields)
 
     def make_snapshot(self, state: MachineState) -> _SCRSnapshot:

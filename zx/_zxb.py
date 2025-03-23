@@ -23,7 +23,8 @@ class ZXBasicCompilerProgram(File):
 
 
 class ZXBasicCompilerSourceFormat(FileFormat, name='ZXB'):
-    def parse(self, filename: str,
+    @classmethod
+    def parse(cls, filename: str,
               image: Bytes) -> ZXBasicCompilerProgram:
         try:
             import zxb  # type: ignore[import-not-found]

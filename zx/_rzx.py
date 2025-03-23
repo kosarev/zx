@@ -233,6 +233,7 @@ class RZXFile(File):
 
 
 class RZXFileFormat(FileFormat, name='RZX'):
-    def parse(self, filename: str, image: Bytes) -> RZXFile:
+    @classmethod
+    def parse(cls, filename: str, image: Bytes) -> RZXFile:
         recording = _parse_rzx(image)
         return RZXFile(format=RZXFileFormat, **recording)

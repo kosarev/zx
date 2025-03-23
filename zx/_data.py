@@ -73,7 +73,8 @@ class FileFormat(object):
         assert name is None or name.isupper()
         cls.NAME = name
 
-    def parse(self, filename: str, image: Bytes) -> File:
+    @classmethod
+    def parse(cls, filename: str, image: Bytes) -> File:
         raise NotImplementedError
 
 

@@ -78,7 +78,8 @@ class WAVFile(SoundFile):
 class WAVFileFormat(SoundFileFormat, name='WAV'):
     _TICKS_FREQ = 3500000  # TODO
 
-    def parse(self, filename: str, image: Bytes) -> WAVFile:
+    @classmethod
+    def parse(cls, filename: str, image: Bytes) -> WAVFile:
         with wave.open(io.BytesIO(image), 'rb') as f:
             num_frames = f.getnframes()
             return WAVFile(

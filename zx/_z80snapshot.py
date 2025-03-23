@@ -186,7 +186,8 @@ class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
 
     _RAW_MEMORY_BLOCK_SIZE_VALUE = 0xffff
 
-    def _uncompress(self, compressed_image: Bytes,
+    @classmethod
+    def _uncompress(cls, compressed_image: Bytes,
                     uncompressed_size: int) -> Bytes:
         MARKER = 0xed
         input = list(compressed_image)
@@ -205,39 +206,41 @@ class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
 
         return bytes(output)
 
-    def _parse_memory_block(self, parser: BinaryParser) -> (
+    @classmethod
+    def _parse_memory_block(cls, parser: BinaryParser) -> (
             collections.OrderedDict[str, typing.Any]):
         BLOCK_SIZE = 16 * 1024
-        fields = parser.parse(self._MEMORY_BLOCK_HEADER)
+        fields = parser.parse(cls._MEMORY_BLOCK_HEADER)
         compressed_size = fields['compressed_size']
-        if compressed_size == self._RAW_MEMORY_BLOCK_SIZE_VALUE:
+        if compressed_size == cls._RAW_MEMORY_BLOCK_SIZE_VALUE:
             raw_image = parser.extract_block(BLOCK_SIZE)
         else:
             compressed_image = parser.extract_block(compressed_size)
-            raw_image = self._uncompress(compressed_image, BLOCK_SIZE)
+            raw_image = cls._uncompress(compressed_image, BLOCK_SIZE)
         return collections.OrderedDict(page_no=fields['page_no'],
                                        image=raw_image)
 
-    def parse(self, filename: str, image: Bytes) -> Z80Snapshot:
+    @classmethod
+    def parse(cls, filename: str, image: Bytes) -> Z80Snapshot:
         # Parse headers.
         parser = BinaryParser(image)
         fields: collections.OrderedDict[str, typing.Any] = (
             collections.OrderedDict())
-        fields.update(parser.parse(self._PRIMARY_HEADER))
+        fields.update(parser.parse(cls._PRIMARY_HEADER))
 
         if fields['pc'] == 0:
-            fields.update(parser.parse(self._EXTRA_HEADERS_SIZE_FIELD))
+            fields.update(parser.parse(cls._EXTRA_HEADERS_SIZE_FIELD))
 
         if 'extra_headers_size' in fields:
             extra_headers = parser.extract_block(fields['extra_headers_size'])
             extra_parser = BinaryParser(extra_headers)
-            fields.update(extra_parser.parse(self._EXTRA_HEADER))
+            fields.update(extra_parser.parse(cls._EXTRA_HEADER))
 
             if extra_parser:
-                fields.update(extra_parser.parse(self._EXTRA_HEADER2))
+                fields.update(extra_parser.parse(cls._EXTRA_HEADER2))
 
             if extra_parser:
-                fields.update(extra_parser.parse(self._EXTRA_HEADER2b))
+                fields.update(extra_parser.parse(cls._EXTRA_HEADER2b))
 
             if extra_parser:
                 raise Error('Too many headers in Z80 snapshot.',
@@ -251,8 +254,8 @@ class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
                     raise Error('The snapshot is too large.')
                 image = parser.extract_rest()
             else:
-                image = self._uncompress(parser.extract_rest(),
-                                         48 * 1024 + 4)
+                image = cls._uncompress(parser.extract_rest(),
+                                        48 * 1024 + 4)
 
                 # Remove the terminator.
                 if image[48 * 1024:] != b'\x00\xed\xed\x00':
@@ -264,7 +267,7 @@ class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
         else:
             memory_blocks = fields.setdefault('memory_blocks', [])
             while parser:
-                block = self._parse_memory_block(parser)
+                block = cls._parse_memory_block(parser)
                 memory_blocks.append(block)
 
         return Z80Snapshot(Z80SnapshotFormat, **fields)
