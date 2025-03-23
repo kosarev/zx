@@ -67,16 +67,11 @@ class File(DataRecord):
 
 
 class FileFormat(object):
-    _NAME: None | str
+    NAME: None | str
 
     def __init_subclass__(cls, *, name: None | str):
         assert name is None or name.isupper()
-        cls._NAME = name
-
-    # TODO: Remove and make the attribute public.
-    def get_name(self) -> str:
-        assert self._NAME is not None
-        return self._NAME
+        cls.NAME = name
 
     def parse(self, filename: str, image: Bytes) -> File:
         raise NotImplementedError

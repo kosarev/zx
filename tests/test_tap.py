@@ -12,7 +12,7 @@ def test_basic() -> None:
     data = b'123'
     block = len(data).to_bytes(2, 'little') + data
     format = zx._tap.TAPFileFormat()
-    assert format._NAME == 'TAP'
+    assert format.NAME == 'TAP'
     tap = format.parse('file.tap', block)
 
     # Generate pulses.

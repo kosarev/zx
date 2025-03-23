@@ -17,7 +17,7 @@ def test_basic() -> None:
     wav_image = buff.getvalue()
 
     format = zx._wav.WAVFileFormat()
-    assert format._NAME == 'WAV'
+    assert format.NAME == 'WAV'
     wav = format.parse('x.wav', wav_image)
 
     # Dump.

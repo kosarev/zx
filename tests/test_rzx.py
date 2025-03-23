@@ -27,7 +27,7 @@ def test_basic() -> None:
 
     # Parse it back.
     format = zx._rzx.RZXFileFormat()
-    assert format._NAME == 'RZX'
+    assert format.NAME == 'RZX'
     rzx = format.parse('x.rzx', rzx_image)
 
     # Dump.

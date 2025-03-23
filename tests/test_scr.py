@@ -8,7 +8,7 @@ def test_basic() -> None:
     # Create a SCR snapshot.
     mach = zx.Emulator(speed_factor=None)
     format = zx._scr.SCRFileFormat()
-    assert format._NAME == 'SCR'
+    assert format.NAME == 'SCR'
     scr = format.make_snapshot(mach)
 
     # Dump.

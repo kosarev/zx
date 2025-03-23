@@ -213,8 +213,8 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
             return
 
     raise Error("Don't know how to convert from %s to %s files." % (
-                src_format().get_name(),
-                dest_format().get_name()))
+                src_format().NAME,
+                dest_format().NAME))
 
 
 def convert(args: list[str]) -> None:
