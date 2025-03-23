@@ -13,12 +13,12 @@ import typing
 import io
 import wave
 from ._binary import Bytes
-from ._data import SoundFile, SoundFileFormat
+from ._data import SoundFile
 from ._error import Error
 from ._tape import tag_last_pulse
 
 
-class WAVFile(SoundFile):
+class WAVFile(SoundFile, format_name='WAV'):
     __TICKS_FREQ = 3500000  # TODO
 
     sample_size: int
@@ -29,7 +29,7 @@ class WAVFile(SoundFile):
 
     def __init__(self, *, sample_size: int, num_channels: int, frame_rate: int,
                  num_frames: int, frames: Bytes) -> None:
-        SoundFile.__init__(self, WAVFileFormat, sample_size=sample_size,
+        SoundFile.__init__(self, sample_size=sample_size,
                            num_channels=num_channels, frame_rate=frame_rate,
                            num_frames=num_frames, frames=frames)
 
@@ -74,12 +74,10 @@ class WAVFile(SoundFile):
             typing.Iterable[tuple[bool, int, tuple[str, ...]]]):
         return tag_last_pulse(self._generate_pulses())
 
-
-class WAVFileFormat(SoundFileFormat, name='WAV'):
     _TICKS_FREQ = 3500000  # TODO
 
     @classmethod
-    def parse(cls, filename: str, image: Bytes) -> WAVFile:
+    def parse(cls, filename: str, image: Bytes) -> 'WAVFile':
         with wave.open(io.BytesIO(image), 'rb') as f:
             num_frames = f.getnframes()
             return WAVFile(

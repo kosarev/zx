@@ -8,7 +8,7 @@ def test_basic() -> None:
     # Create a simple RZX.
     mach = zx.Emulator(speed_factor=None)
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
-    snapshot = zx._z80snapshot.Z80SnapshotFormat().make_snapshot(mach)
+    snapshot = zx._z80snapshot.Z80Snapshot.make_snapshot(mach)
 
     rzx_image = zx._rzx.make_rzx({
         'id': 'input_recording',
@@ -26,8 +26,8 @@ def test_basic() -> None:
     })
 
     # Parse it back.
-    format = zx._rzx.RZXFileFormat()
-    assert format.NAME == 'RZX'
+    format = zx._rzx.RZXFile
+    assert format.FORMAT_NAME == 'RZX'
     rzx = format.parse('x.rzx', rzx_image)
 
     # Dump.

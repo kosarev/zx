@@ -17,7 +17,7 @@ from ._binary import Bytes
 from ._binary import BinaryParser, BinaryWriter
 from ._data import MachineSnapshot
 from ._data import ProcessorSnapshot
-from ._data import SnapshotFormat
+from ._data import SnapshotFile
 from ._data import UnifiedSnapshot
 from ._error import Error
 from ._utils import make16
@@ -39,7 +39,7 @@ def _get_format_version(
     return _V1_FORMAT
 
 
-class Z80Snapshot(MachineSnapshot):
+class Z80Snapshot(MachineSnapshot, format_name='Z80'):
     _MEMORY_PAGE_ADDRS = {4: 0x8000, 5: 0xc000, 8: 0x4000}
 
     a: int
@@ -153,11 +153,9 @@ class Z80Snapshot(MachineSnapshot):
                 image = block['image']
                 memory_blocks.append((self._MEMORY_PAGE_ADDRS[page_no], image))
 
-        return UnifiedSnapshot(Z80SnapshotFormat, **fields,
+        return UnifiedSnapshot(**fields,
                                memory_blocks=memory_blocks)
 
-
-class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
     _PRIMARY_HEADER = [
         'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',
         'B:flags1', '<H:de', '<H:alt_bc', '<H:alt_de', '<H:alt_hl',
@@ -221,7 +219,7 @@ class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
                                        image=raw_image)
 
     @classmethod
-    def parse(cls, filename: str, image: Bytes) -> Z80Snapshot:
+    def parse(cls, filename: str, image: Bytes) -> 'Z80Snapshot':
         # Parse headers.
         parser = BinaryParser(image)
         fields: collections.OrderedDict[str, typing.Any] = (
@@ -270,7 +268,7 @@ class Z80SnapshotFormat(SnapshotFormat, name='Z80'):
                 block = cls._parse_memory_block(parser)
                 memory_blocks.append(block)
 
-        return Z80Snapshot(Z80SnapshotFormat, **fields)
+        return Z80Snapshot(**fields)
 
     # TODO: Rework to generate an internal representation of the
     #       format and then generate its binary version.

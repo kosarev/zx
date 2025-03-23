@@ -14,11 +14,9 @@ import typing
 import collections
 import os
 import sys
-from ._data import ArchiveFileFormat
-from ._data import SnapshotFormat
-from ._data import SoundFileFormat
+from ._data import ArchiveFile
+from ._data import SnapshotFile
 from ._data import SoundFile
-from ._data import FileFormat
 from ._data import File
 from ._data import MachineSnapshot
 from ._emulator import Emulator
@@ -150,11 +148,11 @@ def fastforward(args: list[str]) -> None:
 
 
 def _convert_tape_to_snapshot(src: File, src_filename: str,
-                              src_format: type[FileFormat],
+                              src_format: type[File],
                               dest_filename: str,
-                              dest_format: type[FileFormat]) -> None:
-    assert issubclass(src_format, SoundFileFormat), src_format
-    assert issubclass(dest_format, SnapshotFormat), dest_format
+                              dest_format: type[File]) -> None:
+    assert issubclass(src_format, SoundFile), src_format
+    assert issubclass(dest_format, SnapshotFile), dest_format
 
     with Emulator(speed_factor=None) as app:
         app.load_tape(src_filename)
@@ -162,22 +160,22 @@ def _convert_tape_to_snapshot(src: File, src_filename: str,
 
 
 def _convert_tape_to_tape(src: File, src_filename: str,
-                          src_format: type[FileFormat],
+                          src_format: type[File],
                           dest_filename: str,
-                          dest_format: type[FileFormat]) -> None:
+                          dest_format: type[File]) -> None:
     assert isinstance(src, SoundFile)
-    assert issubclass(src_format, SoundFileFormat), src_format
-    assert issubclass(dest_format, SoundFileFormat), dest_format
-    dest_format().save_from_pulses(dest_filename, src.get_pulses())
+    assert issubclass(src_format, SoundFile), src_format
+    assert issubclass(dest_format, SoundFile), dest_format
+    dest_format.save_from_pulses(dest_filename, src.get_pulses())
 
 
 def _convert_snapshot_to_snapshot(src: File,
                                   src_filename: str,
-                                  src_format: type[FileFormat],
+                                  src_format: type[File],
                                   dest_filename: str,
-                                  dest_format: type[FileFormat]) -> None:
-    assert issubclass(src_format, SnapshotFormat), src_format
-    assert issubclass(dest_format, SnapshotFormat), dest_format
+                                  dest_format: type[File]) -> None:
+    assert issubclass(src_format, SnapshotFile), src_format
+    assert issubclass(dest_format, SnapshotFile), dest_format
 
     with Emulator(speed_factor=None) as app:
         app._load_file(src_filename)
@@ -186,7 +184,7 @@ def _convert_snapshot_to_snapshot(src: File,
 
 def convert_file(src_filename: str, dest_filename: str) -> None:
     src = parse_file(src_filename)
-    src_format = src.get_format()
+    src_format = type(src)
     # print(src, '->', dest_filename)
 
     _, dest_ext = os.path.splitext(dest_filename)
@@ -196,14 +194,14 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
                         dest_filename))
 
     CONVERTERS: list[tuple[
-            type[FileFormat], type[FileFormat],
-            typing.Callable[[File, str, type[FileFormat],
-                             str, type[FileFormat]], None]]] = [
-        (SoundFileFormat, SoundFileFormat,
+            type[File], type[File],
+            typing.Callable[[File, str, type[File],
+                             str, type[File]], None]]] = [
+        (SoundFile, SoundFile,
          _convert_tape_to_tape),
-        (SoundFileFormat, SnapshotFormat,
+        (SoundFile, SnapshotFile,
          _convert_tape_to_snapshot),
-        (SnapshotFormat, SnapshotFormat,
+        (SnapshotFile, SnapshotFile,
          _convert_snapshot_to_snapshot),
     ]
 
@@ -213,8 +211,8 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
             return
 
     raise Error("Don't know how to convert from %s to %s files." % (
-                src_format().NAME,
-                dest_format().NAME))
+                src_format.FORMAT_NAME,
+                dest_format.FORMAT_NAME))
 
 
 def convert(args: list[str]) -> None:

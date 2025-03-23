@@ -31,7 +31,7 @@ from ._except import EmulationExit, EmulatorException
 from ._keyboard import KEYS
 from ._rom import load_rom_image
 from ._utils import make16
-from ._z80snapshot import Z80SnapshotFormat
+from ._z80snapshot import Z80Snapshot
 
 
 class RunEvents(enum.IntFlag):
@@ -454,7 +454,7 @@ class Spectrum48(_Spectrum48Base, MachineState):  # type: ignore[misc]
         elif isinstance(event, LoadFile):
             self._load_file(event.filename)
         elif isinstance(event, SaveSnapshot):
-            self._save_snapshot_file(Z80SnapshotFormat, event.filename)
+            self._save_snapshot_file(Z80Snapshot, event.filename)
         elif isinstance(event, ToggleEmulationPause):
             self.paused ^= True
         elif isinstance(event, ToggleTapePause):

@@ -12,10 +12,8 @@
 import typing
 from ._binary import Bytes, BinaryParser, BinaryWriter
 from ._data import DataRecord
-from ._data import FileFormat
 from ._data import File
 from ._error import Error
-from ._z80snapshot import Z80SnapshotFormat
 from ._z80snapshot import Z80Snapshot
 
 
@@ -56,7 +54,7 @@ def parse_snapshot_block(image: Bytes) -> Z80Snapshot:
         raise Error('Unknown RZX snapshot format %r.' % filename_extension,
                     id='unknown_rzx_snapshot_format')
 
-    format = Z80SnapshotFormat()
+    format = Z80Snapshot
     return format.parse(filename_extension.decode(), snapshot_image)
 
 
@@ -225,15 +223,13 @@ def make_rzx(recording: dict[str, typing.Any]) -> Bytes:
     return writer.get_image()
 
 
-class RZXFile(File):
+class RZXFile(File, format_name='RZX'):
     chunks: list[dict[str, int | str | dict[str, tuple[int, list[int]]]]]
 
     def __init__(self, **recording: typing.Any) -> None:
         super().__init__(**recording)
 
-
-class RZXFileFormat(FileFormat, name='RZX'):
     @classmethod
-    def parse(cls, filename: str, image: Bytes) -> RZXFile:
+    def parse(cls, filename: str, image: Bytes) -> 'RZXFile':
         recording = _parse_rzx(image)
-        return RZXFile(format=RZXFileFormat, **recording)
+        return RZXFile(**recording)

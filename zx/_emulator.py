@@ -13,7 +13,7 @@
 import time
 import typing
 from ._data import MachineSnapshot
-from ._data import SnapshotFormat
+from ._data import SnapshotFile
 from ._data import SoundFile
 from ._device import Device
 from ._device import EndOfFrame
@@ -42,7 +42,7 @@ from ._rzx import RZXFile, make_rzx
 from ._scr import _SCRSnapshot
 from ._tape import TapePlayer
 from ._time import Time
-from ._z80snapshot import Z80SnapshotFormat
+from ._z80snapshot import Z80Snapshot
 from ._zxb import ZXBasicCompilerProgram
 
 
@@ -103,10 +103,10 @@ class Emulator(Spectrum48):
             self.set_breakpoints(0, 0x10000)
 
     # TODO: Double-underscore or make public.
-    def _save_snapshot_file(self, format: type[SnapshotFormat],
+    def _save_snapshot_file(self, format: type[SnapshotFile],
                             filename: str) -> None:
         with open(filename, 'wb') as f:
-            snapshot = format().make_snapshot(self)
+            snapshot = format.make_snapshot(self)
             # TODO: make_snapshot() shall always return a snapshot object.
             # TODO: Use isinstance? The whole SCR support needs rework?
             # if issubclass(type(snapshot), MachineSnapshot):
@@ -206,7 +206,7 @@ class Emulator(Spectrum48):
 
     def __save_crash_rzx(self, player: PlaybackPlayer, state: MachineState,
                          chunk_i: int, frame_i: int) -> None:
-        snapshot = Z80SnapshotFormat().make_snapshot(state)
+        snapshot = Z80Snapshot.make_snapshot(state)
 
         assert 0  # TODO
         crash_recording = {

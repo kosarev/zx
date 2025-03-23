@@ -14,11 +14,12 @@ import io
 import zipfile
 import zx
 from ._binary import Bytes
-from ._data import ArchiveFileFormat
+from ._data import ArchiveFile
 
 
-class ZIPFileFormat(ArchiveFileFormat, name='ZIP'):
-    def read_files(self, image: Bytes) -> (
+class ZIPFile(ArchiveFile, format_name='ZIP'):
+    @classmethod
+    def read_files(cls, image: Bytes) -> (
             typing.Iterable[tuple[str, Bytes]]):
         file = io.BytesIO(image)
         with zipfile.ZipFile(file, 'r') as zf:

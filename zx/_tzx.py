@@ -12,20 +12,19 @@
 import typing
 from ._binary import Bytes, BinaryParser
 from ._data import SoundFile
-from ._data import SoundFileFormat
 from ._error import Error
 from ._tape import (get_block_pulses, get_data_pulses, tag_last_pulse,
                     get_end_pulse)
 
 
-class TZXFile(SoundFile):
+class TZXFile(SoundFile, format_name='TZX'):
     _TICKS_FREQ = 3500000
 
     blocks: list[dict[str, typing.Any]]
 
     def __init__(self, *, major_revision: int, minor_revision: int,
                  blocks: list[dict[str, typing.Any]]) -> None:
-        SoundFile.__init__(self, TZXFileFormat,
+        SoundFile.__init__(self,
                            major_revision=major_revision,
                            minor_revision=minor_revision,
                            blocks=blocks)
@@ -110,8 +109,6 @@ class TZXFile(SoundFile):
     def get_pulses(self) -> typing.Iterable[tuple[bool, int, tuple[str, ...]]]:
         return tag_last_pulse(self._generate_pulses())
 
-
-class TZXFileFormat(SoundFileFormat, name='TZX'):
     @classmethod
     def _parse_standard_speed_data_block(
             cls, parser: BinaryParser) -> dict[str, typing.Any]:
@@ -241,7 +238,7 @@ class TZXFileFormat(SoundFileFormat, name='TZX'):
         return res
 
     @classmethod
-    def parse(cls, filename: str, image: Bytes) -> TZXFile:
+    def parse(cls, filename: str, image: Bytes) -> 'TZXFile':
         parser = BinaryParser(image)
 
         signature = parser.parse_field('8s', 'signature')

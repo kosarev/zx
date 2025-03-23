@@ -13,19 +13,16 @@ import os
 import tempfile
 from ._binary import Bytes
 from ._data import File
-from ._data import FileFormat
 from ._error import Error
 
 
-class ZXBasicCompilerProgram(File):
+class ZXBasicCompilerProgram(File, format_name='ZXB'):
     entry_point: int
     program_bytes: bytes
 
-
-class ZXBasicCompilerSourceFormat(FileFormat, name='ZXB'):
     @classmethod
     def parse(cls, filename: str,
-              image: Bytes) -> ZXBasicCompilerProgram:
+              image: Bytes) -> 'ZXBasicCompilerProgram':
         try:
             import zxb  # type: ignore[import-not-found]
         except ModuleNotFoundError:
@@ -51,4 +48,4 @@ class ZXBasicCompilerSourceFormat(FileFormat, name='ZXB'):
         fields['program_bytes'] = bytes(fields['program_bytes'])
         '''
 
-        return ZXBasicCompilerProgram(ZXBasicCompilerSourceFormat, **fields)
+        return ZXBasicCompilerProgram(**fields)

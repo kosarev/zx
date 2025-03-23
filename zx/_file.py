@@ -11,16 +11,16 @@
 import typing
 import os
 from ._binary import Bytes
-from ._data import ArchiveFileFormat, File, FileFormat
+from ._data import ArchiveFile, File
 from ._error import Error
-from ._rzx import RZXFileFormat
-from ._scr import SCRFileFormat
-from ._tap import TAPFileFormat
-from ._tzx import TZXFileFormat
-from ._wav import WAVFileFormat
-from ._z80snapshot import Z80SnapshotFormat
-from ._zip import ZIPFileFormat
-from ._zxb import ZXBasicCompilerSourceFormat
+from ._rzx import RZXFile
+from ._scr import _SCRSnapshot
+from ._tap import TAPFile
+from ._tzx import TZXFile
+from ._wav import WAVFile
+from ._z80snapshot import Z80Snapshot
+from ._zip import ZIPFile
+from ._zxb import ZXBasicCompilerProgram
 
 
 def _open_file_or_url(path: str) -> typing.Any:
@@ -43,16 +43,16 @@ def _open_file_or_url(path: str) -> typing.Any:
 
 
 def detect_file_format(image: None | bytes,
-                       filename_extension: str) -> None | type[FileFormat]:
+                       filename_extension: str) -> None | type[File]:
     KNOWN_FORMATS = [
-        ('.zxb', None, ZXBasicCompilerSourceFormat),
-        ('.rzx', b'RZX!', RZXFileFormat),
-        ('.scr', None, SCRFileFormat),
-        ('.tap', None, TAPFileFormat),
-        ('.tzx', b'ZXTape!', TZXFileFormat),
-        ('.wav', b'RIFF', WAVFileFormat),
-        ('.z80', None, Z80SnapshotFormat),
-        ('.zip', b'PK\x03\x04', ZIPFileFormat),
+        ('.zxb', None, ZXBasicCompilerProgram),
+        ('.rzx', b'RZX!', RZXFile),
+        ('.scr', None, _SCRSnapshot),
+        ('.tap', None, TAPFile),
+        ('.tzx', b'ZXTape!', TZXFile),
+        ('.wav', b'RIFF', WAVFile),
+        ('.z80', None, Z80Snapshot),
+        ('.zip', b'PK\x03\x04', ZIPFile),
     ]
 
     filename_extension = filename_extension.lower()
@@ -76,10 +76,10 @@ def detect_file_format(image: None | bytes,
     return None
 
 
-def _parse_archive(format: type[ArchiveFileFormat], image: Bytes) -> (
-        list[tuple[str, type[FileFormat], Bytes]]):
-    candidates: list[tuple[str, type[FileFormat], Bytes]] = []
-    for member_name, member_image in format().read_files(image):
+def _parse_archive(format: type[ArchiveFile], image: Bytes) -> (
+        list[tuple[str, type[File], Bytes]]):
+    candidates: list[tuple[str, type[File], Bytes]] = []
+    for member_name, member_image in format.read_files(image):
         base, ext = os.path.splitext(member_name)
         member_format = detect_file_format(member_image, ext)
 
@@ -87,7 +87,7 @@ def _parse_archive(format: type[ArchiveFileFormat], image: Bytes) -> (
             continue
 
         # Recursively parse member archives.
-        if issubclass(member_format, ArchiveFileFormat):
+        if issubclass(member_format, ArchiveFile):
             candidates.extend(_parse_archive(member_format, member_image))
             continue
 
@@ -102,7 +102,7 @@ def _parse_file_image(filename: str, image: Bytes) -> File:
     if not format:
         raise Error('Cannot determine the format of file %r.' % filename)
 
-    if issubclass(format, ArchiveFileFormat):
+    if issubclass(format, ArchiveFile):
         candidates = _parse_archive(format, image)
         if len(candidates) == 0:
             raise Error('No files of known formats in archive %r.' %
@@ -115,7 +115,7 @@ def _parse_file_image(filename: str, image: Bytes) -> File:
 
         filename, format, image = candidates[0]
 
-    return format().parse(filename, image)
+    return format.parse(filename, image)
 
 
 def parse_file(filename: str) -> File:

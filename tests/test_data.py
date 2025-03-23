@@ -15,8 +15,8 @@ def test_basic() -> None:
     assert 'DataRecord' in rec.dumps()
 
     # Create a file object.
-    format = zx._data.FileFormat
-    assert list(zx._data.File(format, x=9)) == [('x', 9)]
+    format = zx._data.File
+    assert list(zx._data.File(x=9)) == [('x', 9)]
 
     # Create a snapshot.
-    assert list(zx._data.MachineSnapshot(format)) == []
+    assert list(zx._data.MachineSnapshot()) == []

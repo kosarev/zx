@@ -58,43 +58,30 @@ class DataRecord(object):
 
 
 class File(DataRecord):
-    def __init__(self, format: type[FileFormat], **fields: typing.Any):
-        self._format = format
+    FORMAT_NAME: None | str
+
+    def __init_subclass__(cls, *, format_name: None | str):
+        assert format_name is None or format_name.isupper()
+        cls.FORMAT_NAME = format_name
+
+    def __init__(self, **fields: typing.Any):
         DataRecord.__init__(self, **fields)
 
-    def get_format(self) -> type[FileFormat]:
-        return self._format
-
-
-class FileFormat(object):
-    NAME: None | str
-
-    def __init_subclass__(cls, *, name: None | str):
-        assert name is None or name.isupper()
-        cls.NAME = name
-
     @classmethod
-    def parse(cls, filename: str, image: Bytes) -> File:
+    def parse(cls, filename: str, image: Bytes) -> 'File':
         raise NotImplementedError
 
 
-class ArchiveFileFormat(FileFormat, name=None):
-    def __init_subclass__(cls, *, name: str):
-        super().__init_subclass__(name=name)
-
-    def read_files(self, image: Bytes) -> (
+class ArchiveFile(File, format_name=None):
+    @classmethod
+    def read_files(cls, image: Bytes) -> (
             typing.Iterable[tuple[str, Bytes]]):
         raise NotImplementedError
 
 
-class SoundFile(File):
+class SoundFile(File, format_name=None):
     def get_pulses(self) -> typing.Iterable[tuple[bool, int, tuple[str, ...]]]:
         raise NotImplementedError
-
-
-class SoundFileFormat(FileFormat, name=None):
-    def __init_subclass__(cls, *, name: str):
-        super().__init_subclass__(name=name)
 
     @classmethod
     def save_from_pulses(
@@ -104,10 +91,7 @@ class SoundFileFormat(FileFormat, name=None):
         raise NotImplementedError
 
 
-class SnapshotFormat(FileFormat, name=None):
-    def __init_subclass__(cls, *, name: str):
-        super().__init_subclass__(name=name)
-
+class SnapshotFile(File, format_name=None):
     # TODO: Should always return snapshots?
     @classmethod
     def make_snapshot(cls, state: MachineState) -> bytes | MachineSnapshot:
@@ -115,7 +99,7 @@ class SnapshotFormat(FileFormat, name=None):
 
 
 # TODO: Not all machine snapshots are files?
-class MachineSnapshot(File):
+class MachineSnapshot(File, format_name=None):
     # TODO: Rename to to_unified_snapshot()?
     def get_unified_snapshot(self) -> UnifiedSnapshot:
         raise NotImplementedError
@@ -126,5 +110,5 @@ class ProcessorSnapshot(DataRecord):
     pass
 
 
-class UnifiedSnapshot(MachineSnapshot):
+class UnifiedSnapshot(MachineSnapshot, format_name=None):
     pass

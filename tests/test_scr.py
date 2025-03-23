@@ -7,8 +7,8 @@ import pytest
 def test_basic() -> None:
     # Create a SCR snapshot.
     mach = zx.Emulator(speed_factor=None)
-    format = zx._scr.SCRFileFormat()
-    assert format.NAME == 'SCR'
+    format = zx._scr._SCRSnapshot
+    assert format.FORMAT_NAME == 'SCR'
     scr = format.make_snapshot(mach)
 
     # Dump.
