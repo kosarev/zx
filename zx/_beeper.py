@@ -76,7 +76,8 @@ class Beeper(Device):
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
         if isinstance(event, HandlePortWrites):
-            self.__handle_port_writes(event.writes)
+            if not event.fast_forward:
+                self.__handle_port_writes(event.writes)
         elif isinstance(event, Destroy):
             self.__destroy()
 

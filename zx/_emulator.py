@@ -73,7 +73,7 @@ class Emulator(Spectrum48):
     __profile: None | Profile
     __playback_player: None | PlaybackPlayer
 
-    def __init__(self, speed_factor: None | float = 1.0,
+    def __init__(self, *, headless: bool = False,
                  profile: None | Profile = None,
                  devices: None | list[Device] = None):
         super().__init__()
@@ -81,7 +81,7 @@ class Emulator(Spectrum48):
         self.frame_count = 0
         # TODO: Double-underscore or make public.
         self._emulation_time = Time()
-        self.__speed_factor = speed_factor
+        self.__headless = headless
 
         self.__events_to_signal = RunEvents.NO_EVENTS
 
@@ -89,7 +89,7 @@ class Emulator(Spectrum48):
             devices = [self, TapePlayer(), Keyboard()]
 
             # Don't even create the window on full throttle.
-            if self.__speed_factor is not None:
+            if not headless:
                 devices.extend([ScreenWindow(self.FRAME_SIZE), Beeper()])
 
         dispatcher = Dispatcher(devices)
@@ -157,12 +157,12 @@ class Emulator(Spectrum48):
             for id in strokes:
                 # print(id)
                 self.devices.notify(KeyStroke(KEYS[id].ID, pressed=True))
-                self.run(duration=0.1, speed_factor=0)
+                self.run(duration=0.1, fast_forward=True)
 
             for id in reversed(strokes):
                 # print(id)
                 self.devices.notify(KeyStroke(KEYS[id].ID, pressed=False))
-                self.run(duration=0.1, speed_factor=0)
+                self.run(duration=0.1, fast_forward=True)
 
     def __on_input(self, addr: int) -> int | str:
         # Handle playbacks.
@@ -248,9 +248,8 @@ class Emulator(Spectrum48):
         self.suppress_interrupts = False
         self.allow_int_after_ei = False
 
-    def __run_quantum(self, speed_factor: None | float = None) -> None:
-        if speed_factor is None:
-            speed_factor = self.__speed_factor
+    def __run_quantum(self, fast_forward: bool = False) -> None:
+        fast_forward = fast_forward or self.__headless
 
         if self.__playback_player:
             creator_info = self.__playback_player.find_recording_info_chunk()
@@ -271,9 +270,11 @@ class Emulator(Spectrum48):
             '''
 
             if self.paused:
-                # Give the CPU some spare time.
-                if speed_factor:
-                    time.sleep((1 / 50) * speed_factor)
+                # Headless runs should never be paused.
+                assert not self.__headless
+
+                # Give the CPU some spare time if emulation is paused.
+                time.sleep(1 / 50)
                 return
 
             events = RunEvents(super().run())
@@ -306,9 +307,9 @@ class Emulator(Spectrum48):
                 pixels = self.get_frame_pixels()
                 self.devices.notify(ScreenUpdated(pixels))
 
-                if speed_factor:
-                    port_writes = self.get_port_writes()
-                    self.devices.notify(HandlePortWrites(port_writes))
+                port_writes = self.get_port_writes()
+                self.devices.notify(HandlePortWrites(
+                    port_writes, fast_forward=fast_forward))
 
                 self.devices.notify(EndOfFrame())
                 self.frame_count += 1
@@ -361,14 +362,14 @@ class Emulator(Spectrum48):
                 self.on_handle_active_int()
 
     def run(self, duration: None | float = None,
-            speed_factor: None | float = None) -> None:
+            fast_forward: bool = False) -> None:
         end_time = None
         if duration is not None:
             end_time = self._emulation_time.get() + duration
 
         while (end_time is None or
                self._emulation_time.get() < end_time):
-            self.__run_quantum(speed_factor=speed_factor)
+            self.__run_quantum(fast_forward=fast_forward)
 
     def __load_input_recording(self, file: RZXFile) -> None:
         self.__playback_player = PlaybackPlayer(self, file)
@@ -390,7 +391,7 @@ class Emulator(Spectrum48):
 
     def reset_and_wait(self) -> None:
         self.pc = 0x0000
-        self.run(duration=1.8, speed_factor=0)
+        self.run(duration=1.8, fast_forward=True)
 
     def __load_zx_basic_compiler_program(
             self, file: ZXBasicCompilerProgram) -> None:
@@ -426,9 +427,9 @@ class Emulator(Spectrum48):
             raise Error("Don't know how to load file %r." % filename)
 
     # TODO: Double-underscore or make public.
-    def _run_file(self, filename: str) -> None:
+    def _run_file(self, filename: str, *, fast_forward: bool = False) -> None:
         self._load_file(filename)
-        self.run()
+        self.run(fast_forward=fast_forward)
 
     def load_tape(self, filename: str) -> None:
         tape = parse_file(filename)
@@ -448,4 +449,4 @@ class Emulator(Spectrum48):
         # Wait till the end of the tape.
         self.__events_to_signal |= RunEvents.END_OF_TAPE
         while not self.__is_end_of_tape():
-            self.__run_quantum(speed_factor=0)
+            self.__run_quantum(fast_forward=True)

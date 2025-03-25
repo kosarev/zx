@@ -122,7 +122,7 @@ def test_file(filename: str) -> bool:
         os.rename(filename, dest_path)
         print('%r moved to %r' % (filename, dest_dir))
 
-    with Emulator(speed_factor=None) as app:
+    with Emulator(headless=True) as app:
         try:
             app._run_file(filename)
             move('passed')
@@ -141,10 +141,10 @@ def test(args: list[str]) -> None:
             break
 
 
-def fastforward(args: list[str]) -> None:
+def fast_forward(args: list[str]) -> None:
     for filename in args:
-        with Emulator(speed_factor=0) as app:
-            app._run_file(filename)
+        with Emulator() as app:
+            app._run_file(filename, fast_forward=True)
 
 
 def _convert_tape_to_snapshot(src: File, src_filename: str,
@@ -154,7 +154,7 @@ def _convert_tape_to_snapshot(src: File, src_filename: str,
     assert issubclass(src_format, SoundFile), src_format
     assert issubclass(dest_format, SnapshotFile), dest_format
 
-    with Emulator(speed_factor=None) as app:
+    with Emulator(headless=True) as app:
         app.load_tape(src_filename)
         app._save_snapshot_file(dest_format, dest_filename)
 
@@ -177,7 +177,7 @@ def _convert_snapshot_to_snapshot(src: File,
     assert issubclass(src_format, SnapshotFile), src_format
     assert issubclass(dest_format, SnapshotFile), dest_format
 
-    with Emulator(speed_factor=None) as app:
+    with Emulator(headless=True) as app:
         app._load_file(src_filename)
         app._save_snapshot_file(dest_format, dest_filename)
 
@@ -257,7 +257,7 @@ def handle_command_line(args: list[str]) -> None:
 
         # TODO: Hidden commands for internal use.
         '__test': test,
-        '__ff': fastforward,
+        '__ff': fast_forward,
     }
 
     if command not in COMMANDS:

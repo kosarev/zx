@@ -15,7 +15,7 @@
 import zx
 
 # Change to see the emulator screen.
-SHOW_SCREEN = False
+HEADLESS = True
 
 
 class DurationSet(object):
@@ -38,7 +38,7 @@ class DurationSet(object):
 
 class MySpectrum48(zx.Emulator):
     def __init__(self):
-        super().__init__(speed_factor=1 if SHOW_SCREEN else None)
+        super().__init__(headless=HEADLESS)
         self.set_on_output_callback(self.__on_output)
 
         self.__report = False

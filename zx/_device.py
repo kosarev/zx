@@ -87,8 +87,10 @@ class ReadPort(DeviceEvent):
 
 
 class HandlePortWrites(DeviceEvent):
-    def __init__(self, writes: numpy.typing.NDArray[numpy.uint64]):
+    def __init__(self, writes: numpy.typing.NDArray[numpy.uint64],
+                 *, fast_forward: bool = False):
         self.writes = writes
+        self.fast_forward = fast_forward
 
 
 class SaveSnapshot(DeviceEvent):

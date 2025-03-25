@@ -5,5 +5,5 @@ import zx
 
 def test_basic() -> None:
     # Create an emulator instance.
-    with zx.Emulator(speed_factor=None) as mach:
+    with zx.Emulator(headless=True) as mach:
         pass
