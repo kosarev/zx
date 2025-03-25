@@ -8,7 +8,6 @@
 #
 #   Published under the MIT license.
 
-import sounddevice  # type: ignore[import-untyped]
 import numpy
 
 import typing
@@ -23,6 +22,7 @@ class Beeper(Device):
     __OUTPUT_FREQ = 44100
 
     def __init__(self) -> None:
+        import sounddevice  # type: ignore[import-untyped]
         self.__start_level = numpy.float32(0)
         self.__start_tick = numpy.float32(0)
         self.__stream = sounddevice.OutputStream(channels=1,
