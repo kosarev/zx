@@ -98,6 +98,7 @@ class WAVFile(SoundFile, format_name='WAV'):
             frame_rate = 44100
             f.setframerate(frame_rate)
 
+            # TODO: Can be faster using numpy?
             LOW = 0
             HIGH = 0xff
             for level, duration, tags in pulses:
