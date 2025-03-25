@@ -12,6 +12,7 @@
 # TODO: Remove unused imports.
 import time
 import typing
+from ._beeper import Beeper
 from ._data import MachineSnapshot
 from ._data import SnapshotFile
 from ._data import SoundFile
@@ -26,6 +27,7 @@ from ._device import PauseStateUpdated
 from ._device import PauseUnpauseTape
 from ._device import QuantumRun
 from ._device import ReadPort
+from ._device import HandlePortWrites
 from ._device import ScreenUpdated
 from ._device import Dispatcher
 from ._error import Error
@@ -84,7 +86,7 @@ class Emulator(Spectrum48):
         self.__events_to_signal = RunEvents.NO_EVENTS
 
         if devices is None:
-            devices = [self, TapePlayer(), Keyboard()]
+            devices = [self, TapePlayer(), Keyboard(), Beeper()]
 
             # Don't even create the window on full throttle.
             if self.__speed_factor is not None:
@@ -297,17 +299,20 @@ class Emulator(Spectrum48):
                     self.pc = ret_addr
 
             if RunEvents.END_OF_FRAME in events:
+                # TODO: Can we translate the screen chunks into pixels
+                # on the Python side using numpy?
                 self.render_screen()
 
                 pixels = self.get_frame_pixels()
                 self.devices.notify(ScreenUpdated(pixels))
 
+                if speed_factor:
+                    port_writes = self.get_port_writes()
+                    self.devices.notify(HandlePortWrites(port_writes))
+
                 self.devices.notify(EndOfFrame())
                 self.frame_count += 1
                 self._emulation_time.advance(1 / 50)
-
-                if speed_factor:
-                    time.sleep((1 / 50) * speed_factor)
 
             if (self.__playback_player and
                     RunEvents.FETCHES_LIMIT_HIT in events):

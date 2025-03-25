@@ -49,6 +49,7 @@ setup(name='zx',
           'pycairo',
           'pygobject==3.50.0',
           'numpy',
+          'sounddevice',
       ],
       package_data={'zx': ['roms/*', 'py.typed']},
       entry_points={

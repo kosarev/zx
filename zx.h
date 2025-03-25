@@ -320,14 +320,23 @@ public:
     void on_output_cycle(fast_u16 addr, fast_u8 n) {
         self().on_output(addr, n);
 
+        ticks_type t = get_ticks();
         if((addr & 0xff) == 0xfe) {
             // TODO: Render to (current_tick + 1) and then update
             // the border color as the new value is sampled at
             // the 2nd tick of the output cycle.
             // TODO: The "+ 1" thing is still wrong as there may
             // be contentions in the middle.
-            render_screen_to_tick(get_ticks() + 1);
+            render_screen_to_tick(t + 1);
             border_color = n & 0x7;
+        }
+
+        if(num_port_writes < max_num_port_writes) {
+            uint_least64_t v = 0;
+            v |= static_cast<uint_least64_t>(addr) << 0;
+            v |= static_cast<uint_least64_t>(n) << 16;
+            v |= static_cast<uint_least64_t>(t) << 32;
+            port_writes[num_port_writes++] = v;
         }
 
         handle_port_contention(addr);
@@ -418,7 +427,18 @@ public:
 
     typedef frame_chunk screen_chunks_type[frame_height][chunks_per_frame_line];
 
-    const screen_chunks_type &get_screen_chunks() { return screen_chunks; }
+    const screen_chunks_type &get_screen_chunks() const {
+        return screen_chunks;
+    }
+
+    static const unsigned
+        ticks_per_shortest_out_instr = 11;  // OUT (n), A  f(4) r(3) o(4)
+    static const unsigned max_num_port_writes =
+        div_ceil<ticks_type>(ticks_per_frame, ticks_per_shortest_out_instr);
+    using port_writes_type = uint_least64_t[max_num_port_writes];
+
+    unsigned get_num_port_writes() const { return num_port_writes; }
+    const port_writes_type &get_port_writes() const { return port_writes; }
 
     // TODO: Name the constants.
     // TODO: private
@@ -429,6 +449,8 @@ public:
         ++frame_counter;
         if(frame_counter % 16 == 0)
             flash_mask ^= 0xffff;
+
+        num_port_writes = 0;
     }
 
     // TODO: private
@@ -782,6 +804,10 @@ protected:
 
 private:
     screen_chunks_type screen_chunks;
+
+    unsigned num_port_writes = 0;
+    port_writes_type port_writes;
+
     least_u8 memory_marks[memory_image_size] = {};
 };
 

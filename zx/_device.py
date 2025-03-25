@@ -10,6 +10,7 @@
 
 import typing
 import enum
+import numpy
 from ._data import SoundFile
 
 
@@ -83,6 +84,11 @@ class QuantumRun(DeviceEvent):
 class ReadPort(DeviceEvent):
     def __init__(self, addr: int):
         self.addr = addr
+
+
+class HandlePortWrites(DeviceEvent):
+    def __init__(self, writes: numpy.typing.NDArray[numpy.uint64]):
+        self.writes = writes
 
 
 class SaveSnapshot(DeviceEvent):
