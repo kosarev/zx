@@ -86,11 +86,11 @@ class Emulator(Spectrum48):
         self.__events_to_signal = RunEvents.NO_EVENTS
 
         if devices is None:
-            devices = [self, TapePlayer(), Keyboard(), Beeper()]
+            devices = [self, TapePlayer(), Keyboard()]
 
             # Don't even create the window on full throttle.
             if self.__speed_factor is not None:
-                devices.append(ScreenWindow(self.FRAME_SIZE))
+                devices.extend([ScreenWindow(self.FRAME_SIZE), Beeper()])
 
         dispatcher = Dispatcher(devices)
 
