@@ -73,11 +73,10 @@ class Beeper(Device):
             ticks = numpy.append(ticks, numpy.float32(TICKS_PER_FRAME - 1))
         assert ticks[0] == 0 and ticks[-1] == TICKS_PER_FRAME - 1
 
-        # Convert CPU ticks into sample indexes.
-        # TODO: Should we instead produce samples for the CPU ticks and
-        # then resample to the target sound frequency?
+        # Convert CPU ticks into an upscaled number of sample indexes.
+        N = 10
         FRAMES_PER_SEC = 50
-        SAMPLES_PER_FRAME = self.__OUTPUT_FREQ / FRAMES_PER_SEC
+        SAMPLES_PER_FRAME = self.__OUTPUT_FREQ * N / FRAMES_PER_SEC
         sample_indexes = ticks / (TICKS_PER_FRAME / SAMPLES_PER_FRAME)
         sample_indexes = (sample_indexes + 0.5).astype(numpy.int32)
 
@@ -86,6 +85,11 @@ class Beeper(Device):
 
         # Create an array of samples.
         samples = numpy.repeat(levels[:-1], counts)
+
+        # Downscale samples back to their intented rate by averaging
+        # adjacent samples. This helps removing high-frequency noise in
+        # some programs, e.g., the Wham! music editor.
+        samples = samples.reshape(-1, N).mean(axis=1)
 
         self.__stream.write(samples)
 
