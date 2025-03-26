@@ -23,8 +23,14 @@ class Beeper(Device):
 
     def __init__(self) -> None:
         import sounddevice  # type: ignore[import-untyped]
-        self.__start_level = numpy.float32(0)
-        self.__start_tick = numpy.float32(0)
+
+        # The last set sound level.
+        self.__current_level = numpy.float32(0)
+
+        # The last port write may happen beyond the end of the previous
+        # frame. When this happens, we store the carried out write here.
+        self.__carry_write: None | tuple[numpy.float32, numpy.float32] = None
+
         self.__stream = sounddevice.OutputStream(channels=1,
                                                  samplerate=self.__OUTPUT_FREQ,
                                                  dtype=numpy.float32)
@@ -45,14 +51,27 @@ class Beeper(Device):
         levels = ((writes >> (16 + EAR_BIT_POS)) & 0x1).astype(numpy.float32)
         ticks = (writes >> 32).astype(numpy.float32)
 
-        # Extend the levels and ticks to cover the whole frame.
+        # Apply the carry write, if any.
+        if self.__carry_write is not None:
+            tick, level = self.__carry_write
+            assert len(ticks) == 0 or tick < ticks[0]
+            levels = numpy.insert(levels, 0, level)
+            ticks = numpy.insert(ticks, 0, tick)
+            self.__carry_write = None
+
+        # Extend the levels and ticks to cover the frame exactly.
         TICKS_PER_FRAME = 69888  # TODO
-        if len(ticks) == 0 or ticks[0] > self.__start_tick:
-            levels = numpy.insert(levels, 0, self.__start_level)
-            ticks = numpy.insert(ticks, 0, self.__start_tick)
-        if ticks[-1] < TICKS_PER_FRAME:
+        if len(ticks) == 0 or ticks[0] > 0:
+            levels = numpy.insert(levels, 0, self.__current_level)
+            ticks = numpy.insert(ticks, 0, 0)
+        if ticks[-1] >= TICKS_PER_FRAME:
+            self.__carry_write = ticks[-1] - TICKS_PER_FRAME, levels[-1]
+            ticks = numpy.delete(ticks, -1)
+            levels = numpy.delete(levels, -1)
+        if ticks[-1] < TICKS_PER_FRAME - 1:
             levels = numpy.append(levels, levels[-1])
-            ticks = numpy.append(ticks, numpy.float32(TICKS_PER_FRAME))
+            ticks = numpy.append(ticks, numpy.float32(TICKS_PER_FRAME - 1))
+        assert ticks[0] == 0 and ticks[-1] == TICKS_PER_FRAME - 1
 
         # Convert CPU ticks into sample indexes.
         # TODO: Should we instead produce samples for the CPU ticks and
@@ -70,8 +89,7 @@ class Beeper(Device):
 
         self.__stream.write(samples)
 
-        self.__start_level = levels[-1]
-        self.__start_tick = ticks[-1] - TICKS_PER_FRAME
+        self.__current_level = levels[-1]
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
