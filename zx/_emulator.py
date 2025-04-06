@@ -27,7 +27,7 @@ from ._device import PauseStateUpdated
 from ._device import PauseUnpauseTape
 from ._device import QuantumRun
 from ._device import ReadPort
-from ._device import ScreenUpdated
+from ._device import EndOfFrame
 from ._device import Dispatcher
 from ._error import Error
 from ._except import EmulatorException
@@ -302,11 +302,8 @@ class Emulator(Spectrum48):
                 # TODO: Can we translate the screen chunks into pixels
                 # on the Python side using numpy?
                 self.render_screen()
-
-                pixels = self.get_frame_pixels()
-                self.devices.notify(ScreenUpdated(pixels))
-
                 self.devices.notify(EndOfFrame(
+                    pixels=self.get_frame_pixels(),
                     port_writes=self.get_port_writes(),
                     fast_forward=fast_forward))
                 self.frame_count += 1

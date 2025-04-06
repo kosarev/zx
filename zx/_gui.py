@@ -23,7 +23,7 @@ from ._device import LoadFile
 from ._device import PauseStateUpdated
 from ._device import QuantumRun
 from ._device import SaveSnapshot
-from ._device import ScreenUpdated
+from ._device import EndOfFrame
 from ._device import TapeStateUpdated
 from ._device import ToggleEmulationPause
 from ._device import ToggleTapePause
@@ -247,7 +247,7 @@ class ScreenWindow(Device):
             _KeyEvent: self.__on_key,
             PauseStateUpdated: self._on_updated_pause_state,
             QuantumRun: self._on_quantum_run,
-            ScreenUpdated: self._on_updated_screen,
+            EndOfFrame: self._on_end_of_frame,
             TapeStateUpdated: self._on_updated_tape_state,
         }
 
@@ -325,9 +325,9 @@ class ScreenWindow(Device):
         self._screencast.on_draw(context.get_group_target())
 
     # TODO: Rename devices -> dispatcher.
-    def _on_updated_screen(self, event: DeviceEvent,
-                           devices: Dispatcher) -> typing.Any:
-        assert isinstance(event, ScreenUpdated)
+    def _on_end_of_frame(self, event: DeviceEvent,
+                         devices: Dispatcher) -> typing.Any:
+        assert isinstance(event, EndOfFrame)
         self.frame_data[:] = event.pixels
         self.area.queue_draw()
 

@@ -23,8 +23,10 @@ class Destroy(DeviceEvent):
 
 
 class EndOfFrame(DeviceEvent):
-    def __init__(self, *, port_writes: numpy.typing.NDArray[numpy.uint64],
+    def __init__(self, *, pixels: bytes,
+                 port_writes: numpy.typing.NDArray[numpy.uint64],
                  fast_forward: bool = False):
+        self.pixels = pixels
         self.port_writes = port_writes
         self.fast_forward = fast_forward
 
@@ -92,11 +94,6 @@ class ReadPort(DeviceEvent):
 class SaveSnapshot(DeviceEvent):
     def __init__(self, filename: str):
         self.filename = filename
-
-
-class ScreenUpdated(DeviceEvent):
-    def __init__(self, pixels: bytes):
-        self.pixels = pixels
 
 
 class TapeStateUpdated(DeviceEvent):
