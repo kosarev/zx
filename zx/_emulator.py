@@ -27,7 +27,6 @@ from ._device import PauseStateUpdated
 from ._device import PauseUnpauseTape
 from ._device import QuantumRun
 from ._device import ReadPort
-from ._device import HandlePortWrites
 from ._device import ScreenUpdated
 from ._device import Dispatcher
 from ._error import Error
@@ -307,11 +306,9 @@ class Emulator(Spectrum48):
                 pixels = self.get_frame_pixels()
                 self.devices.notify(ScreenUpdated(pixels))
 
-                port_writes = self.get_port_writes()
-                self.devices.notify(HandlePortWrites(
-                    port_writes, fast_forward=fast_forward))
-
-                self.devices.notify(EndOfFrame())
+                self.devices.notify(EndOfFrame(
+                    port_writes=self.get_port_writes(),
+                    fast_forward=fast_forward))
                 self.frame_count += 1
                 self._emulation_time.advance(1 / 50)
 

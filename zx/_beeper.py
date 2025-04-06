@@ -14,7 +14,7 @@ import typing
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
-from ._device import HandlePortWrites
+from ._device import EndOfFrame
 from ._device import Destroy
 
 
@@ -97,9 +97,9 @@ class Beeper(Device):
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
-        if isinstance(event, HandlePortWrites):
+        if isinstance(event, EndOfFrame):
             if not event.fast_forward:
-                self.__handle_port_writes(event.writes)
+                self.__handle_port_writes(event.port_writes)
         elif isinstance(event, Destroy):
             self.__destroy()
 

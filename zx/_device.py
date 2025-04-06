@@ -23,7 +23,10 @@ class Destroy(DeviceEvent):
 
 
 class EndOfFrame(DeviceEvent):
-    pass
+    def __init__(self, *, port_writes: numpy.typing.NDArray[numpy.uint64],
+                 fast_forward: bool = False):
+        self.port_writes = port_writes
+        self.fast_forward = fast_forward
 
 
 class GetEmulationPauseState(DeviceEvent):
@@ -84,13 +87,6 @@ class QuantumRun(DeviceEvent):
 class ReadPort(DeviceEvent):
     def __init__(self, addr: int):
         self.addr = addr
-
-
-class HandlePortWrites(DeviceEvent):
-    def __init__(self, writes: numpy.typing.NDArray[numpy.uint64],
-                 *, fast_forward: bool = False):
-        self.writes = writes
-        self.fast_forward = fast_forward
 
 
 class SaveSnapshot(DeviceEvent):
