@@ -35,6 +35,7 @@ from ._time import get_elapsed_time, get_timestamp, Time
 from ._utils import div_ceil
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk  # type: ignore  # nopep8
+Gtk.init_check()
 
 
 SCREENCAST = False
