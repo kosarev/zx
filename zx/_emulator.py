@@ -72,9 +72,12 @@ class Emulator(Spectrum48):
     __profile: None | Profile
     __playback_player: None | PlaybackPlayer
 
-    def __init__(self, *, headless: bool = False,
-                 profile: None | Profile = None,
-                 devices: None | list[Device] = None):
+    def __init__(self, *,
+                 devices: list[Device] | None = None,
+                 keyboard: Device | None = None,
+                 screen: Device | None = None,
+                 headless: bool = False,
+                 profile: Profile | None = None):
         super().__init__()
 
         self.frame_count = 0
@@ -85,11 +88,14 @@ class Emulator(Spectrum48):
         self.__events_to_signal = RunEvents.NO_EVENTS
 
         if devices is None:
-            devices = [self, TapePlayer(), Keyboard()]
+            if keyboard is None:
+                keyboard = Keyboard()
+            if screen is None:
+                screen = ScreenWindow(self.FRAME_SIZE)
 
-            # Don't even create the window on full throttle.
+            devices = [self, TapePlayer(), keyboard]
             if not headless:
-                devices.extend([ScreenWindow(self.FRAME_SIZE), Beeper()])
+                devices.extend([screen, Beeper()])
 
         dispatcher = Dispatcher(devices)
 
