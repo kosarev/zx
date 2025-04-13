@@ -90,11 +90,13 @@ class Emulator(Spectrum48):
         if devices is None:
             if keyboard is None:
                 keyboard = Keyboard()
-            if screen is None:
-                screen = ScreenWindow(self.FRAME_SIZE)
 
             devices = [self, TapePlayer(), keyboard]
+
             if not headless:
+                if screen is None:
+                    screen = ScreenWindow(self.FRAME_SIZE)
+
                 devices.extend([screen, Beeper()])
 
         dispatcher = Dispatcher(devices)
