@@ -12,6 +12,7 @@ import typing
 import enum
 import numpy
 from ._data import SoundFile
+from ._pulses import Pulses
 
 
 class DeviceEvent(object):
@@ -23,11 +24,16 @@ class Destroy(DeviceEvent):
 
 
 class EndOfFrame(DeviceEvent):
-    def __init__(self, *, pixels: bytes,
-                 port_writes: numpy.typing.NDArray[numpy.uint64],
+    def __init__(self, *,
+                 port_writes: numpy.typing.NDArray[numpy.uint64]):
+        self.port_writes = port_writes
+
+
+class OutputFrame(DeviceEvent):
+    def __init__(self, *,
+                 pixels: bytes,
                  fast_forward: bool = False):
         self.pixels = pixels
-        self.port_writes = port_writes
         self.fast_forward = fast_forward
 
 
@@ -106,6 +112,11 @@ class ToggleEmulationPause(DeviceEvent):
 
 class ToggleTapePause(DeviceEvent):
     pass
+
+
+class NewSoundFrame(DeviceEvent):
+    def __init__(self, source: str, pulses: Pulses) -> None:
+        self.source, self.pulses = source, pulses
 
 
 class Device(object):

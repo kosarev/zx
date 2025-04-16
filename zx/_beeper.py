@@ -9,21 +9,18 @@
 #   Published under the MIT license.
 
 import numpy
-
 import typing
+
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EndOfFrame
-from ._device import Destroy
+from ._device import NewSoundFrame
+from ._pulses import Pulses
 
 
 class Beeper(Device):
-    __OUTPUT_FREQ = 44100
-
     def __init__(self) -> None:
-        import sounddevice  # type: ignore[import-untyped]
-
         # The last set sound level.
         self.__current_level = numpy.float32(0)
 
@@ -31,16 +28,9 @@ class Beeper(Device):
         # frame. When this happens, we store the carried out write here.
         self.__carry_write: None | tuple[numpy.float32, numpy.float32] = None
 
-        self.__stream = sounddevice.OutputStream(channels=1,
-                                                 samplerate=self.__OUTPUT_FREQ,
-                                                 dtype=numpy.float32)
-        self.__stream.start()
-
-    def __destroy(self) -> None:
-        self.__stream.close()
-
     def __handle_port_writes(
-            self, writes: numpy.typing.NDArray[numpy.uint64]) -> None:
+            self, writes: numpy.typing.NDArray[numpy.uint64],
+            dispatcher: Dispatcher) -> None:
         # Filter writes to the 0xfe port.
         writes = numpy.frombuffer(writes, dtype=numpy.uint64)
         writes = writes[writes & 0xff == 0xfe]
@@ -48,8 +38,8 @@ class Beeper(Device):
         # Get EAR levels and their corresponding ticks.
         # TODO: Factor in EAR levels as well.
         EAR_BIT_POS = 4
-        levels = ((writes >> (16 + EAR_BIT_POS)) & 0x1).astype(numpy.float32)
-        ticks = (writes >> 32).astype(numpy.float32)
+        levels = ((writes >> (16 + EAR_BIT_POS)) & 0x1).astype(numpy.uint32)
+        ticks = (writes >> 32).astype(numpy.uint32)
 
         # Apply the carry write, if any.
         if self.__carry_write is not None:
@@ -70,37 +60,19 @@ class Beeper(Device):
             levels = numpy.delete(levels, -1)
         if ticks[-1] < TICKS_PER_FRAME - 1:
             levels = numpy.append(levels, levels[-1])
-            ticks = numpy.append(ticks, numpy.float32(TICKS_PER_FRAME - 1))
+            ticks = numpy.append(ticks, TICKS_PER_FRAME - 1)
         assert ticks[0] == 0 and ticks[-1] == TICKS_PER_FRAME - 1
 
-        # Convert CPU ticks into an upscaled number of sample indexes.
-        N = 10
-        FRAMES_PER_SEC = 50
-        SAMPLES_PER_FRAME = self.__OUTPUT_FREQ * N / FRAMES_PER_SEC
-        sample_indexes = ticks / (TICKS_PER_FRAME / SAMPLES_PER_FRAME)
-        sample_indexes = (sample_indexes + 0.5).astype(numpy.int32)
-
-        # Compute intervals between the samples, in ticks.
-        counts = numpy.diff(sample_indexes)
-
-        # Create an array of samples.
-        samples = numpy.repeat(levels[:-1], counts)
-
-        # Downscale samples back to their intented rate by averaging
-        # adjacent samples. This helps removing high-frequency noise in
-        # some programs, e.g., the Wham! music editor.
-        samples = samples.reshape(-1, N).mean(axis=1)
-
-        self.__stream.write(samples)
+        FRAMES_PER_SEC = 50  # TODO
+        rate = TICKS_PER_FRAME * FRAMES_PER_SEC
+        pulses = Pulses(rate, levels, ticks)
+        dispatcher.notify(NewSoundFrame('beeper', pulses))
 
         self.__current_level = levels[-1]
 
-    def on_event(self, event: DeviceEvent, devices: Dispatcher,
+    def on_event(self, event: DeviceEvent, dispatcher: Dispatcher,
                  result: typing.Any) -> typing.Any:
         if isinstance(event, EndOfFrame):
-            if not event.fast_forward:
-                self.__handle_port_writes(event.port_writes)
-        elif isinstance(event, Destroy):
-            self.__destroy()
+            self.__handle_port_writes(event.port_writes, dispatcher)
 
         return result

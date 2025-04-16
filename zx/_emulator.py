@@ -18,6 +18,7 @@ from ._data import SnapshotFile
 from ._data import SoundFile
 from ._device import Device
 from ._device import EndOfFrame
+from ._device import OutputFrame
 from ._device import GetTapeLevel
 from ._device import IsTapePlayerPaused
 from ._device import IsTapePlayerStopped
@@ -41,6 +42,7 @@ from ._machine import Spectrum48
 from ._playback import PlaybackPlayer
 from ._rzx import RZXFile, make_rzx
 from ._scr import _SCRSnapshot
+from ._sound import SoundDevice
 from ._tape import TapePlayer
 from ._time import Time
 from ._z80snapshot import Z80Snapshot
@@ -73,10 +75,12 @@ class Emulator(Spectrum48):
     __playback_player: None | PlaybackPlayer
 
     def __init__(self, *,
-                 devices: list[Device] | None = None,
-                 keyboard: Device | None = None,
                  screen: Device | None = None,
+                 keyboard: Device | None = None,
+                 beeper: Device | None = None,
+                 sound_device: Device | None = None,
                  headless: bool = False,
+                 devices: list[Device] | None = None,
                  profile: Profile | None = None):
         super().__init__()
 
@@ -90,14 +94,18 @@ class Emulator(Spectrum48):
         if devices is None:
             if keyboard is None:
                 keyboard = Keyboard()
+            if beeper is None:
+                beeper = Beeper()
 
-            devices = [self, TapePlayer(), keyboard]
+            devices = [self, TapePlayer(), keyboard, beeper]
 
             if not headless:
                 if screen is None:
                     screen = ScreenWindow(self.FRAME_SIZE)
+                if sound_device is None:
+                    sound_device = SoundDevice()
 
-                devices.extend([screen, Beeper()])
+                devices.extend([screen, sound_device])
 
         dispatcher = Dispatcher(devices)
 
@@ -311,8 +319,9 @@ class Emulator(Spectrum48):
                 # on the Python side using numpy?
                 self.render_screen()
                 self.devices.notify(EndOfFrame(
+                    port_writes=self.get_port_writes()))
+                self.devices.notify(OutputFrame(
                     pixels=self.get_frame_pixels(),
-                    port_writes=self.get_port_writes(),
                     fast_forward=fast_forward))
                 self.frame_count += 1
                 self._emulation_time.advance(1 / 50)
