@@ -24,7 +24,7 @@ ZX Spectrum Emulator in Python and C++
 * Supported machines: 48K only for now.
 * Display: multi-colour effects,
   [accurate timings](https://github.com/kosarev/zx/blob/master/test/screen_timing/SCREEN_TIMING.md).
-* Sound: EAR beeper supported.
+* Sound: EAR beeper and tape output supported.
 * Tape: TAP and TZX formats supported as well as conversion to WAV.
 * Snapshots: Z80.
 * Playback recordings: RZX.

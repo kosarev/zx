@@ -9,7 +9,9 @@
 #   Published under the MIT license.
 
 
+import numpy
 import typing
+
 from ._binary import Bytes
 from ._data import SoundFile
 from ._device import Device
@@ -23,6 +25,8 @@ from ._device import IsTapePlayerStopped
 from ._device import LoadTape
 from ._device import PauseUnpauseTape
 from ._device import TapeStateUpdated
+from ._device import NewSoundFrame
+from ._sound import PulseStream
 from ._time import Time
 
 
@@ -117,6 +121,8 @@ class TapePlayer(Device):
         self._pulse = 0
         self._ticks_per_frame = 69888  # TODO
         self._time = Time()
+        self.__audible_output = PulseStream()
+        self.__audible_pulses: list[tuple[int, int]] = []
 
     def is_paused(self) -> bool:
         return self._is_paused
@@ -158,6 +164,8 @@ class TapePlayer(Device):
 
             # See if we already have a non-zero-length pulse.
             if self._pulse:
+                self.__audible_pulses.append((self._level, self._tick))
+
                 ticks_to_skip = min(self._pulse, target_tick - self._tick)
                 self._pulse -= ticks_to_skip
                 self._tick += ticks_to_skip
@@ -190,17 +198,26 @@ class TapePlayer(Device):
 
         return self._level
 
-    def skip_rest_of_frame(self) -> None:
+    def __complete_frame(self, dispatcher: Dispatcher) -> None:
         if self._tick < self._ticks_per_frame:
             self.get_level_at_frame_tick(self._ticks_per_frame - 1)
 
         assert self._tick >= self._ticks_per_frame
         self._tick -= self._ticks_per_frame
 
-    def on_event(self, event: DeviceEvent, devices: Dispatcher,
+        # Play the tape sound for the user.
+        levels, ticks = (zip(*self.__audible_pulses)
+                         if len(self.__audible_pulses) != 0 else ([], []))
+        pulses = self.__audible_output.stream_frame(
+            numpy.array(levels, dtype=numpy.uint32),
+            numpy.array(ticks, dtype=numpy.uint32))
+        dispatcher.notify(NewSoundFrame('tape', pulses))
+        self.__audible_pulses = []
+
+    def on_event(self, event: DeviceEvent, dispatcher: Dispatcher,
                  result: typing.Any) -> typing.Any:
         if isinstance(event, EndOfFrame):
-            self.skip_rest_of_frame()
+            self.__complete_frame(dispatcher)
         elif isinstance(event, GetTapePlayerTime):
             return self.get_time()
         elif isinstance(event, GetTapeLevel):
@@ -215,6 +232,6 @@ class TapePlayer(Device):
             self.pause(event.pause)
 
             # TODO: Only notify if the state is actually changed.
-            devices.notify(TapeStateUpdated())
+            dispatcher.notify(TapeStateUpdated())
 
         return result

@@ -125,8 +125,10 @@ class SoundDevice(Device):
     def __mix_channels(
             self, samples: list[numpy.typing.NDArray[numpy.float32]]) -> (
                 numpy.typing.NDArray[numpy.float32]):
-        assert len(samples) == 1, 'TODO: Support mixing multiple channels!'
-        return samples[0]
+        assert len(samples) > 0, 'TODO: Support having no sound channels!'
+        mixed: numpy.typing.NDArray[numpy.float32] = (
+            numpy.sum(samples, axis=0) / len(samples))
+        return mixed
 
     def __output_frame(self) -> None:
         samples = [self.__generate_samples(e) for e in self.__frame_events]
