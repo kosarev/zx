@@ -145,16 +145,20 @@ class TapePlayer(Device):
         self.load_parsed_file(file)
 
     def get_level_at_frame_tick(self, tick: int) -> bool:
-        assert self._tick <= tick, (self._tick, tick)
+        assert tick >= self._tick, (self._tick, tick)
 
-        while self._tick < tick:
+        # Get through the series of levels until we get the one at the
+        # requested tick, which is when we are at the tick immediately
+        # following it.
+        target_tick = tick + 1
+        while self._tick != target_tick:
             if self._is_paused:
-                self._tick = tick
+                self._tick = target_tick
                 continue
 
             # See if we already have a non-zero-length pulse.
             if self._pulse:
-                ticks_to_skip = min(self._pulse, tick - self._tick)
+                ticks_to_skip = min(self._pulse, target_tick - self._tick)
                 self._pulse -= ticks_to_skip
                 self._tick += ticks_to_skip
                 self._time.advance(ticks_to_skip /
@@ -182,13 +186,13 @@ class TapePlayer(Device):
             # Do nothing, if there are no more pulses available.
             self._pulses = None
             self._level = False
-            self._tick = tick
+            self._tick = target_tick
 
         return self._level
 
     def skip_rest_of_frame(self) -> None:
         if self._tick < self._ticks_per_frame:
-            self.get_level_at_frame_tick(self._ticks_per_frame)
+            self.get_level_at_frame_tick(self._ticks_per_frame - 1)
 
         assert self._tick >= self._ticks_per_frame
         self._tick -= self._ticks_per_frame
