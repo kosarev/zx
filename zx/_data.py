@@ -10,7 +10,9 @@
 
 from __future__ import annotations
 
+import numpy
 import zx
+
 from ._binary import Bytes
 
 import typing
@@ -77,6 +79,15 @@ class ArchiveFile(File, format_name=None):
     def read_files(cls, image: Bytes) -> (
             typing.Iterable[tuple[str, Bytes]]):
         raise NotImplementedError
+
+
+# TODO: Should derive from DataRecord?
+class SoundPulses(object):
+    def __init__(self, rate: int,
+                 levels: numpy.typing.NDArray[numpy.uint32],
+                 ticks: numpy.typing.NDArray[numpy.uint32]) -> None:
+        assert len(levels) == len(ticks)
+        self.rate, self.levels, self.ticks = rate, levels, ticks
 
 
 class SoundFile(File, format_name=None):

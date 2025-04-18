@@ -12,7 +12,7 @@ import typing
 import enum
 import numpy
 from ._data import SoundFile
-from ._pulses import Pulses
+from ._data import SoundPulses
 
 
 class DeviceEvent(object):
@@ -115,7 +115,7 @@ class ToggleTapePause(DeviceEvent):
 
 
 class NewSoundFrame(DeviceEvent):
-    def __init__(self, source: str, pulses: Pulses) -> None:
+    def __init__(self, source: str, pulses: SoundPulses) -> None:
         self.source, self.pulses = source, pulses
 
 
