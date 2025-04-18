@@ -31,8 +31,8 @@ class Beeper(Device):
         writes = writes[writes & 0xff == 0xfe]
 
         # Get EAR levels and their corresponding ticks.
-        EAR_BIT_POS = 4
-        levels = ((writes >> (16 + EAR_BIT_POS)) & 0x1).astype(numpy.uint32)
+        EAR_BIT_POS = 16 + 4
+        levels = ((writes >> EAR_BIT_POS) & 0x1).astype(numpy.uint32)
         ticks = (writes >> 32).astype(numpy.uint32)
 
         pulses = self.__stream.stream_frame(levels, ticks)
