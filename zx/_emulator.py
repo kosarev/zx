@@ -47,6 +47,7 @@ from ._tape import TapePlayer
 from ._time import Time
 from ._z80snapshot import Z80Snapshot
 from ._zxb import ZXBasicCompilerProgram
+from ._gamepad import Gamepad
 
 
 # Stores information about the running code.
@@ -105,7 +106,7 @@ class Emulator(Spectrum48):
                 if sound_device is None:
                     sound_device = SoundDevice()
 
-                devices.extend([screen, sound_device])
+                devices.extend([screen, sound_device, Gamepad()])
 
         dispatcher = Dispatcher(devices)
 

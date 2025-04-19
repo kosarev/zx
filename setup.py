@@ -50,6 +50,7 @@ setup(name='zx',
           'pygobject==3.50.0',
           'numpy',
           'sounddevice',
+          'evdev; platform_system=="Linux"',
       ],
       package_data={'zx': ['roms/*', 'py.typed']},
       entry_points={
