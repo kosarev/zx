@@ -211,7 +211,7 @@ class TapePlayer(Device):
         pulses = self.__audible_output.stream_frame(
             numpy.array(levels, dtype=numpy.uint32),
             numpy.array(ticks, dtype=numpy.uint32))
-        dispatcher.notify(NewSoundFrame('tape', pulses))
+        dispatcher.notify(NewSoundFrame(pulses))
         self.__audible_pulses = []
 
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher,

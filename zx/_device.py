@@ -115,8 +115,8 @@ class ToggleTapePause(DeviceEvent):
 
 
 class NewSoundFrame(DeviceEvent):
-    def __init__(self, source: str, pulses: SoundPulses) -> None:
-        self.source, self.pulses = source, pulses
+    def __init__(self, pulses: SoundPulses) -> None:
+        self.pulses = pulses
 
 
 class Device(object):

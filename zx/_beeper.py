@@ -36,7 +36,7 @@ class Beeper(Device):
         ticks = (writes >> 32).astype(numpy.uint32)
 
         pulses = self.__stream.stream_frame(levels, ticks)
-        dispatcher.notify(NewSoundFrame('beeper', pulses))
+        dispatcher.notify(NewSoundFrame(pulses))
 
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher,
                  result: typing.Any) -> typing.Any:
