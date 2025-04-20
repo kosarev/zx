@@ -12,7 +12,6 @@
 import typing
 from ._binary import Bytes, BinaryParser, BinaryWriter
 from ._data import DataRecord
-from ._data import File
 from ._error import Error
 from ._z80snapshot import Z80Snapshot
 
@@ -223,7 +222,7 @@ def make_rzx(recording: dict[str, typing.Any]) -> Bytes:
     return writer.get_image()
 
 
-class RZXFile(File, format_name='RZX'):
+class RZXFile(DataRecord, format_name='RZX'):
     chunks: list[dict[str, int | str | dict[str, tuple[int, list[int]]]]]
 
     def __init__(self, **recording: typing.Any) -> None:

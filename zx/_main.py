@@ -17,7 +17,7 @@ import sys
 from ._data import ArchiveFile
 from ._data import SnapshotFile
 from ._data import SoundFile
-from ._data import File
+from ._data import DataRecord
 from ._data import MachineSnapshot
 from ._emulator import Emulator
 from ._emulator import Profile
@@ -147,10 +147,10 @@ def fast_forward(args: list[str]) -> None:
             app._run_file(filename, fast_forward=True)
 
 
-def _convert_tape_to_snapshot(src: File, src_filename: str,
-                              src_format: type[File],
+def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
+                              src_format: type[DataRecord],
                               dest_filename: str,
-                              dest_format: type[File]) -> None:
+                              dest_format: type[DataRecord]) -> None:
     assert issubclass(src_format, SoundFile), src_format
     assert issubclass(dest_format, SnapshotFile), dest_format
 
@@ -159,21 +159,21 @@ def _convert_tape_to_snapshot(src: File, src_filename: str,
         app._save_snapshot_file(dest_format, dest_filename)
 
 
-def _convert_tape_to_tape(src: File, src_filename: str,
-                          src_format: type[File],
+def _convert_tape_to_tape(src: DataRecord, src_filename: str,
+                          src_format: type[DataRecord],
                           dest_filename: str,
-                          dest_format: type[File]) -> None:
+                          dest_format: type[DataRecord]) -> None:
     assert isinstance(src, SoundFile)
     assert issubclass(src_format, SoundFile), src_format
     assert issubclass(dest_format, SoundFile), dest_format
     dest_format.save_from_pulses(dest_filename, src.get_pulses())
 
 
-def _convert_snapshot_to_snapshot(src: File,
+def _convert_snapshot_to_snapshot(src: DataRecord,
                                   src_filename: str,
-                                  src_format: type[File],
+                                  src_format: type[DataRecord],
                                   dest_filename: str,
-                                  dest_format: type[File]) -> None:
+                                  dest_format: type[DataRecord]) -> None:
     assert issubclass(src_format, SnapshotFile), src_format
     assert issubclass(dest_format, SnapshotFile), dest_format
 
@@ -194,9 +194,9 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
                         dest_filename))
 
     CONVERTERS: list[tuple[
-            type[File], type[File],
-            typing.Callable[[File, str, type[File],
-                             str, type[File]], None]]] = [
+            type[DataRecord], type[DataRecord],
+            typing.Callable[[DataRecord, str, type[DataRecord],
+                             str, type[DataRecord]], None]]] = [
         (SoundFile, SoundFile,
          _convert_tape_to_tape),
         (SoundFile, SnapshotFile,

@@ -11,7 +11,7 @@
 import typing
 import os
 from ._binary import Bytes
-from ._data import ArchiveFile, File
+from ._data import ArchiveFile, DataRecord
 from ._error import Error
 from ._rzx import RZXFile
 from ._scr import _SCRSnapshot
@@ -43,7 +43,7 @@ def _open_file_or_url(path: str) -> typing.Any:
 
 
 def detect_file_format(image: None | bytes,
-                       filename_extension: str) -> None | type[File]:
+                       filename_extension: str) -> None | type[DataRecord]:
     KNOWN_FORMATS = [
         ('.zxb', None, ZXBasicCompilerProgram),
         ('.rzx', b'RZX!', RZXFile),
@@ -77,8 +77,8 @@ def detect_file_format(image: None | bytes,
 
 
 def _parse_archive(format: type[ArchiveFile], image: Bytes) -> (
-        list[tuple[str, type[File], Bytes]]):
-    candidates: list[tuple[str, type[File], Bytes]] = []
+        list[tuple[str, type[DataRecord], Bytes]]):
+    candidates: list[tuple[str, type[DataRecord], Bytes]] = []
     for member_name, member_image in format.read_files(image):
         base, ext = os.path.splitext(member_name)
         member_format = detect_file_format(member_image, ext)
@@ -96,7 +96,7 @@ def _parse_archive(format: type[ArchiveFile], image: Bytes) -> (
     return candidates
 
 
-def _parse_file_image(filename: str, image: Bytes) -> File:
+def _parse_file_image(filename: str, image: Bytes) -> DataRecord:
     base, ext = os.path.splitext(filename)
     format = detect_file_format(image, ext)
     if not format:
@@ -118,7 +118,7 @@ def _parse_file_image(filename: str, image: Bytes) -> File:
     return format.parse(filename, image)
 
 
-def parse_file(filename: str) -> File:
+def parse_file(filename: str) -> DataRecord:
     with _open_file_or_url(filename) as f:
         image = f.read()
 

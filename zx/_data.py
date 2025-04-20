@@ -21,6 +21,12 @@ if typing.TYPE_CHECKING:  # TODO
 
 
 class DataRecord(object):
+    FORMAT_NAME: None | str
+
+    def __init_subclass__(cls, *, format_name: None | str):
+        assert format_name is None or format_name.isupper()
+        cls.FORMAT_NAME = format_name
+
     def __init__(self, **fields: typing.Any):
         self.__fields = tuple(fields)
         for id, value in fields.items():
@@ -32,6 +38,11 @@ class DataRecord(object):
     def __iter__(self) -> typing.Iterator[tuple[str, typing.Any]]:
         for id in self.__fields:
             yield id, getattr(self, id)
+
+    @classmethod
+    def parse(cls, filename: str, image: Bytes) -> 'DataRecord':
+        # TODO: Support parsing dumps.
+        raise NotImplementedError
 
     def to_json(self) -> typing.Any:
         def convert(v: typing.Any) -> typing.Any:
@@ -59,22 +70,7 @@ class DataRecord(object):
         return json.dumps(d, indent=2)
 
 
-class File(DataRecord):
-    FORMAT_NAME: None | str
-
-    def __init_subclass__(cls, *, format_name: None | str):
-        assert format_name is None or format_name.isupper()
-        cls.FORMAT_NAME = format_name
-
-    def __init__(self, **fields: typing.Any):
-        DataRecord.__init__(self, **fields)
-
-    @classmethod
-    def parse(cls, filename: str, image: Bytes) -> 'File':
-        raise NotImplementedError
-
-
-class ArchiveFile(File, format_name=None):
+class ArchiveFile(DataRecord, format_name=None):
     @classmethod
     def read_files(cls, image: Bytes) -> (
             typing.Iterable[tuple[str, Bytes]]):
@@ -90,7 +86,7 @@ class SoundPulses(object):
         self.rate, self.levels, self.ticks = rate, levels, ticks
 
 
-class SoundFile(File, format_name=None):
+class SoundFile(DataRecord, format_name=None):
     def get_pulses(self) -> typing.Iterable[tuple[bool, int, tuple[str, ...]]]:
         raise NotImplementedError
 
@@ -102,20 +98,19 @@ class SoundFile(File, format_name=None):
         raise NotImplementedError
 
 
-class SnapshotFile(File, format_name=None):
+class SnapshotFile(DataRecord, format_name=None):
     @classmethod
     def encode(cls, state: MachineState) -> bytes:
         raise NotImplementedError
 
 
-# TODO: Not all machine snapshots are files?
-class MachineSnapshot(File, format_name=None):
+class MachineSnapshot(DataRecord, format_name=None):
     def to_unified_snapshot(self) -> UnifiedSnapshot:
         raise NotImplementedError
 
 
 # TODO: Move to the z80 project.
-class ProcessorSnapshot(DataRecord):
+class ProcessorSnapshot(DataRecord, format_name=None):
     pass
 
 

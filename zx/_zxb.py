@@ -12,11 +12,11 @@ import typing
 import os
 import tempfile
 from ._binary import Bytes
-from ._data import File
+from ._data import DataRecord
 from ._error import Error
 
 
-class ZXBasicCompilerProgram(File, format_name='ZXB'):
+class ZXBasicCompilerProgram(DataRecord, format_name='ZXB'):
     entry_point: int
     program_bytes: bytes
 
