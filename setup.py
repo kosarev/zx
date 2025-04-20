@@ -52,6 +52,11 @@ setup(name='zx',
           'sounddevice',
           'evdev; platform_system=="Linux"',
       ],
+      extras_require={
+          ':"linux" in sys_platform': [
+              'evdev',
+          ],
+      },
       package_data={'zx': ['roms/*', 'py.typed']},
       entry_points={
           'console_scripts': [
