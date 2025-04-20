@@ -15,5 +15,5 @@ def test_basic() -> None:
     assert '_SCRSnapshot' in scr.dumps()
 
     # Produce and dump unified snapshot.
-    uni = scr.get_unified_snapshot()
+    uni = scr.to_unified_snapshot()
     assert 'UnifiedSnapshot' in uni.dumps()

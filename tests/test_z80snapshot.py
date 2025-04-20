@@ -24,5 +24,5 @@ def test_basic() -> None:
     assert 'Z80Snapshot' in snap.dumps()
 
     # Produce and dump unified snapshot.
-    uni = snap.get_unified_snapshot()
+    uni = snap.to_unified_snapshot()
     assert 'UnifiedSnapshot' in uni.dumps()

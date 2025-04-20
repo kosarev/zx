@@ -73,7 +73,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
     memory_snapshot: Bytes
     memory_blocks: list[tuple[int, bytes]]
 
-    def get_unified_snapshot(self) -> UnifiedSnapshot:
+    def to_unified_snapshot(self) -> UnifiedSnapshot:
         # Bit 7 of the stored R value is not significant and
         # shall be taken from bit 0 of flags1.
         flags1 = self.flags1

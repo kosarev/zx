@@ -382,7 +382,7 @@ class MachineState(Z80State, MemoryState):
 
     def install_snapshot(self, snapshot: DataRecord) -> None:
         assert isinstance(snapshot, MachineSnapshot)
-        for field, value in snapshot.get_unified_snapshot():
+        for field, value in snapshot.to_unified_snapshot():
             if field == 'processor_snapshot':
                 assert isinstance(value, DataRecord)
                 Z80State.install_snapshot(self, value)

@@ -110,8 +110,7 @@ class SnapshotFile(File, format_name=None):
 
 # TODO: Not all machine snapshots are files?
 class MachineSnapshot(File, format_name=None):
-    # TODO: Rename to to_unified_snapshot()?
-    def get_unified_snapshot(self) -> UnifiedSnapshot:
+    def to_unified_snapshot(self) -> UnifiedSnapshot:
         raise NotImplementedError
 
 

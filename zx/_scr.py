@@ -23,7 +23,7 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
     dot_patterns: bytes
     colour_attrs: bytes
 
-    def get_unified_snapshot(self) -> UnifiedSnapshot:
+    def to_unified_snapshot(self) -> UnifiedSnapshot:
         # The address of the endless loop.
         LOOP_ADDR = 0x8000
 
