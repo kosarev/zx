@@ -12,7 +12,6 @@
 import collections
 from ._binary import Bytes, BinaryParser, BinaryWriter
 from ._data import MachineSnapshot
-from ._data import SnapshotFile
 from ._data import UnifiedMachineSnapshot
 from ._machine import MachineState
 from ._utils import _split16
@@ -43,7 +42,8 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
         return UnifiedMachineSnapshot(**fields,
                                       memory_blocks=memory_blocks)
 
-    def encode(self) -> bytes:
+    # TODO: Refine.
+    def x_encode(self) -> bytes:
         return self.dot_patterns + self.colour_attrs
 
     _FIELDS = ['6144s:dot_patterns', '768s:colour_attrs']

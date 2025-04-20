@@ -98,14 +98,13 @@ class SoundFile(DataRecord, format_name=None):
         raise NotImplementedError
 
 
-class SnapshotFile(DataRecord, format_name=None):
-    @classmethod
-    def encode(cls, state: MachineState) -> bytes:
-        raise NotImplementedError
-
-
 class MachineSnapshot(DataRecord, format_name=None):
     def to_unified_snapshot(self) -> UnifiedMachineSnapshot:
+        raise NotImplementedError
+
+    # TODO: Should encode from its own state, not machine state.
+    @classmethod
+    def encode(cls, state: MachineState) -> bytes:
         raise NotImplementedError
 
 

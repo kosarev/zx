@@ -15,7 +15,6 @@ import collections
 import os
 import sys
 from ._data import ArchiveFile
-from ._data import SnapshotFile
 from ._data import SoundFile
 from ._data import DataRecord
 from ._data import MachineSnapshot
@@ -152,7 +151,7 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
                               dest_filename: str,
                               dest_format: type[DataRecord]) -> None:
     assert issubclass(src_format, SoundFile), src_format
-    assert issubclass(dest_format, SnapshotFile), dest_format
+    assert issubclass(dest_format, MachineSnapshot), dest_format
 
     with Emulator(headless=True) as app:
         app.load_tape(src_filename)
@@ -174,8 +173,8 @@ def _convert_snapshot_to_snapshot(src: DataRecord,
                                   src_format: type[DataRecord],
                                   dest_filename: str,
                                   dest_format: type[DataRecord]) -> None:
-    assert issubclass(src_format, SnapshotFile), src_format
-    assert issubclass(dest_format, SnapshotFile), dest_format
+    assert issubclass(src_format, MachineSnapshot), src_format
+    assert issubclass(dest_format, MachineSnapshot), dest_format
 
     with Emulator(headless=True) as app:
         app._load_file(src_filename)
@@ -199,9 +198,9 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
                              str, type[DataRecord]], None]]] = [
         (SoundFile, SoundFile,
          _convert_tape_to_tape),
-        (SoundFile, SnapshotFile,
+        (SoundFile, MachineSnapshot,
          _convert_tape_to_snapshot),
-        (SnapshotFile, SnapshotFile,
+        (MachineSnapshot, MachineSnapshot,
          _convert_snapshot_to_snapshot),
     ]
 

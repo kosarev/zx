@@ -16,7 +16,6 @@ import collections
 from ._binary import Bytes
 from ._binary import BinaryParser, BinaryWriter
 from ._data import MachineSnapshot
-from ._data import SnapshotFile
 from ._data import UnifiedMachineSnapshot
 from ._error import Error
 from ._utils import make16
@@ -270,7 +269,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
     # TODO: Rename to to_bytes()? Snapshot is ambiguous in this context.
     #       Or just employ __bytes__()?
     @classmethod
-    def make_snapshot(cls, state) -> bytes:  # type: ignore[no-untyped-def]
+    def encode(cls, state) -> bytes:  # type: ignore[no-untyped-def]
         # TODO: The z80 format cannot represent processor states in
         #       the middle of IX- and IY-prefixed instructions, so
         #       such situations need some additional processing.

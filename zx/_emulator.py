@@ -14,7 +14,6 @@ import time
 import typing
 from ._beeper import Beeper
 from ._data import MachineSnapshot
-from ._data import SnapshotFile
 from ._data import SoundFile
 from ._device import Device
 from ._device import EndOfFrame
@@ -121,7 +120,7 @@ class Emulator(Spectrum48):
             self.set_breakpoints(0, 0x10000)
 
     # TODO: Double-underscore or make public.
-    def _save_snapshot_file(self, format: type[SnapshotFile],
+    def _save_snapshot_file(self, format: type[MachineSnapshot],
                             filename: str) -> None:
         with open(filename, 'wb') as f:
             f.write(format.encode(self))
@@ -215,7 +214,7 @@ class Emulator(Spectrum48):
 
     def __save_crash_rzx(self, player: PlaybackPlayer, state: MachineState,
                          chunk_i: int, frame_i: int) -> None:
-        snapshot = Z80Snapshot.make_snapshot(state)
+        snapshot = Z80Snapshot.encode(state)
 
         assert 0  # TODO
         crash_recording = {

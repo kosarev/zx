@@ -8,7 +8,7 @@ def test_basic() -> None:
     # Create a simple RZX.
     mach = zx.Emulator(headless=True)
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
-    snapshot = zx._z80snapshot.Z80Snapshot.make_snapshot(mach)
+    snapshot = zx._z80snapshot.Z80Snapshot.encode(mach)
 
     rzx_image = zx._rzx.make_rzx({
         'id': 'input_recording',
