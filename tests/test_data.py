@@ -16,3 +16,7 @@ def test_basic() -> None:
 
     # Create a snapshot.
     assert list(zx._data.MachineSnapshot()) == []
+
+    # Unified snapshots convert to themselves.
+    uni = zx._data.UnifiedSnapshot()
+    assert uni.to_unified_snapshot() is uni

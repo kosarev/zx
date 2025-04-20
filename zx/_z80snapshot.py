@@ -16,7 +16,7 @@ import collections
 from ._binary import Bytes
 from ._binary import BinaryParser, BinaryWriter
 from ._data import MachineSnapshot
-from ._data import UnifiedMachineSnapshot
+from ._data import UnifiedSnapshot
 from ._error import Error
 from ._utils import make16
 
@@ -71,7 +71,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
     memory_snapshot: Bytes
     memory_blocks: list[tuple[int, bytes]]
 
-    def to_unified_snapshot(self) -> UnifiedMachineSnapshot:
+    def to_unified_snapshot(self) -> UnifiedSnapshot:
         # Bit 7 of the stored R value is not significant and
         # shall be taken from bit 0 of flags1.
         flags1 = self.flags1
@@ -147,8 +147,8 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                 image = block['image']
                 memory_blocks.append((self._MEMORY_PAGE_ADDRS[page_no], image))
 
-        return UnifiedMachineSnapshot(**fields,
-                                      memory_blocks=memory_blocks)
+        return UnifiedSnapshot(**fields,
+                               memory_blocks=memory_blocks)
 
     _PRIMARY_HEADER = [
         'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',

@@ -12,7 +12,7 @@
 import collections
 from ._binary import Bytes, BinaryParser, BinaryWriter
 from ._data import MachineSnapshot
-from ._data import UnifiedMachineSnapshot
+from ._data import UnifiedSnapshot
 from ._machine import MachineState
 from ._utils import _split16
 
@@ -21,7 +21,7 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
     dot_patterns: bytes
     colour_attrs: bytes
 
-    def to_unified_snapshot(self) -> UnifiedMachineSnapshot:
+    def to_unified_snapshot(self) -> UnifiedSnapshot:
         # The address of the endless loop.
         LOOP_ADDR = 0x8000
 
@@ -39,8 +39,8 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
         # LOOP_ADDR: jp LOOP_ADDR
         memory_blocks.append((LOOP_ADDR, b'\xc3' + bytes(_split16(LOOP_ADDR))))
 
-        return UnifiedMachineSnapshot(**fields,
-                                      memory_blocks=memory_blocks)
+        return UnifiedSnapshot(**fields,
+                               memory_blocks=memory_blocks)
 
     # TODO: Refine.
     def x_encode(self) -> bytes:

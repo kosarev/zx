@@ -99,7 +99,7 @@ class SoundFile(DataRecord, format_name=None):
 
 
 class MachineSnapshot(DataRecord, format_name=None):
-    def to_unified_snapshot(self) -> UnifiedMachineSnapshot:
+    def to_unified_snapshot(self) -> UnifiedSnapshot:
         raise NotImplementedError
 
     # TODO: Should encode from its own state, not machine state.
@@ -108,5 +108,6 @@ class MachineSnapshot(DataRecord, format_name=None):
         raise NotImplementedError
 
 
-class UnifiedMachineSnapshot(MachineSnapshot, format_name=None):
-    pass
+class UnifiedSnapshot(MachineSnapshot, format_name=None):
+    def to_unified_snapshot(self) -> UnifiedSnapshot:
+        return self
