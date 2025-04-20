@@ -124,16 +124,7 @@ class Emulator(Spectrum48):
     def _save_snapshot_file(self, format: type[SnapshotFile],
                             filename: str) -> None:
         with open(filename, 'wb') as f:
-            snapshot = format.make_snapshot(self)
-            # TODO: make_snapshot() shall always return a snapshot object.
-            # TODO: Use isinstance? The whole SCR support needs rework?
-            # if issubclass(type(snapshot), MachineSnapshot):
-            if isinstance(snapshot, _SCRSnapshot):
-                image = snapshot.get_file_image()
-            else:
-                assert isinstance(snapshot, bytes)
-                image = snapshot
-            f.write(image)
+            f.write(format.encode(self))
 
     # TODO: Double-underscore or make public.
     def _is_tape_paused(self) -> bool:

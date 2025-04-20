@@ -48,7 +48,7 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
         return UnifiedSnapshot(**fields,
                                memory_blocks=memory_blocks)
 
-    def get_file_image(self) -> bytes:
+    def encode(self) -> bytes:
         return self.dot_patterns + self.colour_attrs
 
     _FIELDS = ['6144s:dot_patterns', '768s:colour_attrs']

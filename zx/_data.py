@@ -103,9 +103,8 @@ class SoundFile(File, format_name=None):
 
 
 class SnapshotFile(File, format_name=None):
-    # TODO: Should always return snapshots?
     @classmethod
-    def make_snapshot(cls, state: MachineState) -> bytes | MachineSnapshot:
+    def encode(cls, state: MachineState) -> bytes:
         raise NotImplementedError
 
 
