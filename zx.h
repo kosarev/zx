@@ -323,12 +323,12 @@ public:
         ticks_type t = get_ticks();
         if((addr & 0xff) == 0xfe) {
             // TODO: Render to (current_tick + 1) and then update
-            // the border color as the new value is sampled at
+            // the border colour as the new value is sampled at
             // the 2nd tick of the output cycle.
             // TODO: The "+ 1" thing is still wrong as there may
             // be contentions in the middle.
             render_screen_to_tick(t + 1);
-            border_color = n & 0x7;
+            border_colour = n & 0x7;
         }
 
         if(num_port_writes < max_num_port_writes) {
@@ -564,8 +564,8 @@ public:
 
                 auto attr = static_cast<unsigned>(latched_colour_attrs2 >> ((15 - pixel_in_cycle) / 8 * 8));
                 unsigned brightness = attr >> (6 - brightness_bit) & brightness_mask;
-                unsigned ink_color = ((attr >> 0) & 0x7) | brightness;
-                unsigned paper_color = ((attr >> 3) & 0x7) | brightness;
+                unsigned ink_colour = ((attr >> 0) & 0x7) | brightness;
+                unsigned paper_colour = ((attr >> 3) & 0x7) | brightness;
 
                 // TODO: We can compute the whole chunk as soon
                 //       as we read the bytes. And then just
@@ -575,9 +575,9 @@ public:
                 if((attr & 0x80) != 0)
                     pattern ^= flash_mask;
                 pixels_value |= (pattern & ((1u << 15) >> pixel_in_cycle)) != 0 ?
-                    (ink_color << 28) : (paper_color << 28);
+                    (ink_colour << 28) : (paper_colour << 28);
                 pixels_value |= (pattern & ((1u << 14) >> pixel_in_cycle)) != 0 ?
-                    (ink_color << 24) : (paper_color << 24);
+                    (ink_colour << 24) : (paper_colour << 24);
                 pixels_value >>= pixel_in_chunk * 4;
 
                 // printf("%d, pixel_in_cycle %d\n", (int) render_tick, (int) pixel_in_cycle);
@@ -601,7 +601,7 @@ public:
                 pixel_in_line < frame_width;
             if(is_visible_area) {
                 if(render_tick % 4 == 0)
-                    latched_border_color = border_color;
+                    latched_border_colour = border_colour;
 
                 unsigned chunk_index = pixel_in_line / pixels_per_frame_chunk;
                 unsigned pixel_in_chunk = pixel_in_line % pixels_per_frame_chunk;
@@ -611,7 +611,7 @@ public:
                 unsigned screen_line = frame_line - top_hidden_lines;
                 frame_chunk *line_chunks = screen_chunks[screen_line];
                 frame_chunk *chunk = &line_chunks[chunk_index];
-                unsigned pixels_value = (0x11000000 * latched_border_color) >> (pixel_in_chunk * 4);
+                unsigned pixels_value = (0x11000000 * latched_border_colour) >> (pixel_in_chunk * 4);
                 unsigned pixels_mask = 0xff000000 >> (pixel_in_chunk * 4);
                 *chunk = (*chunk & ~pixels_mask) | pixels_value;
 
@@ -626,7 +626,7 @@ public:
     // TODO: Move to the private section.
     unsigned frame_counter = 0;
     ticks_type render_tick = 0;
-    unsigned latched_border_color = 0;
+    unsigned latched_border_colour = 0;
     fast_u16 latched_pixel_pattern = 0;
     fast_u16 latched_colour_attrs = 0;
     fast_u16 latched_pixel_pattern2 = 0;
@@ -652,14 +652,14 @@ public:
         std::size_t p = 0;
         for(const auto &screen_line : screen_chunks) {
             for(auto chunk : screen_line) {
-                pixels[p++] = translate_color((chunk >> 28) & 0xf);
-                pixels[p++] = translate_color((chunk >> 24) & 0xf);
-                pixels[p++] = translate_color((chunk >> 20) & 0xf);
-                pixels[p++] = translate_color((chunk >> 16) & 0xf);
-                pixels[p++] = translate_color((chunk >> 12) & 0xf);
-                pixels[p++] = translate_color((chunk >>  8) & 0xf);
-                pixels[p++] = translate_color((chunk >>  4) & 0xf);
-                pixels[p++] = translate_color((chunk >>  0) & 0xf);
+                pixels[p++] = translate_colour((chunk >> 28) & 0xf);
+                pixels[p++] = translate_colour((chunk >> 24) & 0xf);
+                pixels[p++] = translate_colour((chunk >> 20) & 0xf);
+                pixels[p++] = translate_colour((chunk >> 16) & 0xf);
+                pixels[p++] = translate_colour((chunk >> 12) & 0xf);
+                pixels[p++] = translate_colour((chunk >>  8) & 0xf);
+                pixels[p++] = translate_colour((chunk >>  4) & 0xf);
+                pixels[p++] = translate_colour((chunk >>  0) & 0xf);
             }
         }
     }
@@ -770,7 +770,7 @@ public:
 protected:
     using base::self;
 
-    pixel_type translate_color(unsigned c) {
+    pixel_type translate_colour(unsigned c) {
         uint_fast32_t r = 0;
         r |= (c & red_mask)   << (16 - red_bit);
         r |= (c & green_mask) << (8 - green_bit);
@@ -789,7 +789,7 @@ protected:
     ticks_type fetches_to_stop = 0;  // Null means no limit.
 
     fast_u16 addr_bus_value = 0;
-    unsigned border_color = 0;
+    unsigned border_colour = 0;
 
     // True if interrupts shall not be initiated at the beginning
     // of frames.

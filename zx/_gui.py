@@ -42,12 +42,12 @@ SCREENCAST = False
 PI = 3.1415926535
 
 
-def rgb(color: str, alpha: float = 1) -> tuple[float, float, float, float]:
-    assert color.startswith('#')
-    assert len(color) == 7
-    r = int(color[1:3], 16)
-    g = int(color[3:5], 16)
-    b = int(color[5:7], 16)
+def rgb(colour: str, alpha: float = 1) -> tuple[float, float, float, float]:
+    assert colour.startswith('#')
+    assert len(colour) == 7
+    r = int(colour[1:3], 16)
+    g = int(colour[3:5], 16)
+    b = int(colour[5:7], 16)
     return r / 0xff, g / 0xff, b / 0xff, alpha
 
 

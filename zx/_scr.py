@@ -35,7 +35,7 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
 
         fields = {
             'processor_snapshot': ProcessorSnapshot(**processor_fields),
-            'border_color': 0,
+            'border_colour': 0,
         }
 
         memory_blocks = []

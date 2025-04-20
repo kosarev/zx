@@ -314,7 +314,7 @@ class MachineState(Z80State, MemoryState):
         self.__events = p.parse32()
         self.__int_suppressed = p.parse8()
         self.__int_after_ei_allowed = p.parse8()
-        self.__border_color = p.parse8()
+        self.__border_colour = p.parse8()
         self.__trace_enabled = p.parse8()
 
         self.memory_image = p.parse_block(0x10000)
@@ -368,12 +368,12 @@ class MachineState(Z80State, MemoryState):
         self.__ticks_since_int[:] = _split32(ticks)
 
     @property
-    def border_color(self) -> int:
-        return self.__border_color[0]
+    def border_colour(self) -> int:
+        return self.__border_colour[0]
 
-    @border_color.setter
-    def border_color(self, value: int) -> None:
-        self.__border_color[0] = value
+    @border_colour.setter
+    def border_colour(self, value: int) -> None:
+        self.__border_colour[0] = value
 
     ''' TODO
     def enable_trace(self, enable=True):

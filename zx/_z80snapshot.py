@@ -112,7 +112,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
 
         fields = {
             'processor_snapshot': ProcessorSnapshot(**processor_fields),
-            'border_color': (flags1 >> 1) & 0x7,
+            'border_colour': (flags1 >> 1) & 0x7,
 
             # Give the snapshot a chance to execute at least one
             # instruction without firing up an interrupt.
@@ -291,9 +291,9 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         flags1 |= (r & 0x80) >> 7
         r &= 0x7f
 
-        border_color = state.border_color
-        assert 0 <= border_color <= 7
-        flags1 |= border_color << 1
+        border_colour = state.border_colour
+        assert 0 <= border_colour <= 7
+        flags1 |= border_colour << 1
 
         int_mode = state.int_mode
         assert int_mode in [0, 1, 2]  # TODO

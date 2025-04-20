@@ -73,7 +73,7 @@ struct __attribute__((packed)) machine_state {
     least_u32 events = 0;
     least_u8 int_suppressed = false;
     least_u8 int_after_ei_allowed = false;
-    least_u8 border_color = 7;
+    least_u8 border_colour = 7;
     least_u8 trace_enabled = false;
 
     zx::memory_image_type memory;
@@ -99,7 +99,7 @@ public:
         state.events = events;
         state.int_suppressed = int_suppressed;
         state.int_after_ei_allowed = int_after_ei_allowed;
-        state.border_color = border_color;
+        state.border_colour = border_colour;
         state.trace_enabled = trace_enabled;
     }
 
@@ -111,7 +111,7 @@ public:
         events = state.events;
         int_suppressed = state.int_suppressed;
         int_after_ei_allowed = state.int_after_ei_allowed;
-        border_color = state.border_color;
+        border_colour = state.border_colour;
         trace_enabled = state.trace_enabled;
     }
 
