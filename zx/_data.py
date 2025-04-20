@@ -109,8 +109,7 @@ class MachineSnapshot(DataRecord, format_name=None):
         raise NotImplementedError
 
 
-# TODO: Move to the z80 project.
-class ProcessorSnapshot(DataRecord, format_name=None):
+class UnifiedZ80Snapshot(DataRecord, format_name=None):
     pass
 
 

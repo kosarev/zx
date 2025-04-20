@@ -16,7 +16,7 @@ import collections
 from ._binary import Bytes
 from ._binary import BinaryParser, BinaryWriter
 from ._data import MachineSnapshot
-from ._data import ProcessorSnapshot
+from ._data import UnifiedZ80Snapshot
 from ._data import SnapshotFile
 from ._data import UnifiedMachineSnapshot
 from ._error import Error
@@ -111,7 +111,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         quarter_tstates = ticks_per_frame // 4
 
         fields = {
-            'processor_snapshot': ProcessorSnapshot(**processor_fields),
+            'processor_snapshot': UnifiedZ80Snapshot(**processor_fields),
             'border_colour': (flags1 >> 1) & 0x7,
 
             # Give the snapshot a chance to execute at least one

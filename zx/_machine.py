@@ -14,7 +14,7 @@ import typing
 import types
 from ._data import DataRecord
 from ._data import MachineSnapshot
-from ._data import ProcessorSnapshot
+from ._data import UnifiedZ80Snapshot
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import Destroy
@@ -273,7 +273,7 @@ class Z80State(object):
         self.__iregp_kind[0] = value
 
     def install_snapshot(self, snapshot: DataRecord) -> None:
-        assert isinstance(snapshot, ProcessorSnapshot)
+        assert isinstance(snapshot, UnifiedZ80Snapshot)
         for field, value in snapshot:
             if field != 'id':
                 setattr(self, field, value)
