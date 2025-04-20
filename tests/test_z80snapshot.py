@@ -25,4 +25,4 @@ def test_basic() -> None:
 
     # Produce and dump unified snapshot.
     uni = snap.to_unified_snapshot()
-    assert 'UnifiedSnapshot' in uni.dumps()
+    assert 'UnifiedMachineSnapshot' in uni.dumps()

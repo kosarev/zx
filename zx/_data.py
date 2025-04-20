@@ -105,7 +105,7 @@ class SnapshotFile(DataRecord, format_name=None):
 
 
 class MachineSnapshot(DataRecord, format_name=None):
-    def to_unified_snapshot(self) -> UnifiedSnapshot:
+    def to_unified_snapshot(self) -> UnifiedMachineSnapshot:
         raise NotImplementedError
 
 
@@ -114,5 +114,5 @@ class ProcessorSnapshot(DataRecord, format_name=None):
     pass
 
 
-class UnifiedSnapshot(MachineSnapshot, format_name=None):
+class UnifiedMachineSnapshot(MachineSnapshot, format_name=None):
     pass
