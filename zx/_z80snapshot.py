@@ -16,7 +16,6 @@ import collections
 from ._binary import Bytes
 from ._binary import BinaryParser, BinaryWriter
 from ._data import MachineSnapshot
-from ._data import UnifiedZ80Snapshot
 from ._data import SnapshotFile
 from ._data import UnifiedMachineSnapshot
 from ._error import Error
@@ -88,7 +87,10 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
 
         pc = self.pc if format_version == _V1_FORMAT else self.pc2
 
-        processor_fields = {
+        ticks_per_frame = 69888  # TODO
+        quarter_tstates = ticks_per_frame // 4
+
+        fields = {
             'bc': self.bc,
             'de': self.de,
             'hl': self.hl,
@@ -105,13 +107,6 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             'iff1': 0 if self.iff1 == 0 else 1,
             'iff2': 0 if self.iff2 == 0 else 1,
             'int_mode': int_mode,
-        }
-
-        ticks_per_frame = 69888  # TODO
-        quarter_tstates = ticks_per_frame // 4
-
-        fields = {
-            'processor_snapshot': UnifiedZ80Snapshot(**processor_fields),
             'border_colour': (flags1 >> 1) & 0x7,
 
             # Give the snapshot a chance to execute at least one

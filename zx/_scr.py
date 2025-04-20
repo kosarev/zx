@@ -12,7 +12,6 @@
 import collections
 from ._binary import Bytes, BinaryParser, BinaryWriter
 from ._data import MachineSnapshot
-from ._data import UnifiedZ80Snapshot
 from ._data import SnapshotFile
 from ._data import UnifiedMachineSnapshot
 from ._machine import MachineState
@@ -27,14 +26,10 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
         # The address of the endless loop.
         LOOP_ADDR = 0x8000
 
-        processor_fields = {
+        fields = {
             'pc': LOOP_ADDR,
             'iff1': 0,
             'iff2': 0,
-        }
-
-        fields = {
-            'processor_snapshot': UnifiedZ80Snapshot(**processor_fields),
             'border_colour': 0,
         }
 

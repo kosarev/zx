@@ -109,9 +109,5 @@ class MachineSnapshot(DataRecord, format_name=None):
         raise NotImplementedError
 
 
-class UnifiedZ80Snapshot(DataRecord, format_name=None):
-    pass
-
-
 class UnifiedMachineSnapshot(MachineSnapshot, format_name=None):
     pass

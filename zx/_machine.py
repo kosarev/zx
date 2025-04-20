@@ -14,7 +14,6 @@ import typing
 import types
 from ._data import DataRecord
 from ._data import MachineSnapshot
-from ._data import UnifiedZ80Snapshot
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import Destroy
@@ -272,12 +271,6 @@ class Z80State(object):
     def iregp_kind(self, value: int) -> None:
         self.__iregp_kind[0] = value
 
-    def install_snapshot(self, snapshot: DataRecord) -> None:
-        assert isinstance(snapshot, UnifiedZ80Snapshot)
-        for field, value in snapshot:
-            if field != 'id':
-                setattr(self, field, value)
-
 
 class MemoryState(object):
     def __init__(self, image: memoryview) -> None:
@@ -380,17 +373,12 @@ class MachineState(Z80State, MemoryState):
         self.set('trace_enabled', int(enable))
     '''
 
-    def install_snapshot(self, snapshot: DataRecord) -> None:
-        assert isinstance(snapshot, MachineSnapshot)
+    def install_snapshot(self, snapshot: MachineSnapshot) -> None:
         for field, value in snapshot.to_unified_snapshot():
-            if field == 'processor_snapshot':
-                assert isinstance(value, DataRecord)
-                Z80State.install_snapshot(self, value)
-            elif field == 'memory_blocks':
+            if field == 'memory_blocks':
                 for addr, block in value:
                     self.write(addr, block)
             else:
-                # print(field)
                 setattr(self, field, value)
 
 
