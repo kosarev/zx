@@ -41,7 +41,7 @@ def parse_snapshot_block(image: Bytes) -> Z80Snapshot:
         raise Error('RZX snapshot descriptors are not supported yet.',
                     id='rzx_snapshot_descriptor')
 
-    snapshot_image = parser.extract_rest()
+    snapshot_image = parser.read_remaining_bytes()
     if compressed:
         import zlib
         snapshot_image = zlib.decompress(snapshot_image)
@@ -71,7 +71,7 @@ def parse_input_recording_block(image: Bytes) -> dict[str, typing.Any]:
 
     assert not protected  # TODO: Support protected samples.
 
-    recording_image = parser.extract_rest()
+    recording_image = parser.read_remaining_bytes()
     if compressed:
         import zlib
         recording_image = zlib.decompress(recording_image)

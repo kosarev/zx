@@ -244,9 +244,9 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             if not compressed:
                 if parser.get_remaining_size() != 48 * 1024:
                     raise Error('The snapshot is too large.')
-                image = parser.extract_rest()
+                image = parser.read_remaining_bytes()
             else:
-                image = cls._uncompress(parser.extract_rest(),
+                image = cls._uncompress(parser.read_remaining_bytes(),
                                         48 * 1024 + 4)
 
                 # Remove the terminator.

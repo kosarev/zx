@@ -42,8 +42,8 @@ class BinaryParser(object):
         self.pos += size
         return self.image[begin:self.pos]
 
-    def extract_rest(self) -> Bytes:
-        return self.read_bytes(len(self.image) - self.pos)
+    def read_remaining_bytes(self) -> Bytes:
+        return self.read_bytes(self.get_remaining_size())
 
     def parse_field(self, format: str) -> int | str | bytes | tuple[int | str]:
         size = struct.calcsize(format)
