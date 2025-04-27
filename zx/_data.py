@@ -60,7 +60,7 @@ class DataRecord(object):
                 return v.to_json()
             raise TypeError(f'cannot serialize a {type(v)}')
 
-        return {id: convert(v) for id, v in self}
+        return {id: convert(v) for id, v in self if v is not None}
 
     def dumps(self) -> str:
         metadata = dict(
