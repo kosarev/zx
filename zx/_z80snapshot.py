@@ -242,7 +242,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         if _get_format_version(fields) == _V1_FORMAT:
             compressed = (fields['flags1'] & 0x20) != 0
             if not compressed:
-                if parser.get_rest_size() != 48 * 1024:
+                if parser.get_remaining_size() != 48 * 1024:
                     raise Error('The snapshot is too large.')
                 image = parser.extract_rest()
             else:

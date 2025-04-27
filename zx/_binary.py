@@ -24,17 +24,17 @@ class BinaryParser(object):
         self.image = image
         self.pos = 0
 
-    def get_rest_size(self) -> int:
+    def get_remaining_size(self) -> int:
         return len(self.image) - self.pos
 
     def is_eof(self) -> bool:
-        return self.get_rest_size() == 0
+        return self.get_remaining_size() == 0
 
     def __bool__(self) -> bool:
         return not self.is_eof()
 
     def extract_block(self, size: int) -> Bytes:
-        if size > self.get_rest_size():
+        if size > self.get_remaining_size():
             raise Error('Binary image is too short.',
                         id='binary_image_too_short')
 
