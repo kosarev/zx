@@ -14,7 +14,6 @@ from ._binary import Bytes, BinaryParser, BinaryWriter
 from ._data import MachineSnapshot
 from ._data import UnifiedSnapshot
 from ._machine import MachineState
-from ._utils import _split16
 
 
 class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
@@ -37,7 +36,8 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
         memory_blocks.append((0x4000 + 6144, self.colour_attrs))
 
         # LOOP_ADDR: jp LOOP_ADDR
-        memory_blocks.append((LOOP_ADDR, b'\xc3' + bytes(_split16(LOOP_ADDR))))
+        memory_blocks.append((LOOP_ADDR,
+                              b'\xc3' + LOOP_ADDR.to_bytes(2, 'little')))
 
         return UnifiedSnapshot(**fields,
                                memory_blocks=memory_blocks)
