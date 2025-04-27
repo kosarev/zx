@@ -205,9 +205,9 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         fields = parser.parse(cls._MEMORY_BLOCK_HEADER)
         compressed_size = fields['compressed_size']
         if compressed_size == cls._RAW_MEMORY_BLOCK_SIZE_VALUE:
-            raw_image = parser.extract_block(BLOCK_SIZE)
+            raw_image = parser.read_bytes(BLOCK_SIZE)
         else:
-            compressed_image = parser.extract_block(compressed_size)
+            compressed_image = parser.read_bytes(compressed_size)
             raw_image = cls._uncompress(compressed_image, BLOCK_SIZE)
         return collections.OrderedDict(page_no=fields['page_no'],
                                        image=raw_image)
@@ -224,7 +224,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             fields.update(parser.parse(cls._EXTRA_HEADERS_SIZE_FIELD))
 
         if 'extra_headers_size' in fields:
-            extra_headers = parser.extract_block(fields['extra_headers_size'])
+            extra_headers = parser.read_bytes(fields['extra_headers_size'])
             extra_parser = BinaryParser(extra_headers)
             fields.update(extra_parser.parse(cls._EXTRA_HEADER))
 

@@ -115,7 +115,7 @@ class TZXFile(SoundFile, format_name='TZX'):
         block = parser.parse([('pause_after_block_in_ms', '<H'),
                               ('data_size', '<H')])
         block.update({'id': '0x10 (Standard Speed Data Block)',
-                      'data': parser.extract_block(block['data_size'])})
+                      'data': parser.read_bytes(block['data_size'])})
         del block['data_size']
         return block
 
@@ -137,7 +137,7 @@ class TZXFile(SoundFile, format_name='TZX'):
         data_size_in_bits = data_size * 8 + block.pop('used_bits_in_last_byte')
         block.update({'id': '0x11 (Turbo Speed Data Block)',
                       'data_size_in_bits': data_size_in_bits,
-                      'data': parser.extract_block(data_size)})
+                      'data': parser.read_bytes(data_size)})
         return block
 
     @classmethod
@@ -154,7 +154,7 @@ class TZXFile(SoundFile, format_name='TZX'):
         data_size_in_bits = data_size * 8 + block.pop('used_bits_in_last_byte')
         block.update({'id': '0x14 (Pure Data Block)',
                       'data_size_in_bits': data_size_in_bits,
-                      'data': parser.extract_block(data_size)})
+                      'data': parser.read_bytes(data_size)})
         return block
 
     @classmethod
@@ -162,7 +162,7 @@ class TZXFile(SoundFile, format_name='TZX'):
             cls, parser: BinaryParser) -> dict[str, typing.Any]:
         length = parser.parse_field('B')
         assert isinstance(length, int)
-        name = parser.extract_block(length)
+        name = parser.read_bytes(length)
         # print('Group start: %r.' % name)
         return {'id': '0x21 (Group Start)',
                 'name': name}
@@ -179,7 +179,7 @@ class TZXFile(SoundFile, format_name='TZX'):
             cls, parser: BinaryParser) -> dict[str, typing.Any]:
         size = parser.parse_field('B')
         assert isinstance(size, int)
-        text = parser.extract_block(size)
+        text = parser.read_bytes(size)
         return {'id': '0x30 (Text Description)',
                 'text': text}
 
@@ -207,7 +207,7 @@ class TZXFile(SoundFile, format_name='TZX'):
             assert isinstance(id, int)
             length = parser.parse_field('B')
             assert isinstance(length, int)
-            body = parser.extract_block(length)
+            body = parser.read_bytes(length)
 
             if id not in cls._ARCHIVE_INFO_STRING_IDS:
                 raise Error('Unknown TZX archive info string id 0x%02x.' % id)

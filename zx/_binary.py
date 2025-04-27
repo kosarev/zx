@@ -33,7 +33,7 @@ class BinaryParser(object):
     def __bool__(self) -> bool:
         return not self.is_eof()
 
-    def extract_block(self, size: int) -> Bytes:
+    def read_bytes(self, size: int) -> Bytes:
         if size > self.get_remaining_size():
             raise Error('Binary image is too short.',
                         id='binary_image_too_short')
@@ -43,11 +43,11 @@ class BinaryParser(object):
         return self.image[begin:self.pos]
 
     def extract_rest(self) -> Bytes:
-        return self.extract_block(len(self.image) - self.pos)
+        return self.read_bytes(len(self.image) - self.pos)
 
     def parse_field(self, format: str) -> int | str | bytes | tuple[int | str]:
         size = struct.calcsize(format)
-        value = struct.unpack(format, self.extract_block(size))
+        value = struct.unpack(format, self.read_bytes(size))
         if len(value) == 1:
             value = value[0]
         return value

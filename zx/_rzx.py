@@ -96,7 +96,7 @@ def parse_input_recording_block(image: Bytes) -> dict[str, typing.Any]:
             prev_samples = frames[-1][1]
             frame = (num_of_fetches, prev_samples)
         else:
-            samples = recording_parser.extract_block(num_of_samples)
+            samples = recording_parser.read_bytes(num_of_samples)
             frame = (num_of_fetches, samples)
 
         # Ignore empty frames.
@@ -131,7 +131,7 @@ def parse_block(parser: BinaryParser) -> typing.Any:
     if block_length < 5:
         raise Error('RZX block length is too small: %d' % block_length)
     payload_size = block_length - 5
-    payload_image = parser.extract_block(payload_size)
+    payload_image = parser.read_bytes(payload_size)
 
     # Parse payload image.
     block_id = block['id']
