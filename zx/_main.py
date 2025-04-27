@@ -123,7 +123,9 @@ def test_file(filename: str, batch_mode: bool) -> bool:
     try:
         print(repr(filename))
         file = parse_file(filename)
-        if isinstance(file, RZXFile):
+        if isinstance(file, MachineSnapshot):
+            pass
+        elif isinstance(file, RZXFile):
             with Spectrum(headless=True) as app:
                 app._run_file(filename)
         else:
@@ -137,7 +139,7 @@ def test_file(filename: str, batch_mode: bool) -> bool:
 
         id = 'exception_raised'
         if isinstance(e, Error):
-            id = e.id
+            id = e.id if e.id is not None else 'error_without_id'
         move(id)
         return
 
