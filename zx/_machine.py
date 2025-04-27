@@ -72,17 +72,8 @@ def _make16(b0: int, b1: int) -> int:
     return b0 + (b1 << 8)
 
 
-def _split16(n: int) -> bytes:
-    return bytes(((n >> 0) & 0xff, (n >> 8) & 0xff))
-
-
 def _make32(b0: int, b1: int, b2: int, b3: int) -> int:
     return b0 + (b1 << 8) + (b2 << 16) + (b3 << 24)
-
-
-def _split32(n: int) -> bytes:
-    return bytes(((n >> 0) & 0xff, (n >> 8) & 0xff,
-                  (n >> 16) & 0xff, (n >> 23) & 0xff))
 
 
 class Z80State(object):
@@ -116,7 +107,7 @@ class Z80State(object):
 
     @bc.setter
     def bc(self, value: int) -> None:
-        self.__bc[:] = _split16(value)
+        self.__bc[:] = value.to_bytes(2, 'little')
 
     @property
     def de(self) -> int:
@@ -124,7 +115,7 @@ class Z80State(object):
 
     @de.setter
     def de(self, value: int) -> None:
-        self.__de[:] = _split16(value)
+        self.__de[:] = value.to_bytes(2, 'little')
 
     @property
     def hl(self) -> int:
@@ -132,7 +123,7 @@ class Z80State(object):
 
     @hl.setter
     def hl(self, value: int) -> None:
-        self.__hl[:] = _split16(value)
+        self.__hl[:] = value.to_bytes(2, 'little')
 
     @property
     def af(self) -> int:
@@ -140,7 +131,7 @@ class Z80State(object):
 
     @af.setter
     def af(self, value: int) -> None:
-        self.__af[:] = _split16(value)
+        self.__af[:] = value.to_bytes(2, 'little')
 
     @property
     def a(self) -> int:
@@ -156,7 +147,7 @@ class Z80State(object):
 
     @ix.setter
     def ix(self, value: int) -> None:
-        self.__ix[:] = _split16(value)
+        self.__ix[:] = value.to_bytes(2, 'little')
 
     @property
     def iy(self) -> int:
@@ -164,7 +155,7 @@ class Z80State(object):
 
     @iy.setter
     def iy(self, value: int) -> None:
-        self.__iy[:] = _split16(value)
+        self.__iy[:] = value.to_bytes(2, 'little')
 
     @property
     def alt_bc(self) -> int:
@@ -172,7 +163,7 @@ class Z80State(object):
 
     @alt_bc.setter
     def alt_bc(self, value: int) -> None:
-        self.__alt_bc[:] = _split16(value)
+        self.__alt_bc[:] = value.to_bytes(2, 'little')
 
     @property
     def alt_de(self) -> int:
@@ -180,7 +171,7 @@ class Z80State(object):
 
     @alt_de.setter
     def alt_de(self, value: int) -> None:
-        self.__alt_de[:] = _split16(value)
+        self.__alt_de[:] = value.to_bytes(2, 'little')
 
     @property
     def alt_hl(self) -> int:
@@ -188,7 +179,7 @@ class Z80State(object):
 
     @alt_hl.setter
     def alt_hl(self, value: int) -> None:
-        self.__alt_hl[:] = _split16(value)
+        self.__alt_hl[:] = value.to_bytes(2, 'little')
 
     @property
     def alt_af(self) -> int:
@@ -196,7 +187,7 @@ class Z80State(object):
 
     @alt_af.setter
     def alt_af(self, value: int) -> None:
-        self.__alt_af[:] = _split16(value)
+        self.__alt_af[:] = value.to_bytes(2, 'little')
 
     @property
     def alt_a(self) -> int:
@@ -212,7 +203,7 @@ class Z80State(object):
 
     @pc.setter
     def pc(self, value: int) -> None:
-        self.__pc[:] = _split16(value)
+        self.__pc[:] = value.to_bytes(2, 'little')
 
     @property
     def sp(self) -> int:
@@ -220,7 +211,7 @@ class Z80State(object):
 
     @sp.setter
     def sp(self, value: int) -> None:
-        self.__sp[:] = _split16(value)
+        self.__sp[:] = value.to_bytes(2, 'little')
 
     @property
     def ir(self) -> int:
@@ -228,7 +219,7 @@ class Z80State(object):
 
     @ir.setter
     def ir(self, value: int) -> None:
-        self.__ir[:] = _split16(value)
+        self.__ir[:] = value.to_bytes(2, 'little')
 
     @property
     def i(self) -> int:
@@ -338,7 +329,7 @@ class MachineState(Z80State, MemoryState):
 
     @fetches_limit.setter
     def fetches_limit(self, fetches_to_stop: int) -> None:
-        self.__fetches_to_stop[:] = _split32(fetches_to_stop)
+        self.__fetches_to_stop[:] = fetches_to_stop.to_bytes(4, 'little')
 
     # TODO: Can we do without this?
     def get_events(self) -> int:
@@ -346,7 +337,7 @@ class MachineState(Z80State, MemoryState):
 
     # TODO: Can we do without this?
     def set_events(self, events: int) -> None:
-        self.__events[:] = _split32(events)
+        self.__events[:] = events.to_bytes(4, 'little')
 
     # TODO: Can we do without this?
     def raise_events(self, events: int) -> None:
@@ -358,7 +349,7 @@ class MachineState(Z80State, MemoryState):
 
     @ticks_since_int.setter
     def ticks_since_int(self, ticks: int) -> None:
-        self.__ticks_since_int[:] = _split32(ticks)
+        self.__ticks_since_int[:] = ticks.to_bytes(4, 'little')
 
     @property
     def border_colour(self) -> int:
