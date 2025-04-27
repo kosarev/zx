@@ -257,7 +257,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                 if len(image) != 48 * 1024:
                     raise Error('The snapshot is too large.')
             else:
-                if not image[-4:] != b'\x00\xed\xed\x00':
+                if image[-4:] != b'\x00\xed\xed\x00':
                     raise Error('The compressed memory block does not '
                                 'terminate properly.')
                 image = cls.__uncompress(image[:-4], 48 * 1024)
