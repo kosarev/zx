@@ -68,10 +68,6 @@ class _StateParser(object):
 
 # TODO: Move to _utils.
 # TODO: A single function like 'def _lendian(*bytes)'?
-def _make16(b0: int, b1: int) -> int:
-    return b0 + (b1 << 8)
-
-
 def _make32(b0: int, b1: int, b2: int, b3: int) -> int:
     return b0 + (b1 << 8) + (b2 << 16) + (b3 << 24)
 
@@ -103,7 +99,7 @@ class Z80State(object):
     # TODO: Use a mix-in from the z80 module to implement these?
     @property
     def bc(self) -> int:
-        return _make16(*self.__bc)
+        return int.from_bytes(self.__bc, 'little')
 
     @bc.setter
     def bc(self, value: int) -> None:
@@ -111,7 +107,7 @@ class Z80State(object):
 
     @property
     def de(self) -> int:
-        return _make16(*self.__de)
+        return int.from_bytes(self.__de, 'little')
 
     @de.setter
     def de(self, value: int) -> None:
@@ -119,7 +115,7 @@ class Z80State(object):
 
     @property
     def hl(self) -> int:
-        return _make16(*self.__hl)
+        return int.from_bytes(self.__hl, 'little')
 
     @hl.setter
     def hl(self, value: int) -> None:
@@ -127,7 +123,7 @@ class Z80State(object):
 
     @property
     def af(self) -> int:
-        return _make16(*self.__af)
+        return int.from_bytes(self.__af, 'little')
 
     @af.setter
     def af(self, value: int) -> None:
@@ -143,7 +139,7 @@ class Z80State(object):
 
     @property
     def ix(self) -> int:
-        return _make16(*self.__ix)
+        return int.from_bytes(self.__ix, 'little')
 
     @ix.setter
     def ix(self, value: int) -> None:
@@ -151,7 +147,7 @@ class Z80State(object):
 
     @property
     def iy(self) -> int:
-        return _make16(*self.__iy)
+        return int.from_bytes(self.__iy, 'little')
 
     @iy.setter
     def iy(self, value: int) -> None:
@@ -159,7 +155,7 @@ class Z80State(object):
 
     @property
     def alt_bc(self) -> int:
-        return _make16(*self.__alt_bc)
+        return int.from_bytes(self.__alt_bc, 'little')
 
     @alt_bc.setter
     def alt_bc(self, value: int) -> None:
@@ -167,7 +163,7 @@ class Z80State(object):
 
     @property
     def alt_de(self) -> int:
-        return _make16(*self.__alt_de)
+        return int.from_bytes(self.__alt_de, 'little')
 
     @alt_de.setter
     def alt_de(self, value: int) -> None:
@@ -175,7 +171,7 @@ class Z80State(object):
 
     @property
     def alt_hl(self) -> int:
-        return _make16(*self.__alt_hl)
+        return int.from_bytes(self.__alt_hl, 'little')
 
     @alt_hl.setter
     def alt_hl(self, value: int) -> None:
@@ -183,7 +179,7 @@ class Z80State(object):
 
     @property
     def alt_af(self) -> int:
-        return _make16(*self.__alt_af)
+        return int.from_bytes(self.__alt_af, 'little')
 
     @alt_af.setter
     def alt_af(self, value: int) -> None:
@@ -199,7 +195,7 @@ class Z80State(object):
 
     @property
     def pc(self) -> int:
-        return _make16(*self.__pc)
+        return int.from_bytes(self.__pc, 'little')
 
     @pc.setter
     def pc(self, value: int) -> None:
@@ -207,7 +203,7 @@ class Z80State(object):
 
     @property
     def sp(self) -> int:
-        return _make16(*self.__sp)
+        return int.from_bytes(self.__sp, 'little')
 
     @sp.setter
     def sp(self, value: int) -> None:
@@ -215,7 +211,7 @@ class Z80State(object):
 
     @property
     def ir(self) -> int:
-        return _make16(*self.__ir)
+        return int.from_bytes(self.__ir, 'little')
 
     @ir.setter
     def ir(self, value: int) -> None:
@@ -275,13 +271,11 @@ class MemoryState(object):
     def write(self, addr: int, block: bytes) -> None:
         self.__image[addr:addr + len(block)] = block
 
-    # TODO: read_i8
     def read8(self, addr: int) -> int:
         return self.__image[addr]
 
-    # TODO: read_i16
     def read16(self, addr: int) -> int:
-        return _make16(*self.read(addr, 2))
+        return int.from_bytes(self.read(addr, 2), 'little')
 
 
 class MachineState(Z80State, MemoryState):
