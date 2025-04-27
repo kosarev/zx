@@ -52,7 +52,7 @@ class TAPFile(SoundFile, format_name='TAP'):
 
     @classmethod
     def _parse_block(cls, parser: BinaryParser) -> Bytes:
-        size = parser.parse_field('<H', 'block_size')
+        size = parser.parse_field('<H')
         assert isinstance(size, int)
         return parser.extract_block(size)
 

@@ -160,7 +160,7 @@ class TZXFile(SoundFile, format_name='TZX'):
     @classmethod
     def _parse_group_start(
             cls, parser: BinaryParser) -> dict[str, typing.Any]:
-        length = parser.parse_field('B', 'name_length')
+        length = parser.parse_field('B')
         assert isinstance(length, int)
         name = parser.extract_block(length)
         # print('Group start: %r.' % name)
@@ -177,7 +177,7 @@ class TZXFile(SoundFile, format_name='TZX'):
     @classmethod
     def _parse_text_description(
             cls, parser: BinaryParser) -> dict[str, typing.Any]:
-        size = parser.parse_field('B', 'text_size')
+        size = parser.parse_field('B')
         assert isinstance(size, int)
         text = parser.extract_block(size)
         return {'id': '0x30 (Text Description)',
@@ -199,13 +199,13 @@ class TZXFile(SoundFile, format_name='TZX'):
     @classmethod
     def _parse_archive_info(
             cls, parser: BinaryParser) -> dict[str, typing.Any]:
-        block_size = parser.parse_field('<H', 'block_size')
-        num_of_strings = parser.parse_field('B', 'num_of_strings')
+        block_size = parser.parse_field('<H')
+        num_of_strings = parser.parse_field('B')
         assert isinstance(num_of_strings, int)
         for _ in range(num_of_strings):
-            id = parser.parse_field('B', 'id')
+            id = parser.parse_field('B')
             assert isinstance(id, int)
-            length = parser.parse_field('B', 'length')
+            length = parser.parse_field('B')
             assert isinstance(length, int)
             body = parser.extract_block(length)
 
@@ -228,7 +228,7 @@ class TZXFile(SoundFile, format_name='TZX'):
 
     @classmethod
     def _parse_block(cls, parser: BinaryParser) -> dict[str, typing.Any]:
-        block_id = parser.parse_field('B', 'block_id')
+        block_id = parser.parse_field('B')
         assert isinstance(block_id, int)
         if block_id not in cls._BLOCK_PARSERS:
             raise Error('Unsupported TZX block id 0x%x.' % block_id)
@@ -241,7 +241,7 @@ class TZXFile(SoundFile, format_name='TZX'):
     def parse(cls, filename: str, image: Bytes) -> 'TZXFile':
         parser = BinaryParser(image)
 
-        signature = parser.parse_field('8s', 'signature')
+        signature = parser.parse_field('8s')
         TZX_SIGNATURE = b'ZXTape!\x1a'
         if signature != TZX_SIGNATURE:
             raise Error('Bad TZX file signature %r; expected %r.' % (

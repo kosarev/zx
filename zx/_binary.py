@@ -45,8 +45,7 @@ class BinaryParser(object):
     def extract_rest(self) -> Bytes:
         return self.extract_block(len(self.image) - self.pos)
 
-    def parse_field(self, format: str,
-                    id: str) -> int | str | bytes | tuple[int | str]:
+    def parse_field(self, format: str) -> int | str | bytes | tuple[int | str]:
         size = struct.calcsize(format)
         value = struct.unpack(format, self.extract_block(size))
         if len(value) == 1:
@@ -63,7 +62,7 @@ class BinaryParser(object):
                 # TODO: Remove this branch once all tuple formats
                 # are eliminated.
                 field_id, field_format = field
-            res[field_id] = self.parse_field(field_format, field_id)
+            res[field_id] = self.parse_field(field_format)
         return res
 
 
