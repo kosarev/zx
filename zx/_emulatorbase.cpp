@@ -370,8 +370,8 @@ PyMethodDef methods[] = {
      "Set a callback function handling reading from ports."},
     {"set_on_output_callback", set_on_output_callback, METH_VARARGS,
      "Set a callback function handling writing to ports."},
-    {"run", run, METH_NOARGS,
-     "Run emulator until one or several events are signaled."},
+    {"_run", run, METH_NOARGS,
+     "Run emulator until one or several events are signalled."},
     {"on_handle_active_int", on_handle_active_int, METH_NOARGS,
      "Attempts to initiate a masked interrupt."},
     { nullptr }  // Sentinel.

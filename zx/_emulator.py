@@ -10,8 +10,11 @@
 #   Published under the MIT license.
 
 # TODO: Remove unused imports.
+import numpy
 import time
+import types
 import typing
+
 from ._beeper import Beeper
 from ._data import MachineSnapshot
 from ._data import SoundFile
@@ -29,7 +32,16 @@ from ._device import QuantumRun
 from ._device import ReadPort
 from ._device import EndOfFrame
 from ._device import Dispatcher
+from ._device import Destroy
+from ._device import DeviceEvent
+from ._device import GetEmulationPauseState
+from ._device import GetEmulationTime
+from ._device import LoadFile
+from ._device import SaveSnapshot
+from ._device import ToggleEmulationPause
+from ._device import ToggleTapePause
 from ._error import Error
+from ._except import EmulationExit
 from ._except import EmulatorException
 from ._file import parse_file
 from ._gui import ScreenWindow
@@ -119,6 +131,8 @@ class Emulator(Spectrum48):
         if self.__profile:
             self.set_breakpoints(0, 0x10000)
 
+        self.__paused = False
+
     # TODO: Double-underscore or make public.
     def _save_snapshot_file(self, format: type[MachineSnapshot],
                             filename: str) -> None:
@@ -170,7 +184,7 @@ class Emulator(Spectrum48):
                 self.devices.notify(KeyStroke(KEYS[id].ID, pressed=False))
                 self.run(duration=0.1, fast_forward=True)
 
-    def __on_input(self, addr: int) -> int | str:
+    def __on_input(self, addr: int) -> int:
         # Handle playbacks.
         if self.__playback_player:
             sample = None
@@ -179,6 +193,7 @@ class Emulator(Spectrum48):
 
             if sample == 'END_OF_FRAME':
                 sample_i = 0  # TODO
+                assert 0
                 '''
                 raise Error(
                     'Too few input samples at frame %d of %d. '
@@ -191,6 +206,7 @@ class Emulator(Spectrum48):
 
             # assert 0  # TODO
             # print('__on_input() returns %d' % sample)
+            assert isinstance(sample, int)
             return sample
 
         # Scan keyboard.
@@ -283,7 +299,7 @@ class Emulator(Spectrum48):
                 time.sleep(1 / 50)
                 return
 
-            events = RunEvents(super().run())
+            events = RunEvents(self._run())
             # TODO: print(events)
 
             if RunEvents.BREAKPOINT_HIT in events:
@@ -310,7 +326,8 @@ class Emulator(Spectrum48):
                 # on the Python side using numpy?
                 self.render_screen()
                 self.devices.notify(EndOfFrame(
-                    port_writes=self.get_port_writes()))
+                    port_writes=numpy.frombuffer(self.get_port_writes(),
+                                                 dtype=numpy.uint64)))
                 self.devices.notify(OutputFrame(
                     pixels=self.get_frame_pixels(),
                     fast_forward=fast_forward))
@@ -452,3 +469,54 @@ class Emulator(Spectrum48):
         self.__events_to_signal |= RunEvents.END_OF_TAPE
         while not self.__is_end_of_tape():
             self.__run_quantum(fast_forward=True)
+
+    def __enter__(self) -> 'Emulator':
+        return self
+
+    def __exit__(self, xtype: None | type[BaseException],
+                 value: None | BaseException,
+                 traceback: None | types.TracebackType) -> None:
+        self.devices.notify(Destroy())
+
+    def stop(self) -> None:
+        raise EmulationExit()
+
+    @property
+    def paused(self) -> bool:
+        return self.__paused
+
+    @paused.setter
+    def paused(self, value: bool) -> None:
+        self.__paused = value
+        assert self.devices is not None
+        self.devices.notify(PauseStateUpdated())
+
+    def set_breakpoints(self, addr: int, size: int) -> None:
+        self.mark_addrs(addr, size, self.__BREAKPOINT_MARK)
+
+    def set_breakpoint(self, addr: int) -> None:
+        self.set_breakpoints(addr, 1)
+
+    def on_breakpoint(self) -> None:
+        raise EmulatorException('Breakpoint triggered.')
+
+    def on_event(self, event: DeviceEvent, devices: Dispatcher,
+                 result: typing.Any) -> typing.Any:
+        if isinstance(event, GetEmulationPauseState):
+            return self.paused
+        elif isinstance(event, GetEmulationTime):
+            return self._emulation_time
+        elif isinstance(event, KeyStroke):
+            key = KEYS.get(event.id, None)
+            if key:
+                self.paused = False
+                self._quit_playback_mode()
+        elif isinstance(event, LoadFile):
+            self._load_file(event.filename)
+        elif isinstance(event, SaveSnapshot):
+            self._save_snapshot_file(Z80Snapshot, event.filename)
+        elif isinstance(event, ToggleEmulationPause):
+            self.paused ^= True
+        elif isinstance(event, ToggleTapePause):
+            self._toggle_tape_pause()
+        return result

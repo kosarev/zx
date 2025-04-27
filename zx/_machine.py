@@ -14,6 +14,7 @@ import typing
 import types
 from ._data import DataRecord
 from ._data import MachineSnapshot
+from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import Destroy
@@ -25,7 +26,7 @@ from ._device import PauseStateUpdated
 from ._device import SaveSnapshot
 from ._device import ToggleEmulationPause
 from ._device import ToggleTapePause
-from ._emulatorbase import _Spectrum48Base  # type: ignore
+from ._emulatorbase import _Spectrum48Base
 from ._except import EmulationExit, EmulatorException
 from ._keyboard import KEYS
 from ._rom import load_rom_image
@@ -361,68 +362,13 @@ class MachineState(Z80State, MemoryState):
 
 
 # TODO: Combine with Emulator.
-class Spectrum48(_Spectrum48Base, MachineState):  # type: ignore[misc]
+class Spectrum48(_Spectrum48Base, MachineState, Device):
     # Memory marks.
     __NO_MARKS = 0
     __BREAKPOINT_MARK = 1 << 0
-
-    devices: Dispatcher
 
     def __init__(self) -> None:
         MachineState.__init__(self, self._get_state_view())
 
         # Install ROM.
         self.write(0x0000, load_rom_image('Spectrum48.rom'))
-
-        self.__paused = False
-
-    def __enter__(self) -> 'Spectrum48':
-        return self
-
-    def __exit__(self, xtype: None | type[BaseException],
-                 value: None | BaseException,
-                 traceback: None | types.TracebackType) -> None:
-        self.devices.notify(Destroy())
-
-    def stop(self) -> None:
-        raise EmulationExit()
-
-    @property
-    def paused(self) -> bool:
-        return self.__paused
-
-    @paused.setter
-    def paused(self, value: bool) -> None:
-        self.__paused = value
-        assert self.devices is not None
-        self.devices.notify(PauseStateUpdated())
-
-    def set_breakpoints(self, addr: int, size: int) -> None:
-        self.mark_addrs(addr, size, self.__BREAKPOINT_MARK)
-
-    def set_breakpoint(self, addr: int) -> None:
-        self.set_breakpoints(addr, 1)
-
-    def on_breakpoint(self) -> None:
-        raise EmulatorException('Breakpoint triggered.')
-
-    def on_event(self, event: DeviceEvent, devices: Dispatcher,
-                 result: typing.Any) -> typing.Any:
-        if isinstance(event, GetEmulationPauseState):
-            return self.paused
-        elif isinstance(event, GetEmulationTime):
-            return self._emulation_time
-        elif isinstance(event, KeyStroke):
-            key = KEYS.get(event.id, None)
-            if key:
-                self.paused = False
-                self._quit_playback_mode()
-        elif isinstance(event, LoadFile):
-            self._load_file(event.filename)
-        elif isinstance(event, SaveSnapshot):
-            self._save_snapshot_file(Z80Snapshot, event.filename)
-        elif isinstance(event, ToggleEmulationPause):
-            self.paused ^= True
-        elif isinstance(event, ToggleTapePause):
-            self._toggle_tape_pause()
-        return result

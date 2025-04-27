@@ -27,7 +27,6 @@ class Beeper(Device):
             self, writes: numpy.typing.NDArray[numpy.uint64],
             dispatcher: Dispatcher) -> None:
         # Filter writes to the 0xfe port.
-        writes = numpy.frombuffer(writes, dtype=numpy.uint64)
         writes = writes[writes & 0xff == 0xfe]
 
         # Get EAR levels and their corresponding ticks.
