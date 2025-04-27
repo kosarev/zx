@@ -40,7 +40,7 @@ class RunEvents(enum.IntFlag):
     END_OF_TAPE = 1 << 5
 
 
-class _StateParser(object):
+class StateParser(object):
     def __init__(self, image: memoryview) -> None:
         self.__image = image
         self.__pos = 0
@@ -67,7 +67,7 @@ class _StateParser(object):
 
 class Z80State(object):
     def __init__(self, image: memoryview) -> None:
-        p = _StateParser(image)
+        p = StateParser(image)
         self.__bc = p.parse16()
         self.__de = p.parse16()
         self.__hl = p.parse16()
@@ -275,7 +275,7 @@ class MachineState(Z80State, MemoryState):
     image: memoryview
 
     def __init__(self, image: memoryview) -> None:
-        p = _StateParser(image)
+        p = StateParser(image)
 
         self.z80_image = p.parse_block(32)
         Z80State.__init__(self, self.z80_image)
