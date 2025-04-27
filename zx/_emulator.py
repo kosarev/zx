@@ -390,19 +390,6 @@ class MachineState(Z80State, MemoryState):
                 setattr(self, field, value)
 
 
-# TODO: Combine with Emulator.
-class Spectrum48(_Spectrum48Base, MachineState, Device):
-    # Memory marks.
-    __NO_MARKS = 0
-    __BREAKPOINT_MARK = 1 << 0
-
-    def __init__(self) -> None:
-        MachineState.__init__(self, self._get_state_view())
-
-        # Install ROM.
-        self.write(0x0000, load_rom_image('Spectrum48.rom'))
-
-
 # Stores information about the running code.
 class Profile(object):
     _annots: dict[int, str] = dict()
@@ -415,8 +402,11 @@ class Profile(object):
             yield addr, self._annots[addr]
 
 
-# TODO: Eliminate this class. Move everything to Spectrum48.
-class Emulator(Spectrum48):
+class Emulator(_Spectrum48Base, MachineState, Device):
+    # Memory marks.
+    __NO_MARKS = 0
+    __BREAKPOINT_MARK = 1 << 0
+
     FRAME_SIZE = 48 + 256 + 48, 48 + 192 + 40
 
     _SPIN_V0P5_INFO = {'id': 'info',
@@ -436,7 +426,11 @@ class Emulator(Spectrum48):
                  headless: bool = False,
                  devices: list[Device] | None = None,
                  profile: Profile | None = None):
-        super().__init__()
+        MachineState.__init__(self, self._get_state_view())
+        Device.__init__(self)
+
+        # Install ROM.
+        self.write(0x0000, load_rom_image('Spectrum48.rom'))
 
         self.frame_count = 0
         # TODO: Double-underscore or make public.
