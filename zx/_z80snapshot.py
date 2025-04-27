@@ -26,17 +26,6 @@ _V2_FORMAT = '2.x'
 _V3_FORMAT = '3.x'
 
 
-def _get_format_version(
-        snap: (Z80Snapshot | collections.OrderedDict[str, typing.Any])) -> str:
-    if 'ticks_count_low' in snap:
-        return _V3_FORMAT
-
-    if 'pc2' in snap:
-        return _V2_FORMAT
-
-    return _V1_FORMAT
-
-
 class Z80Snapshot(MachineSnapshot, format_name='Z80'):
     _MEMORY_PAGE_ADDRS = {4: 0x8000, 5: 0xc000, 8: 0x4000}
 
@@ -108,7 +97,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                  misc2: int | None = None,
                  flags3: int | None = None,
                  port_fffd_value: int | None = None,
-                 sound_chip_regs: SoundChipRegs | None = None,
+                 sound_chip_regs: tuple[int] | None = None,
                  ticks_count_low: int | None = None,
                  ticks_count_high: int | None = None,
                  spectator_flag: int | None = None,
@@ -123,7 +112,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                  disciple_inhibit_flag: int | None = None,
                  last_write_to_port_1ffd: int | None = None,
                  memory_image: Bytes | None = None,
-                 memory_blocks: tuple[tuple[int, Bytes]] | None = None):
+                 memory_blocks: list[tuple[int, Bytes]] | None = None):
         assert memory_image is None or memory_blocks is None
         super().__init__(
             a=a, f=f, bc=bc, hl=hl, pc=pc, sp=sp,
@@ -221,42 +210,34 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             memory_blocks.append((0x4000, self.memory_image))
         else:
             assert machine_kind == 'ZX Spectrum 48K', machine_kind  # TODO
-            for block in self.memory_blocks:
-                assert isinstance(block, dict)
-                page_no = block['page_no']
-                image = block['image']
+            for page_no, image in self.memory_blocks:
                 memory_blocks.append((self._MEMORY_PAGE_ADDRS[page_no], image))
 
         return UnifiedSnapshot(**fields,
                                memory_blocks=memory_blocks)
 
-    __V1_HEADER = (
+    __V1_HEADER = [
         'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',
         'B:flags1', '<H:de', '<H:alt_bc', '<H:alt_de', '<H:alt_hl',
-        'B:alt_a', 'B:alt_f', '<H:iy', '<H:ix', 'B:iff1', 'B:iff2', 'B:flags2')
+        'B:alt_a', 'B:alt_f', '<H:iy', '<H:ix', 'B:iff1', 'B:iff2', 'B:flags2']
 
-    __EXTRA_HEADER_SIZE = (
-        '<H:extra_header_size',)
+    __EXTRA_HEADER_SIZE = [
+        '<H:extra_header_size']
 
-    __V2_HEADER = (
+    __V2_HEADER = [
         '<H:pc2', 'B:hardware_mode', 'B:misc1', 'B:misc2', 'B:flags3',
-        'B:port_fffd_value', '16B:sound_chip_regs')
+        'B:port_fffd_value', '16B:sound_chip_regs']
 
-    __V3_HEADER = (
+    __V3_HEADER = [
         '<H:ticks_count_low', 'B:ticks_count_high', 'B:spectator_flag',
         'B:mgt_rom_paged', 'B:multiface_rom_paged',
         'B:memory_at_0000_1fff_is_rom', 'B:memory_at_2000_3fff_is_rom',
         '10B:keyboard_mappings', '10B:keyboard_mapping_keys',
         'B:mgt_type', 'B:disciple_inhibit_button_status',
-        'B:disciple_inhibit_flag')
+        'B:disciple_inhibit_flag']
 
-    __V3_EXTRA_HEADER = (
-        'B:last_write_to_port_1ffd',)
-
-    _MEMORY_BLOCK_HEADER = [
-        '<H:compressed_size', 'B:page_no']
-
-    _RAW_MEMORY_BLOCK_SIZE_VALUE = 0xffff
+    __V3_EXTRA_HEADER = [
+        'B:last_write_to_port_1ffd']
 
     @classmethod
     def __uncompress(cls, compressed_image: Bytes,
@@ -290,18 +271,18 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         return bytes(output)
 
     @classmethod
-    def _parse_memory_block(cls, parser: BinaryParser) -> (
-            collections.OrderedDict[str, typing.Any]):
+    def __parse_memory_block(cls, parser: BinaryParser) -> tuple[int, bytes]:
         BLOCK_SIZE = 16 * 1024
-        fields = parser.parse(cls._MEMORY_BLOCK_HEADER)
-        compressed_size = fields['compressed_size']
-        if compressed_size == cls._RAW_MEMORY_BLOCK_SIZE_VALUE:
-            raw_image = parser.read_bytes(BLOCK_SIZE)
+        compressed_size = parser.parse_field('<H')
+        assert isinstance(compressed_size, int)
+        page_no = parser.parse_field('B')
+        assert isinstance(page_no, int)
+        if compressed_size == 0xffff:
+            image = parser.read_bytes(BLOCK_SIZE)
         else:
             compressed_image = parser.read_bytes(compressed_size)
-            raw_image = cls.__uncompress(compressed_image, BLOCK_SIZE)
-        return collections.OrderedDict(page_no=fields['page_no'],
-                                       image=raw_image)
+            image = cls.__uncompress(compressed_image, BLOCK_SIZE)
+        return page_no, image
 
     @classmethod
     def parse(cls, filename: str, image: Bytes) -> 'Z80Snapshot':
@@ -330,26 +311,27 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                             id='too_many_z80_snapshot_headers')
 
         # Parse memory snapshot.
+        memory_image: bytes | None = None
+        memory_blocks: list[tuple[int, bytes]] | None = None
         if version == 1:
-            compressed = (fields['flags1'] & 0x20) != 0
-            image = parser.read_remaining_bytes()
+            compressed = bool(fields['flags1'] & 0x20)
+            memory_image = parser.read_remaining_bytes()
             if not compressed:
-                if len(image) != 48 * 1024:
+                if len(memory_image) != 48 * 1024:
                     raise Error('The snapshot is too large.')
             else:
-                if image[-4:] != b'\x00\xed\xed\x00':
+                if memory_image[-4:] != b'\x00\xed\xed\x00':
                     raise Error('The compressed memory block does not '
                                 'terminate properly.')
-                image = cls.__uncompress(image[:-4], 48 * 1024)
-
-            fields['memory_image'] = image
+                memory_image = cls.__uncompress(memory_image[:-4], 48 * 1024)
         else:
-            memory_blocks = fields.setdefault('memory_blocks', [])
+            memory_blocks = []
             while parser:
-                block = cls._parse_memory_block(parser)
-                memory_blocks.append(block)
+                memory_blocks.append(cls.__parse_memory_block(parser))
 
-        return Z80Snapshot(**fields)
+        return Z80Snapshot(**fields,
+                           memory_image=memory_image,
+                           memory_blocks=memory_blocks)
 
     # TODO: Rework to generate an internal representation of the
     #       format and then generate its binary version.
