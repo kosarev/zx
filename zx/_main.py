@@ -124,7 +124,7 @@ def test_file(filename: str, batch_mode: bool) -> None:
         print(repr(filename))
         file = parse_file(filename)
         if isinstance(file, MachineSnapshot):
-            pass
+            file.to_unified_snapshot()
         elif isinstance(file, RZXFile):
             with Spectrum(headless=True) as app:
                 app._run_file(filename)
