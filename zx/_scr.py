@@ -13,7 +13,10 @@ import collections
 from ._binary import Bytes, BinaryParser, BinaryWriter
 from ._data import MachineSnapshot
 from ._data import UnifiedSnapshot
-from ._machine import MachineState
+
+import typing
+if typing.TYPE_CHECKING:  # TODO
+    from ._emulator import MachineState
 
 
 class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
@@ -56,6 +59,6 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
         return _SCRSnapshot(**fields)
 
     @classmethod
-    def make_snapshot(cls, state: MachineState) -> '_SCRSnapshot':
+    def make_snapshot(cls, state: 'MachineState') -> '_SCRSnapshot':
         screen = state.read(0x4000, 6 * 1024 + 768)
         return cls.parse('<filename>', screen)

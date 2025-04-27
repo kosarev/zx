@@ -10,13 +10,15 @@
 
 import typing
 from ._data import MachineSnapshot
-from ._machine import MachineState
 from ._rzx import RZXFile
+
+if typing.TYPE_CHECKING:  # TODO
+    from ._emulator import MachineState
 
 
 # TODO: Rework to a time machine interface.
 class PlaybackPlayer(object):
-    def __init__(self, machine: MachineState, file: RZXFile) -> None:
+    def __init__(self, machine: 'MachineState', file: RZXFile) -> None:
         self.__machine = machine
 
         assert isinstance(file, RZXFile)

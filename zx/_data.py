@@ -17,7 +17,7 @@ from ._binary import Bytes
 
 import typing
 if typing.TYPE_CHECKING:  # TODO
-    from ._machine import MachineState
+    from ._emulator import MachineState
 
 
 class DataRecord(object):
