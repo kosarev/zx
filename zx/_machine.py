@@ -29,7 +29,6 @@ from ._emulatorbase import _Spectrum48Base  # type: ignore
 from ._except import EmulationExit, EmulatorException
 from ._keyboard import KEYS
 from ._rom import load_rom_image
-from ._utils import make16
 from ._z80snapshot import Z80Snapshot
 
 

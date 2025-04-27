@@ -12,15 +12,12 @@
 import typing
 
 
-MASK16 = 0xffff
-
-
 def div_ceil(a: int, b: int) -> int:
     return (a + b - 1) // b
 
 
 def make16(hi: int, lo: int) -> int:
-    return ((hi << 8) | lo) & MASK16
+    return (hi << 8) + lo
 
 
 def tupilize(x: typing.Any) -> tuple[typing.Any, ...]:
