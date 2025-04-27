@@ -179,22 +179,33 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
     _RAW_MEMORY_BLOCK_SIZE_VALUE = 0xffff
 
     @classmethod
-    def _uncompress(cls, compressed_image: Bytes,
-                    uncompressed_size: int) -> Bytes:
-        MARKER = 0xed
-        input = list(compressed_image)
-        output = []
+    def __uncompress(cls, compressed_image: Bytes,
+                     uncompressed_size: int) -> Bytes:
+        MARKER = b'\xed\xed'
+        input = bytes(compressed_image)
+        output = bytearray()
         while input:
-            if len(input) >= 4 and input[0] == MARKER and input[1] == MARKER:
-                count = input[2]
-                filler = input[3]
-                output.extend([filler] * count)
-                del input[0:4]
-            else:
-                output.append(input.pop(0))
+            a, m, b = input.partition(MARKER)
+            output.extend(a)
+
+            if m:
+                assert m == MARKER
+                if len(b) < 2:
+                    raise Error('Corrupted compressed memory block: '
+                                'incomplete repetition marker.',
+                                id='corrupted_compressed_memory_block')
+
+                count, filler = b[0], b[1:2]
+                output.extend(filler * count)
+                b = b[2:]
+
+            input = b
 
         if len(output) != uncompressed_size:
-            raise Error('Corrupted compressed memory block.')
+            raise Error('Corrupted compressed memory block: '
+                        f'expected {uncompressed_size} bytes, '
+                        f'but got {len(output)}.',
+                        id='corrupted_compressed_memory_block')
 
         return bytes(output)
 
@@ -208,7 +219,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             raw_image = parser.read_bytes(BLOCK_SIZE)
         else:
             compressed_image = parser.read_bytes(compressed_size)
-            raw_image = cls._uncompress(compressed_image, BLOCK_SIZE)
+            raw_image = cls.__uncompress(compressed_image, BLOCK_SIZE)
         return collections.OrderedDict(page_no=fields['page_no'],
                                        image=raw_image)
 
@@ -241,19 +252,15 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         # Parse memory snapshot.
         if _get_format_version(fields) == _V1_FORMAT:
             compressed = (fields['flags1'] & 0x20) != 0
+            image = parser.read_remaining_bytes()
             if not compressed:
-                if parser.get_remaining_size() != 48 * 1024:
+                if len(image) != 48 * 1024:
                     raise Error('The snapshot is too large.')
-                image = parser.read_remaining_bytes()
             else:
-                image = cls._uncompress(parser.read_remaining_bytes(),
-                                        48 * 1024 + 4)
-
-                # Remove the terminator.
-                if image[48 * 1024:] != b'\x00\xed\xed\x00':
+                if not image[-4:] != b'\x00\xed\xed\x00':
                     raise Error('The compressed memory block does not '
                                 'terminate properly.')
-                image = image[:48 * 1024]
+                image = cls.__uncompress(image[:-4], 48 * 1024)
 
             fields['memory_snapshot'] = image
         else:

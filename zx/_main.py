@@ -97,7 +97,7 @@ def usage() -> None:
     sys.exit()
 
 
-def test_file(filename: str, batch_mode: bool) -> bool:
+def test_file(filename: str, batch_mode: bool) -> None:
     def move(dest_dir: str) -> None:
         os.makedirs(dest_dir, exist_ok=True)
 
