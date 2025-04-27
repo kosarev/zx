@@ -49,20 +49,20 @@ class StateParser(object):
     def parsed_image(self) -> memoryview:
         return self.__image[:self.__pos]
 
-    def parse_block(self, size: int) -> memoryview:
+    def read_bytes(self, size: int) -> memoryview:
         block = self.__image[self.__pos:self.__pos + size]
         self.__pos += size
         assert len(block) == size
         return block
 
     def parse8(self) -> memoryview:
-        return self.parse_block(1)
+        return self.read_bytes(1)
 
     def parse16(self) -> memoryview:
-        return self.parse_block(2)
+        return self.read_bytes(2)
 
     def parse32(self) -> memoryview:
-        return self.parse_block(4)
+        return self.read_bytes(4)
 
 
 class Z80State(object):
@@ -277,7 +277,7 @@ class MachineState(Z80State, MemoryState):
     def __init__(self, image: memoryview) -> None:
         p = StateParser(image)
 
-        self.z80_image = p.parse_block(32)
+        self.z80_image = p.read_bytes(32)
         Z80State.__init__(self, self.z80_image)
 
         self.__ticks_since_int = p.parse32()
@@ -288,7 +288,7 @@ class MachineState(Z80State, MemoryState):
         self.__border_colour = p.parse8()
         self.__trace_enabled = p.parse8()
 
-        self.memory_image = p.parse_block(0x10000)
+        self.memory_image = p.read_bytes(0x10000)
         MemoryState.__init__(self, self.memory_image)
 
         self.image = p.parsed_image
