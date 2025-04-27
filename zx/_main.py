@@ -97,9 +97,7 @@ def usage() -> None:
     sys.exit()
 
 
-def test_file(filename: str) -> bool:
-    print('%r' % filename)
-
+def test_file(filename: str, batch_mode: bool) -> bool:
     def move(dest_dir: str) -> None:
         os.makedirs(dest_dir, exist_ok=True)
 
@@ -122,23 +120,39 @@ def test_file(filename: str) -> bool:
         os.rename(filename, dest_path)
         print('%r moved to %r' % (filename, dest_dir))
 
-    with Spectrum(headless=True) as app:
-        try:
-            app._run_file(filename)
-            move('passed')
-        except Error as e:
-            move(e.id)
-        except Exception as e:
-            # TODO: Refine.
-            return False
+    try:
+        print(repr(filename))
+        file = parse_file(filename)
+        if isinstance(file, RZXFile):
+            with Spectrum(headless=True) as app:
+                app._run_file(filename)
+        else:
+            raise Error(f"Don't know how to test {file}",
+                        id='not_testable')
+    except EmulationExit as e:
+        pass
+    except Exception as e:
+        if not batch_mode:
+            raise
 
-    return True
+        id = 'exception_raised'
+        if isinstance(e, Error):
+            id = e.id
+        move(id)
+        return
+
+    if batch_mode:
+        move('passed')
 
 
 def test(args: list[str]) -> None:
-    for filename in args:
-        if not test_file(filename):
-            break
+    batch_mode = False
+    for arg in args:
+        if arg == '--batch':
+            batch_mode = True
+            continue
+
+        test_file(arg, batch_mode)
 
 
 def fast_forward(args: list[str]) -> None:

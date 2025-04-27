@@ -16,9 +16,7 @@ class Error(EmulatorException):
     """Basic exception for the whole ZX module."""
     def __init__(self, reason: str, id: None | str = None):
         super().__init__(reason)
-
-        if id:
-            self.id = id
+        self.id = id
 
 
 USER_ERRORS = Error, IOError
