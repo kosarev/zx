@@ -39,7 +39,7 @@ private:
     PyObject *object;
 };
 
-namespace Spectrum48 {
+namespace Spectrum {
 
 struct __attribute__((packed)) processor_state {
     least_u16 bc;
@@ -79,9 +79,9 @@ struct __attribute__((packed)) machine_state {
     zx::memory_image_type memory;
 };
 
-class machine_emulator : public zx::spectrum48<machine_emulator> {
+class machine_emulator : public zx::spectrum<machine_emulator> {
 public:
-    typedef zx::spectrum48<machine_emulator> base;
+    typedef zx::spectrum<machine_emulator> base;
 
     machine_emulator() {
         retrieve_state();
@@ -147,8 +147,8 @@ public:
     }
 
 protected:
-    Spectrum48::processor_state get_processor_state() {
-        Spectrum48::processor_state state;
+    Spectrum::processor_state get_processor_state() {
+        Spectrum::processor_state state;
 
         state.bc = get_bc();
         state.de = get_de();
@@ -175,7 +175,7 @@ protected:
         return state;
     }
 
-    void set_processor_state(const Spectrum48::processor_state &state) {
+    void set_processor_state(const Spectrum::processor_state &state) {
         set_bc(state.bc);
         set_de(state.de);
         set_hl(state.hl);
@@ -378,7 +378,7 @@ PyMethodDef methods[] = {
 };
 
 PyObject *object_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
-    if(!PyArg_ParseTuple(args, ":_Spectrum48Base.__new__"))
+    if(!PyArg_ParseTuple(args, ":_SpectrumBase.__new__"))
         return nullptr;
 
     auto *self = cast_object(type->tp_alloc(type, /* nitems= */ 0));
@@ -392,13 +392,13 @@ PyObject *object_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
 void object_dealloc(PyObject *self) {
     auto &object = *cast_object(self);
-    object.emulator.~spectrum48();
+    object.emulator.~spectrum();
     Py_TYPE(self)->tp_free(self);
 }
 
 static PyTypeObject type_object = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
-    "zx._emulatorbase._Spectrum48Base",
+    "zx._emulatorbase._SpectrumBase",
                                 // tp_name
     sizeof(object_instance),    // tp_basicsize
     0,                          // tp_itemsize
@@ -419,7 +419,7 @@ static PyTypeObject type_object = {
     0,                          // tp_as_buffer
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
                                 // tp_flags
-    "ZX Spectrum 48K Emulator", // tp_doc
+    "ZX Spectrum Emulator",     // tp_doc
     0,                          // tp_traverse
     0,                          // tp_clear
     0,                          // tp_richcompare
@@ -449,7 +449,7 @@ static PyTypeObject type_object = {
     0,                          // tp_finalize
 };
 
-}  // namespace Spectrum48
+}  // namespace Spectrum
 
 static PyModuleDef module = {
     PyModuleDef_HEAD_INIT,      // m_base
@@ -471,12 +471,12 @@ extern "C" PyMODINIT_FUNC PyInit__emulatorbase(void) {
     if(!m)
         return nullptr;
 
-    if(PyType_Ready(&Spectrum48::type_object) < 0)
+    if(PyType_Ready(&Spectrum::type_object) < 0)
         return nullptr;
-    Py_INCREF(&Spectrum48::type_object);
+    Py_INCREF(&Spectrum::type_object);
 
     // TODO: Check the returning value.
-    PyModule_AddObject(m, "_Spectrum48Base",
-                       &Spectrum48::type_object.ob_base.ob_base);
+    PyModule_AddObject(m, "_SpectrumBase",
+                       &Spectrum::type_object.ob_base.ob_base);
     return m;
 }

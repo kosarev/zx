@@ -9,11 +9,11 @@
 #   Published under the MIT license.
 
 
-from ._emulator import Emulator
+from ._emulator import Spectrum
 from ._except import EmulationExit
 from ._except import EmulatorException
 from ._main import main
 
 __version__ = '0.11.0'
 
-__all__ = ['Emulator', 'main']
+__all__ = ['Spectrum', 'main']

@@ -5,5 +5,5 @@ import zx
 
 def test_basic() -> None:
     # Create an emulator instance.
-    with zx.Emulator(headless=True) as mach:
+    with zx.Spectrum(headless=True) as mach:
         pass

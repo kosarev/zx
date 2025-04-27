@@ -109,12 +109,12 @@ private:
 };
 
 template<typename D>
-class spectrum48 : public z80::z80_cpu<D> {
+class spectrum : public z80::z80_cpu<D> {
 public:
     typedef z80::z80_cpu<D> base;
     typedef fast_u32 ticks_type;
 
-    spectrum48() {
+    spectrum() {
         uint_fast32_t rnd = 0xde347a01;
         for(auto &cell : self().on_get_memory()) {
             cell = static_cast<least_u8>(rnd);

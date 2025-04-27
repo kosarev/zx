@@ -1,7 +1,7 @@
 
 import typing
 
-class _Spectrum48Base:
+class _SpectrumBase:
     def _get_state_view(self) -> memoryview:
         ...
 

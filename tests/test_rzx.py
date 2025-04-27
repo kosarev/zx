@@ -6,7 +6,7 @@ import pytest
 
 def test_basic() -> None:
     # Create a simple RZX.
-    mach = zx.Emulator(headless=True)
+    mach = zx.Spectrum(headless=True)
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
     snapshot = zx._z80snapshot.Z80Snapshot.encode(mach)
 

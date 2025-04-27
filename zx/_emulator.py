@@ -41,7 +41,7 @@ from ._device import ReadPort
 from ._device import SaveSnapshot
 from ._device import ToggleEmulationPause
 from ._device import ToggleTapePause
-from ._emulatorbase import _Spectrum48Base
+from ._emulatorbase import _SpectrumBase
 from ._error import Error
 from ._except import EmulationExit
 from ._except import EmulatorException
@@ -402,7 +402,7 @@ class Profile(object):
             yield addr, self._annots[addr]
 
 
-class Emulator(_Spectrum48Base, MachineState, Device):
+class Spectrum(_SpectrumBase, MachineState, Device):
     # Memory marks.
     __NO_MARKS = 0
     __BREAKPOINT_MARK = 1 << 0
@@ -806,7 +806,7 @@ class Emulator(_Spectrum48Base, MachineState, Device):
         while not self.__is_end_of_tape():
             self.__run_quantum(fast_forward=True)
 
-    def __enter__(self) -> 'Emulator':
+    def __enter__(self) -> 'Spectrum':
         return self
 
     def __exit__(self, xtype: None | type[BaseException],

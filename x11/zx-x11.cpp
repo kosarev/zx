@@ -407,13 +407,13 @@ private:
     zx::memory_image_type memory;
 };
 
-class x11_spectrum48 : public x11_emulator<zx::spectrum48<x11_spectrum48>>
+class x11_spectrum : public x11_emulator<zx::spectrum<x11_spectrum>>
 {};
 
 }  // anonymous namespace
 
 int main(int argc, const char *argv[]) {
-    x11_spectrum48 emu;
+    x11_spectrum emu;
     emu.load_rom("/usr/share/spectrum-roms/48.rom");
 
     if(argc == 2 && std::strcmp(argv[1], "test") == 0) {

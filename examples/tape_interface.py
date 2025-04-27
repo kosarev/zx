@@ -36,7 +36,7 @@ class DurationSet(object):
         return self.__sum / self.count if self.count > 0 else 0
 
 
-class MySpectrum48(zx.Emulator):
+class MySpectrum48(zx.Spectrum):
     def __init__(self):
         super().__init__(headless=HEADLESS)
         self.set_on_output_callback(self.__on_output)

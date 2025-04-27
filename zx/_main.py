@@ -18,7 +18,7 @@ from ._data import ArchiveFile
 from ._data import SoundFile
 from ._data import DataRecord
 from ._data import MachineSnapshot
-from ._emulator import Emulator
+from ._emulator import Spectrum
 from ._emulator import Profile
 from ._error import Error
 from ._error import USER_ERRORS
@@ -47,7 +47,7 @@ def run(args: list[str]) -> None:
         filename = args.pop(0)
         handle_extra_arguments(args)
 
-    with Emulator() as app:
+    with Spectrum() as app:
         if filename:
             app._load_file(filename)
         app.run()
@@ -60,7 +60,7 @@ def profile(args: list[str]) -> None:
     handle_extra_arguments(args)
 
     profile = Profile()
-    with Emulator(profile=profile) as app:
+    with Spectrum(profile=profile) as app:
         app._load_file(file_to_run)
         app.run()
 
@@ -121,7 +121,7 @@ def test_file(filename: str) -> bool:
         os.rename(filename, dest_path)
         print('%r moved to %r' % (filename, dest_dir))
 
-    with Emulator(headless=True) as app:
+    with Spectrum(headless=True) as app:
         try:
             app._run_file(filename)
             move('passed')
@@ -142,7 +142,7 @@ def test(args: list[str]) -> None:
 
 def fast_forward(args: list[str]) -> None:
     for filename in args:
-        with Emulator() as app:
+        with Spectrum() as app:
             app._run_file(filename, fast_forward=True)
 
 
@@ -153,7 +153,7 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
     assert issubclass(src_format, SoundFile), src_format
     assert issubclass(dest_format, MachineSnapshot), dest_format
 
-    with Emulator(headless=True) as app:
+    with Spectrum(headless=True) as app:
         app.load_tape(src_filename)
         app._save_snapshot_file(dest_format, dest_filename)
 
@@ -176,7 +176,7 @@ def _convert_snapshot_to_snapshot(src: DataRecord,
     assert issubclass(src_format, MachineSnapshot), src_format
     assert issubclass(dest_format, MachineSnapshot), dest_format
 
-    with Emulator(headless=True) as app:
+    with Spectrum(headless=True) as app:
         app._load_file(src_filename)
         app._save_snapshot_file(dest_format, dest_filename)
 
