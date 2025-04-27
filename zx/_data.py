@@ -63,9 +63,11 @@ class DataRecord(object):
         return {id: convert(v) for id, v in self}
 
     def dumps(self) -> str:
+        metadata = dict(
+            creator_tool=f'https://pypi.org/project/zx/{zx.__version__}')
         d = dict(type=type(self).__qualname__,
-                 creator_tool=f'https://pypi.org/project/zx/{zx.__version__}',
-                 contents=self.to_json())
+                 metadata=metadata)
+        d.update(self.to_json())
         import json
         return json.dumps(d, indent=2)
 
