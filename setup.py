@@ -24,12 +24,12 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
 
 
 zx_emulatorbase_module = Extension(
-    name='zx._emulatorbase',
+    name='zx._spectrumbase',
     extra_compile_args=['-std=c++11', '-Wall', '-fno-exceptions', '-fno-rtti',
                         '-O3',
                         '-UNDEBUG',  # TODO
                         ],
-    sources=['zx/_emulatorbase.cpp'],
+    sources=['zx/_spectrumbase.cpp'],
     language='c++')
 
 

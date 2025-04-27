@@ -9,10 +9,10 @@
 #   Published under the MIT license.
 
 
-from ._emulator import Spectrum
 from ._except import EmulationExit
 from ._except import EmulatorException
 from ._main import main
+from ._spectrum import Spectrum
 
 __version__ = '0.11.0'
 

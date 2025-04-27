@@ -398,7 +398,7 @@ void object_dealloc(PyObject *self) {
 
 static PyTypeObject type_object = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
-    "zx._emulatorbase._SpectrumBase",
+    "zx._spectrumbase._SpectrumBase",
                                 // tp_name
     sizeof(object_instance),    // tp_basicsize
     0,                          // tp_itemsize
@@ -453,7 +453,7 @@ static PyTypeObject type_object = {
 
 static PyModuleDef module = {
     PyModuleDef_HEAD_INIT,      // m_base
-    "zx._emulatorbase",         // m_name
+    "zx._spectrumbase",         // m_name
     "ZX Spectrum Emulation Module",
                                 // m_doc
     -1,                         // m_size
@@ -466,7 +466,7 @@ static PyModuleDef module = {
 
 }  // anonymous namespace
 
-extern "C" PyMODINIT_FUNC PyInit__emulatorbase(void) {
+extern "C" PyMODINIT_FUNC PyInit__spectrumbase(void) {
     PyObject *m = PyModule_Create(&module);
     if(!m)
         return nullptr;

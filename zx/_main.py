@@ -14,12 +14,11 @@ import typing
 import collections
 import os
 import sys
+
 from ._data import ArchiveFile
-from ._data import SoundFile
 from ._data import DataRecord
 from ._data import MachineSnapshot
-from ._emulator import Spectrum
-from ._emulator import Profile
+from ._data import SoundFile
 from ._error import Error
 from ._error import USER_ERRORS
 from ._error import verbalize_error
@@ -28,6 +27,8 @@ from ._file import detect_file_format
 from ._file import parse_file
 from ._rzx import make_rzx
 from ._rzx import RZXFile
+from ._spectrum import Profile
+from ._spectrum import Spectrum
 
 
 def pop_argument(args: list[str], error: str) -> str:

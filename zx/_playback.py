@@ -13,7 +13,7 @@ from ._data import MachineSnapshot
 from ._rzx import RZXFile
 
 if typing.TYPE_CHECKING:  # TODO
-    from ._emulator import MachineState
+    from ._spectrum import MachineState
 
 
 # TODO: Rework to a time machine interface.

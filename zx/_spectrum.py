@@ -41,7 +41,6 @@ from ._device import ReadPort
 from ._device import SaveSnapshot
 from ._device import ToggleEmulationPause
 from ._device import ToggleTapePause
-from ._emulatorbase import _SpectrumBase
 from ._error import Error
 from ._except import EmulationExit
 from ._except import EmulatorException
@@ -56,6 +55,7 @@ from ._rzx import make_rzx
 from ._rzx import RZXFile
 from ._scr import _SCRSnapshot
 from ._sound import SoundDevice
+from ._spectrumbase import _SpectrumBase
 from ._tape import TapePlayer
 from ._time import Time
 from ._z80snapshot import Z80Snapshot

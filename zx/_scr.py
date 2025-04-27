@@ -16,7 +16,7 @@ from ._data import UnifiedSnapshot
 
 import typing
 if typing.TYPE_CHECKING:  # TODO
-    from ._emulator import MachineState
+    from ._spectrum import MachineState
 
 
 class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
