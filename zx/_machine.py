@@ -66,12 +66,6 @@ class _StateParser(object):
         return self.parse_block(4)
 
 
-# TODO: Move to _utils.
-# TODO: A single function like 'def _lendian(*bytes)'?
-def _make32(b0: int, b1: int, b2: int, b3: int) -> int:
-    return b0 + (b1 << 8) + (b2 << 16) + (b3 << 24)
-
-
 class Z80State(object):
     def __init__(self, image: memoryview) -> None:
         p = _StateParser(image)
@@ -327,7 +321,7 @@ class MachineState(Z80State, MemoryState):
 
     # TODO: Can we do without this?
     def get_events(self) -> int:
-        return _make32(*self.__events)
+        return int.from_bytes(self.__events, 'little')
 
     # TODO: Can we do without this?
     def set_events(self, events: int) -> None:
@@ -339,7 +333,7 @@ class MachineState(Z80State, MemoryState):
 
     @property
     def ticks_since_int(self) -> int:
-        return _make32(*self.__ticks_since_int)
+        return int.from_bytes(self.__ticks_since_int, 'little')
 
     @ticks_since_int.setter
     def ticks_since_int(self, ticks: int) -> None:
