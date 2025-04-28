@@ -21,11 +21,6 @@ from ._error import Error
 from ._utils import make16
 
 
-_V1_FORMAT = '1.45'
-_V2_FORMAT = '2.x'
-_V3_FORMAT = '3.x'
-
-
 class Z80Snapshot(MachineSnapshot, format_name='Z80'):
     _MEMORY_PAGE_ADDRS = {4: 0x8000, 5: 0xc000, 8: 0x4000}
 
