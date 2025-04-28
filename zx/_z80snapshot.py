@@ -142,51 +142,25 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             memory_blocks=memory_blocks)
 
     def to_unified_snapshot(self) -> UnifiedSnapshot:
-        # Bit 7 of the stored R value is not significant and
-        # shall be taken from bit 0 of flags1.
-        flags1 = self.flags1
-        r = (self.r & 0x7f) | ((flags1 & 0x1) << 7)
+        flags1 = 0x01 if self.flags1 == 0xff else self.flags1
 
-        flags2 = self.flags2
-        int_mode = flags2 & 0x3
+        int_mode = self.flags2 & 0x3
         if int_mode not in [0, 1, 2]:
-            raise Error('Invalid interrupt mode %d.' % int_mode)
-
-        pc = self.pc2 if self.pc2 is not None else self.pc
+            raise Error(f'Invalid interrupt mode {int_mode}.')
 
         ticks_per_frame = 69888  # TODO
         quarter_tstates = ticks_per_frame // 4
 
-        fields = {
-            'bc': self.bc,
-            'de': self.de,
-            'hl': self.hl,
-            'af': make16(self.a, self.f),
-            'ix': self.ix,
-            'iy': self.iy,
-            'alt_bc': self.alt_bc,
-            'alt_de': self.alt_de,
-            'alt_hl': self.alt_hl,
-            'alt_af': make16(self.alt_a, self.alt_f),
-            'pc': pc,
-            'sp': self.sp,
-            'ir': make16(self.i, r),
-            'iff1': 0 if self.iff1 == 0 else 1,
-            'iff2': 0 if self.iff2 == 0 else 1,
-            'int_mode': int_mode,
-            'border_colour': (flags1 >> 1) & 0x7,
-
-            # Give the snapshot a chance to execute at least one
-            # instruction without firing up an interrupt.
-            'ticks_since_int': ticks_per_frame - 23,
-        }
+        # Give the snapshot a chance to execute at least one
+        # instruction without firing up an interrupt.
+        # TODO: Should this be instead done at installing of the snapshot?
+        ticks_since_int = ticks_per_frame - 23
 
         if self.ticks_count_high is not None:
             ticks_high = self.ticks_count_high
             ticks_low = self.ticks_count_low
             ticks_since_int = (((ticks_high + 1) % 4 + 1) * quarter_tstates -
                                (ticks_low + 1))
-            fields['ticks_since_int'] = ticks_since_int
 
         # Determine machine kind.
         # TODO: Not used currently?
@@ -194,8 +168,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             machine_kind = 'ZX Spectrum 48K'
         else:
             hardware_mode = self.hardware_mode
-            flags3 = self.flags3
-            flags3_bit7 = (flags3 & 0x80) >> 7
+            flags3_bit7 = (self.flags3 & 0x80) >> 7
             if hardware_mode == 0 and not flags3_bit7:
                 machine_kind = 'ZX Spectrum 48K'
             else:
@@ -203,8 +176,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                             id='unsupported_machine')
 
         # Handle memory blocks.
-        memory_blocks: list[tuple[int, Bytes] |
-                            dict[str, Bytes]] = []
+        memory_blocks: list[tuple[int, Bytes]] = []
         if self.memory_image is not None:
             assert self.memory_blocks is None
             memory_blocks.append((0x4000, self.memory_image))
@@ -213,8 +185,26 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             for page_no, image in self.memory_blocks:
                 memory_blocks.append((self._MEMORY_PAGE_ADDRS[page_no], image))
 
-        return UnifiedSnapshot(**fields,
-                               memory_blocks=memory_blocks)
+        return UnifiedSnapshot(
+            af=make16(self.a, self.f),
+            bc=self.bc,
+            de=self.de,
+            hl=self.hl,
+            ix=self.ix,
+            iy=self.iy,
+            alt_af=make16(self.alt_a, self.alt_f),
+            alt_bc=self.alt_bc,
+            alt_de=self.alt_de,
+            alt_hl=self.alt_hl,
+            pc=self.pc2 if self.pc2 is not None else self.pc,
+            sp=self.sp,
+            ir=make16(self.i, (self.r & 0x7f) | ((flags1 & 0x1) << 7)),
+            iff1=0 if self.iff1 == 0 else 1,
+            iff2=0 if self.iff2 == 0 else 1,
+            int_mode=int_mode,
+            ticks_since_int=ticks_since_int,
+            border_colour=(flags1 >> 1) & 0x7,
+            memory_blocks=memory_blocks)
 
     __V1_HEADER = [
         'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',

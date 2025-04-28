@@ -111,5 +111,36 @@ class MachineSnapshot(DataRecord, format_name=None):
 
 
 class UnifiedSnapshot(MachineSnapshot, format_name=None):
+    def __init__(
+            self,
+            af: int | None = None,
+            bc: int | None = None,
+            de: int | None = None,
+            hl: int | None = None,
+            ix: int | None = None,
+            iy: int | None = None,
+            alt_af: int | None = None,
+            alt_bc: int | None = None,
+            alt_de: int | None = None,
+            alt_hl: int | None = None,
+            pc: int | None = None,
+            sp: int | None = None,
+            ir: int | None = None,
+            iff1: int | None = None,
+            iff2: int | None = None,
+            int_mode: int | None = None,
+            ticks_since_int: int | None = None,
+            border_colour: int | None = None,
+            memory_blocks: list[tuple[int, Bytes]] | None = None):
+        super().__init__(
+            af=af, bc=bc, de=de, hl=hl, ix=ix, iy=iy,
+            alt_af=alt_af, alt_bc=alt_bc,
+            alt_de=alt_de, alt_hl=alt_hl,
+            pc=pc, sp=sp, ir=ir,
+            iff1=iff1, iff2=iff2, int_mode=int_mode,
+            ticks_since_int=ticks_since_int,
+            border_colour=border_colour,
+            memory_blocks=memory_blocks)
+
     def to_unified_snapshot(self) -> UnifiedSnapshot:
         return self
