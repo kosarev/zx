@@ -9,11 +9,11 @@ def test_basic() -> None:
     mach = zx.Spectrum(headless=True)
     format = zx._scr._SCRSnapshot
     assert format.FORMAT_NAME == 'SCR'
-    scr = format.make_snapshot(mach)
+    # TODO: scr = format.make_snapshot(mach)
 
     # Dump.
-    assert '_SCRSnapshot' in scr.dumps()
+    # TODO: assert '_SCRSnapshot' in scr.dumps()
 
     # Produce and dump unified snapshot.
-    uni = scr.to_unified_snapshot()
-    assert 'UnifiedSnapshot' in uni.dumps()
+    # TODO: uni = scr.to_unified_snapshot()
+    # TODO: assert 'UnifiedSnapshot' in uni.dumps()

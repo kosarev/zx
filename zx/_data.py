@@ -11,13 +11,10 @@
 from __future__ import annotations
 
 import numpy
+import typing
 import zx
 
 from ._binary import Bytes
-
-import typing
-if typing.TYPE_CHECKING:  # TODO
-    from ._spectrum import MachineState
 
 
 class DataRecord(object):
@@ -37,7 +34,9 @@ class DataRecord(object):
 
     def __iter__(self) -> typing.Iterator[tuple[str, typing.Any]]:
         for id in self.__fields:
-            yield id, getattr(self, id)
+            value = getattr(self, id)
+            if value is not None:
+                yield id, value
 
     @classmethod
     def parse(cls, filename: str, image: Bytes) -> 'DataRecord':
@@ -101,16 +100,40 @@ class SoundFile(DataRecord, format_name=None):
 
 
 class MachineSnapshot(DataRecord, format_name=None):
+    @classmethod
+    def from_snapshot(cls, snapshot: MachineSnapshot) -> MachineSnapshot:
+        raise NotImplementedError
+
     def to_unified_snapshot(self) -> UnifiedSnapshot:
         raise NotImplementedError
 
-    # TODO: Should encode from its own state, not machine state.
-    @classmethod
-    def encode(cls, state: MachineState) -> bytes:
+    def encode(self) -> bytes:
         raise NotImplementedError
 
 
 class UnifiedSnapshot(MachineSnapshot, format_name=None):
+    af: int | None
+    bc: int | None
+    de: int | None
+    hl: int | None
+    ix: int | None
+    iy: int | None
+    alt_af: int | None
+    alt_bc: int | None
+    alt_de: int | None
+    alt_hl: int | None
+    pc: int | None
+    sp: int | None
+    ir: int | None
+    wz: int | None
+    iregp_kind: str | None
+    iff1: int | None
+    iff2: int | None
+    int_mode: int | None
+    ticks_since_int: int | None
+    border_colour: int | None
+    memory_blocks: list[tuple[int, Bytes]] | None
+
     def __init__(
             self,
             af: int | None = None,
@@ -126,6 +149,8 @@ class UnifiedSnapshot(MachineSnapshot, format_name=None):
             pc: int | None = None,
             sp: int | None = None,
             ir: int | None = None,
+            wz: int | None = None,
+            iregp_kind: str | None = None,
             iff1: int | None = None,
             iff2: int | None = None,
             int_mode: int | None = None,
@@ -136,7 +161,7 @@ class UnifiedSnapshot(MachineSnapshot, format_name=None):
             af=af, bc=bc, de=de, hl=hl, ix=ix, iy=iy,
             alt_af=alt_af, alt_bc=alt_bc,
             alt_de=alt_de, alt_hl=alt_hl,
-            pc=pc, sp=sp, ir=ir,
+            pc=pc, sp=sp, ir=ir, wz=wz, iregp_kind=iregp_kind,
             iff1=iff1, iff2=iff2, int_mode=int_mode,
             ticks_since_int=ticks_since_int,
             border_colour=border_colour,

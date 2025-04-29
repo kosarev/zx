@@ -18,6 +18,8 @@ from ._binary import BinaryParser, BinaryWriter
 from ._data import MachineSnapshot
 from ._data import UnifiedSnapshot
 from ._error import Error
+from ._utils import get_high8
+from ._utils import get_low8
 from ._utils import make16
 
 
@@ -108,7 +110,11 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                  last_write_to_port_1ffd: int | None = None,
                  memory_image: Bytes | None = None,
                  memory_blocks: list[tuple[int, Bytes]] | None = None):
-        assert memory_image is None or memory_blocks is None
+        if memory_image is not None:
+            assert memory_blocks is None
+            assert len(memory_image) == 48 * 1024
+        if memory_blocks is not None:
+            assert memory_image is None
         super().__init__(
             a=a, f=f, bc=bc, hl=hl, pc=pc, sp=sp,
             i=i, r=r, flags1=flags1, de=de,
@@ -135,6 +141,71 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             last_write_to_port_1ffd=last_write_to_port_1ffd,
             memory_image=memory_image,
             memory_blocks=memory_blocks)
+
+    @classmethod
+    def from_snapshot(cls, snapshot: MachineSnapshot) -> Z80Snapshot:
+        unified = snapshot.to_unified_snapshot()
+
+        # TODO: The z80 format cannot represent processor states in
+        #       the middle of IX- and IY-prefixed instructions, so
+        #       such situations need some additional processing.
+        # TODO: Check for similar problems with other state attributes.
+        # TODO: How do other emulators solve this problem?
+        assert (unified.iregp_kind or 'hl') == 'hl'
+
+        # TODO: Null PC is an indicator of presence of extra headers.
+        # The PC value would need to be encoded in these headers.
+        # TODO: However, it is also possible to have an old-format
+        # snapshots with null PC values. We should support these too.
+        if unified.pc == 0:
+            raise Error('Making snashots with null PC is not supported yet.')
+
+        flags1 = 0
+        flags2 = 0
+
+        # Bit 7 of the stored R value is not signigicant and
+        # shall be taken from bit 0 of flags1.
+        r = get_low8(unified.ir or 0)
+        flags1 |= (r & 0x80) >> 7
+        r &= 0x7f
+
+        border_colour = unified.border_colour or 0
+        assert 0 <= border_colour <= 7
+        flags1 |= border_colour << 1
+
+        int_mode = unified.int_mode or 0
+        assert int_mode in [0, 1, 2]  # TODO
+        flags2 |= int_mode
+
+        # Build full memory image.
+        # TODO: Frobid any data below address 0x4000.
+        memory_image = bytearray(0x10000)
+        if unified.memory_blocks is not None:
+            for addr, block in unified.memory_blocks:
+                memory_image[addr:addr+len(block)] = block
+
+        return Z80Snapshot(
+            a=get_high8(unified.af or 0),
+            f=get_low8(unified.af or 0),
+            bc=unified.bc or 0,
+            hl=unified.hl or 0,
+            pc=unified.pc or 0,
+            sp=unified.sp or 0,
+            i=get_high8(unified.ir or 0),
+            r=get_low8(unified.ir or 0) & 0x7f,
+            flags1=flags1,
+            de=unified.de or 0,
+            alt_bc=unified.alt_bc or 0,
+            alt_de=unified.alt_de or 0,
+            alt_hl=unified.alt_hl or 0,
+            alt_a=get_high8(unified.alt_af or 0),
+            alt_f=get_low8(unified.alt_af or 0),
+            iy=unified.iy or 0,
+            ix=unified.ix or 0,
+            iff1=unified.iff1 or 0,
+            iff2=unified.iff2 or 0,
+            flags2=flags2,
+            memory_image=memory_image[0x4000:])
 
     def to_unified_snapshot(self) -> UnifiedSnapshot:
         flags1 = 0x01 if self.flags1 == 0xff else self.flags1
@@ -194,6 +265,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             pc=self.pc2 if self.pc2 is not None else self.pc,
             sp=self.sp,
             ir=make16(self.i, (self.r & 0x7f) | ((flags1 & 0x1) << 7)),
+            iregp_kind='hl',
             iff1=0 if self.iff1 == 0 else 1,
             iff2=0 if self.iff2 == 0 else 1,
             int_mode=int_mode,
@@ -318,57 +390,23 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                            memory_image=memory_image,
                            memory_blocks=memory_blocks)
 
-    # TODO: Rework to generate an internal representation of the
-    #       format and then generate its binary version.
-    # TODO: Rename to to_bytes()? Snapshot is ambiguous in this context.
-    #       Or just employ __bytes__()?
-    @classmethod
-    def encode(cls, state) -> bytes:  # type: ignore[no-untyped-def]
-        # TODO: The z80 format cannot represent processor states in
-        #       the middle of IX- and IY-prefixed instructions, so
-        #       such situations need some additional processing.
-        # TODO: Check for similar problems with other state attributes.
-        assert state.iregp_kind == 'hl'
-
-        flags1 = 0
-        flags2 = 0
-
-        # Bit 7 of the stored R value is not signigicant and
-        # shall be taken from bit 0 of flags1.
-        r = state.r
-        flags1 |= (r & 0x80) >> 7
-        r &= 0x7f
-
-        border_colour = state.border_colour
-        assert 0 <= border_colour <= 7
-        flags1 |= border_colour << 1
-
-        int_mode = state.int_mode
-        assert int_mode in [0, 1, 2]  # TODO
-        flags2 |= int_mode
-
-        # TODO: Null PC is an indicator of presence of extra headers.
-        # The PC value would need to be encoded in these headers.
-        # TODO: However, it is also possible to have an old-format
-        # snapshots with null PC values. We should support these too.
-        if state.pc == 0:
-            raise Error('Making snashots with null PC is not supported yet.')
-
+    def encode(self) -> bytes:
         # Write v1 header.
         # TODO: Support other versions.
+        assert self.extra_header_size is None
         writer = BinaryWriter()
         writer.write(
-            cls.__V1_HEADER,
-            a=state.a, f=state.f, bc=state.bc,
-            hl=state.hl, pc=state.pc, sp=state.sp,
-            i=state.i, r=r, flags1=flags1, de=state.de,
-            alt_bc=state.alt_bc, alt_de=state.alt_de,
-            alt_hl=state.alt_hl,
-            alt_a=state.alt_a, alt_f=state.alt_f,
-            iy=state.iy, ix=state.ix,
-            iff1=state.iff1, iff2=state.iff2, flags2=flags2)
+            self.__V1_HEADER,
+            a=self.a, f=self.f, bc=self.bc,
+            hl=self.hl, pc=self.pc, sp=self.sp,
+            i=self.i, r=self.r, flags1=self.flags1, de=self.de,
+            alt_bc=self.alt_bc, alt_de=self.alt_de,
+            alt_hl=self.alt_hl,
+            alt_a=self.alt_a, alt_f=self.alt_f,
+            iy=self.iy, ix=self.ix,
+            iff1=self.iff1, iff2=self.iff2, flags2=self.flags2)
 
         # Write memory snapshot.
-        writer.write_block(state.read(0x4000, size=48 * 1024))
+        writer.write_block(self.memory_image)
 
         return writer.get_image()

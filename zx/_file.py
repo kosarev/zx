@@ -96,7 +96,7 @@ def _parse_archive(format: type[ArchiveFile], image: Bytes) -> (
     return candidates
 
 
-def _parse_file_image(filename: str, image: Bytes) -> DataRecord:
+def parse_file_image(filename: str, image: Bytes) -> DataRecord:
     base, ext = os.path.splitext(filename)
     format = detect_file_format(image, ext)
     if not format:
@@ -122,4 +122,4 @@ def parse_file(filename: str) -> DataRecord:
     with _open_file_or_url(filename) as f:
         image = f.read()
 
-    return _parse_file_image(filename, image)
+    return parse_file_image(filename, image)

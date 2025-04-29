@@ -19,6 +19,7 @@ import typing
 from ._beeper import Beeper
 from ._data import MachineSnapshot
 from ._data import SoundFile
+from ._data import UnifiedSnapshot
 from ._device import Destroy
 from ._device import Device
 from ._device import DeviceEvent
@@ -278,15 +279,27 @@ class Z80State(object):
         return {0: 'hl', 1: 'ix', 2: 'iy'}[n]
 
     @iregp_kind.setter
-    def iregp_kind(self, value: int) -> None:
-        self.__iregp_kind[0] = value
+    def iregp_kind(self, value: str) -> None:
+        n = {'hl': 0, 'ix': 1, 'iy': 2}[value]
+        self.__iregp_kind[0] = n
+
+    def to_snapshot(self) -> UnifiedSnapshot:
+        return UnifiedSnapshot(
+            af=self.af, bc=self.bc, de=self.de, hl=self.hl,
+            ix=self.ix, iy=self.iy,
+            alt_af=self.alt_af, alt_bc=self.alt_bc,
+            alt_de=self.alt_de, alt_hl=self.alt_hl,
+            pc=self.pc, sp=self.sp, ir=self.ir,
+            # TODO: wz=self.wz,
+            iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
+            iregp_kind=self.iregp_kind)
 
 
 class MemoryState(object):
     def __init__(self, image: memoryview) -> None:
         assert len(image) == 0x10000
         self.__image = image
-        self.image = self.__image
+        self.image = self.__image  # TODO: Remove?
 
     def read(self, addr: int, size: int) -> bytes:
         return self.__image[addr:addr + size]
@@ -299,6 +312,9 @@ class MemoryState(object):
 
     def read16(self, addr: int) -> int:
         return int.from_bytes(self.read(addr, 2), 'little')
+
+    def to_snapshot(self) -> UnifiedSnapshot:
+        return UnifiedSnapshot(memory_blocks=[(0x0000, self.__image)])
 
 
 class MachineState(Z80State, MemoryState):
@@ -380,6 +396,14 @@ class MachineState(Z80State, MemoryState):
     def enable_trace(self, enable=True):
         self.set('trace_enabled', int(enable))
     '''
+
+    def to_snapshot(self) -> UnifiedSnapshot:
+        # TODO: Store all fields.
+        return UnifiedSnapshot(
+            **dict(Z80State.to_snapshot(self)),
+            **dict(MemoryState.to_snapshot(self)),
+            ticks_since_int=self.ticks_since_int,
+            border_colour=self.border_colour)
 
     def install_snapshot(self, snapshot: MachineSnapshot) -> None:
         for field, value in snapshot.to_unified_snapshot():
@@ -473,7 +497,7 @@ class Spectrum(_SpectrumBase, MachineState, Device):
     def _save_snapshot_file(self, format: type[MachineSnapshot],
                             filename: str) -> None:
         with open(filename, 'wb') as f:
-            f.write(format.encode(self))
+            f.write(format.from_snapshot(self.to_snapshot()).encode())
 
     # TODO: Double-underscore or make public.
     def _is_tape_paused(self) -> bool:
@@ -566,7 +590,7 @@ class Spectrum(_SpectrumBase, MachineState, Device):
 
     def __save_crash_rzx(self, player: PlaybackPlayer, state: MachineState,
                          chunk_i: int, frame_i: int) -> None:
-        snapshot = Z80Snapshot.encode(state)
+        snapshot = Z80Snapshot.from_snapshot(state.to_snapshot()).encode()
 
         assert 0  # TODO
         crash_recording = {

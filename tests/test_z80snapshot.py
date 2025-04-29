@@ -12,7 +12,7 @@ def test_basic() -> None:
     mach.hl = HL
     format = zx._z80snapshot.Z80Snapshot
     assert format.FORMAT_NAME == 'Z80'
-    image = format.encode(mach)
+    image = format.from_snapshot(mach.to_snapshot()).encode()
     assert len(image) == 49182
     assert image[4:6] == HL.to_bytes(2, 'little')
 

@@ -20,6 +20,14 @@ def make16(hi: int, lo: int) -> int:
     return (hi << 8) + lo
 
 
+def get_low8(n: int) -> int:
+    return n & 0xff
+
+
+def get_high8(n: int) -> int:
+    return n >> 8
+
+
 def tupilize(x: typing.Any) -> tuple[typing.Any, ...]:
     if isinstance(x, (tuple, list)):
         return tuple(x)
