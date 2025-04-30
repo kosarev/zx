@@ -15,6 +15,7 @@ import typing
 import collections
 from ._binary import Bytes
 from ._binary import BinaryParser, BinaryWriter
+from ._data import DataRecord
 from ._data import MachineSnapshot
 from ._data import UnifiedSnapshot
 from ._error import Error
@@ -23,10 +24,136 @@ from ._utils import get_low8
 from ._utils import make16
 
 
+class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None):
+    last_write_to_port_1ffd: int
+
+    def __init__(self, *, last_write_to_port_1ffd: int = 0):
+        super().__init__(last_write_to_port_1ffd=last_write_to_port_1ffd)
+
+    __V3_EXTRA_HEADER = ['B:last_write_to_port_1ffd']
+
+    @classmethod
+    def parse_header(cls, parser: BinaryParser) -> Z80SnapshotV3ExtraHeader:
+        v3_extra_fields = parser.parse(cls.__V3_EXTRA_HEADER)
+        return Z80SnapshotV3ExtraHeader(**v3_extra_fields)
+
+
+class Z80SnapshotV3Header(DataRecord, format_name=None):
+    ticks_count_low: int
+    ticks_count_high: int
+    spectator_flag: int
+    mgt_rom_paged: int
+    multiface_rom_paged: int
+    memory_at_0000_1fff_is_rom: int
+    memory_at_2000_3fff_is_rom: int
+    keyboard_mappings: tuple[int, ...]
+    keyboard_mapping_keys: tuple[int, ...]
+    mgt_type: int
+    disciple_inhibit_button_status: int
+    disciple_inhibit_flag: int
+
+    v3_extra_header: Z80SnapshotV3ExtraHeader | None
+
+    __V3_HEADER = [
+        '<H:ticks_count_low', 'B:ticks_count_high', 'B:spectator_flag',
+        'B:mgt_rom_paged', 'B:multiface_rom_paged',
+        'B:memory_at_0000_1fff_is_rom', 'B:memory_at_2000_3fff_is_rom',
+        '10B:keyboard_mappings', '10B:keyboard_mapping_keys',
+        'B:mgt_type', 'B:disciple_inhibit_button_status',
+        'B:disciple_inhibit_flag']
+
+    def __init__(
+            self, *,
+            ticks_count_low: int = 0,
+            ticks_count_high: int = 0,
+            spectator_flag: int = 0,
+            mgt_rom_paged: int = 0,
+            multiface_rom_paged: int = 0,
+            memory_at_0000_1fff_is_rom: int = 0,
+            memory_at_2000_3fff_is_rom: int = 0,
+            keyboard_mappings: tuple[int, ...] = (0,) * 10,
+            keyboard_mapping_keys: tuple[bytes, ...] = (b'\x00',) * 10,
+            mgt_type: int = 0,
+            disciple_inhibit_button_status: int = 0,
+            disciple_inhibit_flag: int = 0,
+            v3_extra_header: Z80SnapshotV3ExtraHeader | None = None):
+        super().__init__(
+            ticks_count_low=ticks_count_low,
+            ticks_count_high=ticks_count_high,
+            spectator_flag=spectator_flag,
+            mgt_rom_paged=mgt_rom_paged,
+            multiface_rom_paged=multiface_rom_paged,
+            memory_at_0000_1fff_is_rom=memory_at_0000_1fff_is_rom,
+            memory_at_2000_3fff_is_rom=memory_at_2000_3fff_is_rom,
+            keyboard_mappings=keyboard_mappings,
+            keyboard_mapping_keys=keyboard_mapping_keys,
+            mgt_type=mgt_type,
+            disciple_inhibit_button_status=disciple_inhibit_button_status,
+            disciple_inhibit_flag=disciple_inhibit_flag,
+            v3_extra_header=v3_extra_header)
+
+    @classmethod
+    def parse_header(cls, parser: BinaryParser) -> Z80SnapshotV3Header:
+        v3_fields = parser.parse(cls.__V3_HEADER)
+
+        v3_extra_header = None
+        if parser:
+            v3_extra_header = Z80SnapshotV3ExtraHeader.parse_header(parser)
+
+        return Z80SnapshotV3Header(
+            **v3_fields,
+            v3_extra_header=v3_extra_header)
+
+
+class Z80SnapshotV2Header(DataRecord, format_name=None):
+    extra_header_size: int
+    pc2: int
+    hardware_mode: int
+    misc1: int
+    misc2: int
+    flags3: int
+    port_fffd_value: int
+    sound_chip_regs: tuple[int, ...]
+
+    v3_header: Z80SnapshotV3Header | None
+
+    __V2_HEADER = [
+        '<H:pc2', 'B:hardware_mode', 'B:misc1', 'B:misc2', 'B:flags3',
+        'B:port_fffd_value', '16B:sound_chip_regs']
+
+    def __init__(
+            self, *,
+            pc2: int = 0,
+            hardware_mode: int = 0,
+            misc1: int = 0,
+            misc2: int = 0,
+            flags3: int = 0,
+            port_fffd_value: int = 0,
+            sound_chip_regs: tuple[int, ...] = (0,) * 16,
+            v3_header: Z80SnapshotV3Header | None = None):
+        super().__init__(
+            pc2=pc2, hardware_mode=hardware_mode,
+            misc1=misc1, misc2=misc2, flags3=flags3,
+            port_fffd_value=port_fffd_value,
+            sound_chip_regs=sound_chip_regs,
+            v3_header=v3_header)
+
+    @classmethod
+    def parse_header(cls, parser: BinaryParser) -> Z80SnapshotV2Header:
+        v2_fields = parser.parse(cls.__V2_HEADER)
+
+        v3_header = None
+        if parser:
+            v3_header = Z80SnapshotV3Header.parse_header(parser)
+
+        return Z80SnapshotV2Header(
+            **v2_fields,
+            v3_header=v3_header)
+
+
 class Z80Snapshot(MachineSnapshot, format_name='Z80'):
     _MEMORY_PAGE_ADDRS = {4: 0x8000, 5: 0xc000, 8: 0x4000}
 
-    # v1
     a: int
     f: int
     bc: int
@@ -48,68 +175,25 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
     iff2: bool
     flags2: int
 
-    # v2
-    extra_header_size: int
-    pc2: int
-    hardware_mode: int
-    misc1: int
-    misc2: int
-    flags3: int
-    port_fffd_value: int
-    sound_chip_regs: tuple[int]
-
-    # v3
-    ticks_count_low: int
-    ticks_count_high: int
-    spectator_flag: int
-    mgt_rom_paged: int
-    multiface_rom_paged: int
-    memory_at_0000_1fff_is_rom: int
-    memory_at_2000_3fff_is_rom: int
-    keyboard_mappings: tuple[int]
-    keyboard_mapping_keys: tuple[int]
-    mgt_type: int
-    disciple_inhibit_button_status: int
-    disciple_inhibit_flag: int
-
-    last_write_to_port_1ffd: int
+    v2_header: Z80SnapshotV2Header | None
 
     memory_image: Bytes
     memory_blocks: list[tuple[int, bytes]]
 
-    def __init__(self, *,
-                 a: int = 0, f: int = 0, bc: int = 0, hl: int = 0,
-                 pc: int = 0, sp: int = 0, i: int = 0, r: int = 0,
-                 flags1: int = 0,
-                 de: int = 0,
-                 alt_bc: int = 0, alt_de: int = 0, alt_hl: int = 0,
-                 alt_a: int = 0, alt_f: int = 0,
-                 iy: int = 0, ix: int = 0,
-                 iff1: int = 0, iff2: int = 0,
-                 flags2: int = 0,
-                 extra_header_size: int | None = None,
-                 pc2: int | None = None,
-                 hardware_mode: int | None = None,
-                 misc1: int | None = None,
-                 misc2: int | None = None,
-                 flags3: int | None = None,
-                 port_fffd_value: int | None = None,
-                 sound_chip_regs: tuple[int] | None = None,
-                 ticks_count_low: int | None = None,
-                 ticks_count_high: int | None = None,
-                 spectator_flag: int | None = None,
-                 mgt_rom_paged: int | None = None,
-                 multiface_rom_paged: int | None = None,
-                 memory_at_0000_1fff_is_rom: int | None = None,
-                 memory_at_2000_3fff_is_rom: int | None = None,
-                 keyboard_mappings: tuple[int] | None = None,
-                 keyboard_mapping_keys: tuple[bytes] | None = None,
-                 mgt_type: int | None = None,
-                 disciple_inhibit_button_status: int | None = None,
-                 disciple_inhibit_flag: int | None = None,
-                 last_write_to_port_1ffd: int | None = None,
-                 memory_image: Bytes | None = None,
-                 memory_blocks: list[tuple[int, Bytes]] | None = None):
+    def __init__(
+            self, *,
+            a: int = 0, f: int = 0, bc: int = 0, hl: int = 0,
+            pc: int = 0, sp: int = 0, i: int = 0, r: int = 0,
+            flags1: int = 0,
+            de: int = 0,
+            alt_bc: int = 0, alt_de: int = 0, alt_hl: int = 0,
+            alt_a: int = 0, alt_f: int = 0,
+            iy: int = 0, ix: int = 0,
+            iff1: int = 0, iff2: int = 0,
+            flags2: int = 0,
+            v2_header: Z80SnapshotV2Header | None = None,
+            memory_image: Bytes | None = None,
+            memory_blocks: list[tuple[int, Bytes]] | None = None):
         if memory_image is not None:
             assert memory_blocks is None
             assert len(memory_image) == 48 * 1024
@@ -121,24 +205,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             alt_bc=alt_bc, alt_de=alt_de, alt_hl=alt_hl,
             alt_a=alt_a, alt_f=alt_f,
             iy=iy, ix=ix, iff1=iff1, iff2=iff2, flags2=flags2,
-            extra_header_size=extra_header_size,
-            pc2=pc2, hardware_mode=hardware_mode,
-            misc1=misc1, misc2=misc2, flags3=flags3,
-            port_fffd_value=port_fffd_value,
-            sound_chip_regs=sound_chip_regs,
-            ticks_count_low=ticks_count_low,
-            ticks_count_high=ticks_count_high,
-            spectator_flag=spectator_flag,
-            mgt_rom_paged=mgt_rom_paged,
-            multiface_rom_paged=multiface_rom_paged,
-            memory_at_0000_1fff_is_rom=memory_at_0000_1fff_is_rom,
-            memory_at_2000_3fff_is_rom=memory_at_2000_3fff_is_rom,
-            keyboard_mappings=keyboard_mappings,
-            keyboard_mapping_keys=keyboard_mapping_keys,
-            mgt_type=mgt_type,
-            disciple_inhibit_button_status=disciple_inhibit_button_status,
-            disciple_inhibit_flag=disciple_inhibit_flag,
-            last_write_to_port_1ffd=last_write_to_port_1ffd,
+            v2_header=v2_header,
             memory_image=memory_image,
             memory_blocks=memory_blocks)
 
@@ -222,19 +289,22 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         # TODO: Should this be instead done at installing of the snapshot?
         ticks_since_int = ticks_per_frame - 23
 
-        if self.ticks_count_high is not None:
-            ticks_high = self.ticks_count_high
-            ticks_low = self.ticks_count_low
-            ticks_since_int = (((ticks_high + 1) % 4 + 1) * quarter_tstates -
-                               (ticks_low + 1))
+        if self.v2_header is not None:
+            v3_header = self.v2_header.v3_header
+            if v3_header is not None:
+                ticks_high = v3_header.ticks_count_high
+                ticks_low = v3_header.ticks_count_low
+                ticks_since_int = (
+                    ((ticks_high + 1) % 4 + 1) * quarter_tstates -
+                    (ticks_low + 1))
 
         # Determine machine kind.
         # TODO: Not used currently?
-        if self.hardware_mode is None:
+        if self.v2_header is None:
             machine_kind = 'ZX Spectrum 48K'
         else:
-            hardware_mode = self.hardware_mode
-            flags3_bit7 = (self.flags3 & 0x80) >> 7
+            hardware_mode = self.v2_header.hardware_mode
+            flags3_bit7 = (self.v2_header.flags3 & 0x80) >> 7
             if hardware_mode == 0 and not flags3_bit7:
                 machine_kind = 'ZX Spectrum 48K'
             else:
@@ -262,7 +332,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             alt_bc=self.alt_bc,
             alt_de=self.alt_de,
             alt_hl=self.alt_hl,
-            pc=self.pc2 if self.pc2 is not None else self.pc,
+            pc=self.v2_header.pc2 if self.v2_header is not None else self.pc,
             sp=self.sp,
             ir=make16(self.i, (self.r & 0x7f) | ((flags1 & 0x1) << 7)),
             iregp_kind='hl',
@@ -277,24 +347,6 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',
         'B:flags1', '<H:de', '<H:alt_bc', '<H:alt_de', '<H:alt_hl',
         'B:alt_a', 'B:alt_f', '<H:iy', '<H:ix', 'B:iff1', 'B:iff2', 'B:flags2']
-
-    __EXTRA_HEADER_SIZE = [
-        '<H:extra_header_size']
-
-    __V2_HEADER = [
-        '<H:pc2', 'B:hardware_mode', 'B:misc1', 'B:misc2', 'B:flags3',
-        'B:port_fffd_value', '16B:sound_chip_regs']
-
-    __V3_HEADER = [
-        '<H:ticks_count_low', 'B:ticks_count_high', 'B:spectator_flag',
-        'B:mgt_rom_paged', 'B:multiface_rom_paged',
-        'B:memory_at_0000_1fff_is_rom', 'B:memory_at_2000_3fff_is_rom',
-        '10B:keyboard_mappings', '10B:keyboard_mapping_keys',
-        'B:mgt_type', 'B:disciple_inhibit_button_status',
-        'B:disciple_inhibit_flag']
-
-    __V3_EXTRA_HEADER = [
-        'B:last_write_to_port_1ffd']
 
     @classmethod
     def __uncompress(cls, compressed_image: Bytes,
@@ -345,33 +397,25 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
     def parse(cls, filename: str, image: Bytes) -> 'Z80Snapshot':
         # Parse headers.
         parser = BinaryParser(image)
-        version = 1
-        fields = parser.parse(cls.__V1_HEADER)
+        v1_fields = parser.parse(cls.__V1_HEADER)
 
-        if fields['pc'] == 0:
-            version = 2
-            fields.update(parser.parse(cls.__EXTRA_HEADER_SIZE))
-
-            extra_headers = parser.read_bytes(fields['extra_header_size'])
-            extra_parser = BinaryParser(extra_headers)
-            fields.update(extra_parser.parse(cls.__V2_HEADER))
-
-            if extra_parser:
-                version = 3
-                fields.update(extra_parser.parse(cls.__V3_HEADER))
+        v2_header = None
+        if v1_fields['pc'] == 0:
+            extra_header_size = parser.parse_field('<H')
+            assert isinstance(extra_header_size, int)
+            extra_header = parser.read_bytes(extra_header_size)
+            extra_parser = BinaryParser(extra_header)
+            v2_header = Z80SnapshotV2Header.parse_header(extra_parser)
 
             if extra_parser:
-                fields.update(extra_parser.parse(cls.__V3_EXTRA_HEADER))
-
-            if extra_parser:
-                raise Error('Too many headers in Z80 snapshot.',
-                            id='too_many_z80_snapshot_headers')
+                raise Error('Z80 snapshot: the extra header is too large.',
+                            id='z80_snapshot_extra_header_too_large')
 
         # Parse memory snapshot.
         memory_image: bytes | None = None
         memory_blocks: list[tuple[int, bytes]] | None = None
-        if version == 1:
-            compressed = bool(fields['flags1'] & 0x20)
+        if v2_header is None:
+            compressed = bool(v1_fields['flags1'] & 0x20)
             memory_image = parser.read_remaining_bytes()
             if not compressed:
                 if len(memory_image) != 48 * 1024:
@@ -386,25 +430,17 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             while parser:
                 memory_blocks.append(cls.__parse_memory_block(parser))
 
-        return Z80Snapshot(**fields,
+        return Z80Snapshot(**v1_fields,
+                           v2_header=v2_header,
                            memory_image=memory_image,
                            memory_blocks=memory_blocks)
 
     def encode(self) -> bytes:
         # Write v1 header.
         # TODO: Support other versions.
-        assert self.extra_header_size is None
+        assert self.v2_header is None
         writer = BinaryWriter()
-        writer.write(
-            self.__V1_HEADER,
-            a=self.a, f=self.f, bc=self.bc,
-            hl=self.hl, pc=self.pc, sp=self.sp,
-            i=self.i, r=self.r, flags1=self.flags1, de=self.de,
-            alt_bc=self.alt_bc, alt_de=self.alt_de,
-            alt_hl=self.alt_hl,
-            alt_a=self.alt_a, alt_f=self.alt_f,
-            iy=self.iy, ix=self.ix,
-            iff1=self.iff1, iff2=self.iff2, flags2=self.flags2)
+        writer.write(self.__V1_HEADER, **dict(self))
 
         # Write memory snapshot.
         writer.write_block(self.memory_image)
