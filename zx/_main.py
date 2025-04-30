@@ -15,6 +15,7 @@ import collections
 import os
 import sys
 
+from ._binary import Bytes
 from ._data import ArchiveFile
 from ._data import DataRecord
 from ._data import MachineSnapshot
@@ -121,8 +122,24 @@ def test_file(filename: str, batch_mode: bool) -> None:
         os.rename(filename, dest_path)
         print('%r moved to %r' % (filename, dest_dir))
 
-    def match_bytes(a: bytes, b: bytes) -> None:
-        assert a == b
+    def match_bytes(b1: Bytes, b2: Bytes) -> None:
+        if b1 == b2:
+            return
+
+        mismatch_count = None
+        for i, (c1, c2) in enumerate(zip(b1, b2)):
+            mismatch = c1 != c2
+            print(f'{i} {c1:02x} {c2:02x}', '*' if mismatch else '')
+            if mismatch_count is None:
+                if mismatch:
+                    mismatch_count = 10
+            else:
+                if mismatch_count == 0:
+                    assert 0
+                else:
+                    mismatch_count -= 1
+
+        assert 0
 
     def match_data_records(r1: DataRecord, r2: DataRecord) -> None:
         for f1, f2 in zip(r1, r2):
@@ -144,7 +161,7 @@ def test_file(filename: str, batch_mode: bool) -> None:
         file = parse_file_image(filename, image)
 
         if isinstance(file, MachineSnapshot):
-            # TODO: assert file.encode() == image
+            match_bytes(image, file.encode())
 
             unified = file.to_unified_snapshot()
             unified2 = type(file).from_snapshot(unified).to_unified_snapshot()

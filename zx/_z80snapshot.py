@@ -9,12 +9,12 @@
 #   Published under the MIT license.
 
 
-from __future__ import annotations
-
+import numpy
 import typing
-import collections
+
 from ._binary import Bytes
-from ._binary import BinaryParser, BinaryWriter
+from ._binary import BinaryParser
+from ._binary import BinaryWriter
 from ._data import DataRecord
 from ._data import MachineSnapshot
 from ._data import UnifiedSnapshot
@@ -33,9 +33,12 @@ class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None):
     __V3_EXTRA_HEADER = ['B:last_write_to_port_1ffd']
 
     @classmethod
-    def parse_header(cls, parser: BinaryParser) -> Z80SnapshotV3ExtraHeader:
+    def parse_header(cls, parser: BinaryParser) -> 'Z80SnapshotV3ExtraHeader':
         v3_extra_fields = parser.parse(cls.__V3_EXTRA_HEADER)
         return Z80SnapshotV3ExtraHeader(**v3_extra_fields)
+
+    def write(self, writer: BinaryWriter) -> None:
+        writer.write(self.__V3_EXTRA_HEADER, **dict(self))
 
 
 class Z80SnapshotV3Header(DataRecord, format_name=None):
@@ -93,7 +96,7 @@ class Z80SnapshotV3Header(DataRecord, format_name=None):
             v3_extra_header=v3_extra_header)
 
     @classmethod
-    def parse_header(cls, parser: BinaryParser) -> Z80SnapshotV3Header:
+    def parse_header(cls, parser: BinaryParser) -> 'Z80SnapshotV3Header':
         v3_fields = parser.parse(cls.__V3_HEADER)
 
         v3_extra_header = None
@@ -103,6 +106,12 @@ class Z80SnapshotV3Header(DataRecord, format_name=None):
         return Z80SnapshotV3Header(
             **v3_fields,
             v3_extra_header=v3_extra_header)
+
+    def write(self, writer: BinaryWriter) -> None:
+        writer.write(self.__V3_HEADER, **dict(self))
+
+        if self.v3_extra_header is not None:
+            self.v3_extra_header.write(writer)
 
 
 class Z80SnapshotV2Header(DataRecord, format_name=None):
@@ -139,7 +148,7 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
             v3_header=v3_header)
 
     @classmethod
-    def parse_header(cls, parser: BinaryParser) -> Z80SnapshotV2Header:
+    def parse_header(cls, parser: BinaryParser) -> 'Z80SnapshotV2Header':
         v2_fields = parser.parse(cls.__V2_HEADER)
 
         v3_header = None
@@ -149,6 +158,12 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
         return Z80SnapshotV2Header(
             **v2_fields,
             v3_header=v3_header)
+
+    def write(self, writer: BinaryWriter) -> None:
+        writer.write(self.__V2_HEADER, **dict(self))
+
+        if self.v3_header is not None:
+            self.v3_header.write(writer)
 
 
 class Z80Snapshot(MachineSnapshot, format_name='Z80'):
@@ -178,7 +193,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
     v2_header: Z80SnapshotV2Header | None
 
     memory_image: Bytes
-    memory_blocks: list[tuple[int, bytes]]
+    memory_blocks: list[tuple[int, int, bytes]]
 
     def __init__(
             self, *,
@@ -193,10 +208,9 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             flags2: int = 0,
             v2_header: Z80SnapshotV2Header | None = None,
             memory_image: Bytes | None = None,
-            memory_blocks: list[tuple[int, Bytes]] | None = None):
+            memory_blocks: list[tuple[int, int, Bytes]] | None = None):
         if memory_image is not None:
             assert memory_blocks is None
-            assert len(memory_image) == 48 * 1024
         if memory_blocks is not None:
             assert memory_image is None
         super().__init__(
@@ -210,7 +224,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             memory_blocks=memory_blocks)
 
     @classmethod
-    def from_snapshot(cls, snapshot: MachineSnapshot) -> Z80Snapshot:
+    def from_snapshot(cls, snapshot: MachineSnapshot) -> 'Z80Snapshot':
         unified = snapshot.to_unified_snapshot()
 
         # TODO: The z80 format cannot represent processor states in
@@ -315,10 +329,29 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         memory_blocks: list[tuple[int, Bytes]] = []
         if self.memory_image is not None:
             assert self.memory_blocks is None
-            memory_blocks.append((0x4000, self.memory_image))
+
+            memory_image = self.memory_image
+            compressed = bool(self.flags1 & 0x20)
+            if not compressed:
+                if len(memory_image) != 48 * 1024:
+                    raise Error('Z80 snapshot: memory image is too large.',
+                                id='z80_snapshot_memory_image_too_large')
+            else:
+                if memory_image[-4:] != b'\x00\xed\xed\x00':
+                    raise Error('Z80 snapshot: compressed memory image has '
+                                'no end marker.',
+                                id='z80_snapshot_no_end_marker')
+                memory_image = self.__uncompress(memory_image[:-4], 48 * 1024)
+            memory_blocks.append((0x4000, memory_image))
         else:
             assert machine_kind == 'ZX Spectrum 48K', machine_kind  # TODO
-            for page_no, image in self.memory_blocks:
+
+            BLOCK_SIZE = 16 * 1024
+            for page_no, compressed_size, image in self.memory_blocks:
+                if compressed_size != 0xffff:
+                    assert len(image) == compressed_size
+                    image = self.__uncompress(image, BLOCK_SIZE)
+
                 memory_blocks.append((self._MEMORY_PAGE_ADDRS[page_no], image))
 
         return UnifiedSnapshot(
@@ -379,19 +412,64 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
 
         return bytes(output)
 
+    def __compress(cls, image: Bytes) -> bytes:
+        # For every element see if it's equal to the subsequent one.
+        input = numpy.frombuffer(image, dtype=numpy.uint8)
+        eq = input[:-1] == input[1:]
+
+        # Find indexes where sequences of repeating bytes start and
+        # just before they stop.
+        indexes, = numpy.where(eq[1:] != eq[:-1])
+        indexes = numpy.append(indexes + 1, len(input))
+
+        # Emit the partitions of repeating and non-repeating bytes.
+        input_size = len(input)
+        output = bytearray()
+        p = 0
+        ends_with_non_blocked_ed = False
+        for i in indexes:
+            if p == i:
+                continue
+
+            if p == input_size - 1 or not eq[p]:
+                output.extend(image[p:i])
+                p += i - p
+                ends_with_non_blocked_ed = output[-1] == 0xed
+                continue
+
+            if ends_with_non_blocked_ed:
+                assert image[p] != 0xed
+                output.append(image[p])
+                p += 1
+                ends_with_non_blocked_ed = False
+
+            count = min(i + 1, input_size) - p
+            while count:
+                chunk = min(count, 0xff)
+                if chunk >= 5 or image[p] == 0xed:
+                    output.extend((0xed, 0xed, chunk, input[p]))
+                    ends_with_non_blocked_ed = False
+                else:
+                    output.extend(image[p:p+chunk])
+                    ends_with_non_blocked_ed = output[-1] == 0xed
+                count -= chunk
+                p += chunk
+
+        return bytes(output)
+
     @classmethod
-    def __parse_memory_block(cls, parser: BinaryParser) -> tuple[int, bytes]:
-        BLOCK_SIZE = 16 * 1024
+    def __parse_memory_block(
+            cls, parser: BinaryParser) -> tuple[int, int, bytes]:
         compressed_size = parser.parse_field('<H')
         assert isinstance(compressed_size, int)
         page_no = parser.parse_field('B')
         assert isinstance(page_no, int)
-        if compressed_size == 0xffff:
-            image = parser.read_bytes(BLOCK_SIZE)
-        else:
-            compressed_image = parser.read_bytes(compressed_size)
-            image = cls.__uncompress(compressed_image, BLOCK_SIZE)
-        return page_no, image
+
+        BLOCK_SIZE = 16 * 1024
+        size = BLOCK_SIZE if compressed_size == 0xffff else compressed_size
+        image = parser.read_bytes(size)
+
+        return page_no, compressed_size, image
 
     @classmethod
     def parse(cls, filename: str, image: Bytes) -> 'Z80Snapshot':
@@ -413,18 +491,9 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
 
         # Parse memory snapshot.
         memory_image: bytes | None = None
-        memory_blocks: list[tuple[int, bytes]] | None = None
+        memory_blocks: list[tuple[int, int, bytes]] | None = None
         if v2_header is None:
-            compressed = bool(v1_fields['flags1'] & 0x20)
             memory_image = parser.read_remaining_bytes()
-            if not compressed:
-                if len(memory_image) != 48 * 1024:
-                    raise Error('The snapshot is too large.')
-            else:
-                if memory_image[-4:] != b'\x00\xed\xed\x00':
-                    raise Error('The compressed memory block does not '
-                                'terminate properly.')
-                memory_image = cls.__uncompress(memory_image[:-4], 48 * 1024)
         else:
             memory_blocks = []
             while parser:
@@ -436,13 +505,23 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                            memory_blocks=memory_blocks)
 
     def encode(self) -> bytes:
-        # Write v1 header.
-        # TODO: Support other versions.
-        assert self.v2_header is None
         writer = BinaryWriter()
         writer.write(self.__V1_HEADER, **dict(self))
 
-        # Write memory snapshot.
-        writer.write_block(self.memory_image)
+        if self.v2_header is None:
+            writer.write_bytes(self.memory_image)
+        else:
+            extra_writer = BinaryWriter()
+            self.v2_header.write(extra_writer)
+            extra_header = extra_writer.get_image()
+
+            writer.write_field('<H', len(extra_header))
+            writer.write_bytes(extra_header)
+
+            if self.memory_blocks is not None:
+                for page_no, compressed_size, block in self.memory_blocks:
+                    writer.write_field('<H', compressed_size)
+                    writer.write_field('B', page_no)
+                    writer.write_bytes(block)
 
         return writer.get_image()

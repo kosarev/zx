@@ -175,7 +175,7 @@ def make_rzx(recording: dict[str, typing.Any]) -> Bytes:
     major_revision = b'\x00'
     minor_revision = b'\x0c'
     flags = b'\x00\x00\x00\x00'
-    writer.write_block(signature + major_revision + minor_revision + flags)
+    writer.write_bytes(signature + major_revision + minor_revision + flags)
 
     for chunk in recording['chunks']:
         chunk_writer = BinaryWriter()
@@ -194,7 +194,7 @@ def make_rzx(recording: dict[str, typing.Any]) -> Bytes:
                                flags=0,  # Non-descriptor. Not compressed.
                                filename_extension=b'Z80\x00',
                                uncompressed_length=len(image))
-            chunk_writer.write_block(image)
+            chunk_writer.write_bytes(image)
         elif id == 'port_samples':
             chunk_id = RZX_BLOCK_ID_INPUT_RECORDING
 
@@ -211,13 +211,13 @@ def make_rzx(recording: dict[str, typing.Any]) -> Bytes:
                                     '<H:num_of_port_samples'],
                                    num_of_fetches=num_of_fetches,
                                    num_of_port_samples=len(samples))
-                chunk_writer.write_block(samples)
+                chunk_writer.write_bytes(samples)
         else:
             assert 0, (id, list(chunk))  # TODO
 
         writer.write(['B:id', '<L:size'],
                      id=chunk_id, size=len(chunk_writer.get_image()) + 4 + 1)
-        writer.write_block(chunk_writer.get_image())
+        writer.write_bytes(chunk_writer.get_image())
 
     return writer.get_image()
 

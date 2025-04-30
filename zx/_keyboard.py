@@ -14,7 +14,7 @@ from ._device import DeviceEvent
 from ._device import KeyStroke
 from ._device import ReadPort
 from ._device import Dispatcher
-from ._utils import tupilize
+from ._utils import tupilise
 
 
 # TODO: Redesign.
@@ -45,7 +45,7 @@ _KEY_IDS = [
 
 KEYS = dict()
 for index, ids in enumerate(_KEY_IDS):
-    ids = tupilize(ids)
+    ids = tupilise(ids)
     id, *aliases = ids
     info = Key(id, index)
     for i in ids:

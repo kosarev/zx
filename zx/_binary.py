@@ -12,6 +12,7 @@
 import typing
 import struct
 from ._error import Error
+from ._utils import tupilise
 
 
 Bytes = bytes | bytearray | memoryview
@@ -72,13 +73,16 @@ class BinaryWriter(object):
     def __init__(self) -> None:
         self._chunks = []
 
-    def write_block(self, block: Bytes) -> None:
+    def write_bytes(self, block: Bytes) -> None:
         self._chunks.append(block)
+
+    def write_field(self, format: str, value: typing.Any) -> None:
+        self.write_bytes(struct.pack(format, *tupilise(value)))
 
     def write(self, format: list[str], **values: typing.Any) -> None:
         for field in format:
             field_format, field_id = field.split(':', maxsplit=1)
-            self.write_block(struct.pack(field_format, values[field_id]))
+            self.write_field(field_format, values[field_id])
 
     def get_image(self) -> Bytes:
         return b''.join(self._chunks)
