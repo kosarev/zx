@@ -122,7 +122,7 @@ def test_file(filename: str, batch_mode: bool) -> None:
         os.rename(filename, dest_path)
         print('%r moved to %r' % (filename, dest_dir))
 
-    def match_bytes(b1: Bytes, b2: Bytes) -> None:
+    def match_bytes(b1: Bytes, b2: Bytes, path) -> None:
         if b1 == b2:
             return
 
@@ -141,17 +141,28 @@ def test_file(filename: str, batch_mode: bool) -> None:
 
         assert 0
 
-    def match_data_records(r1: DataRecord, r2: DataRecord) -> None:
-        for f1, f2 in zip(r1, r2):
-            n1, v1 = f1
-            n2, v2 = f2
-            assert n1 == n2, (n1, n2)
-            assert type(v1) is type(v2), (n1, type(v1), n2, type(v2))
+    def match(a: typing.Any, b: typing.Any, path='') -> None:
+        if isinstance(a, bytearray):
+            a = bytes(a)
+        if isinstance(b, bytearray):
+            b = bytes(b)
 
-            if isinstance(v1, bytes):
-                match_bytes(v1, v2)
-            else:
-                assert v1 == v2, (n1, v1, n2, v2)
+        if type(a) is not type(b):
+            assert 0, (type(a), type(b))
+
+        if isinstance(a, (int, str)):
+            assert a == b, (path, a, b)
+        elif isinstance(a, bytes):
+            match_bytes(a, b, path)
+        elif isinstance(a, (tuple, list)):
+            for i, (ea, eb) in enumerate(zip(a, b)):
+                match(ea, eb, f'{path}.{type(a).__qualname__}[{i}]')
+        elif isinstance(a, DataRecord):
+            for (na, va), (nb, vb) in zip(a, b):
+                assert na == nb
+                match(va, vb, f'{path}.{na}')
+        else:
+            assert 0, type(a)
 
     try:
         print(repr(filename))
@@ -161,11 +172,11 @@ def test_file(filename: str, batch_mode: bool) -> None:
         file = parse_file_image(filename, image)
 
         if isinstance(file, MachineSnapshot):
-            match_bytes(image, file.encode())
+            match(image, file.encode())
 
             unified = file.to_unified_snapshot()
             unified2 = type(file).from_snapshot(unified).to_unified_snapshot()
-            # TODO: match_data_records(unified, unified2)
+            # TODO: match(unified, unified2)
         elif isinstance(file, RZXFile):
             with Spectrum(headless=True) as app:
                 app._run_file(filename)
