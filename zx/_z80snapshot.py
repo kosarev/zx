@@ -167,7 +167,8 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
 
 
 class Z80Snapshot(MachineSnapshot, format_name='Z80'):
-    _MEMORY_PAGE_ADDRS = {4: 0x8000, 5: 0xc000, 8: 0x4000}
+    # Some snapshots contain zero pages as well.
+    _MEMORY_PAGE_ADDRS = {0: 0x0000, 4: 0x8000, 5: 0xc000, 8: 0x4000}
 
     a: int
     f: int
