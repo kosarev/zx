@@ -122,7 +122,7 @@ def test_file(filename: str, batch_mode: bool) -> None:
         os.rename(filename, dest_path)
         print('%r moved to %r' % (filename, dest_dir))
 
-    def match_bytes(b1: Bytes, b2: Bytes, path) -> None:
+    def match_bytes(b1: Bytes, b2: Bytes, path: str) -> None:
         if b1 == b2:
             return
 
@@ -141,7 +141,7 @@ def test_file(filename: str, batch_mode: bool) -> None:
 
         assert 0
 
-    def match(a: typing.Any, b: typing.Any, path='') -> None:
+    def match(a: typing.Any, b: typing.Any, path: str = '') -> None:
         if isinstance(a, bytearray):
             a = bytes(a)
         if isinstance(b, bytearray):
