@@ -157,6 +157,9 @@ class UnifiedSnapshot(MachineSnapshot, format_name=None):
             ticks_since_int: int | None = None,
             border_colour: int | None = None,
             memory_blocks: list[tuple[int, Bytes]] | None = None):
+        if memory_blocks is not None:
+            memory_blocks.sort()
+
         super().__init__(
             af=af, bc=bc, de=de, hl=hl, ix=ix, iy=iy,
             alt_af=alt_af, alt_bc=alt_bc,

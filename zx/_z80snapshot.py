@@ -75,7 +75,7 @@ class Z80SnapshotV3Header(DataRecord, format_name=None):
             memory_at_0000_1fff_is_rom: int = 0,
             memory_at_2000_3fff_is_rom: int = 0,
             keyboard_mappings: tuple[int, ...] = (0,) * 10,
-            keyboard_mapping_keys: tuple[bytes, ...] = (b'\x00',) * 10,
+            keyboard_mapping_keys: tuple[int, ...] = (0,) * 10,
             mgt_type: int = 0,
             disciple_inhibit_button_status: int = 0,
             disciple_inhibit_flag: int = 0,
@@ -116,7 +116,7 @@ class Z80SnapshotV3Header(DataRecord, format_name=None):
 
 class Z80SnapshotV2Header(DataRecord, format_name=None):
     extra_header_size: int
-    pc2: int
+    pc: int
     hardware_mode: int
     misc1: int
     misc2: int
@@ -127,12 +127,12 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
     v3_header: Z80SnapshotV3Header | None
 
     __V2_HEADER = [
-        '<H:pc2', 'B:hardware_mode', 'B:misc1', 'B:misc2', 'B:flags3',
+        '<H:pc', 'B:hardware_mode', 'B:misc1', 'B:misc2', 'B:flags3',
         'B:port_fffd_value', '16B:sound_chip_regs']
 
     def __init__(
             self, *,
-            pc2: int = 0,
+            pc: int = 0,
             hardware_mode: int = 0,
             misc1: int = 0,
             misc2: int = 0,
@@ -141,7 +141,7 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
             sound_chip_regs: tuple[int, ...] = (0,) * 16,
             v3_header: Z80SnapshotV3Header | None = None):
         super().__init__(
-            pc2=pc2, hardware_mode=hardware_mode,
+            pc=pc, hardware_mode=hardware_mode,
             misc1=misc1, misc2=misc2, flags3=flags3,
             port_fffd_value=port_fffd_value,
             sound_chip_regs=sound_chip_regs,
@@ -168,7 +168,7 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
 
 class Z80Snapshot(MachineSnapshot, format_name='Z80'):
     # Some snapshots contain zero pages as well.
-    _MEMORY_PAGE_ADDRS = {0: 0x0000, 4: 0x8000, 5: 0xc000, 8: 0x4000}
+    __MEMORY_PAGE_ADDRS = {0: 0x0000, 4: 0x8000, 5: 0xc000, 8: 0x4000}
 
     a: int
     f: int
@@ -235,13 +235,6 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         # TODO: How do other emulators solve this problem?
         assert (unified.iregp_kind or 'hl') == 'hl'
 
-        # TODO: Null PC is an indicator of presence of extra headers.
-        # The PC value would need to be encoded in these headers.
-        # TODO: However, it is also possible to have an old-format
-        # snapshots with null PC values. We should support these too.
-        if unified.pc == 0:
-            raise Error('Making snashots with null PC is not supported yet.')
-
         flags1 = 0
         flags2 = 0
 
@@ -261,17 +254,40 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
 
         # Build full memory image.
         # TODO: Frobid any data below address 0x4000.
-        memory_image = bytearray(0x10000)
+        memory_blocks = []
         if unified.memory_blocks is not None:
+            RAM_SIZE = 0x10000
+            image: list[None | int] = [None] * RAM_SIZE
             for addr, block in unified.memory_blocks:
-                memory_image[addr:addr+len(block)] = block
+                image[addr:addr+len(block)] = list(block)
+
+            PAGE_SIZE = 0x4000
+            EMPTY_PAGE = [None] * PAGE_SIZE
+            for page_no, addr in cls.__MEMORY_PAGE_ADDRS.items():
+                page = image[addr:addr+PAGE_SIZE]
+                if page != EMPTY_PAGE:
+                    page_image = bytes(0 if b is None else b for b in page)
+                    memory_blocks.append((page_no, 0xffff, page_image))
+
+        # https://worldofspectrum.org/faq/reference/z80format.htm
+        # The hi T state counter counts up modulo 4. Just after the ULA
+        # generates its once-in-every-20-ms interrupt, it is 3, and is
+        # increased by one every 5 emulated milliseconds. In these
+        # 1/200s intervals, the low T state counter counts down from
+        # 17471 to 0 (17726 in 128K modes), which make a total of 69888
+        # (70908) T states per frame.
+        ticks_per_frame = 69888  # TODO
+        quarter_frame = ticks_per_frame // 4
+        ticks_since_int = unified.ticks_since_int or 0
+        ticks_high = (ticks_since_int // quarter_frame + 3) % 4
+        ticks_low = (quarter_frame - 1) - ticks_since_int % quarter_frame
 
         return Z80Snapshot(
             a=get_high8(unified.af or 0),
             f=get_low8(unified.af or 0),
             bc=unified.bc or 0,
             hl=unified.hl or 0,
-            pc=unified.pc or 0,
+            pc=0,
             sp=unified.sp or 0,
             i=get_high8(unified.ir or 0),
             r=get_low8(unified.ir or 0) & 0x7f,
@@ -287,7 +303,13 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             iff1=unified.iff1 or 0,
             iff2=unified.iff2 or 0,
             flags2=flags2,
-            memory_image=memory_image[0x4000:])
+            v2_header=Z80SnapshotV2Header(
+                pc=unified.pc or 0,
+                v3_header=Z80SnapshotV3Header(
+                    ticks_count_low=ticks_low,
+                    ticks_count_high=ticks_high,
+                    v3_extra_header=Z80SnapshotV3ExtraHeader())),
+            memory_blocks=memory_blocks)
 
     def to_unified_snapshot(self) -> UnifiedSnapshot:
         flags1 = 0x01 if self.flags1 == 0xff else self.flags1
@@ -297,7 +319,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             raise Error(f'Invalid interrupt mode {int_mode}.')
 
         ticks_per_frame = 69888  # TODO
-        quarter_tstates = ticks_per_frame // 4
+        quarter_frame = ticks_per_frame // 4
 
         # Give the snapshot a chance to execute at least one
         # instruction without firing up an interrupt.
@@ -307,11 +329,12 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         if self.v2_header is not None:
             v3_header = self.v2_header.v3_header
             if v3_header is not None:
+                # https://worldofspectrum.org/faq/reference/z80format.htm
                 ticks_high = v3_header.ticks_count_high
                 ticks_low = v3_header.ticks_count_low
                 ticks_since_int = (
-                    ((ticks_high + 1) % 4 + 1) * quarter_tstates -
-                    (ticks_low + 1))
+                    (ticks_high - 3) % 4 * quarter_frame +
+                    ((quarter_frame - 1) - ticks_low % quarter_frame))
 
         # Determine machine kind.
         # TODO: Not used currently?
@@ -343,7 +366,10 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                                 'no end marker.',
                                 id='z80_snapshot_no_end_marker')
                 memory_image = self.__uncompress(memory_image[:-4], 48 * 1024)
-            memory_blocks.append((0x4000, memory_image))
+            memory_blocks.extend([
+                (0x4000, memory_image[0x0000:0x4000]),
+                (0x8000, memory_image[0x4000:0x8000]),
+                (0xc000, memory_image[0x8000:0xc000])])
         else:
             assert machine_kind == 'ZX Spectrum 48K', machine_kind  # TODO
 
@@ -353,7 +379,8 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                     assert len(image) == compressed_size
                     image = self.__uncompress(image, BLOCK_SIZE)
 
-                memory_blocks.append((self._MEMORY_PAGE_ADDRS[page_no], image))
+                memory_blocks.append((self.__MEMORY_PAGE_ADDRS[page_no],
+                                      image))
 
         return UnifiedSnapshot(
             af=make16(self.a, self.f),
@@ -366,7 +393,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             alt_bc=self.alt_bc,
             alt_de=self.alt_de,
             alt_hl=self.alt_hl,
-            pc=self.v2_header.pc2 if self.v2_header is not None else self.pc,
+            pc=self.v2_header.pc if self.v2_header is not None else self.pc,
             sp=self.sp,
             ir=make16(self.i, (self.r & 0x7f) | ((flags1 & 0x1) << 7)),
             iregp_kind='hl',

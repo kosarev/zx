@@ -314,7 +314,7 @@ class MemoryState(object):
         return int.from_bytes(self.read(addr, 2), 'little')
 
     def to_snapshot(self) -> UnifiedSnapshot:
-        return UnifiedSnapshot(memory_blocks=[(0x0000, self.__image)])
+        return UnifiedSnapshot(memory_blocks=[(0x4000, self.__image[0x4000:])])
 
 
 class MachineState(Z80State, MemoryState):

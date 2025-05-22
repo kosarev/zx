@@ -176,7 +176,7 @@ def test_file(filename: str, batch_mode: bool) -> None:
 
             unified = file.to_unified_snapshot()
             unified2 = type(file).from_snapshot(unified).to_unified_snapshot()
-            # TODO: match(unified, unified2)
+            match(unified, unified2)
         elif isinstance(file, RZXFile):
             with Spectrum(headless=True) as app:
                 app._run_file(filename)
