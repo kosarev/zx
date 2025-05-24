@@ -246,17 +246,14 @@ class ScreenWindow(Device):
 
         rendering_driver_index = -1
         renderer_flags = 0
-        renderer = sdl2.SDL_CreateRenderer(window, rendering_driver_index,
-                                           renderer_flags)
+        self.__renderer = sdl2.SDL_CreateRenderer(
+            window, rendering_driver_index, renderer_flags)
 
-        texture = sdl2.SDL_CreateTexture(
-            renderer,
-            sdl2.SDL_PIXELFORMAT_RGBA8888,
+        self.__pixel_texture = sdl2.SDL_CreateTexture(
+            self.__renderer,
+            sdl2.SDL_PIXELFORMAT_RGB888,
             sdl2.SDL_TEXTUREACCESS_STREAMING,
             self.frame_width, self.frame_height)
-
-        pixels = numpy.zeros((self.frame_height, self.frame_width, 4),
-                             dtype=numpy.uint8)
 
         self.__sdl_event = sdl2.SDL_Event()
 
@@ -359,6 +356,22 @@ class ScreenWindow(Device):
         assert isinstance(event, OutputFrame)
         self.frame_data[:] = event.pixels
         self.area.queue_draw()
+
+        rect = None
+        pitch = self.frame_width * 4
+        pixels = ctypes.c_void_p(ctypes.addressof(
+            ctypes.c_char.from_buffer(bytearray(event.pixels))))
+        import sdl2
+        sdl2.SDL_UpdateTexture(self.__pixel_texture, rect,
+                               pixels, pitch)
+
+        sdl2.SDL_RenderClear(self.__renderer)
+
+        src_rect, dest_rect = None, None
+        sdl2.SDL_RenderCopy(self.__renderer, self.__pixel_texture,
+                            src_rect, dest_rect)
+
+        sdl2.SDL_RenderPresent(self.__renderer)
 
     def _show_help(self, devices: Dispatcher) -> None:
         KEYS_HELP = [

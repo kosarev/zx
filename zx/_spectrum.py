@@ -475,14 +475,15 @@ class Spectrum(_SpectrumBase, MachineState, Device):
 
             if not headless:
                 if screen is None:
-                    screen = PyGObjectScreenWindow(self.FRAME_SIZE)
+                    # TODO: Remove once the transition to SDL is completed.
+                    if '__ZX_ADD_NEW_UI_WINDOW' in os.environ:
+                        screen = ScreenWindow(self.FRAME_SIZE)
+                    else:
+                        screen = PyGObjectScreenWindow(self.FRAME_SIZE)
                 if sound_device is None:
                     sound_device = SoundDevice()
 
                 devices.extend([screen, sound_device, Gamepad()])
-
-                if '__ZX_ADD_NEW_UI_WINDOW' in os.environ:
-                    devices.append(ScreenWindow(self.FRAME_SIZE))
 
         dispatcher = Dispatcher(devices)
 
