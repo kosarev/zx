@@ -384,6 +384,7 @@ class ScreenWindow(Device):
             ('PAUSE', 'Pause/resume emulation.'),
         ]
 
+        # TODO: Use the GUI for that.
         for entry in KEYS_HELP:
             print('%7s  %s' % entry)
 
