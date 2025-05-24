@@ -72,15 +72,20 @@ _DrawProc = typing.Callable[
 _Widget: typing.TypeAlias = Gtk.DrawingArea
 
 
-def _draw_pause_sign(context: _Context, renderer: int, x: float, y: float,
+def _draw_pause_sign(c: _Context, renderer: int, x: float, y: float,
                      size: float, alpha: float) -> None:
     w = 0.1 * size
     h = 0.4 * size
     d = 0.15 * size
-    if context is not None:
-        context.rectangle(x - d, y - h / 2, w, h)
-        context.rectangle(x + d - w, y - h / 2, w, h)
-        context.fill()
+    # TODO: Remove the check.
+    if renderer is not None:
+        import sdl2  # type: ignore
+        sdl2.SDL_RenderFillRect(
+            renderer,
+            sdl2.SDL_Rect(int(x - d), int(y - h / 2), int(w), int(h)))
+        sdl2.SDL_RenderFillRect(
+            renderer,
+            sdl2.SDL_Rect(int(x + d - w), int(y - h / 2), int(w), int(h)))
 
 
 def _draw_tape_sign(context: _Context, renderer: _Renderer, x: float, y: float,
@@ -125,7 +130,7 @@ def _draw_notification_circle(context: _Context, renderer: _Renderer,
 
     # TODO: Remove the check.
     if renderer is not None:
-        import sdl2  # type: ignore
+        import sdl2
         sdl2.SDL_SetRenderDrawColor(renderer, *rgb('#1e1e1e', alpha))
         sdl2.SDL_RenderFillRect(
             renderer,
@@ -141,6 +146,9 @@ def draw_pause_notification(context: _Context, renderer: _Renderer,
 
     if context is not None:
         context.set_source_rgba(*xrgb('#ffffff', alpha))
+    if renderer is not None:
+        import sdl2
+        sdl2.SDL_SetRenderDrawColor(renderer, *rgb('#ffffff', alpha))
     _draw_pause_sign(context, renderer, x, y, size, alpha)
 
 
@@ -152,6 +160,9 @@ def draw_tape_pause_notification(context: _Context, renderer: _Renderer,
 
     if context is not None:
         context.set_source_rgba(*xrgb('#ffffff', alpha))
+    if renderer is not None:
+        import sdl2
+        sdl2.SDL_SetRenderDrawColor(renderer, *rgb('#ffffff', alpha))
     _draw_tape_sign(context, renderer, x, y - size * 0.13, size * 0.5,
                     alpha, t)
     _draw_pause_sign(context, renderer, x, y + size * 0.23, size * 0.5, alpha)
@@ -165,6 +176,9 @@ def draw_tape_resume_notification(context: _Context, renderer: _Renderer,
 
     if context is not None:
         context.set_source_rgba(*xrgb('#ffffff', alpha))
+    if renderer is not None:
+        import sdl2
+        sdl2.SDL_SetRenderDrawColor(renderer, *rgb('#ffffff', alpha))
     _draw_tape_sign(context, renderer, x, y - size * 0.015, size * 0.6,
                     alpha, t)
 
