@@ -12,6 +12,7 @@
 # TODO: Remove unused imports.
 import enum
 import numpy
+import os
 import time
 import types
 import typing
@@ -47,13 +48,14 @@ from ._except import EmulationExit
 from ._except import EmulatorException
 from ._file import parse_file
 from ._gamepad import Gamepad
-from ._gui import ScreenWindow
+from ._gui import PyGObjectScreenWindow
 from ._keyboard import Keyboard
 from ._keyboard import KEYS
 from ._playback import PlaybackPlayer
 from ._rom import load_rom_image
 from ._rzx import make_rzx
 from ._rzx import RZXFile
+from ._screen import ScreenWindow
 from ._scr import _SCRSnapshot
 from ._sound import SoundDevice
 from ._spectrumbase import _SpectrumBase
@@ -473,11 +475,14 @@ class Spectrum(_SpectrumBase, MachineState, Device):
 
             if not headless:
                 if screen is None:
-                    screen = ScreenWindow(self.FRAME_SIZE)
+                    screen = PyGObjectScreenWindow(self.FRAME_SIZE)
                 if sound_device is None:
                     sound_device = SoundDevice()
 
                 devices.extend([screen, sound_device, Gamepad()])
+
+                if '__ZX_ADD_NEW_UI_WINDOW' in os.environ:
+                    devices.append(ScreenWindow(self.FRAME_SIZE))
 
         dispatcher = Dispatcher(devices)
 

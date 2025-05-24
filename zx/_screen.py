@@ -209,7 +209,7 @@ class _ExceptionEvent(DeviceEvent):
         self.exception = exception
 
 
-class PyGObjectScreenWindow(Device):
+class ScreenWindow(Device):
     _SCREEN_AREA_BACKGROUND_COLOUR = rgb('#1e1e1e')
 
     _GTK_KEYS_TO_ZX_KEYS = {
