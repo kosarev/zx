@@ -247,6 +247,7 @@ class _ExceptionEvent(DeviceEvent):
 
 
 class ScreenWindow(Device):
+    # TODO: Remove.
     _SCREEN_AREA_BACKGROUND_COLOUR = xrgb('#1e1e1e')
 
     _GTK_KEYS_TO_ZX_KEYS = {
@@ -419,10 +420,22 @@ class ScreenWindow(Device):
 
         sdl2.SDL_RenderClear(self.__renderer)
 
-        src_rect, dest_rect = None, None
-        sdl2.SDL_RenderCopy(self.__renderer, self.__pixel_texture,
-                            src_rect, dest_rect)
+        # Draw the background.
+        sdl2.SDL_SetRenderDrawColor(self.__renderer, *rgb('#1e1e1e'))
+        sdl2.SDL_RenderFillRect(self.__renderer,
+                                sdl2.SDL_Rect(0, 0, *window_size))
 
+        # Draw the emulated screen.
+        src_rect = None
+        sdl2.SDL_RenderCopy(
+            self.__renderer, self.__pixel_texture,
+            src_rect,
+            sdl2.SDL_Rect((window_width - width) // 2,
+                          (window_height - height) // 2,
+                          width,
+                          height))
+
+        # Draw notifications.
         context = None
         self._notification.draw(window_size, (width, height), context,
                                 self.__renderer)
