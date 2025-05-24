@@ -44,7 +44,8 @@ SCREENCAST = False
 PI = 3.1415926535
 
 
-def rgb(colour: str, alpha: float = 1) -> tuple[float, float, float, float]:
+# TODO: Remove once the transition to SDL is done.
+def xrgb(colour: str, alpha: float = 1) -> tuple[float, float, float, float]:
     assert colour.startswith('#')
     assert len(colour) == 7
     r = int(colour[1:3], 16)
@@ -53,85 +54,119 @@ def rgb(colour: str, alpha: float = 1) -> tuple[float, float, float, float]:
     return r / 0xff, g / 0xff, b / 0xff, alpha
 
 
+def rgb(colour: str, alpha: float = 1) -> tuple[float, float, float, float]:
+    assert colour.startswith('#')
+    assert len(colour) == 7
+    r = int(colour[1:3], 16)
+    g = int(colour[3:5], 16)
+    b = int(colour[5:7], 16)
+    return r, g, b, int(0xff * alpha)
+
+
+_Renderer = typing.Any
 _Surface = cairo.Surface
-_Context: typing.TypeAlias = 'cairo.Context[_Surface]'
-_DrawProc = typing.Callable[[_Context, float, float, float, float, float],
-                            None]
+_Context: typing.TypeAlias = 'cairo.Context[_Surface] | None'
+_DrawProc = typing.Callable[
+    [_Context, _Renderer, float, float, float, float, float],
+    None]
 _Widget: typing.TypeAlias = Gtk.DrawingArea
 
 
-def _draw_pause_sign(context: _Context, x: float, y: float, size: float,
-                     alpha: float) -> None:
+def _draw_pause_sign(context: _Context, renderer: int, x: float, y: float,
+                     size: float, alpha: float) -> None:
     w = 0.1 * size
     h = 0.4 * size
     d = 0.15 * size
-    context.rectangle(x - d, y - h / 2, w, h)
-    context.rectangle(x + d - w, y - h / 2, w, h)
-    context.fill()
+    if context is not None:
+        context.rectangle(x - d, y - h / 2, w, h)
+        context.rectangle(x + d - w, y - h / 2, w, h)
+        context.fill()
 
 
-def _draw_tape_sign(context: _Context, x: float, y: float, size: float,
-                    alpha: float, t: float = 0) -> None:
+def _draw_tape_sign(context: _Context, renderer: _Renderer, x: float, y: float,
+                    size: float, alpha: float, t: float = 0) -> None:
     R = 0.10
     D = 0.33 - R
     H = 0.6
     RPM = 33.3
 
-    context.set_line_width(size * 0.05)
-    context.set_line_cap(cairo.LINE_CAP_ROUND)
-    context.set_line_join(cairo.LINE_JOIN_ROUND)
+    if context is not None:
+        context.set_line_width(size * 0.05)
+        context.set_line_cap(cairo.LINE_CAP_ROUND)
+        context.set_line_join(cairo.LINE_JOIN_ROUND)
 
-    context.rectangle(x - size * 0.5, y - size * (H / 2), size, size * H)
+        context.rectangle(x - size * 0.5, y - size * (H / 2), size, size * H)
 
-    context.move_to(x - size * (D - 0.15), y - size * R)
-    context.line_to(x + size * (D - 0.15), y - size * R)
+        context.move_to(x - size * (D - 0.15), y - size * R)
+        context.line_to(x + size * (D - 0.15), y - size * R)
 
-    context.move_to(x - size * (D - R), y)
-    context.new_sub_path()
-    a = t * (RPM * 2 * PI / 60)
-    context.arc(x - size * D, y, size * R, a, a + (2 * PI - 0.7))
+        context.move_to(x - size * (D - R), y)
+        context.new_sub_path()
+        a = t * (RPM * 2 * PI / 60)
+        context.arc(x - size * D, y, size * R, a, a + (2 * PI - 0.7))
 
-    context.move_to(x + size * (D + R), y)
-    context.new_sub_path()
-    a += PI / 5
-    # context.arc(x + size * D, y, size * R, 0, 2 * PI)
-    context.arc(x + size * D, y, size * R, a, a + (2 * PI - 0.7))
+        context.move_to(x + size * (D + R), y)
+        context.new_sub_path()
+        a += PI / 5
+        # context.arc(x + size * D, y, size * R, 0, 2 * PI)
+        context.arc(x + size * D, y, size * R, a, a + (2 * PI - 0.7))
 
-    context.stroke()
+        context.stroke()
 
 
-def _draw_notification_circle(context: _Context, x: float, y: float,
+# TODO: Move to the class. +Same for other drawing functions.
+def _draw_notification_circle(context: _Context, renderer: _Renderer,
+                              x: float, y: float,
                               size: float, alpha: float) -> None:
-    context.arc(x, y, size / 2, 0, 2 * PI)
-    context.set_source_rgba(*rgb('#1e1e1e', alpha))
-    context.fill()
+    if context is not None:
+        context.arc(x, y, size / 2, 0, 2 * PI)
+        context.set_source_rgba(*xrgb('#1e1e1e', alpha))
+        context.fill()
+
+    # TODO: Remove the check.
+    if renderer is not None:
+        import sdl2  # type: ignore
+        sdl2.SDL_SetRenderDrawColor(renderer, *rgb('#1e1e1e', alpha))
+        sdl2.SDL_RenderFillRect(
+            renderer,
+            sdl2.SDL_Rect(int(x - size / 2), int(y - size / 2),
+                          int(size), int(size)))
 
 
-def draw_pause_notification(context: _Context, x: float, y: float, size: float,
-                            alpha: float = 1, t: float = 0) -> None:
-    _draw_notification_circle(context, x, y, size, alpha)
+def draw_pause_notification(context: _Context, renderer: _Renderer,
+                            x: float, y: float,
+                            size: float, alpha: float = 1,
+                            t: float = 0) -> None:
+    _draw_notification_circle(context, renderer, x, y, size, alpha)
 
-    context.set_source_rgba(*rgb('#ffffff', alpha))
-    _draw_pause_sign(context, x, y, size, alpha)
+    if context is not None:
+        context.set_source_rgba(*xrgb('#ffffff', alpha))
+    _draw_pause_sign(context, renderer, x, y, size, alpha)
 
 
-def draw_tape_pause_notification(context: _Context, x: float, y: float,
+def draw_tape_pause_notification(context: _Context, renderer: _Renderer,
+                                 x: float, y: float,
                                  size: float, alpha: float = 1,
                                  t: float = 0) -> None:
-    _draw_notification_circle(context, x, y, size, alpha)
+    _draw_notification_circle(context, renderer, x, y, size, alpha)
 
-    context.set_source_rgba(*rgb('#ffffff', alpha))
-    _draw_tape_sign(context, x, y - size * 0.13, size * 0.5, alpha, t)
-    _draw_pause_sign(context, x, y + size * 0.23, size * 0.5, alpha)
+    if context is not None:
+        context.set_source_rgba(*xrgb('#ffffff', alpha))
+    _draw_tape_sign(context, renderer, x, y - size * 0.13, size * 0.5,
+                    alpha, t)
+    _draw_pause_sign(context, renderer, x, y + size * 0.23, size * 0.5, alpha)
 
 
-def draw_tape_resume_notification(context: _Context, x: float, y: float,
+def draw_tape_resume_notification(context: _Context, renderer: _Renderer,
+                                  x: float, y: float,
                                   size: float, alpha: float = 1,
                                   t: float = 0) -> None:
-    _draw_notification_circle(context, x, y, size, alpha)
+    _draw_notification_circle(context, renderer, x, y, size, alpha)
 
-    context.set_source_rgba(*rgb('#ffffff', alpha))
-    _draw_tape_sign(context, x, y - size * 0.015, size * 0.6, alpha, t)
+    if context is not None:
+        context.set_source_rgba(*xrgb('#ffffff', alpha))
+    _draw_tape_sign(context, renderer, x, y - size * 0.015, size * 0.6,
+                    alpha, t)
 
 
 class Notification(object):
@@ -151,7 +186,7 @@ class Notification(object):
         self._draw = None
 
     def draw(self, window_size: tuple[int, int], screen_size: tuple[int, int],
-             context: _Context) -> None:
+             context: _Context, renderer: _Renderer) -> None:
         if not self._timestamp:
             return
 
@@ -170,7 +205,7 @@ class Notification(object):
             return
 
         assert self._draw is not None
-        self._draw(context, x + size / 2, y + size / 2, size, alpha,
+        self._draw(context, renderer, x + size / 2, y + size / 2, size, alpha,
                    self._time.get())
 
 
@@ -212,7 +247,7 @@ class _ExceptionEvent(DeviceEvent):
 
 
 class ScreenWindow(Device):
-    _SCREEN_AREA_BACKGROUND_COLOUR = rgb('#1e1e1e')
+    _SCREEN_AREA_BACKGROUND_COLOUR = xrgb('#1e1e1e')
 
     _GTK_KEYS_TO_ZX_KEYS = {
         'RETURN': 'ENTER',
@@ -233,10 +268,10 @@ class ScreenWindow(Device):
 
         self.scale = 1 if SCREENCAST else 2
 
-        import sdl2  # type: ignore
+        import sdl2
         sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO)
 
-        window = sdl2.SDL_CreateWindow(
+        self.__window = sdl2.SDL_CreateWindow(
             b'ZX Spectrum Emulator',
             sdl2.SDL_WINDOWPOS_CENTERED,
             sdl2.SDL_WINDOWPOS_CENTERED,
@@ -247,7 +282,10 @@ class ScreenWindow(Device):
         rendering_driver_index = -1
         renderer_flags = 0
         self.__renderer = sdl2.SDL_CreateRenderer(
-            window, rendering_driver_index, renderer_flags)
+            self.__window, rendering_driver_index, renderer_flags)
+
+        sdl2.SDL_SetRenderDrawBlendMode(self.__renderer,
+                                        sdl2.SDL_BLENDMODE_BLEND)
 
         self.__pixel_texture = sdl2.SDL_CreateTexture(
             self.__renderer,
@@ -331,6 +369,7 @@ class ScreenWindow(Device):
                               self.frame_width))
 
         # Draw the background.
+        assert context is not None
         context.save()
         context.rectangle(0, 0, window_width, window_height)
         context.set_source_rgba(*self._SCREEN_AREA_BACKGROUND_COLOUR)
@@ -345,7 +384,9 @@ class ScreenWindow(Device):
         context.paint()
         context.restore()
 
-        self._notification.draw(window_size, (width, height), context)
+        renderer = None
+        self._notification.draw(window_size, (width, height),
+                                context, renderer)
         context.restore()
 
         self._screencast.on_draw(context.get_group_target())
@@ -357,11 +398,21 @@ class ScreenWindow(Device):
         self.frame_data[:] = event.pixels
         self.area.queue_draw()
 
+        import sdl2
+        w, h = ctypes.c_int(), ctypes.c_int()
+        sdl2.SDL_GetWindowSize(self.__window, ctypes.byref(w), ctypes.byref(h))
+        window_size = window_width, window_height = w.value, h.value
+        width = min(window_width,
+                    div_ceil(window_height * self.frame_width,
+                             self.frame_height))
+        height = min(window_height,
+                     div_ceil(window_width * self.frame_height,
+                              self.frame_width))
+
         rect = None
         pitch = self.frame_width * 4
         pixels = ctypes.c_void_p(ctypes.addressof(
             ctypes.c_char.from_buffer(bytearray(event.pixels))))
-        import sdl2
         sdl2.SDL_UpdateTexture(self.__pixel_texture, rect,
                                pixels, pitch)
 
@@ -370,6 +421,10 @@ class ScreenWindow(Device):
         src_rect, dest_rect = None, None
         sdl2.SDL_RenderCopy(self.__renderer, self.__pixel_texture,
                             src_rect, dest_rect)
+
+        context = None
+        self._notification.draw(window_size, (width, height), context,
+                                self.__renderer)
 
         sdl2.SDL_RenderPresent(self.__renderer)
 
