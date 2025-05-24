@@ -391,15 +391,23 @@ class ScreenWindow(Device):
 
         self._screencast.on_draw(context.get_group_target())
 
-    # TODO: Rename devices -> dispatcher.
     def _on_output_frame(self, event: DeviceEvent,
-                         devices: Dispatcher) -> typing.Any:
+                         dispatcher: Dispatcher) -> typing.Any:
         assert isinstance(event, OutputFrame)
         self.frame_data[:] = event.pixels
         self.area.queue_draw()
 
+        rect = None
+        pitch = self.frame_width * 4
+        pixels = ctypes.c_void_p(ctypes.addressof(
+            ctypes.c_char.from_buffer(bytearray(event.pixels))))
         import sdl2
+        sdl2.SDL_UpdateTexture(self.__pixel_texture, rect,
+                               pixels, pitch)
+
+    def __update_screen(self) -> None:
         w, h = ctypes.c_int(), ctypes.c_int()
+        import sdl2
         sdl2.SDL_GetWindowSize(self.__window, ctypes.byref(w), ctypes.byref(h))
         window_size = window_width, window_height = w.value, h.value
         width = min(window_width,
@@ -408,13 +416,6 @@ class ScreenWindow(Device):
         height = min(window_height,
                      div_ceil(window_width * self.frame_height,
                               self.frame_width))
-
-        rect = None
-        pitch = self.frame_width * 4
-        pixels = ctypes.c_void_p(ctypes.addressof(
-            ctypes.c_char.from_buffer(bytearray(event.pixels))))
-        sdl2.SDL_UpdateTexture(self.__pixel_texture, rect,
-                               pixels, pitch)
 
         sdl2.SDL_RenderClear(self.__renderer)
 
@@ -590,6 +591,8 @@ class ScreenWindow(Device):
 
         while self.__events:
             self.on_event(self.__events.pop(0), dispatcher, None)
+
+        self.__update_screen()
 
     def __toggle_pause(self, devices: Dispatcher) -> None:
         devices.notify(ToggleEmulationPause())
