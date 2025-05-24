@@ -8,10 +8,12 @@
 #
 #   Published under the MIT license.
 
-import typing
 import cairo
+import ctypes
 import enum
 import gi  # type: ignore
+import numpy
+import typing
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import GetEmulationPauseState
@@ -226,7 +228,39 @@ class ScreenWindow(Device):
 
         self.__events = []
 
-        self._window = Gtk.Window()
+        # TODO: Hide members like this.
+        self.frame_width, self.frame_height = frame_size
+
+        self.scale = 1 if SCREENCAST else 2
+
+        import sdl2  # type: ignore
+        sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO)
+
+        window = sdl2.SDL_CreateWindow(
+            b'ZX Spectrum Emulator',
+            sdl2.SDL_WINDOWPOS_CENTERED,
+            sdl2.SDL_WINDOWPOS_CENTERED,
+            self.frame_width * self.scale,
+            self.frame_height * self.scale,
+            sdl2.SDL_WINDOW_SHOWN | sdl2.SDL_WINDOW_RESIZABLE)
+
+        rendering_driver_index = -1
+        renderer_flags = 0
+        renderer = sdl2.SDL_CreateRenderer(window, rendering_driver_index,
+                                           renderer_flags)
+
+        texture = sdl2.SDL_CreateTexture(
+            renderer,
+            sdl2.SDL_PIXELFORMAT_RGBA8888,
+            sdl2.SDL_TEXTUREACCESS_STREAMING,
+            self.frame_width, self.frame_height)
+
+        pixels = numpy.zeros((self.frame_height, self.frame_width, 4),
+                             dtype=numpy.uint8)
+
+        self.__sdl_event = sdl2.SDL_Event()
+
+        self._gtk_window = Gtk.Window()
 
         self._KEY_HANDLERS: dict[str, typing.Callable[[Dispatcher], None]] = {
             'ESCAPE': self.__on_exit,
@@ -254,29 +288,24 @@ class ScreenWindow(Device):
         self._notification = Notification()
         self._screencast = Screencast()
 
-        # TODO: Hide members like this.
-        self.frame_width, self.frame_height = frame_size
-
-        self.scale = 1 if SCREENCAST else 2
-
         self.area = Gtk.DrawingArea()
         self.area.connect('draw', self._on_draw_area)
         self.area.connect('button-press-event', self.__on_gdk_click)
-        self._window.add(self.area)
+        self._gtk_window.add(self.area)
 
-        self._window.set_title('ZX Spectrum Emulator')
+        self._gtk_window.set_title('ZX Spectrum Emulator')
         if SCREENCAST:
             width, height = 640, 390
         else:
             width, height = (self.frame_width * self.scale,
                              self.frame_height * self.scale)
-        self._window.resize(width, height)
+        self._gtk_window.resize(width, height)
         minimum_size = self.frame_width // 4, self.frame_height // 4
-        self._window.set_size_request(*minimum_size)
-        self._window.set_position(Gtk.WindowPosition.CENTER)
-        self._window.connect('delete-event', self._on_done)
+        self._gtk_window.set_size_request(*minimum_size)
+        self._gtk_window.set_position(Gtk.WindowPosition.CENTER)
+        self._gtk_window.connect('delete-event', self._on_done)
 
-        self._window.show_all()
+        self._gtk_window.show_all()
 
         self.frame_size = self.frame_width * self.frame_height
         self.frame = cairo.ImageSurface(cairo.FORMAT_RGB24,
@@ -289,13 +318,13 @@ class ScreenWindow(Device):
 
         self.area.add_events(Gdk.EventMask.BUTTON_PRESS_MASK |
                              Gdk.EventMask.BUTTON_RELEASE_MASK)
-        self._window.connect('key-press-event', self.__on_gdk_key)
-        self._window.connect('key-release-event', self.__on_gdk_key)
-        self._window.connect('window-state-event',
-                             self.__on_window_state_event)
+        self._gtk_window.connect('key-press-event', self.__on_gdk_key)
+        self._gtk_window.connect('key-release-event', self.__on_gdk_key)
+        self._gtk_window.connect('window-state-event',
+                                 self.__on_window_state_event)
 
     def _on_draw_area(self, widget: _Widget, context: _Context) -> None:
-        window_size = self._window.get_size()
+        window_size = self._gtk_window.get_size()
         window_width, window_height = window_size
         width = min(window_width,
                     div_ceil(window_height * self.frame_width,
@@ -348,7 +377,7 @@ class ScreenWindow(Device):
     def _save_snapshot(self, devices: Dispatcher) -> None:
         # TODO: Add file filters.
         dialog = Gtk.FileChooserDialog(
-            'Save snapshot', self._window,
+            'Save snapshot', self._gtk_window,
             Gtk.FileChooserAction.SAVE,
             (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
              Gtk.STOCK_SAVE, Gtk.ResponseType.OK))
@@ -363,7 +392,7 @@ class ScreenWindow(Device):
 
     def _error_box(self, title: str, message: str) -> None:
         dialog = Gtk.MessageDialog(
-            self._window, 0, Gtk.MessageType.ERROR,
+            self._gtk_window, 0, Gtk.MessageType.ERROR,
             Gtk.ButtonsType.OK, title)
         dialog.format_secondary_text(message)
         dialog.run()
@@ -372,7 +401,7 @@ class ScreenWindow(Device):
     def _choose_and_load_file(self, devices: Dispatcher) -> None:
         # TODO: Add file filters.
         dialog = Gtk.FileChooserDialog(
-            'Load file', self._window,
+            'Load file', self._gtk_window,
             Gtk.FileChooserAction.OPEN,
             (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
              Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
@@ -394,9 +423,9 @@ class ScreenWindow(Device):
 
     def _toggle_fullscreen(self, devices: Dispatcher) -> None:
         if self._is_fullscreen:
-            self._window.unfullscreen()
+            self._gtk_window.unfullscreen()
         else:
-            self._window.fullscreen()
+            self._gtk_window.fullscreen()
 
     def __queue_event(self, event: DeviceEvent) -> None:
         self.__events.append(event)
@@ -477,15 +506,21 @@ class ScreenWindow(Device):
         tape_time = devices.notify(GetTapePlayerTime())
         self._notification.set(draw, tape_time)
 
-    def _on_quantum_run(self, event: DeviceEvent, devices: Dispatcher) -> None:
+    def _on_quantum_run(self, event: DeviceEvent,
+                        dispatcher: Dispatcher) -> None:
         assert isinstance(event, QuantumRun)
         self.area.queue_draw()
 
         while Gtk.events_pending():
             Gtk.main_iteration()
 
+        import sdl2
+        while sdl2.SDL_PollEvent(ctypes.byref(self.__sdl_event)) != 0:
+            if self.__sdl_event.type == sdl2.SDL_QUIT:
+                self.__on_exit(dispatcher)
+
         while self.__events:
-            self.on_event(self.__events.pop(0), devices, None)
+            self.on_event(self.__events.pop(0), dispatcher, None)
 
     def __toggle_pause(self, devices: Dispatcher) -> None:
         devices.notify(ToggleEmulationPause())
@@ -494,4 +529,4 @@ class ScreenWindow(Device):
         devices.notify(ToggleTapePause())
 
     def __on_destroy(self, event: DeviceEvent, devices: Dispatcher) -> None:
-        self._window.destroy()
+        self._gtk_window.destroy()
