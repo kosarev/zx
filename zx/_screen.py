@@ -12,6 +12,8 @@ import ctypes
 import enum
 import gi  # type: ignore
 import numpy
+import tkinter.filedialog
+import tkinter.messagebox
 import typing
 from ._device import Destroy
 from ._device import Device
@@ -292,7 +294,7 @@ class ScreenWindow(Device):
             'F10': self.__on_exit,
             'F1': self._show_help,
             'F2': self._save_snapshot,
-            'F3': self._choose_and_load_file,
+            'F3': self.__choose_and_load_file,
             'F6': self.__toggle_tape_pause,
             'F11': self.__toggle_fullscreen,
             'PAUSE': self.__toggle_pause,
@@ -390,50 +392,31 @@ class ScreenWindow(Device):
 
     def _save_snapshot(self, devices: Dispatcher) -> None:
         # TODO: Add file filters.
-        dialog = Gtk.FileChooserDialog(
-            'Save snapshot', self._gtk_window,
-            Gtk.FileChooserAction.SAVE,
-            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-             Gtk.STOCK_SAVE, Gtk.ResponseType.OK))
-        dialog.set_do_overwrite_confirmation(True)
-        if dialog.run() == Gtk.ResponseType.OK:
+        filename = tkinter.filedialog.asksaveasfilename(
+            defaultextension=".z80",
+            filetypes=[("All files", "*.*")],
+            title="Save snapshot")
+
+        if isinstance(filename, str):
             try:
-                devices.notify(SaveSnapshot(dialog.get_filename()))
+                devices.notify(SaveSnapshot(filename))
             except USER_ERRORS as e:
-                self._error_box('File error', verbalize_error(e))
+                self.__error_box('File error', verbalize_error(e))
 
-        dialog.destroy()
+    def __error_box(self, title: str, message: str) -> None:
+        tkinter.messagebox.showerror(title, message)
 
-    def _error_box(self, title: str, message: str) -> None:
-        dialog = Gtk.MessageDialog(
-            self._gtk_window, 0, Gtk.MessageType.ERROR,
-            Gtk.ButtonsType.OK, title)
-        dialog.format_secondary_text(message)
-        dialog.run()
-        dialog.destroy()
-
-    def _choose_and_load_file(self, devices: Dispatcher) -> None:
+    def __choose_and_load_file(self, devices: Dispatcher) -> None:
         # TODO: Add file filters.
-        dialog = Gtk.FileChooserDialog(
-            'Load file', self._gtk_window,
-            Gtk.FileChooserAction.OPEN,
-            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-             Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
+        filename = tkinter.filedialog.askopenfilename(
+            title="Load file",
+            filetypes=[("All Files", "*.*")])
 
-        filename = None
-        if dialog.run() == Gtk.ResponseType.OK:
-            filename = dialog.get_filename()
-
-        # Close the dialog window before trying to load the file
-        # as that loading may take significant time, e.g., if it
-        # implies simulation of key strokes, etc.
-        dialog.destroy()
-
-        if filename is not None:
+        if isinstance(filename, str):
             try:
                 devices.notify(LoadFile(filename))
             except USER_ERRORS as e:
-                self._error_box('File error', verbalize_error(e))
+                self.__error_box('File error', verbalize_error(e))
 
     def __toggle_fullscreen(self, devices: Dispatcher) -> None:
         import sdl2
