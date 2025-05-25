@@ -287,7 +287,6 @@ class ScreenWindow(Device):
         self._gtk_window = Gtk.Window()
 
         self._KEY_HANDLERS: dict[str, typing.Callable[[Dispatcher], None]] = {
-            'ESCAPE': self.__on_exit,
             'F10': self.__on_exit,
             'F1': self._show_help,
             'F2': self._save_snapshot,
@@ -326,7 +325,6 @@ class ScreenWindow(Device):
         minimum_size = self.frame_width // 4, self.frame_height // 4
         self._gtk_window.set_size_request(*minimum_size)
         self._gtk_window.set_position(Gtk.WindowPosition.CENTER)
-        self._gtk_window.connect('delete-event', self._on_done)
 
         self._gtk_window.show_all()
 
@@ -510,9 +508,6 @@ class ScreenWindow(Device):
         raise event.exception
 
     def __on_exit(self, devices: Dispatcher) -> None:
-        self.__queue_event(_ExceptionEvent(EmulationExit()))
-
-    def _on_done(self, widget: _Widget) -> None:
         self.__queue_event(_ExceptionEvent(EmulationExit()))
 
     def __on_window_state_event(self, widget: _Widget,
