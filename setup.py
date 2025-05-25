@@ -6,7 +6,7 @@ import os
 from setuptools import Extension, setup
 
 
-here = os.path.abspath(os.path.dirname(inspect.getsource(lambda: 0)))
+here = os.path.abspath(os.path.dirname(__file__))
 
 with open(os.path.join(here, 'zx/__init__.py')) as f:
     s, = [s for s in f.readlines() if '__version__' in s]
@@ -37,7 +37,7 @@ zx_emulatorbase_module = Extension(
 # TODO: Do we have a name for the emulator?
 setup(name='zx',
       version=version,
-      description='ZX Spectrum Emulator in Python and C++',
+      description='ZX Spectrum emulation framework',
       long_description=long_description,
       long_description_content_type='text/markdown',
       author='Ivan Kosarev',
@@ -64,11 +64,8 @@ setup(name='zx',
           'Intended Audience :: Developers',
           'Intended Audience :: Education',
           'Intended Audience :: End Users/Desktop',
-          'License :: OSI Approved :: MIT License',
           'Operating System :: OS Independent',
           'Programming Language :: C++',
-          # TODO: Are we going to support Python 2?
-          # TODO: Specific versions?
           'Programming Language :: Python :: 3',
           'Programming Language :: Python :: Implementation :: CPython',
           'Topic :: Games/Entertainment',
@@ -77,5 +74,4 @@ setup(name='zx',
           'Topic :: System :: Emulators',
       ],
       license='MIT',
-      # TODO: Respect other parameters.
       )
