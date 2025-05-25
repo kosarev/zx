@@ -41,7 +41,12 @@ private:
 
 namespace Spectrum {
 
+#if defined(_MSC_VER)
+#pragma pack(push, 1)
+struct processor_state {
+#else
 struct __attribute__((packed)) processor_state {
+#endif
     least_u16 bc;
     least_u16 de;
     least_u16 hl;
@@ -64,8 +69,16 @@ struct __attribute__((packed)) processor_state {
     least_u8 int_mode;
     least_u8 index_rp_kind;
 };
+#if defined(_MSC_VER)
+#pragma pack(pop)
+#endif
 
+#if defined(_MSC_VER)
+#pragma pack(push, 1)
+struct machine_state {
+#else
 struct __attribute__((packed)) machine_state {
+#endif
     processor_state proc;
 
     least_u32 ticks_since_int = 0;
@@ -78,6 +91,9 @@ struct __attribute__((packed)) machine_state {
 
     zx::memory_image_type memory;
 };
+#if defined(_MSC_VER)
+#pragma pack(pop)
+#endif
 
 class machine_emulator : public zx::spectrum<machine_emulator> {
 public:
@@ -392,7 +408,7 @@ PyObject *object_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
 void object_dealloc(PyObject *self) {
     auto &object = *cast_object(self);
-    object.emulator.~spectrum();
+    object.emulator.~machine_emulator();
     Py_TYPE(self)->tp_free(self);
 }
 

@@ -4,6 +4,7 @@ zx.egg-info
 zx/build
 zx/__pycache__
 zx/_spectrumbase.cpython-*
+zx/*.pyd
 test/__pycache__
 tests/__pycache__
 /*.z80
