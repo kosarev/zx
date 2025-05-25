@@ -10,11 +10,11 @@
 
 import ctypes
 import enum
-import gi  # type: ignore
 import numpy
 import tkinter.filedialog
 import tkinter.messagebox
 import typing
+
 from ._device import Destroy
 from ._device import Device
 from ._device import DeviceEvent
@@ -37,8 +37,6 @@ from ._error import verbalize_error
 from ._except import EmulationExit
 from ._time import get_elapsed_time, get_timestamp, Time
 from ._utils import div_ceil
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk  # type: ignore  # nopep8
 
 
 SCREENCAST = False
@@ -288,8 +286,6 @@ class ScreenWindow(Device):
 
         self.__sdl_event = sdl2.SDL_Event()
 
-        self._gtk_window = Gtk.Window()
-
         self._KEY_HANDLERS: dict[str, typing.Callable[[Dispatcher], None]] = {
             'F10': self.__on_exit,
             'F1': self._show_help,
@@ -500,9 +496,6 @@ class ScreenWindow(Device):
     def _on_quantum_run(self, event: DeviceEvent,
                         dispatcher: Dispatcher) -> None:
         assert isinstance(event, QuantumRun)
-        while Gtk.events_pending():
-            Gtk.main_iteration()
-
         import sdl2
         while sdl2.SDL_PollEvent(ctypes.byref(self.__sdl_event)) != 0:
             if self.__sdl_event.type == sdl2.SDL_QUIT:
