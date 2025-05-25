@@ -48,7 +48,6 @@ from ._except import EmulationExit
 from ._except import EmulatorException
 from ._file import parse_file
 from ._gamepad import Gamepad
-from ._gui import PyGObjectScreenWindow
 from ._keyboard import Keyboard
 from ._keyboard import KEYS
 from ._playback import PlaybackPlayer
@@ -475,11 +474,7 @@ class Spectrum(_SpectrumBase, MachineState, Device):
 
             if not headless:
                 if screen is None:
-                    # TODO: Remove once the transition to SDL is completed.
-                    if '__ZX_ADD_NEW_UI_WINDOW' in os.environ:
-                        screen = ScreenWindow(self.FRAME_SIZE)
-                    else:
-                        screen = PyGObjectScreenWindow(self.FRAME_SIZE)
+                    screen = ScreenWindow(self.FRAME_SIZE)
                 if sound_device is None:
                     sound_device = SoundDevice()
 

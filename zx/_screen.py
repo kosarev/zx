@@ -44,16 +44,6 @@ SCREENCAST = False
 PI = 3.1415926535
 
 
-# TODO: Remove once the transition to SDL is done.
-def xrgb(colour: str, alpha: float = 1) -> tuple[float, float, float, float]:
-    assert colour.startswith('#')
-    assert len(colour) == 7
-    r = int(colour[1:3], 16)
-    g = int(colour[3:5], 16)
-    b = int(colour[5:7], 16)
-    return r / 0xff, g / 0xff, b / 0xff, alpha
-
-
 def rgb(colour: str, alpha: float = 1) -> tuple[float, float, float, float]:
     assert colour.startswith('#')
     assert len(colour) == 7
@@ -234,9 +224,6 @@ class _ExceptionEvent(DeviceEvent):
 
 
 class ScreenWindow(Device):
-    # TODO: Remove.
-    _SCREEN_AREA_BACKGROUND_COLOUR = xrgb('#1e1e1e')
-
     __SDL_KEYS_TO_ZX_KEYS = {
         'RETURN': 'ENTER',
         'LEFT SHIFT': 'CAPS SHIFT',
