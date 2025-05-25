@@ -80,6 +80,7 @@ def _draw_pause_sign(c: _Context, renderer: int, x: float, y: float,
     # TODO: Remove the check.
     if renderer is not None:
         import sdl2  # type: ignore
+        sdl2.SDL_SetRenderDrawColor(renderer, *rgb('#ffffff', alpha))
         sdl2.SDL_RenderFillRect(
             renderer,
             sdl2.SDL_Rect(int(x - d), int(y - h / 2), int(w), int(h)))
@@ -88,35 +89,37 @@ def _draw_pause_sign(c: _Context, renderer: int, x: float, y: float,
             sdl2.SDL_Rect(int(x + d - w), int(y - h / 2), int(w), int(h)))
 
 
-def _draw_tape_sign(context: _Context, renderer: _Renderer, x: float, y: float,
+def _draw_tape_sign(c: _Context, renderer: _Renderer, x: float, y: float,
                     size: float, alpha: float, t: float = 0) -> None:
     R = 0.10
     D = 0.33 - R
     H = 0.6
-    RPM = 33.3
+    RPM = 11
 
-    if context is not None:
-        context.set_line_width(size * 0.05)
-        context.set_line_cap(cairo.LINE_CAP_ROUND)
-        context.set_line_join(cairo.LINE_JOIN_ROUND)
+    # TODO: Remove the check.
+    if renderer is not None:
+        # TODO: Animate the reels.
+        a = t * -(RPM * 2 * PI / 60)
 
-        context.rectangle(x - size * 0.5, y - size * (H / 2), size, size * H)
+        import sdl2
+        sdl2.SDL_SetRenderDrawColor(renderer, *rgb('#ffffff', alpha))
+        sdl2.SDL_RenderDrawRect(
+            renderer,
+            sdl2.SDL_Rect(int(x - size * 0.5), int(y - size * (H / 2)),
+                          int(size), int(size * H)))
 
-        context.move_to(x - size * (D - 0.15), y - size * R)
-        context.line_to(x + size * (D - 0.15), y - size * R)
+        import sdl2.sdlgfx  # type: ignore
+        sdl2.sdlgfx.hlineRGBA(
+            renderer,
+            int(x - size * (D - 0.15)),
+            int(x + size * (D - 0.15)),
+            int(y - size * R),
+            *rgb('#ffffff', alpha))
 
-        context.move_to(x - size * (D - R), y)
-        context.new_sub_path()
-        a = t * (RPM * 2 * PI / 60)
-        context.arc(x - size * D, y, size * R, a, a + (2 * PI - 0.7))
-
-        context.move_to(x + size * (D + R), y)
-        context.new_sub_path()
-        a += PI / 5
-        # context.arc(x + size * D, y, size * R, 0, 2 * PI)
-        context.arc(x + size * D, y, size * R, a, a + (2 * PI - 0.7))
-
-        context.stroke()
+        sdl2.sdlgfx.aacircleRGBA(renderer, int(x - size * (D - R / 2)), int(y),
+                                 int(size * R), *rgb('#ffffff', alpha))
+        sdl2.sdlgfx.aacircleRGBA(renderer, int(x + size * (D - R / 2)), int(y),
+                                 int(size * R), *rgb('#ffffff', alpha))
 
 
 # TODO: Move to the class. +Same for other drawing functions.
@@ -146,9 +149,6 @@ def draw_pause_notification(context: _Context, renderer: _Renderer,
 
     if context is not None:
         context.set_source_rgba(*xrgb('#ffffff', alpha))
-    if renderer is not None:
-        import sdl2
-        sdl2.SDL_SetRenderDrawColor(renderer, *rgb('#ffffff', alpha))
     _draw_pause_sign(context, renderer, x, y, size, alpha)
 
 
@@ -160,9 +160,6 @@ def draw_tape_pause_notification(context: _Context, renderer: _Renderer,
 
     if context is not None:
         context.set_source_rgba(*xrgb('#ffffff', alpha))
-    if renderer is not None:
-        import sdl2
-        sdl2.SDL_SetRenderDrawColor(renderer, *rgb('#ffffff', alpha))
     _draw_tape_sign(context, renderer, x, y - size * 0.13, size * 0.5,
                     alpha, t)
     _draw_pause_sign(context, renderer, x, y + size * 0.23, size * 0.5, alpha)
