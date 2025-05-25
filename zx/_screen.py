@@ -290,7 +290,7 @@ class ScreenWindow(Device):
             'F2': self._save_snapshot,
             'F3': self._choose_and_load_file,
             'F6': self.__toggle_tape_pause,
-            'F11': self._toggle_fullscreen,
+            'F11': self.__toggle_fullscreen,
             'PAUSE': self.__toggle_pause,
         }
 
@@ -333,11 +333,6 @@ class ScreenWindow(Device):
         self.pattern = cairo.SurfacePattern(self.frame)
         if not SCREENCAST:
             self.pattern.set_filter(cairo.FILTER_NEAREST)
-
-        self.area.add_events(Gdk.EventMask.BUTTON_PRESS_MASK |
-                             Gdk.EventMask.BUTTON_RELEASE_MASK)
-        self._gtk_window.connect('window-state-event',
-                                 self.__on_window_state_event)
 
     def _on_output_frame(self, event: DeviceEvent,
                          dispatcher: Dispatcher) -> typing.Any:
@@ -453,11 +448,12 @@ class ScreenWindow(Device):
             except USER_ERRORS as e:
                 self._error_box('File error', verbalize_error(e))
 
-    def _toggle_fullscreen(self, devices: Dispatcher) -> None:
-        if self._is_fullscreen:
-            self._gtk_window.unfullscreen()
-        else:
-            self._gtk_window.fullscreen()
+    def __toggle_fullscreen(self, devices: Dispatcher) -> None:
+        import sdl2
+        flags = sdl2.SDL_GetWindowFlags(self.__window)
+        flags &= sdl2.SDL_WINDOW_FULLSCREEN_DESKTOP
+        flags ^= sdl2.SDL_WINDOW_FULLSCREEN_DESKTOP
+        sdl2.SDL_SetWindowFullscreen(self.__window, flags)
 
     def __queue_event(self, event: DeviceEvent) -> None:
         self.__events.append(event)
@@ -496,7 +492,7 @@ class ScreenWindow(Device):
         if event.type == _ClickType.Single:
             self.__toggle_pause(devices)
         elif event.type == _ClickType.Double:
-            self._toggle_fullscreen(devices)
+            self.__toggle_fullscreen(devices)
 
     def __on_exception(self, event: DeviceEvent,
                        devices: Dispatcher) -> typing.Any:
@@ -505,11 +501,6 @@ class ScreenWindow(Device):
 
     def __on_exit(self, devices: Dispatcher) -> None:
         self.__queue_event(_ExceptionEvent(EmulationExit()))
-
-    def __on_window_state_event(self, widget: _Widget,
-                                event: Gdk.EventWindowState) -> None:
-        state = event.new_window_state
-        self._is_fullscreen = bool(state & Gdk.WindowState.FULLSCREEN)
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
