@@ -64,8 +64,6 @@ def rgb(colour: str, alpha: float = 1) -> tuple[float, float, float, float]:
 
 
 _Renderer = typing.Any
-_Surface = cairo.Surface
-_Context: typing.TypeAlias = 'cairo.Context[_Surface]'
 _DrawProc = typing.Callable[
     [_Renderer, float, float, float, float, float],
     None]
@@ -203,13 +201,16 @@ class Screencast(object):
     def __init__(self) -> None:
         self._counter = 0
 
-    def on_draw(self, surface: _Surface) -> None:
+    def on_draw(self, pixel_texture: typing.Any) -> None:
         if not SCREENCAST:
             return
 
+        # TODO
+        '''
         filename = '%05d.png' % self._counter
         surface.write_to_png(filename)
         self._counter += 1
+        '''
 
 
 class _KeyEvent(DeviceEvent):
@@ -312,7 +313,6 @@ class ScreenWindow(Device):
         self._screencast = Screencast()
 
         self.area = Gtk.DrawingArea()
-        self.area.connect('draw', self._on_draw_area)
         self.area.connect('button-press-event', self.__on_gdk_click)
         self._gtk_window.add(self.area)
 
@@ -345,35 +345,6 @@ class ScreenWindow(Device):
         self._gtk_window.connect('key-release-event', self.__on_gdk_key)
         self._gtk_window.connect('window-state-event',
                                  self.__on_window_state_event)
-
-    def _on_draw_area(self, widget: _Widget, context: _Context) -> None:
-        window_size = self._gtk_window.get_size()
-        window_width, window_height = window_size
-        width = min(window_width,
-                    div_ceil(window_height * self.frame_width,
-                             self.frame_height))
-        height = min(window_height,
-                     div_ceil(window_width * self.frame_height,
-                              self.frame_width))
-
-        # Draw the background.
-        context.save()
-        context.rectangle(0, 0, window_width, window_height)
-        context.set_source_rgba(*self._SCREEN_AREA_BACKGROUND_COLOUR)
-        context.fill()
-
-        # Draw the emulated screen.
-        context.save()
-        context.translate((window_width - width) // 2,
-                          (window_height - height) // 2)
-        context.scale(width / self.frame_width, height / self.frame_height)
-        context.set_source(self.pattern)
-        context.paint()
-        context.restore()
-
-        context.restore()
-
-        self._screencast.on_draw(context.get_group_target())
 
     def _on_output_frame(self, event: DeviceEvent,
                          dispatcher: Dispatcher) -> typing.Any:
@@ -417,6 +388,9 @@ class ScreenWindow(Device):
                           (window_height - height) // 2,
                           width,
                           height))
+
+        # TODO
+        self._screencast.on_draw(self.__pixel_texture)
 
         # Draw notifications.
         self._notification.draw(window_size, (width, height),
@@ -538,7 +512,7 @@ class ScreenWindow(Device):
     def __on_exit(self, devices: Dispatcher) -> None:
         self.__queue_event(_ExceptionEvent(EmulationExit()))
 
-    def _on_done(self, widget: _Widget, context: _Context) -> None:
+    def _on_done(self, widget: _Widget) -> None:
         self.__queue_event(_ExceptionEvent(EmulationExit()))
 
     def __on_window_state_event(self, widget: _Widget,
