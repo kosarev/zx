@@ -67,7 +67,6 @@ _Renderer = typing.Any
 _DrawProc = typing.Callable[
     [_Renderer, float, float, float, float, float],
     None]
-_Widget: typing.TypeAlias = Gtk.DrawingArea
 
 
 def _draw_pause_sign(renderer: int, x: float, y: float,
@@ -280,6 +279,11 @@ class ScreenWindow(Device):
             sdl2.SDL_TEXTUREACCESS_STREAMING,
             self.frame_width, self.frame_height)
 
+        # TODO: Support as an option.
+        if False:
+            sdl2.SDL_SetTextureScaleMode(self.__pixel_texture,
+                                         sdl2.SDL_ScaleModeLinear)
+
         self.__sdl_event = sdl2.SDL_Event()
 
         self._gtk_window = Gtk.Window()
@@ -309,10 +313,6 @@ class ScreenWindow(Device):
         self._notification = Notification()
         self._screencast = Screencast()
 
-        self.area = Gtk.DrawingArea()
-        self._gtk_window.add(self.area)
-
-        self._gtk_window.set_title('ZX Spectrum Emulator')
         if SCREENCAST:
             width, height = 640, 390
         else:
@@ -322,20 +322,10 @@ class ScreenWindow(Device):
         sdl2.SDL_SetWindowMinimumSize(self.__window, *minimum_size)
 
         self.frame_size = self.frame_width * self.frame_height
-        self.frame = cairo.ImageSurface(cairo.FORMAT_RGB24,
-                                        self.frame_width, self.frame_height)
-        self.frame_data = self.frame.get_data()
-
-        self.pattern = cairo.SurfacePattern(self.frame)
-        if not SCREENCAST:
-            self.pattern.set_filter(cairo.FILTER_NEAREST)
 
     def _on_output_frame(self, event: DeviceEvent,
                          dispatcher: Dispatcher) -> typing.Any:
         assert isinstance(event, OutputFrame)
-        self.frame_data[:] = event.pixels
-        self.area.queue_draw()
-
         rect = None
         pitch = self.frame_width * 4
         pixels = ctypes.c_void_p(ctypes.addressof(
@@ -526,8 +516,6 @@ class ScreenWindow(Device):
     def _on_quantum_run(self, event: DeviceEvent,
                         dispatcher: Dispatcher) -> None:
         assert isinstance(event, QuantumRun)
-        self.area.queue_draw()
-
         while Gtk.events_pending():
             Gtk.main_iteration()
 
