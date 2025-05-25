@@ -312,7 +312,6 @@ class ScreenWindow(Device):
         self._screencast = Screencast()
 
         self.area = Gtk.DrawingArea()
-        self.area.connect('button-press-event', self.__on_gdk_click)
         self._gtk_window.add(self.area)
 
         self._gtk_window.set_title('ZX Spectrum Emulator')
@@ -482,14 +481,14 @@ class ScreenWindow(Device):
         zx_key_id = self._GTK_KEYS_TO_ZX_KEYS.get(event.id, event.id)
         devices.notify(KeyStroke(zx_key_id, event.pressed))
 
-    def __on_gdk_click(self, widget: _Widget, event: Gdk.EventButton) -> bool:
+    def __on_sdl_click(self, event: typing.Any) -> bool:
         TYPES = {
-            Gdk.EventType.BUTTON_PRESS: _ClickType.Single,
-            Gdk.EventType._2BUTTON_PRESS: _ClickType.Double,
+            1: _ClickType.Single,
+            2: _ClickType.Double,
         }
 
-        if event.type in TYPES:
-            self.__queue_event(_ClickEvent(TYPES[event.type]))
+        if event.button.clicks in TYPES:
+            self.__queue_event(_ClickEvent(TYPES[event.button.clicks]))
             return True
 
         return False
@@ -552,6 +551,8 @@ class ScreenWindow(Device):
         while sdl2.SDL_PollEvent(ctypes.byref(self.__sdl_event)) != 0:
             if self.__sdl_event.type == sdl2.SDL_QUIT:
                 self.__on_exit(dispatcher)
+            elif self.__sdl_event.type == sdl2.SDL_MOUSEBUTTONDOWN:
+                self.__on_sdl_click(self.__sdl_event)
 
         while self.__events:
             self.on_event(self.__events.pop(0), dispatcher, None)
