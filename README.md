@@ -20,6 +20,7 @@ ZX Spectrum Emulator in Python and C++
 
 ### Development status
 
+* Platforms: Linux and Windows (via SDL2).
 * General status: working pre-alpha.
 * Supported machines: 48K only for now.
 * Display: multi-colour effects,
