@@ -8,12 +8,12 @@
 #
 #   Published under the MIT license.
 
-import cairo
 import ctypes
 import enum
 import gi  # type: ignore
 import numpy
 import typing
+from ._device import Destroy
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import GetEmulationPauseState
@@ -308,6 +308,7 @@ class ScreenWindow(Device):
             QuantumRun: self._on_quantum_run,
             OutputFrame: self._on_output_frame,
             TapeStateUpdated: self._on_updated_tape_state,
+            Destroy: self.__on_destroy,
         }
 
         self._notification = Notification()
@@ -540,4 +541,5 @@ class ScreenWindow(Device):
         devices.notify(ToggleTapePause())
 
     def __on_destroy(self, event: DeviceEvent, devices: Dispatcher) -> None:
-        self._gtk_window.destroy()
+        import sdl2
+        sdl2.SDL_DestroyWindow(self.__window)
