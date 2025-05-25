@@ -318,12 +318,8 @@ class ScreenWindow(Device):
         else:
             width, height = (self.frame_width * self.scale,
                              self.frame_height * self.scale)
-        self._gtk_window.resize(width, height)
         minimum_size = self.frame_width // 4, self.frame_height // 4
-        self._gtk_window.set_size_request(*minimum_size)
-        self._gtk_window.set_position(Gtk.WindowPosition.CENTER)
-
-        self._gtk_window.show_all()
+        sdl2.SDL_SetWindowMinimumSize(self.__window, *minimum_size)
 
         self.frame_size = self.frame_width * self.frame_height
         self.frame = cairo.ImageSurface(cairo.FORMAT_RGB24,
