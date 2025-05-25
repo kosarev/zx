@@ -238,12 +238,10 @@ class ScreenWindow(Device):
     # TODO: Remove.
     _SCREEN_AREA_BACKGROUND_COLOUR = xrgb('#1e1e1e')
 
-    _GTK_KEYS_TO_ZX_KEYS = {
+    __SDL_KEYS_TO_ZX_KEYS = {
         'RETURN': 'ENTER',
-        'ALT_L': 'CAPS SHIFT',
-        'SHIFT_L': 'CAPS SHIFT',
-        'ALT_R': 'SYMBOL SHIFT',
-        'SHIFT_R': 'SYMBOL SHIFT'}
+        'LEFT SHIFT': 'CAPS SHIFT',
+        'RIGHT SHIFT': 'SYMBOL SHIFT'}
 
     __events: list[DeviceEvent]
 
@@ -338,8 +336,6 @@ class ScreenWindow(Device):
 
         self.area.add_events(Gdk.EventMask.BUTTON_PRESS_MASK |
                              Gdk.EventMask.BUTTON_RELEASE_MASK)
-        self._gtk_window.connect('key-press-event', self.__on_gdk_key)
-        self._gtk_window.connect('key-release-event', self.__on_gdk_key)
         self._gtk_window.connect('window-state-event',
                                  self.__on_window_state_event)
 
@@ -466,19 +462,20 @@ class ScreenWindow(Device):
     def __queue_event(self, event: DeviceEvent) -> None:
         self.__events.append(event)
 
-    def __on_gdk_key(self, widget: _Widget, event: Gdk.EventKey) -> None:
+    def __on_sdl_key(self, event: typing.Any) -> None:
         # TODO: Do not upper the case here. Ignore unknown key.
         # Translate to our own key ids.
+        import sdl2
         self.__queue_event(_KeyEvent(
-            Gdk.keyval_name(event.keyval).upper(),
-            event.type == Gdk.EventType.KEY_PRESS))
+            sdl2.SDL_GetKeyName(event.key.keysym.sym).decode('utf-8').upper(),
+            event.type == sdl2.SDL_KEYDOWN))
 
     def __on_key(self, event: DeviceEvent, devices: Dispatcher) -> typing.Any:
         assert isinstance(event, _KeyEvent)
         if event.pressed and event.id in self._KEY_HANDLERS:
             self._KEY_HANDLERS[event.id](devices)
 
-        zx_key_id = self._GTK_KEYS_TO_ZX_KEYS.get(event.id, event.id)
+        zx_key_id = self.__SDL_KEYS_TO_ZX_KEYS.get(event.id, event.id)
         devices.notify(KeyStroke(zx_key_id, event.pressed))
 
     def __on_sdl_click(self, event: typing.Any) -> bool:
@@ -553,6 +550,8 @@ class ScreenWindow(Device):
                 self.__on_exit(dispatcher)
             elif self.__sdl_event.type == sdl2.SDL_MOUSEBUTTONDOWN:
                 self.__on_sdl_click(self.__sdl_event)
+            elif self.__sdl_event.type in (sdl2.SDL_KEYDOWN, sdl2.SDL_KEYUP):
+                self.__on_sdl_key(self.__sdl_event)
 
         while self.__events:
             self.on_event(self.__events.pop(0), dispatcher, None)
