@@ -8,6 +8,7 @@
 #
 #   Published under the MIT license.
 
+import ctypes
 import numpy
 import typing
 
@@ -62,26 +63,35 @@ class PulseStream(object):
 
 
 class SoundDevice(Device):
-    # TODO: Use sounddevice.query_devices(sounddevice.default.device['output'])
     # TODO: Rename to output rate.
     __OUTPUT_FREQ = 44100
 
     def __init__(self) -> None:
         self.__frame_events: list[NewSoundFrame] = []
 
-        # TODO: Don't use sounddevice until we know we are actually
+        # TODO: Don't use SDL until we know we are actually
         # outputting sound via it. (The user may want to do something
-        # else with the original or mixed samples, or may want custom
-        # some channel mixing.)
-        import sounddevice  # type: ignore[import-untyped]
+        # else with the original or mixed samples, or may want some
+        # custom some channel mixing.)
+        import sdl2.audio  # type: ignore
+        sdl2.SDL_Init(sdl2.SDL_INIT_AUDIO)
 
-        self.__stream = sounddevice.OutputStream(channels=1,
-                                                 samplerate=self.__OUTPUT_FREQ,
-                                                 dtype=numpy.float32)
-        self.__stream.start()
+        spec = sdl2.audio.SDL_AudioSpec(
+            freq=self.__OUTPUT_FREQ,
+            aformat=sdl2.audio.AUDIO_F32,
+            channels=1,
+            samples=(self.__OUTPUT_FREQ // 50),  # TODO
+            )
+
+        self.__device = sdl2.audio.SDL_OpenAudioDevice(None, 0, spec, None, 0)
+
+        # Start playing.
+        # TODO: Delay until we actually have some audio to output?
+        sdl2.audio.SDL_PauseAudioDevice(self.__device, 0)
 
     def __destroy(self) -> None:
-        self.__stream.close()
+        import sdl2.audio
+        sdl2.audio.SDL_CloseAudioDevice(self.__device)
 
     def __new_sound_frame(self, frame_event: NewSoundFrame) -> None:
         self.__frame_events.append(frame_event)
@@ -135,7 +145,17 @@ class SoundDevice(Device):
         self.__frame_events.clear()
 
         mixed_samples = self.__mix_channels(samples)
-        self.__stream.write(mixed_samples)
+
+        import sdl2.audio
+        import ctypes
+        while sdl2.audio.SDL_GetQueuedAudioSize(self.__device) > (
+                self.__OUTPUT_FREQ // 50):
+            sdl2.SDL_Delay(10)
+
+        sdl2.audio.SDL_QueueAudio(
+            self.__device,
+            mixed_samples.ctypes.data_as(ctypes.c_void_p),
+            len(mixed_samples) * 4)
 
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher,
                  result: typing.Any) -> typing.Any:
