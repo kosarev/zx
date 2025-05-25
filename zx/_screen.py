@@ -260,6 +260,8 @@ class ScreenWindow(Device):
         sdl2.SDL_SetRenderDrawBlendMode(self.__renderer,
                                         sdl2.SDL_BLENDMODE_BLEND)
 
+        self.__pixels = bytearray()
+
         self.__pixel_texture = sdl2.SDL_CreateTexture(
             self.__renderer,
             sdl2.SDL_PIXELFORMAT_RGB888,
@@ -314,8 +316,9 @@ class ScreenWindow(Device):
         assert isinstance(event, OutputFrame)
         rect = None
         pitch = self.frame_width * 4
+        self.__pixels[:] = event.pixels
         pixels = ctypes.c_void_p(ctypes.addressof(
-            ctypes.c_char.from_buffer(bytearray(event.pixels))))
+            ctypes.c_char.from_buffer(self.__pixels)))
         import sdl2
         sdl2.SDL_UpdateTexture(self.__pixel_texture, rect,
                                pixels, pitch)
