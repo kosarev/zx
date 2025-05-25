@@ -70,7 +70,7 @@ $ zx
 
 `F6` pauses/resumes tape.
 
-`F10` and `ESC` quit the emulator.
+`F10` quits the emulator.
 
 `F11` and double click switch between fullscreen and windowed mode.
 
