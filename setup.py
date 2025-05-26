@@ -43,6 +43,7 @@ setup(name='zx',
       author='Ivan Kosarev',
       author_email='mail@ivankosarev.com',
       url='https://github.com/kosarev/zx/',
+      license='MIT',
       ext_modules=[zx_emulatorbase_module],
       packages=['zx'],
       install_requires=[
@@ -72,5 +73,4 @@ setup(name='zx',
           'Topic :: Software Development :: Libraries',
           'Topic :: System :: Emulators',
       ],
-      license='MIT',
       )
