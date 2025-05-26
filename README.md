@@ -36,6 +36,7 @@ ZX Spectrum emulation framework in Python and C++
 
 For the latest release:
 ```shell
+$ pip install --upgrade pip
 $ pip install --upgrade setuptools wheel
 $ pip install zx
 ```
