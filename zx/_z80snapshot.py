@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2019 Ivan Kosarev.
+#   Copyright (C) 2017-2025 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -194,7 +194,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
     v2_header: Z80SnapshotV2Header | None
 
     memory_image: Bytes
-    memory_blocks: list[tuple[int, int, bytes]]
+    memory_blocks: typing.Sequence[tuple[int, int, bytes]]
 
     def __init__(
             self, *,
@@ -209,7 +209,8 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             flags2: int = 0,
             v2_header: Z80SnapshotV2Header | None = None,
             memory_image: Bytes | None = None,
-            memory_blocks: list[tuple[int, int, Bytes]] | None = None):
+            memory_blocks: (
+                typing.Sequence[tuple[int, int, Bytes]] | None) = None):
         if memory_image is not None:
             assert memory_blocks is None
         if memory_blocks is not None:
@@ -487,7 +488,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
 
     @classmethod
     def __parse_memory_block(
-            cls, parser: BinaryParser) -> tuple[int, int, bytes]:
+            cls, parser: BinaryParser) -> tuple[int, int, Bytes]:
         compressed_size = parser.parse_field('<H')
         assert isinstance(compressed_size, int)
         page_no = parser.parse_field('B')
@@ -518,8 +519,8 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                             id='z80_snapshot_extra_header_too_large')
 
         # Parse memory snapshot.
-        memory_image: bytes | None = None
-        memory_blocks: list[tuple[int, int, bytes]] | None = None
+        memory_image: Bytes | None = None
+        memory_blocks: typing.Sequence[tuple[int, int, Bytes]] | None = None
         if v2_header is None:
             memory_image = parser.read_remaining_bytes()
         else:

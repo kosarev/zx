@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2020 Ivan Kosarev.
+#   Copyright (C) 2017-2025 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -11,6 +11,8 @@
 import typing
 import enum
 import numpy
+
+from ._binary import Bytes
 from ._data import SoundFile
 from ._data import SoundPulses
 
@@ -31,7 +33,7 @@ class EndOfFrame(DeviceEvent):
 
 class OutputFrame(DeviceEvent):
     def __init__(self, *,
-                 pixels: bytes,
+                 pixels: Bytes,
                  fast_forward: bool = False):
         self.pixels = pixels
         self.fast_forward = fast_forward

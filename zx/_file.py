@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2020 Ivan Kosarev.
+#   Copyright (C) 2017-2025 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -42,7 +42,7 @@ def _open_file_or_url(path: str) -> typing.Any:
     return open(path, 'rb')
 
 
-def detect_file_format(image: None | bytes,
+def detect_file_format(image: None | Bytes,
                        filename_extension: str) -> None | type[DataRecord]:
     KNOWN_FORMATS = [
         ('.zxb', None, ZXBasicCompilerProgram),

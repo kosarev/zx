@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2019 Ivan Kosarev.
+#   Copyright (C) 2017-2025 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -84,5 +84,5 @@ class BinaryWriter(object):
             field_format, field_id = field.split(':', maxsplit=1)
             self.write_field(field_format, values[field_id])
 
-    def get_image(self) -> Bytes:
+    def get_image(self) -> bytes:
         return b''.join(self._chunks)

@@ -300,7 +300,7 @@ class MemoryState(object):
         self.__image = image
 
     def read(self, addr: int, size: int) -> bytes:
-        return self.__image[addr:addr + size]
+        return bytes(self.__image[addr:addr + size])
 
     def write(self, addr: int, block: bytes) -> None:
         self.__image[addr:addr + len(block)] = block
@@ -565,7 +565,9 @@ class Spectrum(_SpectrumBase, MachineState, Device):
 
         # Scan keyboard.
         n = 0xbf
-        n &= self.devices.notify(ReadPort(addr), 0xff)
+        v = self.devices.notify(ReadPort(addr), 0xff)
+        assert isinstance(v, int)
+        n &= v
 
         # TODO: Use the tick when the ear value is sampled
         #       instead of the tick of the beginning of the input

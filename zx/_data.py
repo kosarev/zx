@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2019 Ivan Kosarev.
+#   Copyright (C) 2017-2025 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -156,9 +156,11 @@ class UnifiedSnapshot(MachineSnapshot, format_name=None):
             int_mode: int | None = None,
             ticks_since_int: int | None = None,
             border_colour: int | None = None,
-            memory_blocks: list[tuple[int, Bytes]] | None = None):
-        if memory_blocks is not None:
-            memory_blocks.sort()
+            memory_blocks: typing.Sequence[tuple[int, Bytes]] | None = None):
+        if memory_blocks is None:
+            blocks = None
+        else:
+            blocks = sorted(memory_blocks)
 
         super().__init__(
             af=af, bc=bc, de=de, hl=hl, ix=ix, iy=iy,
@@ -168,7 +170,7 @@ class UnifiedSnapshot(MachineSnapshot, format_name=None):
             iff1=iff1, iff2=iff2, int_mode=int_mode,
             ticks_since_int=ticks_since_int,
             border_colour=border_colour,
-            memory_blocks=memory_blocks)
+            memory_blocks=blocks)
 
     def to_unified_snapshot(self) -> UnifiedSnapshot:
         return self
