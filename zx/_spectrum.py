@@ -316,8 +316,6 @@ class MemoryState(object):
 
 
 class MachineState(Z80State, MemoryState):
-    image: memoryview
-
     def __init__(self, image: memoryview) -> None:
         p = StateParser(image)
 
