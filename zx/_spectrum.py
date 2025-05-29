@@ -315,7 +315,7 @@ class MemoryState(object):
         return UnifiedSnapshot(memory_blocks=[(0x4000, self.__image[0x4000:])])
 
 
-class MachineState(Z80State, MemoryState):
+class SpectrumState(Z80State, MemoryState):
     def __init__(self, image: memoryview) -> None:
         p = StateParser(image)
 
@@ -420,7 +420,7 @@ class Profile(object):
             yield addr, self._annots[addr]
 
 
-class Spectrum(_SpectrumBase, MachineState, Device):
+class Spectrum(_SpectrumBase, SpectrumState, Device):
     # Memory marks.
     __NO_MARKS = 0
     __BREAKPOINT_MARK = 1 << 0
@@ -444,7 +444,7 @@ class Spectrum(_SpectrumBase, MachineState, Device):
                  headless: bool = False,
                  devices: list[Device] | None = None,
                  profile: Profile | None = None):
-        MachineState.__init__(self, self._get_state_view())
+        SpectrumState.__init__(self, self._get_state_view())
         Device.__init__(self)
 
         # Install ROM.
@@ -584,7 +584,7 @@ class Spectrum(_SpectrumBase, MachineState, Device):
 
         return n
 
-    def __save_crash_rzx(self, player: PlaybackPlayer, state: MachineState,
+    def __save_crash_rzx(self, player: PlaybackPlayer, state: SpectrumState,
                          chunk_i: int, frame_i: int) -> None:
         snapshot = Z80Snapshot.from_snapshot(state.to_snapshot()).encode()
 
@@ -639,7 +639,7 @@ class Spectrum(_SpectrumBase, MachineState, Device):
             '''
             frame_count += 1
             if frame_count == -12820:
-                frame_state = MachineState(bytes(self.image))
+                frame_state = SpectrumState(bytes(self.image))
                 self.__save_crash_rzx(player, frame_state, chunk_i, frame_i)
                 assert 0
 

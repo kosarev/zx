@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2021 Ivan Kosarev.
+#   Copyright (C) 2017-2025 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -13,12 +13,12 @@ from ._data import MachineSnapshot
 from ._rzx import RZXFile
 
 if typing.TYPE_CHECKING:  # TODO
-    from ._spectrum import MachineState
+    from ._spectrum import SpectrumState
 
 
 # TODO: Rework to a time machine interface.
 class PlaybackPlayer(object):
-    def __init__(self, machine: 'MachineState', file: RZXFile) -> None:
+    def __init__(self, machine: 'SpectrumState', file: RZXFile) -> None:
         self.__machine = machine
 
         assert isinstance(file, RZXFile)
