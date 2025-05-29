@@ -119,8 +119,6 @@ class Z80State(object):
         self.__int_mode = p.parse8()
         self.__iregp_kind = p.parse8()
 
-        self.image = p.parsed_image
-
     # TODO: Use a mix-in from the z80 module to implement these?
     @property
     def bc(self) -> int:
@@ -300,7 +298,6 @@ class MemoryState(object):
     def __init__(self, image: memoryview) -> None:
         assert len(image) == 0x10000
         self.__image = image
-        self.image = self.__image  # TODO: Remove?
 
     def read(self, addr: int, size: int) -> bytes:
         return self.__image[addr:addr + size]
@@ -337,8 +334,6 @@ class MachineState(Z80State, MemoryState):
 
         self.memory_image = p.read_bytes(0x10000)
         MemoryState.__init__(self, self.memory_image)
-
-        self.image = p.parsed_image
 
     @property
     def suppress_interrupts(self) -> bool:
