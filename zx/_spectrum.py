@@ -294,28 +294,7 @@ class Z80State(object):
             iregp_kind=self.iregp_kind)
 
 
-class MemoryState(object):
-    def __init__(self, image: memoryview) -> None:
-        assert len(image) == 0x10000
-        self.__image = image
-
-    def read(self, addr: int, size: int) -> bytes:
-        return bytes(self.__image[addr:addr + size])
-
-    def write(self, addr: int, block: bytes) -> None:
-        self.__image[addr:addr + len(block)] = block
-
-    def read8(self, addr: int) -> int:
-        return self.__image[addr]
-
-    def read16(self, addr: int) -> int:
-        return int.from_bytes(self.read(addr, 2), 'little')
-
-    def to_snapshot(self) -> UnifiedSnapshot:
-        return UnifiedSnapshot(memory_blocks=[(0x4000, self.__image[0x4000:])])
-
-
-class SpectrumState(Z80State, MemoryState):
+class SpectrumState(Z80State):
     def __init__(self, image: memoryview) -> None:
         p = StateParser(image)
 
@@ -330,8 +309,7 @@ class SpectrumState(Z80State, MemoryState):
         self.__border_colour = p.parse8()
         self.__trace_enabled = p.parse8()
 
-        self.memory_image = p.read_bytes(0x10000)
-        MemoryState.__init__(self, self.memory_image)
+        self.__memory = p.read_bytes(0x10000)
 
     @property
     def suppress_interrupts(self) -> bool:
@@ -391,11 +369,23 @@ class SpectrumState(Z80State, MemoryState):
         self.set('trace_enabled', int(enable))
     '''
 
+    def read(self, addr: int, size: int) -> bytes:
+        return bytes(self.__memory[addr:addr + size])
+
+    def write(self, addr: int, block: bytes) -> None:
+        self.__memory[addr:addr + len(block)] = block
+
+    def read8(self, addr: int) -> int:
+        return self.__memory[addr]
+
+    def read16(self, addr: int) -> int:
+        return int.from_bytes(self.read(addr, 2), 'little')
+
     def to_snapshot(self) -> UnifiedSnapshot:
         # TODO: Store all fields.
         return UnifiedSnapshot(
             **dict(Z80State.to_snapshot(self)),
-            **dict(MemoryState.to_snapshot(self)),
+            memory_blocks=[(0x4000, self.__memory[0x4000:])],
             ticks_since_int=self.ticks_since_int,
             border_colour=self.border_colour)
 
