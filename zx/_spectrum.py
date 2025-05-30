@@ -282,17 +282,6 @@ class Z80State(object):
         n = {'hl': 0, 'ix': 1, 'iy': 2}[value]
         self.__iregp_kind[0] = n
 
-    def to_snapshot(self) -> UnifiedSnapshot:
-        return UnifiedSnapshot(
-            af=self.af, bc=self.bc, de=self.de, hl=self.hl,
-            ix=self.ix, iy=self.iy,
-            alt_af=self.alt_af, alt_bc=self.alt_bc,
-            alt_de=self.alt_de, alt_hl=self.alt_hl,
-            pc=self.pc, sp=self.sp, ir=self.ir,
-            # TODO: wz=self.wz,
-            iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
-            iregp_kind=self.iregp_kind)
-
 
 class SpectrumState(Z80State):
     def __init__(self, image: memoryview) -> None:
@@ -384,7 +373,14 @@ class SpectrumState(Z80State):
     def to_snapshot(self) -> UnifiedSnapshot:
         # TODO: Store all fields.
         return UnifiedSnapshot(
-            **dict(Z80State.to_snapshot(self)),
+            af=self.af, bc=self.bc, de=self.de, hl=self.hl,
+            ix=self.ix, iy=self.iy,
+            alt_af=self.alt_af, alt_bc=self.alt_bc,
+            alt_de=self.alt_de, alt_hl=self.alt_hl,
+            pc=self.pc, sp=self.sp, ir=self.ir,
+            # TODO: wz=self.wz,
+            iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
+            iregp_kind=self.iregp_kind,
             memory_blocks=[(0x4000, self.__memory[0x4000:])],
             ticks_since_int=self.ticks_since_int,
             border_colour=self.border_colour)
