@@ -66,9 +66,7 @@ const memory_marks no_marks           = 0;
 const memory_marks breakpoint_mark    = 1u << 0;
 const memory_marks visited_instr_mark = 1u << 7;
 
-const unsigned memory_image_size = 0x10000;  // 64K bytes.
-
-typedef least_u8 memory_image[memory_image_size];
+typedef least_u8 memory_image[z80::address_space_size];
 
 class disassembler : public z80::z80_disasm<disassembler> {
 public:
@@ -139,7 +137,7 @@ public:
     ticks_type get_ticks() const { return ticks_since_int; }
 
     void set_memory_byte(fast_u16 addr, fast_u8 n) {
-        assert(addr < memory_image_size);
+        assert(addr < z80::address_space_size);
         self().on_get_memory()[addr] = static_cast<least_u8>(n);
     }
 
@@ -152,7 +150,7 @@ public:
     }
 
     fast_u8 on_read(fast_u16 addr) {
-        assert(addr < memory_image_size);
+        assert(addr < z80::address_space_size);
         return self().on_get_memory()[addr];
     }
 
@@ -809,7 +807,7 @@ private:
     unsigned num_port_writes = 0;
     port_writes_type port_writes;
 
-    least_u8 memory_marks[memory_image_size] = {};
+    least_u8 memory_marks[z80::address_space_size] = {};
 };
 
 }  // namespace zx
