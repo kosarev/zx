@@ -2,7 +2,7 @@
 /*  ZX Spectrum Emulator.
     https://github.com/kosarev/zx
 
-    Copyright (C) 2017-2021 Ivan Kosarev.
+    Copyright (C) 2017-2025 Ivan Kosarev.
     mail@ivankosarev.com
 
     Published under the MIT license.
@@ -115,11 +115,7 @@ public:
     typedef fast_u32 ticks_type;
 
     spectrum() {
-        uint_fast32_t rnd = 0xde347a01;
-        for(auto &cell : self().on_get_memory()) {
-            cell = static_cast<least_u8>(rnd);
-            rnd = (rnd * 0x74392cef) ^ (rnd >> 16);
-        }
+        on_reset_memory();
     }
 
     events_mask get_events() const { return events; }
@@ -145,6 +141,14 @@ public:
     void set_memory_byte(fast_u16 addr, fast_u8 n) {
         assert(addr < memory_image_size);
         self().on_get_memory()[addr] = static_cast<least_u8>(n);
+    }
+
+    void on_reset_memory() {
+        uint_fast32_t rnd = 0xde347a01;
+        for(auto &cell : self().on_get_memory()) {
+            cell = static_cast<least_u8>(rnd);
+            rnd = (rnd * 0x74392cef) ^ (rnd >> 16);
+        }
     }
 
     fast_u8 on_read(fast_u16 addr) {
