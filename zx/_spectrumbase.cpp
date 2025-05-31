@@ -2,7 +2,7 @@
 /*  ZX Spectrum Emulation Module for Python.
     https://github.com/kosarev/zx
 
-    Copyright (C) 2017-2021 Ivan Kosarev.
+    Copyright (C) 2017-2025 Ivan Kosarev.
     mail@ivankosarev.com
 
     Published under the MIT license.
@@ -216,7 +216,7 @@ protected:
     }
 
 public:
-    memory_image_type &on_get_memory() {
+    zx::memory_image_type &on_get_memory() {
         return state.memory;
     }
 

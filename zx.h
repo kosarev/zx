@@ -376,9 +376,6 @@ public:
             base::disable_int_on_ei();
     }
 
-    static const unsigned memory_image_size = 0x10000;  // 64K bytes.
-    typedef least_u8 memory_image_type[memory_image_size];
-
     static const ticks_type ticks_per_frame = 69888;
     static const ticks_type ticks_per_line = 224;
     static const ticks_type ticks_per_active_int = 32;
