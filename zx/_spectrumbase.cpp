@@ -89,7 +89,7 @@ struct __attribute__((packed)) machine_state {
     least_u8 border_colour = 7;
     least_u8 trace_enabled = false;
 
-    zx::memory_image_type memory;
+    zx::memory_image memory;
 };
 #if defined(_MSC_VER)
 #pragma pack(pop)
@@ -216,7 +216,7 @@ protected:
     }
 
 public:
-    zx::memory_image_type &on_get_memory() {
+    zx::memory_image &on_get_memory() {
         return state.memory;
     }
 

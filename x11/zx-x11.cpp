@@ -2,7 +2,7 @@
 /*  ZX Spectrum Emulator.
     https://github.com/kosarev/zx
 
-    Copyright (C) 2017-2021 Ivan Kosarev.
+    Copyright (C) 2017-2025 Ivan Kosarev.
     mail@ivankosarev.com
 
     Published under the MIT license.
@@ -377,7 +377,7 @@ public:
         return n;
     }
 
-    zx::memory_image_type &on_get_memory() {
+    zx::memory_image &on_get_memory() {
         return memory;
     }
 
@@ -404,7 +404,7 @@ private:
     static const unsigned num_of_keyboard_ports = 8;
     typedef least_u8 keyboard_state_type[num_of_keyboard_ports];
     keyboard_state_type keyboard_state;
-    zx::memory_image_type memory;
+    zx::memory_image memory;
 };
 
 class x11_spectrum : public x11_emulator<zx::spectrum<x11_spectrum>>

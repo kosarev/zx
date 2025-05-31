@@ -68,13 +68,13 @@ const memory_marks visited_instr_mark = 1u << 7;
 
 const unsigned memory_image_size = 0x10000;  // 64K bytes.
 
-typedef least_u8 memory_image_type[memory_image_size];
+typedef least_u8 memory_image[memory_image_size];
 
 class disassembler : public z80::z80_disasm<disassembler> {
 public:
     typedef z80::z80_disasm<disassembler> base;
 
-    disassembler(fast_u16 addr, const memory_image_type &memory)
+    disassembler(fast_u16 addr, const memory_image &memory)
         : addr(addr), memory(memory)
     {}
 
@@ -102,7 +102,7 @@ public:
 
 private:
     fast_u16 addr;
-    const memory_image_type &memory;
+    const memory_image &memory;
 
     static const std::size_t max_output_buff_size = 32;
     char output_buff[max_output_buff_size];
