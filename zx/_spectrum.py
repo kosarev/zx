@@ -73,9 +73,11 @@ class RunEvents(enum.IntFlag):
 
 
 class SpectrumModel(type):
-    _MODELS_BY_CXX_CODES = {}
+    _MODELS_BY_CXX_CODES: dict[int, type['SpectrumModel']] = {}
 
-    def __init_subclass__(cls, *, cxx_model_code):
+    _CXX_MODEL_CODE: int
+
+    def __init_subclass__(cls, *, cxx_model_code: int):
         cls._CXX_MODEL_CODE = cxx_model_code
         SpectrumModel._MODELS_BY_CXX_CODES[cxx_model_code] = cls
 
@@ -451,7 +453,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
     __playback_player: None | PlaybackPlayer
 
     def __init__(self, *,
-                 model: SpectrumModel | None = None,
+                 model: type[SpectrumModel] | None = None,
                  screen: Device | None = None,
                  keyboard: Device | None = None,
                  beeper: Device | None = None,
