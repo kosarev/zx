@@ -72,6 +72,19 @@ class RunEvents(enum.IntFlag):
     END_OF_TAPE = 1 << 5
 
 
+class SpectrumModel(type):
+    def __init_subclass__(cls, *, cxx_model_code):
+        cls._CXX_MODEL_CODE = cxx_model_code
+
+
+class Spectrum48(SpectrumModel, cxx_model_code=0):
+    pass
+
+
+class Spectrum128(SpectrumModel, cxx_model_code=1):
+    pass
+
+
 class StateParser(object):
     def __init__(self, image: memoryview) -> None:
         self.__image = image
@@ -297,7 +310,7 @@ class SpectrumState(Z80State):
         self.__int_after_ei_allowed = p.parse8()
         self.__border_colour = p.parse8()
         self.__trace_enabled = p.parse8()
-        self.__model = p.parse8()
+        self._model = p.parse8()
         padding1 = p.parse8()
         padding2 = p.parse8()
         padding3 = p.parse8()
@@ -427,6 +440,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
     __playback_player: None | PlaybackPlayer
 
     def __init__(self, *,
+                 model: SpectrumModel | None = None,
                  screen: Device | None = None,
                  keyboard: Device | None = None,
                  beeper: Device | None = None,
@@ -436,6 +450,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                  profile: Profile | None = None):
         SpectrumState.__init__(self, self._get_state_view())
         Device.__init__(self)
+
+        self._model[0] = (model if model is not None
+                          else Spectrum48)._CXX_MODEL_CODE
 
         # Install ROM.
         self.write(0x0000, load_rom_image('Spectrum48.rom'))

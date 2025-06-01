@@ -4,7 +4,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2019 Ivan Kosarev.
+#   Copyright (C) 2017-2025 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -31,6 +31,8 @@ from ._rzx import make_rzx
 from ._rzx import RZXFile
 from ._spectrum import Profile
 from ._spectrum import Spectrum
+from ._spectrum import Spectrum48
+from ._spectrum import Spectrum128
 
 
 def pop_argument(args: list[str], error: str) -> str:
@@ -39,18 +41,27 @@ def pop_argument(args: list[str], error: str) -> str:
     return args.pop(0)
 
 
+def pop_option(args: list[str], option: str) -> bool:
+    if args[0:1] != [option]:
+        return False
+    args.pop(0)
+    return True
+
+
 def handle_extra_arguments(args: list[str]) -> None:
     if args:
         raise Error('Extra argument %r.' % args[0])
 
 
 def run(args: list[str]) -> None:
+    model = Spectrum128 if pop_option(args, '--128') else Spectrum48
+
     filename = None
     if args:
         filename = args.pop(0)
         handle_extra_arguments(args)
 
-    with Spectrum() as app:
+    with Spectrum(model=model) as app:
         if filename:
             app._load_file(filename)
         app.run()
@@ -91,7 +102,7 @@ def looks_like_filename(s: str) -> bool:
 
 def usage() -> None:
     print('Usage:')
-    print('  zx [run] [<file>]')
+    print('  zx [run] [--128] [<file>]')
     print('  zx [convert] <from-file> <to-filename>')
     print('  zx profile <file-to-run> <profile-filename>')
     print('  zx dump <file>')
@@ -300,6 +311,7 @@ def convert(args: list[str]) -> None:
 def handle_command_line(args: list[str]) -> None:
     # Guess the command by the arguments.
     if (not args or
+            args[0].startswith('--') or
             len(args) == 1 and looks_like_filename(args[0])):
         run(args)
         return
