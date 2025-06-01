@@ -66,7 +66,39 @@ const memory_marks no_marks           = 0;
 const memory_marks breakpoint_mark    = 1u << 0;
 const memory_marks visited_instr_mark = 1u << 7;
 
-typedef least_u8 memory_image[z80::address_space_size];
+#if defined(_MSC_VER)
+#pragma pack(push, 1)
+class memory_image {
+#else
+class __attribute__((packed)) memory_image {
+#endif
+public:
+    memory_image() {}
+
+    void reset() {
+        uint_fast32_t rnd = 0xde347a01;
+        for(auto &b : bytes) {
+            b = static_cast<least_u8>(rnd);
+            rnd = (rnd * 0x74392cef) ^ (rnd >> 16);
+        }
+    }
+
+    fast_u8 read(fast_u16 addr) const {
+        assert(addr < z80::address_space_size);
+        return bytes[addr];
+    }
+
+    void write(fast_u16 addr, fast_u8 n) {
+        assert(addr < z80::address_space_size);
+        bytes[addr] = static_cast<least_u8>(n);
+    }
+
+private:
+    least_u8 bytes[z80::address_space_size];
+};
+#if defined(_MSC_VER)
+#pragma pack(pop)
+#endif
 
 class disassembler : public z80::z80_disasm<disassembler> {
 public:
@@ -81,7 +113,7 @@ public:
     }
 
     fast_u8 on_read_next_byte() {
-        fast_u8 n = memory[mask16(addr)];
+        fast_u8 n = memory.read(mask16(addr));
         addr = inc16(addr);
         return n;
     }
@@ -136,28 +168,16 @@ public:
 
     ticks_type get_ticks() const { return ticks_since_int; }
 
-    void set_memory_byte(fast_u16 addr, fast_u8 n) {
-        assert(addr < z80::address_space_size);
-        self().on_get_memory()[addr] = static_cast<least_u8>(n);
-    }
-
     void on_reset_memory() {
-        uint_fast32_t rnd = 0xde347a01;
-        for(auto &cell : self().on_get_memory()) {
-            cell = static_cast<least_u8>(rnd);
-            rnd = (rnd * 0x74392cef) ^ (rnd >> 16);
-        }
+        self().on_get_memory().reset();
     }
 
     fast_u8 on_read(fast_u16 addr) {
-        assert(addr < z80::address_space_size);
-        return self().on_get_memory()[addr];
+        return self().on_get_memory().read(addr);
     }
 
     void on_write(fast_u16 addr, fast_u8 n) {
-        // Do not alter ROM.
-        if(addr >= 0x4000)
-            set_memory_byte(addr, n);
+        return self().on_get_memory().write(addr, n);
     }
 
     void handle_contention() {

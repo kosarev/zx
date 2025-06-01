@@ -301,7 +301,7 @@ public:
                   filename, std::strerror(errno));
 
         for(fast_u16 i = 0; i != rom_size; ++i)
-            machine::set_memory_byte(i, rom[i]);
+            on_get_memory().write(i, rom[i]);
     }
 
 private:
