@@ -99,21 +99,36 @@ public:
         }
     }
 
-    fast_u8 read(fast_u16 addr) const {
-        assert(addr < z80::address_space_size);
-        return bytes[addr];
+    fast_u8 read(fast_u16 addr, page rom, page ram) const {
+        return bytes[get_offset(addr, rom, ram)];
     }
 
-    void write(fast_u16 addr, fast_u8 n) {
-        assert(addr < z80::address_space_size);
-        bytes[addr] = static_cast<least_u8>(n);
+    void write(fast_u16 addr, fast_u8 n, page rom, page ram) {
+        bytes[get_offset(addr, rom, ram)] = static_cast<least_u8>(n);
     }
 
 private:
     static constexpr unsigned page_size = 0x4000;
     static constexpr unsigned num_pages = ram7 + 1;
+
+    // TODO: Support cases where only 48K memory is needed.
     static constexpr fast_u32 image_size =
         static_cast<fast_u32>(page_size) * num_pages;
+
+    static fast_u16 get_offset(fast_u16 addr, page rom, page ram) {
+        assert(addr < z80::address_space_size);
+        assert(rom == rom0 || rom == rom1);
+        assert(ram != rom0 && ram != rom1);
+
+        if (addr < 0x4000)
+            return rom * page_size + addr;
+
+        if (addr < 0xc000)
+            return addr;
+
+        return ram * page_size + addr % page_size;
+    }
+
     least_u8 bytes[image_size];
 };
 #if defined(_MSC_VER)
@@ -124,8 +139,9 @@ class disassembler : public z80::z80_disasm<disassembler> {
 public:
     typedef z80::z80_disasm<disassembler> base;
 
-    disassembler(fast_u16 addr, const memory_image &memory)
-        : addr(addr), memory(memory)
+    disassembler(fast_u16 addr, memory_image::page rom_page,
+                 memory_image::page ram_page, const memory_image &memory)
+        : addr(addr), rom_page(rom_page), ram_page(ram_page), memory(memory)
     {}
 
     void on_emit(const char *out) {
@@ -133,7 +149,7 @@ public:
     }
 
     fast_u8 on_read_next_byte() {
-        fast_u8 n = memory.read(mask16(addr));
+        fast_u8 n = memory.read(mask16(addr), rom_page, ram_page);
         addr = inc16(addr);
         return n;
     }
@@ -152,6 +168,8 @@ public:
 
 private:
     fast_u16 addr;
+    memory_image::page rom_page;
+    memory_image::page ram_page;
     const memory_image &memory;
 
     static const std::size_t max_output_buff_size = 32;
@@ -193,11 +211,11 @@ public:
     }
 
     fast_u8 on_read(fast_u16 addr) {
-        return self().on_get_memory().read(addr);
+        return self().on_get_memory().read(addr, rom_page, ram_page);
     }
 
     void on_write(fast_u16 addr, fast_u8 n) {
-        return self().on_get_memory().write(addr, n);
+        return self().on_get_memory().write(addr, n, rom_page, ram_page);
     }
 
     void handle_contention() {
@@ -756,7 +774,7 @@ public:
         bool new_rom_instr =
             pc < 0x4000 && !is_marked_addr(pc, visited_instr_mark);
 
-        disassembler disasm(pc, self().on_get_memory());
+        disassembler disasm(pc, rom_page, ram_page, self().on_get_memory());
         std::fprintf(trace,
             "%7u "
             "PC:%04x AF:%04x BC:%04x DE:%04x HL:%04x IX:%04x IY:%04x "
@@ -842,6 +860,9 @@ protected:
     bool trace_enabled = false;
 
 private:
+    memory_image::page rom_page = memory_image::rom0;
+    memory_image::page ram_page = memory_image::ram0;
+
     screen_chunks_type screen_chunks;
 
     unsigned num_port_writes = 0;

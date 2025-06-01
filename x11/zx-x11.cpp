@@ -301,7 +301,8 @@ public:
                   filename, std::strerror(errno));
 
         for(fast_u16 i = 0; i != rom_size; ++i)
-            on_get_memory().write(i, rom[i]);
+            on_get_memory().write(i, rom[i], zx::memory_image::rom0,
+                                  zx::memory_image::ram0);
     }
 
 private:
