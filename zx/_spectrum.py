@@ -73,8 +73,11 @@ class RunEvents(enum.IntFlag):
 
 
 class SpectrumModel(type):
+    _MODELS_BY_CXX_CODES = {}
+
     def __init_subclass__(cls, *, cxx_model_code):
         cls._CXX_MODEL_CODE = cxx_model_code
+        SpectrumModel._MODELS_BY_CXX_CODES[cxx_model_code] = cls
 
 
 class Spectrum48(SpectrumModel, cxx_model_code=0):
@@ -310,7 +313,7 @@ class SpectrumState(Z80State):
         self.__int_after_ei_allowed = p.parse8()
         self.__border_colour = p.parse8()
         self.__trace_enabled = p.parse8()
-        self._model = p.parse8()
+        self.__model = p.parse8()
         padding1 = p.parse8()
         padding2 = p.parse8()
         padding3 = p.parse8()
@@ -374,6 +377,14 @@ class SpectrumState(Z80State):
     def enable_trace(self, enable=True):
         self.set('trace_enabled', int(enable))
     '''
+
+    @property
+    def model(self) -> type[SpectrumModel]:
+        return SpectrumModel._MODELS_BY_CXX_CODES[self.__model[0]]
+
+    @model.setter
+    def model(self, model: type[SpectrumModel]) -> None:
+        self.__model[0] = model._CXX_MODEL_CODE
 
     def read(self, addr: int, size: int) -> bytes:
         return bytes(self.__memory[addr:addr + size])
@@ -451,8 +462,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         SpectrumState.__init__(self, self._get_state_view())
         Device.__init__(self)
 
-        self._model[0] = (model if model is not None
-                          else Spectrum48)._CXX_MODEL_CODE
+        self.model = model if model is not None else Spectrum48
 
         # Install ROM.
         self.write(0x0000, load_rom_image('Spectrum48.rom'))
