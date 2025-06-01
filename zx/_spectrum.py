@@ -20,6 +20,8 @@ import typing
 from ._beeper import Beeper
 from ._data import MachineSnapshot
 from ._data import SoundFile
+from ._data import Spectrum48
+from ._data import SpectrumModel
 from ._data import UnifiedSnapshot
 from ._device import Destroy
 from ._device import Device
@@ -70,24 +72,6 @@ class RunEvents(enum.IntFlag):
     FETCHES_LIMIT_HIT = 1 << 3
     BREAKPOINT_HIT = 1 << 4
     END_OF_TAPE = 1 << 5
-
-
-class SpectrumModel(type):
-    _MODELS_BY_CXX_CODES: dict[int, type['SpectrumModel']] = {}
-
-    _CXX_MODEL_CODE: int
-
-    def __init_subclass__(cls, *, cxx_model_code: int):
-        cls._CXX_MODEL_CODE = cxx_model_code
-        SpectrumModel._MODELS_BY_CXX_CODES[cxx_model_code] = cls
-
-
-class Spectrum48(SpectrumModel, cxx_model_code=0):
-    pass
-
-
-class Spectrum128(SpectrumModel, cxx_model_code=1):
-    pass
 
 
 class StateParser(object):
@@ -302,6 +286,20 @@ class Z80State(object):
 
 
 class SpectrumState(Z80State):
+    __PAGE_SIZE = 0x4000
+
+    __ROM_PAGE_IMAGE_OFFSETS = {0: 0 * __PAGE_SIZE,
+                                1: 4 * __PAGE_SIZE}
+
+    __RAM_PAGE_IMAGE_OFFSETS = {5: 1 * __PAGE_SIZE,
+                                2: 2 * __PAGE_SIZE,
+                                0: 3 * __PAGE_SIZE,
+                                1: 5 * __PAGE_SIZE,
+                                3: 6 * __PAGE_SIZE,
+                                4: 7 * __PAGE_SIZE,
+                                6: 8 * __PAGE_SIZE,
+                                7: 9 * __PAGE_SIZE}
+
     def __init__(self, image: memoryview) -> None:
         p = StateParser(image)
 
@@ -320,7 +318,7 @@ class SpectrumState(Z80State):
         padding2 = p.parse8()
         padding3 = p.parse8()
 
-        self.__memory = p.read_bytes(0x10000)
+        self.__memory = p.read_bytes(10 * self.__PAGE_SIZE)
 
     @property
     def suppress_interrupts(self) -> bool:
@@ -391,8 +389,28 @@ class SpectrumState(Z80State):
     def read(self, addr: int, size: int) -> bytes:
         return bytes(self.__memory[addr:addr + size])
 
-    def write(self, addr: int, block: bytes) -> None:
-        self.__memory[addr:addr + len(block)] = block
+    def write(self, addr: int, block: bytes, *,
+              rom_page: int | None = None,
+              ram_page: int | None = None) -> None:
+        while block:
+            next_page_addr = (addr // self.__PAGE_SIZE + 1) * self.__PAGE_SIZE
+            chunk = block[:next_page_addr - addr]
+
+            if addr < 0x4000:
+                # TODO: Write to the current ROM otherwise.
+                assert rom_page is not None
+                offset = self.__ROM_PAGE_IMAGE_OFFSETS[rom_page]
+            elif addr < 0xc000:
+                offset = addr
+            else:
+                # TODO: Write to the current RAM otherwise.
+                assert ram_page is not None
+                offset = self.__RAM_PAGE_IMAGE_OFFSETS[ram_page]
+
+            self.__memory[offset:offset + len(chunk)] = chunk
+
+            addr += len(chunk)
+            block = block[len(chunk):]
 
     def read8(self, addr: int) -> int:
         return self.__memory[addr]
@@ -411,15 +429,17 @@ class SpectrumState(Z80State):
             # TODO: wz=self.wz,
             iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
             iregp_kind=self.iregp_kind,
-            memory_blocks=[(0x4000, self.__memory[0x4000:])],
+            memory_blocks=[(0x4000, 0, 0, self.__memory[0x4000:])],
             ticks_since_int=self.ticks_since_int,
             border_colour=self.border_colour)
 
     def install_snapshot(self, snapshot: MachineSnapshot) -> None:
         for field, value in snapshot.to_unified_snapshot():
             if field == 'memory_blocks':
-                for addr, block in value:
-                    self.write(addr, block)
+                for addr, rom_page, ram_page, block in value:
+                    self.write(addr, block,
+                               rom_page=rom_page,
+                               ram_page=ram_page)
             else:
                 setattr(self, field, value)
 
@@ -467,7 +487,13 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.model = model if model is not None else Spectrum48
 
         # Install ROM.
-        self.write(0x0000, load_rom_image('Spectrum48.rom'))
+        PAGE_SIZE = 0x4000
+        rom = load_rom_image(self.model._ROM_FILE_NAME)
+        assert len(rom) >= PAGE_SIZE
+        self.write(0x0000, rom[:PAGE_SIZE], rom_page=0)
+        if len(rom) > PAGE_SIZE:
+            assert len(rom) == 2 * PAGE_SIZE
+            self.write(0x0000, rom[PAGE_SIZE:], rom_page=1)
 
         self.frame_count = 0
         # TODO: Double-underscore or make public.
@@ -480,9 +506,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             if keyboard is None:
                 keyboard = Keyboard()
             if beeper is None:
-                beeper = Beeper()
+                beeper = Beeper(self.model)
 
-            devices = [self, TapePlayer(), keyboard, beeper]
+            devices = [self, TapePlayer(self.model), keyboard, beeper]
 
             if not headless:
                 if screen is None:

@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2019 Ivan Kosarev.
+#   Copyright (C) 2017-2025 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -14,6 +14,7 @@ import typing
 
 from ._binary import Bytes
 from ._data import SoundFile
+from ._data import SpectrumModel
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
@@ -113,15 +114,15 @@ def tag_last_pulse(pulses: typing.Iterable[tuple[bool, int,
 class TapePlayer(Device):
     _pulses: None | typing.Iterable[tuple[bool, int, tuple[str, ...]]]
 
-    def __init__(self) -> None:
+    def __init__(self, model: type[SpectrumModel]) -> None:
         self._is_paused = True
         self._pulses = None
         self._tick = 0
         self._level = False
         self._pulse = 0
-        self._ticks_per_frame = 69888  # TODO
+        self._ticks_per_frame = model._TICKS_PER_FRAME
         self._time = Time()
-        self.__audible_output = PulseStream()
+        self.__audible_output = PulseStream(model)
         self.__audible_pulses: list[tuple[int, int]] = []
 
     def is_paused(self) -> bool:

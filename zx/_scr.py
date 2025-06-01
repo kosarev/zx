@@ -24,12 +24,14 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
     def to_unified_snapshot(self) -> UnifiedSnapshot:
         # The address of the endless loop.
         memory_blocks = []
-        memory_blocks.append((0x4000, self.dot_patterns))
-        memory_blocks.append((0x4000 + 6144, self.colour_attrs))
+        ROM_PAGE, RAM_PAGE = 0, 0
+        memory_blocks.extend([
+            (0x4000, ROM_PAGE, RAM_PAGE, self.dot_patterns),
+            (0x4000 + 6144, ROM_PAGE, RAM_PAGE, self.colour_attrs)])
 
         # LOOP_ADDR: jp LOOP_ADDR
         LOOP_ADDR = 0x8000
-        memory_blocks.append((LOOP_ADDR,
+        memory_blocks.append((LOOP_ADDR, ROM_PAGE, RAM_PAGE,
                               b'\xc3' + LOOP_ADDR.to_bytes(2, 'little')))
 
         return UnifiedSnapshot(

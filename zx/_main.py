@@ -20,6 +20,7 @@ from ._data import ArchiveFile
 from ._data import DataRecord
 from ._data import MachineSnapshot
 from ._data import SoundFile
+from ._data import Spectrum128
 from ._error import Error
 from ._error import USER_ERRORS
 from ._error import verbalize_error
@@ -31,8 +32,6 @@ from ._rzx import make_rzx
 from ._rzx import RZXFile
 from ._spectrum import Profile
 from ._spectrum import Spectrum
-from ._spectrum import Spectrum48
-from ._spectrum import Spectrum128
 
 
 def pop_argument(args: list[str], error: str) -> str:
@@ -54,7 +53,9 @@ def handle_extra_arguments(args: list[str]) -> None:
 
 
 def run(args: list[str]) -> None:
-    model = Spectrum128 if pop_option(args, '--128') else Spectrum48
+    model = None
+    if pop_option(args, '--128'):
+        model = Spectrum128
 
     filename = None
     if args:

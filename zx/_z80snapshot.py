@@ -259,7 +259,9 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         if unified.memory_blocks is not None:
             RAM_SIZE = 0x10000
             image: list[None | int] = [None] * RAM_SIZE
-            for addr, block in unified.memory_blocks:
+            for addr, rom_page, ram_page, block in unified.memory_blocks:
+                assert rom_page == 0  # TODO
+                assert ram_page == 0  # TODO
                 image[addr:addr+len(block)] = list(block)
 
             PAGE_SIZE = 0x4000
@@ -351,7 +353,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                             id='unsupported_machine')
 
         # Handle memory blocks.
-        memory_blocks: list[tuple[int, Bytes]] = []
+        memory_blocks: list[tuple[int, int, int, Bytes]] = []
         if self.memory_image is not None:
             assert self.memory_blocks is None
 
@@ -368,9 +370,9 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                                 id='z80_snapshot_no_end_marker')
                 memory_image = self.__uncompress(memory_image[:-4], 48 * 1024)
             memory_blocks.extend([
-                (0x4000, memory_image[0x0000:0x4000]),
-                (0x8000, memory_image[0x4000:0x8000]),
-                (0xc000, memory_image[0x8000:0xc000])])
+                (0x4000, 0, 0, memory_image[0x0000:0x4000]),
+                (0x8000, 0, 0, memory_image[0x4000:0x8000]),
+                (0xc000, 0, 0, memory_image[0x8000:0xc000])])
         else:
             assert machine_kind == 'ZX Spectrum 48K', machine_kind  # TODO
 
@@ -381,7 +383,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                     image = self.__uncompress(image, BLOCK_SIZE)
 
                 memory_blocks.append((self.__MEMORY_PAGE_ADDRS[page_no],
-                                      image))
+                                      0, 0, image))
 
         return UnifiedSnapshot(
             af=make16(self.a, self.f),

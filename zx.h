@@ -121,7 +121,7 @@ public:
 
     static page get_rom_page(unsigned n) {
         assert(n < 2);
-        static const page pages[8] = {rom0, rom1};
+        static const page pages[2] = {rom0, rom1};
         return pages[n];
     }
 
@@ -233,14 +233,28 @@ public:
     }
 
     void on_write(fast_u16 addr, fast_u8 n) {
-        return self().on_get_memory().write(addr, n, rom_page, ram_page);
+        // Do not alter ROM.
+        if(addr >= 0x4000)
+            self().on_get_memory().write(addr, n, rom_page, ram_page);
     }
 
-    void handle_contention() {
+    ticks_type get_cont_base() const {
         // TODO: We sample ~INT during the last tick of the
         // previous instruction, so we add 1 to the contention
         // base to compensate that.
-        const ticks_type cont_base = 14335 + 1;
+        switch (self().on_get_model()) {
+        case spectrum_model::spectrum_48:
+            return 14335 + 1;
+        case spectrum_model::spectrum_128:
+            return 14361 + 1;  // TODO: Correct?
+        }
+        unreachable("Unknown Spectrum model.");
+    }
+
+    void handle_contention() {
+        ticks_type cont_base = get_cont_base();
+        ticks_type ticks_per_line = get_ticks_per_line();
+
         if(ticks_since_int < cont_base)
             return;
 
@@ -396,6 +410,13 @@ public:
     }
 
     void on_output_cycle(fast_u16 addr, fast_u8 n) {
+        if(FILE *trace = get_trace_file()) {
+            std::fprintf(trace, "write_port %04x %02x\n",
+                         static_cast<unsigned>(addr),
+                         static_cast<unsigned>(n));
+            std::fflush(trace);
+        }
+
         self().on_output(addr, n);
 
         ticks_type t = get_ticks();
@@ -413,10 +434,25 @@ public:
         // https://worldofspectrum.org/faq/reference/128kreference.htm
         if(self().on_get_model() == spectrum_model::spectrum_128 &&
                (addr & 0x8002) == 0 && !ignore_7ffd_port_writes) {
-            ram_page = memory_image::get_ram_page(n & 7);
-            rom_page = memory_image::get_rom_page((n >> 3) & 1);
+            unsigned ram_page_n = n & 7;
+            ram_page = memory_image::get_ram_page(ram_page_n);
+
+            unsigned rom_page_n = (n >> 4) & 1;
+            rom_page = memory_image::get_rom_page(rom_page_n);
+
             ignore_7ffd_port_writes = n & 0x20;
-            // TODO: Support selecting the shadow screen.
+
+            shadow_screen = n & 8;
+
+            if(FILE *trace = get_trace_file()) {
+                std::fprintf(trace,
+                             "ram %d, rom %d, ignore_writes %d, screen %d\n",
+                             static_cast<int>(ram_page_n),
+                             static_cast<int>(rom_page_n),
+                             static_cast<int>(ignore_7ffd_port_writes),
+                             static_cast<int>(shadow_screen));
+                std::fflush(trace);
+            }
         }
 
         if(num_port_writes < max_num_port_writes) {
@@ -460,8 +496,32 @@ public:
             base::disable_int_on_ei();
     }
 
-    static const ticks_type ticks_per_frame = 69888;
-    static const ticks_type ticks_per_line = 224;
+    static constexpr ticks_type max_ticks_per_frame = 70908;
+
+    ticks_type get_ticks_per_frame() const {
+        switch (self().on_get_model()) {
+        case spectrum_model::spectrum_48:
+            static_assert(max_ticks_per_frame >= 69888,
+                          "max_ticks_per_frame too small!");
+            return 69888;
+        case spectrum_model::spectrum_128:
+            static_assert(max_ticks_per_frame >= 70908,
+                          "max_ticks_per_frame too small!");
+            return 70908;
+        }
+        unreachable("Unknown Spectrum model.");
+    }
+
+    ticks_type get_ticks_per_line() const {
+        switch (self().on_get_model()) {
+        case spectrum_model::spectrum_48:
+            return 224;
+        case spectrum_model::spectrum_128:
+            return 228;
+        }
+        unreachable("Unknown Spectrum model.");
+    }
+
     static const ticks_type ticks_per_active_int = 32;
 
     // Four bits per frame pixel in brightness:grb format.
@@ -519,7 +579,8 @@ public:
     static const unsigned
         ticks_per_shortest_out_instr = 11;  // OUT (n), A  f(4) r(3) o(4)
     static const unsigned max_num_port_writes =
-        div_ceil<ticks_type>(ticks_per_frame, ticks_per_shortest_out_instr);
+        div_ceil<ticks_type>(max_ticks_per_frame,
+                             ticks_per_shortest_out_instr);
     using port_writes_type = uint_least64_t[max_num_port_writes];
 
     unsigned get_num_port_writes() const { return num_port_writes; }
@@ -528,7 +589,7 @@ public:
     // TODO: Name the constants.
     // TODO: private
     void start_new_frame() {
-        ticks_since_int %= ticks_per_frame;
+        ticks_since_int %= get_ticks_per_frame();
         render_tick = 0;
 
         ++frame_counter;
@@ -539,51 +600,51 @@ public:
     }
 
     // TODO: private
-    static fast_u16 get_pixel_pattern_addr(unsigned frame_line,
-                                           unsigned pixel_in_line) {
+    static fast_u16 get_pixel_pattern_offset(unsigned frame_line,
+                                             unsigned pixel_in_line) {
         assert(frame_line >= 64);
         assert(frame_line < 64 + screen_height);
         assert(pixel_in_line >= border_width);
         assert(pixel_in_line < border_width + screen_width);
 
-        fast_u16 addr = 0x4000;
+        fast_u32 offset = 0;
 
         // Adjust the address according to the third of the
         // screen.
         unsigned line = frame_line - 64;
-        addr += 0x800 * (line / 64);
+        offset += 0x800 * (line / 64);
         line %= 64;
 
         // See which character line it is.
-        addr += 0x20 * (line / 8);
+        offset += 0x20 * (line / 8);
         line %= 8;
 
         // Then, adjust according to the pixel line within the
         // character line.
-        addr += 0x100 * line;
+        offset += 0x100 * line;
 
         // Finally, apply the offset in line.
-        addr += (pixel_in_line - border_width) / 8;
+        offset += (pixel_in_line - border_width) / 8;
 
-        return addr;
+        return offset;
     }
 
     // TODO: private
-    static fast_u16 get_colour_attrs_addr(unsigned frame_line,
-                                          unsigned pixel_in_line) {
+    static fast_u16 get_colour_attrs_offset(unsigned frame_line,
+                                            unsigned pixel_in_line) {
         assert(frame_line >= 64);
         assert(frame_line < 64 + screen_height);
         assert(pixel_in_line >= border_width);
         assert(pixel_in_line < border_width + screen_width);
 
-        fast_u16 addr = 0x5800;
+        fast_u16 offset = 0;
 
         unsigned line = frame_line - 64;
-        addr += 0x20 * (line / 8);
+        offset += 0x20 * (line / 8);
 
-        addr += (pixel_in_line - border_width) / 8;
+        offset += (pixel_in_line - border_width) / 8;
 
-        return addr;
+        return offset;
     }
 
     // TODO: Name the constants.
@@ -593,6 +654,18 @@ public:
                       "Unsupported frame pixel format!");
         static_assert(pixels_per_frame_chunk == 8,
                       "Unsupported frame chunk format!");
+
+        constexpr memory_image::page rom0 = memory_image::rom0;
+        constexpr memory_image::page ram5 = memory_image::ram5;
+        constexpr memory_image::page ram7 = memory_image::ram7;
+        memory_image::page screen_page = shadow_screen ? ram7 : ram5;
+
+        constexpr fast_u16 screen_addr = 0xc000;
+        constexpr fast_u16 screen_attr_addr = screen_addr + 0x1800;
+
+        const memory_image &memory = self().on_get_memory();
+
+        ticks_type ticks_per_line = get_ticks_per_line();
 
         // TODO: Render the border by whole chunks when possible.
         while(render_tick < end_tick) {
@@ -610,18 +683,25 @@ public:
                 frame_line < 64 + screen_height &&
                 pixel_in_line >= border_width - 8 &&
                 pixel_in_line < border_width + screen_width - 8;
-            if(is_screen_latching_area && render_tick % 8 == 0) {
-                fast_u16 pattern_addr = get_pixel_pattern_addr(
-                    frame_line, pixel_in_line + 8);
+            if(is_screen_latching_area &&
+                    (render_tick - frame_line * ticks_per_line) % 8 == 0) {
+                fast_u16 pattern_addr = screen_addr +
+                    get_pixel_pattern_offset(frame_line, pixel_in_line + 8);
                 // TODO
                 // printf("%d -> 0x%04x\n", (int) render_tick, (unsigned) addr);
-                latched_pixel_pattern = make16(on_read(pattern_addr),
-                                               on_read(pattern_addr + 1));
+                fast_u8 pattern_hi =
+                    memory.read(pattern_addr + 0, rom0, screen_page);
+                fast_u8 pattern_lo =
+                    memory.read(pattern_addr + 1, rom0, screen_page);
+                latched_pixel_pattern = make16(pattern_hi, pattern_lo);
 
-                fast_u16 attr_addr = get_colour_attrs_addr(
-                    frame_line, pixel_in_line + 8);
-                latched_colour_attrs = make16(on_read(attr_addr),
-                                              on_read(attr_addr + 1));
+                fast_u16 attr_addr = screen_attr_addr +
+                    get_colour_attrs_offset(frame_line, pixel_in_line + 8);
+                fast_u8 attr_hi =
+                    memory.read(attr_addr + 0, rom0, screen_page);
+                fast_u8 attr_lo =
+                    memory.read(attr_addr + 1, rom0, screen_page);
+                latched_colour_attrs = make16(attr_hi, attr_lo);
             }
 
             // Render the screen area.
@@ -719,7 +799,7 @@ public:
     fast_u16 flash_mask = 0;
 
     void render_screen() {
-        render_screen_to_tick(ticks_per_frame);
+        render_screen_to_tick(get_ticks_per_frame());
     }
 
     typedef uint_least32_t pixel_type;
@@ -751,6 +831,7 @@ public:
 
     events_mask run() {
         // Normalize the ticks-since-int counter.
+        ticks_type ticks_per_frame = get_ticks_per_frame();
         if (ticks_since_int >= ticks_per_frame)
             start_new_frame();
 
@@ -892,6 +973,8 @@ private:
     memory_image::page ram_page = memory_image::ram0;
 
     bool ignore_7ffd_port_writes = false;
+
+    bool shadow_screen = false;
 
     screen_chunks_type screen_chunks;
 

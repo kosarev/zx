@@ -13,6 +13,7 @@ import numpy
 import typing
 
 from ._data import SoundPulses
+from ._data import SpectrumModel
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
@@ -22,7 +23,9 @@ from ._device import Destroy
 
 
 class PulseStream(object):
-    def __init__(self) -> None:
+    def __init__(self, model: type[SpectrumModel]) -> None:
+        self.__ticks_per_frame = model._TICKS_PER_FRAME
+
         # The last set sound level.
         self.__current_level = numpy.uint32(0)
 
@@ -41,24 +44,23 @@ class PulseStream(object):
             self.__carry_pulse = None
 
         # Extend the levels and ticks to cover the frame exactly.
-        TICKS_PER_FRAME = 69888  # TODO
         if len(ticks) == 0 or ticks[0] > 0:
             levels = numpy.insert(levels, 0, self.__current_level)
             ticks = numpy.insert(ticks, 0, 0)
-        if ticks[-1] >= TICKS_PER_FRAME:
+        if ticks[-1] >= self.__ticks_per_frame:
             assert self.__carry_pulse is None
-            self.__carry_pulse = ticks[-1] - TICKS_PER_FRAME, levels[-1]
+            self.__carry_pulse = ticks[-1] - self.__ticks_per_frame, levels[-1]
             ticks = numpy.delete(ticks, -1)
             levels = numpy.delete(levels, -1)
-        if ticks[-1] < TICKS_PER_FRAME - 1:
+        if ticks[-1] < self.__ticks_per_frame - 1:
             levels = numpy.append(levels, levels[-1])
-            ticks = numpy.append(ticks, TICKS_PER_FRAME - 1)
-        assert ticks[0] == 0 and ticks[-1] == TICKS_PER_FRAME - 1
+            ticks = numpy.append(ticks, self.__ticks_per_frame - 1)
+        assert ticks[0] == 0 and ticks[-1] == self.__ticks_per_frame - 1
 
         self.__current_level = levels[-1]
 
         FRAMES_PER_SEC = 50  # TODO
-        rate = TICKS_PER_FRAME * FRAMES_PER_SEC
+        rate = self.__ticks_per_frame * FRAMES_PER_SEC
         return SoundPulses(rate, levels, ticks)
 
 

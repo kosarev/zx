@@ -11,6 +11,7 @@
 import numpy
 import typing
 
+from ._data import SpectrumModel
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
@@ -20,8 +21,8 @@ from ._sound import PulseStream
 
 
 class Beeper(Device):
-    def __init__(self) -> None:
-        self.__stream = PulseStream()
+    def __init__(self, model: type[SpectrumModel]) -> None:
+        self.__stream = PulseStream(model)
 
     def __handle_port_writes(
             self, writes: numpy.typing.NDArray[numpy.uint64],
