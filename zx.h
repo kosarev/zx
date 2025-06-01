@@ -73,6 +73,22 @@ class memory_image {
 class __attribute__((packed)) memory_image {
 #endif
 public:
+    enum page : unsigned {
+        // 48K model memory map.
+        rom0,
+        ram5,
+        ram2,
+        ram0,
+
+        // 128K model extra pages.
+        rom1,
+        ram1,
+        ram3,
+        ram4,
+        ram6,
+        ram7,
+    };
+
     memory_image() {}
 
     void reset() {
@@ -94,7 +110,11 @@ public:
     }
 
 private:
-    least_u8 bytes[z80::address_space_size];
+    static constexpr unsigned page_size = 0x4000;
+    static constexpr unsigned num_pages = ram7 + 1;
+    static constexpr fast_u32 image_size =
+        static_cast<fast_u32>(page_size) * num_pages;
+    least_u8 bytes[image_size];
 };
 #if defined(_MSC_VER)
 #pragma pack(pop)
