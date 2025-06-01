@@ -26,20 +26,6 @@ using z80::fast_u16;
 
 namespace {
 
-#if 0  // TODO: Unused.
-template<typename T>
-constexpr T div_ceil(T a, T b) {
-    return (a + b - 1) / b;
-}
-#endif
-
-#if 0  // TODO: Unused.
-template<typename T>
-constexpr bool is_multiple_of(T a, T b) {
-    return b != 0 && a % b == 0;
-}
-#endif
-
 #if defined(__GNUC__) || defined(__clang__)
 # define LIKE_PRINTF(format, args) \
       __attribute__((__format__(__printf__, format, args)))
@@ -362,6 +348,10 @@ private:
     static const unsigned spectrum_key_break_space = 0x0f;
 
 public:
+    zx::spectrum_model on_get_model() const {
+        return zx::spectrum_model::spectrum_48;
+    }
+
     fast_u8 on_input(fast_u16 addr) {
         fast_u8 n = 0xbf;  // TODO
         if(!(addr & 1)) {

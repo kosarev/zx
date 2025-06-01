@@ -66,6 +66,11 @@ const memory_marks no_marks           = 0;
 const memory_marks breakpoint_mark    = 1u << 0;
 const memory_marks visited_instr_mark = 1u << 7;
 
+enum class spectrum_model {
+    spectrum_48,
+    spectrum_128,
+};
+
 #if defined(_MSC_VER)
 #pragma pack(push, 1)
 class memory_image {
@@ -105,6 +110,19 @@ public:
 
     void write(fast_u16 addr, fast_u8 n, page rom, page ram) {
         bytes[get_offset(addr, rom, ram)] = static_cast<least_u8>(n);
+    }
+
+    static page get_ram_page(unsigned n) {
+        assert(n < 8);
+        static const page pages[8] = {ram0, ram1, ram2, ram3,
+                                      ram4, ram5, ram6, ram7};
+        return pages[n];
+    }
+
+    static page get_rom_page(unsigned n) {
+        assert(n < 2);
+        static const page pages[8] = {rom0, rom1};
+        return pages[n];
     }
 
 private:
@@ -389,6 +407,16 @@ public:
             // be contentions in the middle.
             render_screen_to_tick(t + 1);
             border_colour = n & 0x7;
+        }
+
+        // Handle the 0x7ffd port.
+        // https://worldofspectrum.org/faq/reference/128kreference.htm
+        if(self().on_get_model() == spectrum_model::spectrum_128 &&
+               (addr & 0x8002) == 0 && !ignore_7ffd_port_writes) {
+            ram_page = memory_image::get_ram_page(n & 7);
+            rom_page = memory_image::get_rom_page((n >> 3) & 1);
+            ignore_7ffd_port_writes = n & 0x20;
+            // TODO: Support selecting the shadow screen.
         }
 
         if(num_port_writes < max_num_port_writes) {
@@ -862,6 +890,8 @@ protected:
 private:
     memory_image::page rom_page = memory_image::rom0;
     memory_image::page ram_page = memory_image::ram0;
+
+    bool ignore_7ffd_port_writes = false;
 
     screen_chunks_type screen_chunks;
 

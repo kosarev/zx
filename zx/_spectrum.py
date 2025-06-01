@@ -297,6 +297,10 @@ class SpectrumState(Z80State):
         self.__int_after_ei_allowed = p.parse8()
         self.__border_colour = p.parse8()
         self.__trace_enabled = p.parse8()
+        self.__model = p.parse8()
+        padding1 = p.parse8()
+        padding2 = p.parse8()
+        padding3 = p.parse8()
 
         self.__memory = p.read_bytes(0x10000)
 
