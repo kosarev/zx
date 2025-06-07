@@ -387,11 +387,13 @@ class SpectrumState(Z80State):
         self.__model[0] = model._CXX_MODEL_CODE
 
     def read(self, addr: int, size: int) -> bytes:
+        assert addr + size <= 0x10000  # TODO
         return bytes(self.__memory[addr:addr + size])
 
     def write(self, addr: int, block: bytes, *,
               rom_page: int | None = None,
               ram_page: int | None = None) -> None:
+        assert addr + len(block) <= 0x10000  # TODO
         while block:
             next_page_addr = (addr // self.__PAGE_SIZE + 1) * self.__PAGE_SIZE
             chunk = block[:next_page_addr - addr]
@@ -413,7 +415,7 @@ class SpectrumState(Z80State):
             block = block[len(chunk):]
 
     def read8(self, addr: int) -> int:
-        return self.__memory[addr]
+        return self.read(addr, 1)[0]
 
     def read16(self, addr: int) -> int:
         return int.from_bytes(self.read(addr, 2), 'little')
