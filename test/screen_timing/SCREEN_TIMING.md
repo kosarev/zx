@@ -7,8 +7,8 @@ The first two pixels of the screen area are displayed at CPU tick
 The 64 is the number of scanlines before the screen area begins (the top
 border) and 224 is the number of CPU ticks per scanline.
 
-All ticks are since ~INT becomes active, so the first tick since active
-~INT is 0.
+All ticks are since ~INT becomes active, with the first tick since
+active ~INT being 0.
 
 
 ## Border timing
