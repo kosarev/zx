@@ -4,7 +4,7 @@
 The first two pixels of the screen area are displayed at CPU tick
 64 * 224 + 4 = 14340.
 
-The 64 is the number of scanlines before the screen area beings (the top
+The 64 is the number of scanlines before the screen area begins (the top
 border) and 224 is the number of CPU ticks per scanline.
 
 All ticks are since ~INT becomes active, so the first tick since active
