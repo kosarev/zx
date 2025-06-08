@@ -35,6 +35,28 @@ Then at tick 14348 subsequent four bytes are read and another
 chunk of 16 pixels is displayed on the screen.
 
 
+# Display, memory contention and ULA reads (floating bus) cycles
+
+| Tick   | Contention       | ULA read | Screen area pixels                |
+| ------ | ---------------- | -------- | --------------------------------- |
+| 14,336 | 6 (until 13,342) | -        | -                                 |
+| 14,337 | 5 (until 13,342) | -        | -                                 |
+| 14,338 | 4 (until 13,342) | 0x4000   | -                                 |
+| 14,339 | 3 (until 13,342) | 0x5800   | -                                 |
+| 14,340 | 2 (until 13,342) | 0x4001   | 0b11000000 from 0x4000 and 0x5800 |
+| 14,341 | 1 (until 13,342) | 0x5801   | 0b00110000 from 0x4000 and 0x5800 |
+| 14,342 | -                | -        | 0b00001100 from 0x4000 and 0x5800 |
+| 14,343 | -                | -        | 0b00000011 from 0x4000 and 0x5800 |
+| 14,344 | 6 (until 14,350) | -        | 0b11000000 from 0x4001 and 0x5801 |
+| 14,345 | 5 (until 14,350) | -        | 0b00110000 from 0x4001 and 0x5801 |
+| 14,346 | 4 (until 14,350) | 0x4002   | 0b00001100 from 0x4001 and 0x5801 |
+| 14,347 | 3 (until 14,350) | 0x5802   | 0b00000011 from 0x4001 and 0x5801 |
+| 14,348 | 2 (until 14,350) | 0x4003   | 0b11000000 from 0x4002 and 0x5802 |
+| 14,349 | 1 (until 14,350) | 0x5803   | 0b00110000 from 0x4002 and 0x5802 |
+| 14,350 | -                | -        | 0b00001100 from 0x4002 and 0x5802 |
+| 14,351 | -                | -        | 0b00000011 from 0x4002 and 0x5802 |
+
+
 ## References
 
 * The relevant discussion on the WoS site:
