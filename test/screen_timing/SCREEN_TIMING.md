@@ -41,7 +41,7 @@ Then at tick 14348 subsequent four bytes are read and another
 chunk of 16 pixels is displayed on the screen.
 
 
-# Display, memory contention and ULA reads (floating bus) cycles
+## Display, memory contention and ULA reads (floating bus) cycles
 
 | Tick   | Contention       | ULA read | Screen area pixels                |
 | ------ | ---------------- | -------- | --------------------------------- |
@@ -61,6 +61,17 @@ chunk of 16 pixels is displayed on the screen.
 | 14,349 | 1 (until 14,350) | 0x5803   | 0b00110000 from 0x4002 and 0x5802 |
 | 14,350 | -                | -        | 0b00001100 from 0x4002 and 0x5802 |
 | 14,351 | -                | -        | 0b00000011 from 0x4002 and 0x5802 |
+
+
+## Tests
+
+* [TAP file](https://github.com/kosarev/zx/blob/master/test/screen_timing/screen_timing_early.tap), for early timing machines
+* [TAP file](https://github.com/kosarev/zx/blob/master/test/screen_timing/screen_timing_late.tap), for late timing machines
+* The [script](https://github.com/kosarev/zx/blob/master/test/screen_timing/generate_drawing.py) used to generate the test source code.
+
+## Expected output
+
+![Expected output](https://raw.githubusercontent.com/kosarev/zx/master/test/screen_timing/screenshot.png "Expected ouput")
 
 
 ## References
