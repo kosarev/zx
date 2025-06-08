@@ -464,7 +464,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
 
             if p == input_size - 1 or not eq[p]:
                 output.extend(image[p:i])
-                p += i - p
+                p += int(i - p)
                 ends_with_non_blocked_ed = output[-1] == 0xed
                 continue
 
