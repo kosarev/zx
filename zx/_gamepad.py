@@ -28,7 +28,7 @@ class Gamepad(Device):
 
         devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
         for device in devices:
-            if 'Xbox' in device.name:
+            if 'Xbox' in device.name or '8BitDo' in device.name:
                 self.__gamepad = device
                 self.__gamepad.grab()
                 break

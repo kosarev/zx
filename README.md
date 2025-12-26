@@ -29,7 +29,7 @@ ZX Spectrum emulation framework in Python and C++
 * Tape: TAP and TZX formats supported as well as conversion to WAV.
 * Snapshots: Z80.
 * Playback recordings: RZX.
-* Joystick: Xbox controllers supported via `evdev` (Linux only), mapped to cursor keys.
+* Joystick: Xbox and 8BitDo controllers supported via `evdev` (Linux only), mapped to cursor keys.
 
 
 ### Installation and running
