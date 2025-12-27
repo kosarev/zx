@@ -49,7 +49,6 @@ from ._error import Error
 from ._except import EmulationExit
 from ._except import EmulatorException
 from ._file import parse_file
-from ._gamepad import Gamepad
 from ._keyboard import Keyboard
 from ._keyboard import KEYS
 from ._playback import PlaybackPlayer
@@ -518,7 +517,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 if sound_device is None:
                     sound_device = SoundDevice()
 
-                devices.extend([screen, sound_device, Gamepad()])
+                devices.extend([screen, sound_device])
 
         dispatcher = Dispatcher(devices)
 

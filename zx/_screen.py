@@ -242,7 +242,7 @@ class ScreenWindow(Device):
         self.scale = 1 if SCREENCAST else 2
 
         import sdl2
-        sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO)
+        sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO | sdl2.SDL_INIT_GAMECONTROLLER)
 
         self.__window = sdl2.SDL_CreateWindow(
             b'ZX Spectrum Emulator',
@@ -310,6 +310,12 @@ class ScreenWindow(Device):
         sdl2.SDL_SetWindowMinimumSize(self.__window, *minimum_size)
 
         self.frame_size = self.frame_width * self.frame_height
+
+        for i in range(sdl2.SDL_NumJoysticks()):
+            if sdl2.SDL_IsGameController(i):
+                sdl2.SDL_GameControllerOpen(i)
+
+        self.__joy_hat_mask = 0
 
     def _on_output_frame(self, event: DeviceEvent,
                          dispatcher: Dispatcher) -> typing.Any:
@@ -450,6 +456,35 @@ class ScreenWindow(Device):
         elif event.type == _ClickType.Double:
             self.__toggle_fullscreen(devices)
 
+    def __on_joystick_event(self, event: typing.Any,
+                            dispatcher: Dispatcher) -> None:
+        # TODO: Have a separate joystick device instead of sending key
+        # strokes directly.
+        import sdl2
+        if event.type == sdl2.SDL_JOYHATMOTION:
+            new_mask = event.jhat.value
+            for dir_mask, hat_key in ((sdl2.SDL_HAT_LEFT, '5'),
+                                      (sdl2.SDL_HAT_RIGHT, '8'),
+                                      (sdl2.SDL_HAT_UP, '7'),
+                                      (sdl2.SDL_HAT_DOWN, '6')):
+                changed = bool((new_mask ^ self.__joy_hat_mask) & dir_mask)
+                if changed:
+                    pressed = bool(new_mask & dir_mask)
+                    dispatcher.notify(KeyStroke(hat_key, pressed))
+
+            self.__joy_hat_mask = new_mask
+            return
+
+        if event.type in (sdl2.SDL_JOYBUTTONDOWN, sdl2.SDL_JOYBUTTONUP):
+            KEYS = {
+                2: '0',  # X button, fire.
+            }
+
+            button_key = KEYS.get(event.jbutton.button)
+            if button_key:
+                pressed = event.jbutton.state == sdl2.SDL_PRESSED
+                dispatcher.notify(KeyStroke(button_key, pressed))
+
     def __on_exception(self, event: DeviceEvent,
                        devices: Dispatcher) -> typing.Any:
         assert isinstance(event, _ExceptionEvent,)
@@ -494,6 +529,12 @@ class ScreenWindow(Device):
                 self.__on_sdl_click(self.__sdl_event)
             elif self.__sdl_event.type in (sdl2.SDL_KEYDOWN, sdl2.SDL_KEYUP):
                 self.__on_sdl_key(self.__sdl_event)
+            elif self.__sdl_event.type in (sdl2.SDL_JOYAXISMOTION,
+                                           sdl2.SDL_JOYBALLMOTION,
+                                           sdl2.SDL_JOYHATMOTION,
+                                           sdl2.SDL_JOYBUTTONDOWN,
+                                           sdl2.SDL_JOYBUTTONUP):
+                self.__on_joystick_event(self.__sdl_event, dispatcher)
 
         while self.__events:
             self.on_event(self.__events.pop(0), dispatcher, None)
