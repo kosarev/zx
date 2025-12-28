@@ -29,7 +29,7 @@ ZX Spectrum emulation framework in Python and C++
 * Tape: TAP and TZX formats supported as well as conversion to WAV.
 * Snapshots: Z80.
 * Playback recordings: RZX.
-* Joystick: Supported via SDL.
+* Joystick: D-Pad mapped to cursor keys, supported via SDL.
 
 
 ### Installation and running

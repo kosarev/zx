@@ -311,9 +311,7 @@ class ScreenWindow(Device):
 
         self.frame_size = self.frame_width * self.frame_height
 
-        for i in range(sdl2.SDL_NumJoysticks()):
-            if sdl2.SDL_IsGameController(i):
-                sdl2.SDL_GameControllerOpen(i)
+        self.__controllers: dict[int, ctypes.c_void_p] = {}
 
     def _on_output_frame(self, event: DeviceEvent,
                          dispatcher: Dispatcher) -> typing.Any:
@@ -459,18 +457,37 @@ class ScreenWindow(Device):
         # TODO: Have a separate joystick device instead of sending key
         # strokes directly.
         import sdl2
-        KEYS = {
-            sdl2.SDL_CONTROLLER_BUTTON_DPAD_LEFT: '5',
-            sdl2.SDL_CONTROLLER_BUTTON_DPAD_RIGHT: '8',
-            sdl2.SDL_CONTROLLER_BUTTON_DPAD_UP: '7',
-            sdl2.SDL_CONTROLLER_BUTTON_DPAD_DOWN: '6',
-            sdl2.SDL_CONTROLLER_BUTTON_X: '0',  # Fire.
-        }
+        if event.type == sdl2.SDL_CONTROLLERDEVICEADDED:
+            device_index = event.cdevice.which
+            if sdl2.SDL_IsGameController(device_index):
+                controller = sdl2.SDL_GameControllerOpen(device_index)
+                if controller:
+                    joystick = sdl2.SDL_GameControllerGetJoystick(controller)
+                    instance_id = sdl2.SDL_JoystickInstanceID(joystick)
+                    self.__controllers[instance_id] = controller
+            return
 
-        button_key = KEYS.get(event.jbutton.button)
-        if button_key:
-            pressed = event.jbutton.state == sdl2.SDL_PRESSED
-            dispatcher.notify(KeyStroke(button_key, pressed))
+        if event.type == sdl2.SDL_CONTROLLERDEVICEREMOVED:
+            instance_id = event.cdevice.which
+            controller = self.__controllers.pop(instance_id, None)
+            if controller:
+                sdl2.SDL_GameControllerClose(controller)
+            return
+
+        if event.type in (sdl2.SDL_CONTROLLERBUTTONUP,
+                          sdl2.SDL_CONTROLLERBUTTONDOWN):
+            KEYS = {
+                sdl2.SDL_CONTROLLER_BUTTON_DPAD_LEFT: '5',
+                sdl2.SDL_CONTROLLER_BUTTON_DPAD_RIGHT: '8',
+                sdl2.SDL_CONTROLLER_BUTTON_DPAD_UP: '7',
+                sdl2.SDL_CONTROLLER_BUTTON_DPAD_DOWN: '6',
+                sdl2.SDL_CONTROLLER_BUTTON_X: '0',  # Fire.
+            }
+
+            button_key = KEYS.get(event.jbutton.button)
+            if button_key:
+                pressed = event.jbutton.state == sdl2.SDL_PRESSED
+                dispatcher.notify(KeyStroke(button_key, pressed))
 
     def __on_exception(self, event: DeviceEvent,
                        devices: Dispatcher) -> typing.Any:
@@ -516,7 +533,9 @@ class ScreenWindow(Device):
                 self.__on_sdl_click(self.__sdl_event)
             elif self.__sdl_event.type in (sdl2.SDL_KEYDOWN, sdl2.SDL_KEYUP):
                 self.__on_sdl_key(self.__sdl_event)
-            elif self.__sdl_event.type in (sdl2.SDL_CONTROLLERBUTTONUP,
+            elif self.__sdl_event.type in (sdl2.SDL_CONTROLLERDEVICEADDED,
+                                           sdl2.SDL_CONTROLLERDEVICEREMOVED,
+                                           sdl2.SDL_CONTROLLERBUTTONUP,
                                            sdl2.SDL_CONTROLLERBUTTONDOWN):
                 self.__on_controller_event(self.__sdl_event, dispatcher)
 
