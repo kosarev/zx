@@ -183,6 +183,52 @@ class Notification(object):
                    self._time.get())
 
 
+class _SideBar:
+    def __init__(self) -> None:
+        self.active = False
+        self.__window_size: None | tuple[int, int] = None
+        self.__texture = None
+
+    def __rebuild(self, window_size: tuple[int, int],
+                  renderer: _Renderer) -> None:
+        assert self.__window_size != window_size
+
+        window_width, window_height = window_size
+        width, height = window_width // 3, window_height
+
+        import sdl2
+        surface = sdl2.SDL_CreateRGBSurfaceWithFormat(
+            0, width, height, 32, sdl2.SDL_PIXELFORMAT_RGBA32)
+
+        background_colour = sdl2.SDL_MapRGBA(
+            surface.contents.format, 0, 0, 0, 180)
+        sdl2.SDL_FillRect(surface, None, background_colour)
+
+        texture = sdl2.SDL_CreateTextureFromSurface(renderer, surface)
+        sdl2.SDL_SetTextureBlendMode(texture, sdl2.SDL_BLENDMODE_BLEND)
+
+        sdl2.SDL_FreeSurface(surface)
+
+        if self.__texture:
+            sdl2.SDL_DestroyTexture(self.__texture)
+        self.__texture = texture
+
+        self.__window_size = window_size
+
+    def draw(self, window_size: tuple[int, int], renderer: _Renderer) -> None:
+        if not self.active:
+            return
+
+        if self.__window_size != window_size:
+            self.__rebuild(window_size, renderer)
+
+        import sdl2
+        w, h = sdl2.c_int(), sdl2.c_int()
+        sdl2.SDL_QueryTexture(self.__texture, None, None, w, h)
+        sdl2.SDL_RenderCopy(renderer, self.__texture, None,
+                            sdl2.SDL_Rect(0, 0, w.value, h.value))
+
+
 # TODO: A quick solution for making screencasts.
 class Screencast(object):
     _counter: int
@@ -298,6 +344,7 @@ class ScreenWindow(Device):
             Destroy: self.__on_destroy,
         }
 
+        self.__sidebar = _SideBar()
         self._notification = Notification()
         self._screencast = Screencast()
 
@@ -357,6 +404,9 @@ class ScreenWindow(Device):
         # TODO
         self._screencast.on_draw(self.__pixel_texture)
 
+        # Draw sidebar.
+        self.__sidebar.draw(window_size, self.__renderer)
+
         # Draw notifications.
         self._notification.draw(window_size, (width, height),
                                 self.__renderer)
@@ -364,6 +414,8 @@ class ScreenWindow(Device):
         sdl2.SDL_RenderPresent(self.__renderer)
 
     def _show_help(self, devices: Dispatcher) -> None:
+        self.__sidebar.active ^= True
+
         KEYS_HELP = [
             ('F1', 'Show help.'),
             ('F2', 'Save snapshot.'),
