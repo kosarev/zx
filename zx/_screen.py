@@ -187,6 +187,7 @@ class _SideBar:
     def __init__(self) -> None:
         self.active = False
         self.__window_size: None | tuple[int, int] = None
+        self.__font = None
         self.__texture = None
 
     def __rebuild(self, window_size: tuple[int, int],
@@ -203,6 +204,36 @@ class _SideBar:
         background_colour = sdl2.SDL_MapRGBA(
             surface.contents.format, 0, 0, 0, 180)
         sdl2.SDL_FillRect(surface, None, background_colour)
+
+        KEYS_HELP = [
+            ('F1', 'Show help'),
+            ('F2', 'Save snapshot'),
+            ('F3', 'Load snapshot or tape file'),
+            ('F6', 'Pause/resume tape'),
+            ('F10', 'Quit'),
+            ('F11', 'Fullscreen/windowed mode'),
+            ('PAUSE', 'Pause/resume emulation'),
+        ]
+
+        # TODO: Use TTF_CloseFont().
+        import sdl2.sdlttf  # type: ignore
+        text_size = 16
+        if not self.__font:
+            # TODO: Supply the font.
+            font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
+            self.__font = sdl2.sdlttf.TTF_OpenFont(font_path.encode('utf-8'),
+                                                   text_size)
+
+        text_colour = sdl2.SDL_Color(230, 230, 230, 255)
+        for i, (key, action) in enumerate(KEYS_HELP):
+            text_surface = sdl2.sdlttf.TTF_RenderUTF8_Blended(
+                self.__font, f'{key} {action}'.encode('utf-8'), text_colour)
+            sdl2.SDL_BlitSurface(
+                text_surface, None, surface,
+                sdl2.SDL_Rect(0, text_size * i,
+                              text_surface.contents.w,
+                              text_surface.contents.h))
+            sdl2.SDL_FreeSurface(text_surface)
 
         texture = sdl2.SDL_CreateTextureFromSurface(renderer, surface)
         sdl2.SDL_SetTextureBlendMode(texture, sdl2.SDL_BLENDMODE_BLEND)
@@ -290,6 +321,9 @@ class ScreenWindow(Device):
         import sdl2
         sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO | sdl2.SDL_INIT_GAMECONTROLLER)
 
+        import sdl2.sdlttf
+        sdl2.sdlttf.TTF_Init()
+
         self.__window = sdl2.SDL_CreateWindow(
             b'ZX Spectrum Emulator',
             sdl2.SDL_WINDOWPOS_CENTERED,
@@ -323,7 +357,8 @@ class ScreenWindow(Device):
 
         self._KEY_HANDLERS: dict[str, typing.Callable[[Dispatcher], None]] = {
             'F10': self.__on_exit,
-            'F1': self._show_help,
+            'ESCAPE': self._toggle_sidebar,
+            'F1': self._toggle_sidebar,
             'F2': self._save_snapshot,
             'F3': self.__choose_and_load_file,
             'F6': self.__toggle_tape_pause,
@@ -413,22 +448,8 @@ class ScreenWindow(Device):
 
         sdl2.SDL_RenderPresent(self.__renderer)
 
-    def _show_help(self, devices: Dispatcher) -> None:
+    def _toggle_sidebar(self, devices: Dispatcher) -> None:
         self.__sidebar.active ^= True
-
-        KEYS_HELP = [
-            ('F1', 'Show help.'),
-            ('F2', 'Save snapshot.'),
-            ('F3', 'Load snapshot or tape file.'),
-            ('F6', 'Pause/resume tape.'),
-            ('F10', 'Quit.'),
-            ('F11', 'Fullscreen/windowed mode.'),
-            ('PAUSE', 'Pause/resume emulation.'),
-        ]
-
-        # TODO: Use the GUI for that.
-        for entry in KEYS_HELP:
-            print('%7s  %s' % entry)
 
     def _save_snapshot(self, devices: Dispatcher) -> None:
         # TODO: Add file filters.
