@@ -198,7 +198,7 @@ class _SideBar:
 
         # TODO: Use TTF_CloseFont().
         import sdl2.sdlttf  # type: ignore
-        text_size = 16
+        text_size = 18
         if not self.__font:
             # TODO: Supply the font.
             font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
@@ -208,6 +208,7 @@ class _SideBar:
         em_c_width, em_c_height = sdl2.c_int(), sdl2.c_int()
         sdl2.sdlttf.TTF_SizeText(self.__font, b'M', em_c_width, em_c_height)
         em = em_c_width.value
+        line_height = sdl2.sdlttf.TTF_FontLineSkip(self.__font)
 
         width = min(window_width, em * 21)
         height = window_height
@@ -236,7 +237,7 @@ class _SideBar:
                 self.__font, f'{key} {action}'.encode('utf-8'), text_colour)
             sdl2.SDL_BlitSurface(
                 text_surface, None, surface,
-                sdl2.SDL_Rect(0, text_size * i,
+                sdl2.SDL_Rect(em, int(line_height * (3 + 2.5 * i)),
                               text_surface.contents.w,
                               text_surface.contents.h))
             sdl2.SDL_FreeSurface(text_surface)
