@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2025 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -195,7 +195,22 @@ class _SideBar:
         assert self.__window_size != window_size
 
         window_width, window_height = window_size
-        width, height = window_width // 3, window_height
+
+        # TODO: Use TTF_CloseFont().
+        import sdl2.sdlttf  # type: ignore
+        text_size = 16
+        if not self.__font:
+            # TODO: Supply the font.
+            font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
+            self.__font = sdl2.sdlttf.TTF_OpenFont(font_path.encode('utf-8'),
+                                                   text_size)
+
+        em_c_width, em_c_height = sdl2.c_int(), sdl2.c_int()
+        sdl2.sdlttf.TTF_SizeText(self.__font, b'M', em_c_width, em_c_height)
+        em = em_c_width.value
+
+        width = min(window_width, em * 21)
+        height = window_height
 
         import sdl2
         surface = sdl2.SDL_CreateRGBSurfaceWithFormat(
@@ -214,15 +229,6 @@ class _SideBar:
             ('F11', 'Fullscreen/windowed mode'),
             ('PAUSE', 'Pause/resume emulation'),
         ]
-
-        # TODO: Use TTF_CloseFont().
-        import sdl2.sdlttf  # type: ignore
-        text_size = 16
-        if not self.__font:
-            # TODO: Supply the font.
-            font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
-            self.__font = sdl2.sdlttf.TTF_OpenFont(font_path.encode('utf-8'),
-                                                   text_size)
 
         text_colour = sdl2.SDL_Color(230, 230, 230, 255)
         for i, (key, action) in enumerate(KEYS_HELP):
