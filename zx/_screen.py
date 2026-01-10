@@ -187,7 +187,7 @@ class _OverlayScreen:
     def __init__(self) -> None:
         self.active = False
         self.__window_size: None | tuple[int, int] = None
-        self.__font = None
+        self.__fonts = {}
         self.__texture = None
 
     def __rebuild(self, window_size: tuple[int, int],
@@ -198,17 +198,23 @@ class _OverlayScreen:
 
         # TODO: Use TTF_CloseFont().
         import sdl2.sdlttf  # type: ignore
-        text_size = 18
-        if not self.__font:
+        if width < 450 or height < 400:
+            text_size = 14
+        else:
+            text_size = 18
+        if text_size not in self.__fonts:
             # TODO: Supply the font.
             font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
-            self.__font = sdl2.sdlttf.TTF_OpenFont(font_path.encode('utf-8'),
-                                                   text_size)
+            self.__fonts[text_size] = sdl2.sdlttf.TTF_OpenFont(
+                font_path.encode('utf-8'), text_size)
+
+        font = self.__fonts[text_size]
 
         em_c_width, em_c_height = sdl2.c_int(), sdl2.c_int()
-        sdl2.sdlttf.TTF_SizeText(self.__font, b'M', em_c_width, em_c_height)
+        sdl2.sdlttf.TTF_SizeText(font, b'M', em_c_width, em_c_height)
         em = em_c_width.value
-        line_height = sdl2.sdlttf.TTF_FontLineSkip(self.__font)
+        em_height = em_c_height.value
+        line_height = sdl2.sdlttf.TTF_FontLineSkip(font)
 
         import sdl2
         surface = sdl2.SDL_CreateRGBSurfaceWithFormat(
@@ -231,19 +237,22 @@ class _OverlayScreen:
         text_box_width = em * 15
         text_box_vspacing = line_height * 2.5
         text_box_height = len(KEYS_HELP) * text_box_vspacing
-        text_box_x = (width - text_box_width) // 2
-        text_box_y = (height - text_box_height) // 2
+        text_box_x = max(0, (width - text_box_width) // 2)
+        text_box_y = max(0, (height - text_box_height) // 2)
 
         text_colour = sdl2.SDL_Color(230, 230, 230, 255)
         for i, (key, action) in enumerate(KEYS_HELP):
             text_surface = sdl2.sdlttf.TTF_RenderUTF8_Blended(
-                self.__font, f'{key} {action}'.encode('utf-8'), text_colour)
+                font, f'{key} {action}'.encode('utf-8'), text_colour)
             sdl2.SDL_BlitSurface(
                 text_surface, None, surface,
-                sdl2.SDL_Rect(text_box_x,
-                              int(text_box_y + i * text_box_vspacing),
-                              text_surface.contents.w,
-                              text_surface.contents.h))
+                sdl2.SDL_Rect(
+                    text_box_x,
+                    int(text_box_y +
+                        i * text_box_vspacing +
+                        (text_box_vspacing - em_height) / 2),
+                    text_surface.contents.w,
+                    text_surface.contents.h))
             sdl2.SDL_FreeSurface(text_surface)
 
         texture = sdl2.SDL_CreateTextureFromSurface(renderer, surface)
