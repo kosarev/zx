@@ -233,26 +233,34 @@ class _OverlayScreen:
             ('PAUSE', 'Pause/resume emulation'),
         ]
 
-        text_box_width = em * 15
+        hotkey_offset = em * 5
+        text_box_width = hotkey_offset + em * 14
         text_box_vspacing = line_height * 2.5
         text_box_height = len(KEYS_HELP) * text_box_vspacing
         text_box_x = max(0, (width - text_box_width) // 2)
         text_box_y = max(0, (height - text_box_height) // 2)
 
         text_colour = sdl2.SDL_Color(230, 230, 230, 255)
-        for i, (key, action) in enumerate(KEYS_HELP):
-            text_surface = sdl2.sdlttf.TTF_RenderUTF8_Blended(
-                font, f'{key} {action}'.encode('utf-8'), text_colour)
+        for i, (hotkey, action) in enumerate(KEYS_HELP):
+            hotkey_surface = sdl2.sdlttf.TTF_RenderUTF8_Blended(
+                font, hotkey.encode('utf-8'), text_colour)
+            action_surface = sdl2.sdlttf.TTF_RenderUTF8_Blended(
+                font, action.encode('utf-8'), text_colour)
+            x = text_box_x + hotkey_offset
+            y = int(text_box_y + i * text_box_vspacing +
+                    (text_box_vspacing - em_height) / 2)
             sdl2.SDL_BlitSurface(
-                text_surface, None, surface,
-                sdl2.SDL_Rect(
-                    text_box_x,
-                    int(text_box_y +
-                        i * text_box_vspacing +
-                        (text_box_vspacing - em_height) / 2),
-                    text_surface.contents.w,
-                    text_surface.contents.h))
-            sdl2.SDL_FreeSurface(text_surface)
+                hotkey_surface, None, surface,
+                sdl2.SDL_Rect(x - hotkey_surface.contents.w - em, y,
+                              hotkey_surface.contents.w,
+                              hotkey_surface.contents.h))
+            sdl2.SDL_BlitSurface(
+                action_surface, None, surface,
+                sdl2.SDL_Rect(x, y,
+                              action_surface.contents.w,
+                              action_surface.contents.h))
+            sdl2.SDL_FreeSurface(hotkey_surface)
+            sdl2.SDL_FreeSurface(action_surface)
 
         texture = sdl2.SDL_CreateTextureFromSurface(renderer, surface)
         sdl2.SDL_SetTextureBlendMode(texture, sdl2.SDL_BLENDMODE_BLEND)
