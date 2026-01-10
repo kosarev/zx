@@ -183,7 +183,7 @@ class Notification(object):
                    self._time.get())
 
 
-class _SideBar:
+class _OverlayScreen:
     def __init__(self) -> None:
         self.active = False
         self.__window_size: None | tuple[int, int] = None
@@ -194,7 +194,7 @@ class _SideBar:
                   renderer: _Renderer) -> None:
         assert self.__window_size != window_size
 
-        window_width, window_height = window_size
+        width, height = window_size
 
         # TODO: Use TTF_CloseFont().
         import sdl2.sdlttf  # type: ignore
@@ -209,9 +209,6 @@ class _SideBar:
         sdl2.sdlttf.TTF_SizeText(self.__font, b'M', em_c_width, em_c_height)
         em = em_c_width.value
         line_height = sdl2.sdlttf.TTF_FontLineSkip(self.__font)
-
-        width = min(window_width, em * 21)
-        height = window_height
 
         import sdl2
         surface = sdl2.SDL_CreateRGBSurfaceWithFormat(
@@ -231,13 +228,20 @@ class _SideBar:
             ('PAUSE', 'Pause/resume emulation'),
         ]
 
+        text_box_width = em * 15
+        text_box_vspacing = line_height * 2.5
+        text_box_height = len(KEYS_HELP) * text_box_vspacing
+        text_box_x = (width - text_box_width) // 2
+        text_box_y = (height - text_box_height) // 2
+
         text_colour = sdl2.SDL_Color(230, 230, 230, 255)
         for i, (key, action) in enumerate(KEYS_HELP):
             text_surface = sdl2.sdlttf.TTF_RenderUTF8_Blended(
                 self.__font, f'{key} {action}'.encode('utf-8'), text_colour)
             sdl2.SDL_BlitSurface(
                 text_surface, None, surface,
-                sdl2.SDL_Rect(em, int(line_height * (3 + 2.5 * i)),
+                sdl2.SDL_Rect(text_box_x,
+                              int(text_box_y + i * text_box_vspacing),
                               text_surface.contents.w,
                               text_surface.contents.h))
             sdl2.SDL_FreeSurface(text_surface)
@@ -261,10 +265,9 @@ class _SideBar:
             self.__rebuild(window_size, renderer)
 
         import sdl2
-        w, h = sdl2.c_int(), sdl2.c_int()
-        sdl2.SDL_QueryTexture(self.__texture, None, None, w, h)
+        window_width, window_height = window_size
         sdl2.SDL_RenderCopy(renderer, self.__texture, None,
-                            sdl2.SDL_Rect(0, 0, w.value, h.value))
+                            sdl2.SDL_Rect(0, 0, window_width, window_height))
 
 
 # TODO: A quick solution for making screencasts.
@@ -386,7 +389,7 @@ class ScreenWindow(Device):
             Destroy: self.__on_destroy,
         }
 
-        self.__sidebar = _SideBar()
+        self.__sidebar = _OverlayScreen()
         self._notification = Notification()
         self._screencast = Screencast()
 
