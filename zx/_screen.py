@@ -225,7 +225,6 @@ class _OverlayScreen:
         sdl2.SDL_FillRect(surface, None, background_colour)
 
         KEYS_HELP = [
-            ('F1', 'Show help'),
             ('F2', 'Save snapshot'),
             ('F3', 'Load snapshot or tape file'),
             ('F6', 'Pause/resume tape'),
