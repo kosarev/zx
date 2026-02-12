@@ -198,25 +198,29 @@ class _OverlayScreen:
 
     class __Font:
         def __init__(self, text_size: int) -> None:
+            self.text_size = text_size
+
             import sdl2
             import sdl2.sdlttf  # type: ignore
             import importlib.resources
-            self.text_size = text_size
             font_path = str(importlib.resources.files('zx').joinpath('fonts')
                             .joinpath('DejaVuSans.ttf'))
-            self.font = sdl2.sdlttf.TTF_OpenFont(
+            self.__font = sdl2.sdlttf.TTF_OpenFont(
                 font_path.encode('utf-8'), text_size)
+
             em_c_width = sdl2.c_int()
             em_c_height = sdl2.c_int()
             sdl2.sdlttf.TTF_SizeText(
-                self.font, b'M', em_c_width, em_c_height)
+                self.__font, b'M', em_c_width, em_c_height)
             self.em = em_c_width.value
             self.em_height = em_c_height.value
+
+            self.line_height = sdl2.sdlttf.TTF_FontLineSkip(self.__font)
 
         def render(self, text: str, colour: typing.Any) -> typing.Any:
             import sdl2.sdlttf
             return sdl2.sdlttf.TTF_RenderUTF8_Blended(
-                self.font, text.encode('utf-8'), colour)
+                self.__font, text.encode('utf-8'), colour)
 
     def __init__(self) -> None:
         import sdl2
@@ -310,7 +314,7 @@ class _OverlayScreen:
 
         em = self.__normal_font.em
         em_height = self.__normal_font.em_height
-        line_height = sdl2.sdlttf.TTF_FontLineSkip(self.__normal_font.font)
+        line_height = self.__normal_font.line_height
 
         import sdl2
         surface = sdl2.SDL_CreateRGBSurfaceWithFormat(
