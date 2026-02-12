@@ -213,6 +213,11 @@ class _OverlayScreen:
             self.em = em_c_width.value
             self.em_height = em_c_height.value
 
+        def render(self, text: str, colour: typing.Any) -> typing.Any:
+            import sdl2.sdlttf
+            return sdl2.sdlttf.TTF_RenderUTF8_Blended(
+                self.font, text.encode('utf-8'), colour)
+
     def __init__(self) -> None:
         import sdl2
         self.active = False
@@ -241,12 +246,9 @@ class _OverlayScreen:
         TTF_RenderUTF8_Blended. Caller is responsible for freeing the surface.
         """
         import sdl2
-        import sdl2.sdlttf
 
         # Render the text.
-        text_surface = sdl2.sdlttf.TTF_RenderUTF8_Blended(
-            font.font, key_text.encode('utf-8'),
-            self.__key_button_text_colour)
+        text_surface = font.render(key_text, self.__key_button_text_colour)
 
         # Calculate box dimensions with padding.
         h_padding = int(font.em * self.__KEY_BUTTON_H_PADDING_EM)
@@ -336,8 +338,7 @@ class _OverlayScreen:
         for i, (hotkey, action) in enumerate(KEYS_HELP):
             hotkey_surface = self.__draw_key_button(
                 self.__key_button_font, hotkey)
-            action_surface = sdl2.sdlttf.TTF_RenderUTF8_Blended(
-                self.__normal_font.font, action.encode('utf-8'), text_colour)
+            action_surface = self.__normal_font.render(action, text_colour)
             x = text_box_x + hotkey_offset
             y = int(text_box_y + i * text_box_vspacing +
                     (text_box_vspacing - em_height) / 2)
