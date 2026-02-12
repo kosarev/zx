@@ -196,12 +196,30 @@ class _OverlayScreen:
     # Overlay background styling.
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
 
+    class __Font:
+        def __init__(self, text_size: int) -> None:
+            import sdl2
+            import sdl2.sdlttf  # type: ignore
+            import importlib.resources
+            font_path = str(importlib.resources.files('zx').joinpath('fonts')
+                            .joinpath('DejaVuSans.ttf'))
+            self.font = sdl2.sdlttf.TTF_OpenFont(
+                font_path.encode('utf-8'), text_size)
+            em_c_width = sdl2.c_int()
+            em_c_height = sdl2.c_int()
+            sdl2.sdlttf.TTF_SizeText(
+                self.font, b'M', em_c_width, em_c_height)
+            self.em = em_c_width.value
+            self.em_height = em_c_height.value
+
     def __init__(self) -> None:
         import sdl2
         self.active = False
         self.__window_size: None | tuple[int, int] = None
-        self.__fonts: dict[int, typing.Any] = {}
         self.__texture = None
+        self.__normal_font: None | _OverlayScreen.__Font = None
+        self.__key_button_font: None | _OverlayScreen.__Font = None
+        self.__current_text_size: None | int = None
 
         # Pre-create colours using RGBA32 format (used by all surfaces).
         format_rgba32 = sdl2.SDL_AllocFormat(sdl2.SDL_PIXELFORMAT_RGBA32)
@@ -215,23 +233,24 @@ class _OverlayScreen:
             format_rgba32, *self.__OVERLAY_BG_RGBA)
         sdl2.SDL_FreeFormat(format_rgba32)
 
-    def __draw_key_button(self, font: typing.Any, key_text: str,
-                          em: int) -> typing.Any:
+    def __draw_key_button(self, font: __Font,
+                          key_text: str) -> typing.Any:
         """Draw a key name with a kbd-style box around it.
 
         Returns a surface with the key button, similar to
         TTF_RenderUTF8_Blended. Caller is responsible for freeing the surface.
         """
         import sdl2
-        import sdl2.sdlttf  # type: ignore
+        import sdl2.sdlttf
 
         # Render the text.
         text_surface = sdl2.sdlttf.TTF_RenderUTF8_Blended(
-            font, key_text.encode('utf-8'), self.__key_button_text_colour)
+            font.font, key_text.encode('utf-8'),
+            self.__key_button_text_colour)
 
         # Calculate box dimensions with padding.
-        h_padding = int(em * self.__KEY_BUTTON_H_PADDING_EM)
-        v_padding = int(em * self.__KEY_BUTTON_V_PADDING_EM)
+        h_padding = int(font.em * self.__KEY_BUTTON_H_PADDING_EM)
+        v_padding = int(font.em * self.__KEY_BUTTON_V_PADDING_EM)
         box_w = text_surface.contents.w + h_padding * 2
         box_h = text_surface.contents.h + v_padding * 2
 
@@ -275,30 +294,22 @@ class _OverlayScreen:
             text_size = 14
         else:
             text_size = 18
-        if text_size not in self.__fonts:
-            import importlib.resources
-            font_path = (importlib.resources.files('zx').joinpath('fonts')
-                         .joinpath('DejaVuSans.ttf'))
-            self.__fonts[text_size] = sdl2.sdlttf.TTF_OpenFont(
-                str(font_path).encode('utf-8'), text_size)
 
-        # Create smaller font for key buttons.
-        key_button_text_size = int(text_size * self.__KEY_BUTTON_FONT_SCALE)
-        if key_button_text_size not in self.__fonts:
-            import importlib.resources
-            font_path = (importlib.resources.files('zx').joinpath('fonts')
-                         .joinpath('DejaVuSans.ttf'))
-            self.__fonts[key_button_text_size] = sdl2.sdlttf.TTF_OpenFont(
-                str(font_path).encode('utf-8'), key_button_text_size)
+        # Create fonts if text size changed.
+        if text_size != self.__current_text_size:
+            self.__normal_font = self.__Font(text_size)
+            key_button_text_size = int(
+                text_size * self.__KEY_BUTTON_FONT_SCALE)
+            self.__key_button_font = self.__Font(key_button_text_size)
 
-        font = self.__fonts[text_size]
-        key_button_font = self.__fonts[key_button_text_size]
+            self.__current_text_size = text_size
 
-        em_c_width, em_c_height = sdl2.c_int(), sdl2.c_int()
-        sdl2.sdlttf.TTF_SizeText(font, b'M', em_c_width, em_c_height)
-        em = em_c_width.value
-        em_height = em_c_height.value
-        line_height = sdl2.sdlttf.TTF_FontLineSkip(font)
+        assert self.__normal_font is not None
+        assert self.__key_button_font is not None
+
+        em = self.__normal_font.em
+        em_height = self.__normal_font.em_height
+        line_height = sdl2.sdlttf.TTF_FontLineSkip(self.__normal_font.font)
 
         import sdl2
         surface = sdl2.SDL_CreateRGBSurfaceWithFormat(
@@ -325,9 +336,9 @@ class _OverlayScreen:
         text_colour = sdl2.SDL_Color(230, 230, 230, 255)
         for i, (hotkey, action) in enumerate(KEYS_HELP):
             hotkey_surface = self.__draw_key_button(
-                key_button_font, hotkey, em)
+                self.__key_button_font, hotkey)
             action_surface = sdl2.sdlttf.TTF_RenderUTF8_Blended(
-                font, action.encode('utf-8'), text_colour)
+                self.__normal_font.font, action.encode('utf-8'), text_colour)
             x = text_box_x + hotkey_offset
             y = int(text_box_y + i * text_box_vspacing +
                     (text_box_vspacing - em_height) / 2)
