@@ -187,7 +187,7 @@ class _OverlayScreen:
     def __init__(self) -> None:
         self.active = False
         self.__window_size: None | tuple[int, int] = None
-        self.__fonts = {}
+        self.__fonts: dict[int, typing.Any] = {}
         self.__texture = None
 
     def __rebuild(self, window_size: tuple[int, int],
@@ -203,10 +203,11 @@ class _OverlayScreen:
         else:
             text_size = 18
         if text_size not in self.__fonts:
-            # TODO: Supply the font.
-            font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
+            import importlib.resources
+            font_path = (importlib.resources.files('zx').joinpath('fonts')
+                         .joinpath('DejaVuSans.ttf'))
             self.__fonts[text_size] = sdl2.sdlttf.TTF_OpenFont(
-                font_path.encode('utf-8'), text_size)
+                str(font_path).encode('utf-8'), text_size)
 
         font = self.__fonts[text_size]
 

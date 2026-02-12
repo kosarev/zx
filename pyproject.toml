@@ -29,4 +29,4 @@ zx = 'zx:main'
 packages = ['zx']
 
 [tool.setuptools.package-data]
-zx = ['roms/*', 'py.typed']
+zx = ['roms/*', 'fonts/*', 'py.typed']

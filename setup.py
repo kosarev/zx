@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+#   ZX Spectrum Emulator.
+#   https://github.com/kosarev/zx
+#
+#   Copyright (C) 2017-2026 Ivan Kosarev.
+#   mail@ivankosarev.com
+#
+#   Published under the MIT license.
+
 import inspect
 import os
 from setuptools import Extension, setup
@@ -52,7 +60,7 @@ setup(name='zx',
           'numpy',
           'evdev; platform_system=="Linux"',
       ],
-      package_data={'zx': ['roms/*', 'py.typed']},
+      package_data={'zx': ['roms/*', 'fonts/*', 'py.typed']},
       entry_points={
           'console_scripts': [
               'zx = zx:main',
