@@ -299,7 +299,7 @@ class _OverlayScreen:
         if width < 450 or height < 400:
             text_size = 14
         else:
-            text_size = 18
+            text_size = 17
 
         # Create fonts if text size changed.
         if (self.__normal_font is None or
