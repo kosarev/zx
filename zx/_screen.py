@@ -192,11 +192,27 @@ class _OverlayScreen:
     __KEY_BUTTON_V_PADDING_EM = 0.2
     __KEY_BUTTON_BORDER_THICKNESS = 1
 
+    # Overlay background styling.
+    __OVERLAY_BG_RGBA = (0, 0, 0, 180)
+
     def __init__(self) -> None:
+        import sdl2
         self.active = False
         self.__window_size: None | tuple[int, int] = None
         self.__fonts: dict[int, typing.Any] = {}
         self.__texture = None
+
+        # Pre-create colours using RGBA32 format (used by all surfaces).
+        format_rgba32 = sdl2.SDL_AllocFormat(sdl2.SDL_PIXELFORMAT_RGBA32)
+        self.__key_button_text_colour = sdl2.SDL_Color(
+            *self.__KEY_BUTTON_TEXT_RGB)
+        self.__key_button_border_colour = sdl2.SDL_MapRGBA(
+            format_rgba32, *self.__KEY_BUTTON_BORDER_RGB)
+        self.__key_button_bg_colour = sdl2.SDL_MapRGBA(
+            format_rgba32, *self.__KEY_BUTTON_BG_RGB)
+        self.__overlay_bg_colour = sdl2.SDL_MapRGBA(
+            format_rgba32, *self.__OVERLAY_BG_RGBA)
+        sdl2.SDL_FreeFormat(format_rgba32)
 
     def __draw_key_button(self, font: typing.Any, key_text: str,
                           em: int) -> typing.Any:
@@ -208,11 +224,9 @@ class _OverlayScreen:
         import sdl2
         import sdl2.sdlttf  # type: ignore
 
-        text_colour = sdl2.SDL_Color(*self.__KEY_BUTTON_TEXT_RGB)
-
         # Render the text.
         text_surface = sdl2.sdlttf.TTF_RenderUTF8_Blended(
-            font, key_text.encode('utf-8'), text_colour)
+            font, key_text.encode('utf-8'), self.__key_button_text_colour)
 
         # Calculate box dimensions with padding.
         h_padding = int(em * self.__KEY_BUTTON_H_PADDING_EM)
@@ -224,13 +238,9 @@ class _OverlayScreen:
         button_surface = sdl2.SDL_CreateRGBSurfaceWithFormat(
             0, box_w, box_h, 32, sdl2.SDL_PIXELFORMAT_RGBA32)
 
-        border_colour = sdl2.SDL_MapRGBA(
-            button_surface.contents.format, *self.__KEY_BUTTON_BORDER_RGB)
-        bg_colour = sdl2.SDL_MapRGBA(
-            button_surface.contents.format, *self.__KEY_BUTTON_BG_RGB)
-
         # Draw background.
-        sdl2.SDL_FillRect(button_surface, None, bg_colour)
+        sdl2.SDL_FillRect(button_surface, None,
+                          self.__key_button_bg_colour)
 
         # Draw border.
         t = self.__KEY_BUTTON_BORDER_THICKNESS
@@ -240,7 +250,8 @@ class _OverlayScreen:
         right_line = (box_w - t, 0, t, box_h)
         for rect in (top_line, bottom_line, left_line, right_line):
             sdl2.SDL_FillRect(
-                button_surface, sdl2.SDL_Rect(*rect), border_colour)
+                button_surface, sdl2.SDL_Rect(*rect),
+                self.__key_button_border_colour)
 
         # Blit text centered in the box.
         sdl2.SDL_BlitSurface(
@@ -282,9 +293,7 @@ class _OverlayScreen:
         surface = sdl2.SDL_CreateRGBSurfaceWithFormat(
             0, width, height, 32, sdl2.SDL_PIXELFORMAT_RGBA32)
 
-        background_colour = sdl2.SDL_MapRGBA(
-            surface.contents.format, 0, 0, 0, 180)
-        sdl2.SDL_FillRect(surface, None, background_colour)
+        sdl2.SDL_FillRect(surface, None, self.__overlay_bg_colour)
 
         KEYS_HELP = [
             ('F2', 'Save snapshot'),
