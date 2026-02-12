@@ -184,11 +184,72 @@ class Notification(object):
 
 
 class _OverlayScreen:
+    # Key button styling.
+    __KEY_BUTTON_TEXT_RGB = (230, 230, 230, 255)
+    __KEY_BUTTON_BORDER_RGB = (180, 180, 180, 255)
+    __KEY_BUTTON_BG_RGB = (50, 50, 50, 255)
+    __KEY_BUTTON_H_PADDING_EM = 0.4
+    __KEY_BUTTON_V_PADDING_EM = 0.2
+    __KEY_BUTTON_BORDER_THICKNESS = 1
+
     def __init__(self) -> None:
         self.active = False
         self.__window_size: None | tuple[int, int] = None
         self.__fonts: dict[int, typing.Any] = {}
         self.__texture = None
+
+    def __draw_key_button(self, font: typing.Any, key_text: str,
+                          em: int) -> typing.Any:
+        """Draw a key name with a kbd-style box around it.
+
+        Returns a surface with the key button, similar to
+        TTF_RenderUTF8_Blended. Caller is responsible for freeing the surface.
+        """
+        import sdl2
+        import sdl2.sdlttf  # type: ignore
+
+        text_colour = sdl2.SDL_Color(*self.__KEY_BUTTON_TEXT_RGB)
+
+        # Render the text.
+        text_surface = sdl2.sdlttf.TTF_RenderUTF8_Blended(
+            font, key_text.encode('utf-8'), text_colour)
+
+        # Calculate box dimensions with padding.
+        h_padding = int(em * self.__KEY_BUTTON_H_PADDING_EM)
+        v_padding = int(em * self.__KEY_BUTTON_V_PADDING_EM)
+        box_w = text_surface.contents.w + h_padding * 2
+        box_h = text_surface.contents.h + v_padding * 2
+
+        # Create button surface.
+        button_surface = sdl2.SDL_CreateRGBSurfaceWithFormat(
+            0, box_w, box_h, 32, sdl2.SDL_PIXELFORMAT_RGBA32)
+
+        border_colour = sdl2.SDL_MapRGBA(
+            button_surface.contents.format, *self.__KEY_BUTTON_BORDER_RGB)
+        bg_colour = sdl2.SDL_MapRGBA(
+            button_surface.contents.format, *self.__KEY_BUTTON_BG_RGB)
+
+        # Draw background.
+        sdl2.SDL_FillRect(button_surface, None, bg_colour)
+
+        # Draw border.
+        t = self.__KEY_BUTTON_BORDER_THICKNESS
+        top_line = (0, 0, box_w, t)
+        bottom_line = (0, box_h - t, box_w, t)
+        left_line = (0, 0, t, box_h)
+        right_line = (box_w - t, 0, t, box_h)
+        for rect in (top_line, bottom_line, left_line, right_line):
+            sdl2.SDL_FillRect(
+                button_surface, sdl2.SDL_Rect(*rect), border_colour)
+
+        # Blit text centered in the box.
+        sdl2.SDL_BlitSurface(
+            text_surface, None, button_surface,
+            sdl2.SDL_Rect(h_padding, v_padding,
+                          text_surface.contents.w, text_surface.contents.h))
+
+        sdl2.SDL_FreeSurface(text_surface)
+        return button_surface
 
     def __rebuild(self, window_size: tuple[int, int],
                   renderer: _Renderer) -> None:
@@ -197,7 +258,7 @@ class _OverlayScreen:
         width, height = window_size
 
         # TODO: Use TTF_CloseFont().
-        import sdl2.sdlttf  # type: ignore
+        import sdl2.sdlttf
         if width < 450 or height < 400:
             text_size = 14
         else:
@@ -243,8 +304,7 @@ class _OverlayScreen:
 
         text_colour = sdl2.SDL_Color(230, 230, 230, 255)
         for i, (hotkey, action) in enumerate(KEYS_HELP):
-            hotkey_surface = sdl2.sdlttf.TTF_RenderUTF8_Blended(
-                font, hotkey.encode('utf-8'), text_colour)
+            hotkey_surface = self.__draw_key_button(font, hotkey, em)
             action_surface = sdl2.sdlttf.TTF_RenderUTF8_Blended(
                 font, action.encode('utf-8'), text_colour)
             x = text_box_x + hotkey_offset
