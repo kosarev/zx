@@ -323,12 +323,13 @@ class _OverlayScreen:
         sdl2.SDL_FillRect(surface, None, self.__overlay_bg_colour)
 
         KEYS_HELP = [
-            ('F2', 'Save snapshot'),
+            ('ESC', 'Toggle help'),
             ('F3', 'Load snapshot or tape file'),
-            ('F6', 'Pause/resume tape'),
-            ('F10', 'Quit'),
-            ('F11', 'Fullscreen/windowed mode'),
+            ('F2', 'Save snapshot'),
             ('PAUSE', 'Pause/resume emulation'),
+            ('F6', 'Pause/resume tape'),
+            ('F11', 'Toggle fullscreen'),
+            ('F10', 'Quit'),
         ]
 
         hotkey_offset = em * 5
