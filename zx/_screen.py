@@ -201,6 +201,7 @@ class _OverlayScreen:
             import sdl2
             import sdl2.sdlttf  # type: ignore
             import importlib.resources
+            self.text_size = text_size
             font_path = str(importlib.resources.files('zx').joinpath('fonts')
                             .joinpath('DejaVuSans.ttf'))
             self.font = sdl2.sdlttf.TTF_OpenFont(
@@ -219,7 +220,6 @@ class _OverlayScreen:
         self.__texture = None
         self.__normal_font: None | _OverlayScreen.__Font = None
         self.__key_button_font: None | _OverlayScreen.__Font = None
-        self.__current_text_size: None | int = None
 
         # Pre-create colours using RGBA32 format (used by all surfaces).
         format_rgba32 = sdl2.SDL_AllocFormat(sdl2.SDL_PIXELFORMAT_RGBA32)
@@ -296,13 +296,12 @@ class _OverlayScreen:
             text_size = 18
 
         # Create fonts if text size changed.
-        if text_size != self.__current_text_size:
+        if (self.__normal_font is None or
+                text_size != self.__normal_font.text_size):
             self.__normal_font = self.__Font(text_size)
             key_button_text_size = int(
                 text_size * self.__KEY_BUTTON_FONT_SCALE)
             self.__key_button_font = self.__Font(key_button_text_size)
-
-            self.__current_text_size = text_size
 
         assert self.__normal_font is not None
         assert self.__key_button_font is not None
