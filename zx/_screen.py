@@ -344,8 +344,7 @@ class _OverlayScreen:
         self.__display_scale: float = 0.0
         self.__texture = None
 
-    def __draw_key_button(self, font: _Font,
-                          key_text: str,
+    def __draw_key_button(self, key_text: str,
                           renderer: '_Renderer') -> typing.Any:
         """Draw a key name with a kbd-style box around it.
 
@@ -353,6 +352,8 @@ class _OverlayScreen:
         TTF_RenderUTF8_Blended. Caller is responsible for freeing the surface.
         """
         assert renderer.display_scale is not None
+        assert renderer.key_button_font is not None
+        font = renderer.key_button_font
         # Render the text.
         text_surface = font.render(key_text, self.__KEY_BUTTON_TEXT_RGB)
 
@@ -421,8 +422,7 @@ class _OverlayScreen:
         text_box_y = max(0, (height - text_box_height) // 2)
 
         for i, (hotkey, action) in enumerate(KEYS_HELP):
-            hotkey_surface = self.__draw_key_button(
-                renderer.key_button_font, hotkey, renderer)
+            hotkey_surface = self.__draw_key_button(hotkey, renderer)
             action_surface = renderer.normal_font.render(
                 action, self.__KEY_BUTTON_TEXT_RGB)
             x = text_box_x + hotkey_offset
