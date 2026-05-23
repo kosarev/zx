@@ -563,7 +563,7 @@ class ScreenWindow(Device):
             Destroy: self.__on_destroy,
         }
 
-        self.__sidebar = _OverlayScreen()
+        self.__overlay = _OverlayScreen()
         self._notification = Notification()
         self._screencast = Screencast()
 
@@ -623,8 +623,8 @@ class ScreenWindow(Device):
         # TODO
         self._screencast.on_draw(self.__pixel_texture)
 
-        # Draw sidebar.
-        self.__sidebar.draw(window_size, self.__renderer)
+        # Draw overlay screen.
+        self.__overlay.draw(window_size, self.__renderer)
 
         # Draw notifications.
         self._notification.draw(window_size, (width, height), self.__renderer)
@@ -632,7 +632,7 @@ class ScreenWindow(Device):
         self.__renderer.present()
 
     def _toggle_sidebar(self, devices: Dispatcher) -> None:
-        self.__sidebar.active ^= True
+        self.__overlay.active ^= True
 
     def _save_snapshot(self, devices: Dispatcher) -> None:
         # TODO: Add file filters.
