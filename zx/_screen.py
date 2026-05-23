@@ -88,6 +88,16 @@ class _Renderer:
         import sdl2
         sdl2.SDL_RenderDrawRect(self.sdl_renderer, sdl2.SDL_Rect(x, y, w, h))
 
+    def hline(self, x1: int, x2: int, y: int,
+              color: tuple[int, int, int, int]) -> None:
+        import sdl2.sdlgfx  # type: ignore[import-untyped]
+        sdl2.sdlgfx.hlineRGBA(self.sdl_renderer, x1, x2, y, *color)
+
+    def aacircle(self, x: int, y: int, r: int,
+                 color: tuple[int, int, int, int]) -> None:
+        import sdl2.sdlgfx
+        sdl2.sdlgfx.aacircleRGBA(self.sdl_renderer, x, y, r, *color)
+
     def present(self) -> None:
         import sdl2
         sdl2.SDL_RenderPresent(self.sdl_renderer)
@@ -118,22 +128,16 @@ def _draw_tape_sign(renderer: _Renderer, x: float, y: float,
     renderer.draw_rect(int(x - size * 0.5), int(y - size * (H / 2)),
                        int(size), int(size * H))
 
-    import sdl2.sdlgfx  # type: ignore
-    sdl2.sdlgfx.hlineRGBA(
-        renderer.sdl_renderer,
+    renderer.hline(
         int(x - size * (D - 0.15)),
         int(x + size * (D - 0.15)),
         int(y - size * R),
-        *rgb('#ffffff', alpha))
+        rgb('#ffffff', alpha))
 
-    sdl2.sdlgfx.aacircleRGBA(
-        renderer.sdl_renderer,
-        int(x - size * (D - R / 2)), int(y),
-        int(size * R), *rgb('#ffffff', alpha))
-    sdl2.sdlgfx.aacircleRGBA(
-        renderer.sdl_renderer,
-        int(x + size * (D - R / 2)), int(y),
-        int(size * R), *rgb('#ffffff', alpha))
+    renderer.aacircle(int(x - size * (D - R / 2)), int(y),
+                      int(size * R), rgb('#ffffff', alpha))
+    renderer.aacircle(int(x + size * (D - R / 2)), int(y),
+                      int(size * R), rgb('#ffffff', alpha))
 
 
 # TODO: Move to the class. +Same for other drawing functions.
