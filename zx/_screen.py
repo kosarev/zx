@@ -438,13 +438,12 @@ class _OverlayScreen:
         if not self.active:
             return
 
-        assert renderer.window_size is not None
         if (self.__window_size != renderer.window_size or
                 self.__display_scale != renderer.display_scale):
             self.__rebuild(renderer)
 
-        window_width, window_height = renderer.window_size
-        renderer.copy(self.__texture, 0, 0, window_width, window_height)
+        assert renderer.window_size is not None
+        renderer.copy(self.__texture, 0, 0, *renderer.window_size)
 
 
 # TODO: A quick solution for making screencasts.
