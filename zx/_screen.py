@@ -67,8 +67,12 @@ _DrawProc = typing.Callable[
 
 
 class _Renderer:
+    __KEY_BUTTON_FONT_SCALE = 0.85
+
     window_size: None | tuple[int, int]
     display_scale: None | float
+    normal_font: typing.Optional['_Font']
+    key_button_font: typing.Optional['_Font']
 
     def __init__(self, window: _SDLWindow) -> None:
         import sdl2  # type: ignore[import-untyped]
@@ -80,11 +84,31 @@ class _Renderer:
             self.sdl_renderer, sdl2.SDL_BLENDMODE_BLEND)
         self.window_size = None
         self.display_scale = None
+        self.normal_font = None
+        self.key_button_font = None
 
     def reset(self, window_size: tuple[int, int],
               display_scale: float) -> None:
         self.window_size = window_size
         self.display_scale = display_scale
+
+        width, height = window_size
+        logical_width = width / display_scale
+        logical_height = height / display_scale
+
+        # TODO: Use TTF_CloseFont().
+        if logical_width < 450 or logical_height < 400:
+            text_size = 14
+        else:
+            text_size = 17
+
+        physical_size = round(text_size * display_scale)
+        if (self.normal_font is None or
+                physical_size != self.normal_font.text_size):
+            self.normal_font = self.create_font(physical_size)
+            kb_size = round(
+                text_size * self.__KEY_BUTTON_FONT_SCALE * display_scale)
+            self.key_button_font = self.create_font(kb_size)
 
     def clear(self) -> None:
         import sdl2
@@ -310,7 +334,6 @@ class _OverlayScreen:
     __KEY_BUTTON_H_PADDING_EM = 0.4
     __KEY_BUTTON_V_PADDING_EM = 0.2
     __KEY_BUTTON_BORDER_THICKNESS = 1
-    __KEY_BUTTON_FONT_SCALE = 0.85
 
     # Overlay background styling.
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
@@ -320,8 +343,6 @@ class _OverlayScreen:
         self.__window_size: None | tuple[int, int] = None
         self.__display_scale: float = 0.0
         self.__texture = None
-        self.__normal_font: None | _Font = None
-        self.__key_button_font: None | _Font = None
 
     def __draw_key_button(self, font: _Font,
                           key_text: str,
@@ -368,33 +389,16 @@ class _OverlayScreen:
     def __rebuild(self, renderer: '_Renderer') -> None:
         assert renderer.display_scale is not None
         assert renderer.window_size is not None
+        assert renderer.normal_font is not None
+        assert renderer.key_button_font is not None
         assert (self.__window_size != renderer.window_size or
                 self.__display_scale != renderer.display_scale)
 
         width, height = renderer.window_size
-        logical_width = width / renderer.display_scale
-        logical_height = height / renderer.display_scale
 
-        # TODO: Use TTF_CloseFont().
-        if logical_width < 450 or logical_height < 400:
-            text_size = round(14 * renderer.display_scale)
-        else:
-            text_size = round(17 * renderer.display_scale)
-
-        # Create fonts if text size changed.
-        if (self.__normal_font is None or
-                text_size != self.__normal_font.text_size):
-            self.__normal_font = renderer.create_font(text_size)
-            key_button_text_size = int(
-                text_size * self.__KEY_BUTTON_FONT_SCALE)
-            self.__key_button_font = renderer.create_font(key_button_text_size)
-
-        assert self.__normal_font is not None
-        assert self.__key_button_font is not None
-
-        em = self.__normal_font.em
-        em_height = self.__normal_font.em_height
-        line_height = self.__normal_font.line_height
+        em = renderer.normal_font.em
+        em_height = renderer.normal_font.em_height
+        line_height = renderer.normal_font.line_height
 
         surface = renderer.create_surface(width, height)
         renderer.fill_surface(surface, self.__OVERLAY_BG_RGBA)
@@ -418,8 +422,8 @@ class _OverlayScreen:
 
         for i, (hotkey, action) in enumerate(KEYS_HELP):
             hotkey_surface = self.__draw_key_button(
-                self.__key_button_font, hotkey, renderer)
-            action_surface = self.__normal_font.render(
+                renderer.key_button_font, hotkey, renderer)
+            action_surface = renderer.normal_font.render(
                 action, self.__KEY_BUTTON_TEXT_RGB)
             x = text_box_x + hotkey_offset
             y = int(text_box_y + i * text_box_vspacing +
