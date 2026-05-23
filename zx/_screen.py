@@ -56,6 +56,7 @@ def rgb(colour: str, alpha: float = 1.0) -> _Colour:
     return r, g, b, int(0xff * alpha)
 
 
+_SDLWindow = typing.Any
 _SDLRenderer = typing.Any
 _SDLSurface = typing.Any
 _SDLTexture = typing.Any
@@ -69,8 +70,14 @@ class _Renderer:
     window_size: None | tuple[int, int]
     display_scale: None | float
 
-    def __init__(self, sdl_renderer: _SDLRenderer) -> None:
-        self.sdl_renderer = sdl_renderer
+    def __init__(self, window: _SDLWindow) -> None:
+        import sdl2  # type: ignore[import-untyped]
+        rendering_driver_index = -1
+        renderer_flags = 0
+        self.sdl_renderer = sdl2.SDL_CreateRenderer(
+            window, rendering_driver_index, renderer_flags)
+        sdl2.SDL_SetRenderDrawBlendMode(
+            self.sdl_renderer, sdl2.SDL_BLENDMODE_BLEND)
         self.window_size = None
         self.display_scale = None
 
@@ -80,7 +87,7 @@ class _Renderer:
         self.display_scale = display_scale
 
     def clear(self) -> None:
-        import sdl2  # type: ignore[import-untyped]
+        import sdl2
         sdl2.SDL_RenderClear(self.sdl_renderer)
 
     def set_draw_colour(self, colour: _Colour) -> None:
@@ -523,20 +530,12 @@ class ScreenWindow(Device):
             sdl2.SDL_WINDOW_SHOWN | sdl2.SDL_WINDOW_RESIZABLE |
             sdl2.SDL_WINDOW_ALLOW_HIGHDPI)
 
-        rendering_driver_index = -1
-        renderer_flags = 0
-        sdl_renderer = sdl2.SDL_CreateRenderer(
-            self.__window, rendering_driver_index, renderer_flags)
-
-        sdl2.SDL_SetRenderDrawBlendMode(sdl_renderer,
-                                        sdl2.SDL_BLENDMODE_BLEND)
-
-        self.__renderer = _Renderer(sdl_renderer)
+        self.__renderer = _Renderer(self.__window)
 
         self.__pixels = bytearray()
 
         self.__pixel_texture = sdl2.SDL_CreateTexture(
-            sdl_renderer,
+            self.__renderer.sdl_renderer,
             sdl2.SDL_PIXELFORMAT_RGB888,
             sdl2.SDL_TEXTUREACCESS_STREAMING,
             self.frame_width, self.frame_height)
