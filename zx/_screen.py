@@ -493,7 +493,6 @@ class ScreenWindow(Device):
         self.frame_width, self.frame_height = frame_size
 
         self.scale = 1 if SCREENCAST else 2
-        self.__display_scale: float | None = None
 
         if ('WAYLAND_DISPLAY' in os.environ and
                 'SDL_VIDEODRIVER' not in os.environ):
