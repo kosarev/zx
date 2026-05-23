@@ -54,10 +54,17 @@ def rgb(colour: str, alpha: float = 1) -> tuple[float, float, float, float]:
     return r, g, b, int(0xff * alpha)
 
 
-_Renderer = typing.Any
+_SDLRenderer = typing.Any
 _DrawProc = typing.Callable[
-    [_Renderer, float, float, float, float, float],
+    [_SDLRenderer, float, float, float, float, float],
     None]
+
+
+class _Renderer:
+    def __init__(self, sdl_renderer: _SDLRenderer,
+                 display_scale: float) -> None:
+        self.sdl_renderer = sdl_renderer
+        self.display_scale = display_scale
 
 
 def _draw_pause_sign(renderer: int, x: float, y: float,
@@ -161,14 +168,14 @@ class Notification(object):
         self._draw = None
 
     def draw(self, window_size: tuple[int, int], screen_size: tuple[int, int],
-             display_scale: float, renderer: _Renderer) -> None:
+             renderer: _Renderer) -> None:
         if not self._timestamp:
             return
 
         width, height = screen_size
         window_width, window_height = window_size
 
-        size = min(80 * display_scale, width * 0.2)
+        size = min(80 * renderer.display_scale, width * 0.2)
         x = (window_width - size) // 2
         y = (window_height - size) // 2
 
@@ -180,8 +187,8 @@ class Notification(object):
             return
 
         assert self._draw is not None
-        self._draw(renderer, x + size / 2, y + size / 2, size, alpha,
-                   self._time.get())
+        self._draw(renderer.sdl_renderer, x + size / 2, y + size / 2, size,
+                   alpha, self._time.get())
 
 
 class _OverlayScreen:
@@ -246,7 +253,7 @@ class _OverlayScreen:
 
     def __draw_key_button(self, font: __Font,
                           key_text: str,
-                          display_scale: float) -> typing.Any:
+                          renderer: '_Renderer') -> typing.Any:
         """Draw a key name with a kbd-style box around it.
 
         Returns a surface with the key button, similar to
@@ -272,7 +279,7 @@ class _OverlayScreen:
                           self.__key_button_bg_colour)
 
         # Draw border.
-        t = round(self.__KEY_BUTTON_BORDER_THICKNESS * display_scale)
+        t = round(self.__KEY_BUTTON_BORDER_THICKNESS * renderer.display_scale)
         top_line = (0, 0, box_w, t)
         bottom_line = (0, box_h - t, box_w, t)
         left_line = (0, 0, t, box_h)
@@ -292,21 +299,20 @@ class _OverlayScreen:
         return button_surface
 
     def __rebuild(self, window_size: tuple[int, int],
-                  display_scale: float,
-                  renderer: _Renderer) -> None:
+                  renderer: '_Renderer') -> None:
         assert (self.__window_size != window_size or
-                self.__display_scale != display_scale)
+                self.__display_scale != renderer.display_scale)
 
         width, height = window_size
-        logical_width = width / display_scale
-        logical_height = height / display_scale
+        logical_width = width / renderer.display_scale
+        logical_height = height / renderer.display_scale
 
         # TODO: Use TTF_CloseFont().
         import sdl2.sdlttf
         if logical_width < 450 or logical_height < 400:
-            text_size = round(14 * display_scale)
+            text_size = round(14 * renderer.display_scale)
         else:
-            text_size = round(17 * display_scale)
+            text_size = round(17 * renderer.display_scale)
 
         # Create fonts if text size changed.
         if (self.__normal_font is None or
@@ -349,7 +355,7 @@ class _OverlayScreen:
         text_colour = sdl2.SDL_Color(230, 230, 230, 255)
         for i, (hotkey, action) in enumerate(KEYS_HELP):
             hotkey_surface = self.__draw_key_button(
-                self.__key_button_font, hotkey, display_scale)
+                self.__key_button_font, hotkey, renderer)
             action_surface = self.__normal_font.render(action, text_colour)
             x = text_box_x + hotkey_offset
             y = int(text_box_y + i * text_box_vspacing +
@@ -367,7 +373,8 @@ class _OverlayScreen:
             sdl2.SDL_FreeSurface(hotkey_surface)
             sdl2.SDL_FreeSurface(action_surface)
 
-        texture = sdl2.SDL_CreateTextureFromSurface(renderer, surface)
+        texture = sdl2.SDL_CreateTextureFromSurface(renderer.sdl_renderer,
+                                                    surface)
         sdl2.SDL_SetTextureBlendMode(texture, sdl2.SDL_BLENDMODE_BLEND)
 
         sdl2.SDL_FreeSurface(surface)
@@ -377,20 +384,20 @@ class _OverlayScreen:
         self.__texture = texture
 
         self.__window_size = window_size
-        self.__display_scale = display_scale
+        self.__display_scale = renderer.display_scale
 
-    def draw(self, window_size: tuple[int, int], display_scale: float,
-             renderer: _Renderer) -> None:
+    def draw(self, window_size: tuple[int, int],
+             renderer: '_Renderer') -> None:
         if not self.active:
             return
 
         if (self.__window_size != window_size or
-                self.__display_scale != display_scale):
-            self.__rebuild(window_size, display_scale, renderer)
+                self.__display_scale != renderer.display_scale):
+            self.__rebuild(window_size, renderer)
 
         import sdl2
         window_width, window_height = window_size
-        sdl2.SDL_RenderCopy(renderer, self.__texture, None,
+        sdl2.SDL_RenderCopy(renderer.sdl_renderer, self.__texture, None,
                             sdl2.SDL_Rect(0, 0, window_width, window_height))
 
 
@@ -585,12 +592,13 @@ class ScreenWindow(Device):
         # TODO
         self._screencast.on_draw(self.__pixel_texture)
 
+        renderer = _Renderer(self.__renderer, display_scale)
+
         # Draw sidebar.
-        self.__sidebar.draw(window_size, display_scale, self.__renderer)
+        self.__sidebar.draw(window_size, renderer)
 
         # Draw notifications.
-        self._notification.draw(window_size, (width, height),
-                                display_scale, self.__renderer)
+        self._notification.draw(window_size, (width, height), renderer)
 
         sdl2.SDL_RenderPresent(self.__renderer)
 
