@@ -148,10 +148,10 @@ class _Renderer:
     def create_font(self, size: int) -> '_Font':
         return _Font(size)
 
-    def create_surface(self, w: int, h: int) -> _SDLSurface:
+    def create_surface(self, w: float, h: float) -> _SDLSurface:
         import sdl2
         return sdl2.SDL_CreateRGBSurfaceWithFormat(
-            0, w, h, 32, sdl2.SDL_PIXELFORMAT_RGBA32)
+            0, round(w), round(h), 32, sdl2.SDL_PIXELFORMAT_RGBA32)
 
     def free_surface(self, surface: _SDLSurface) -> None:
         import sdl2
@@ -165,17 +165,19 @@ class _Renderer:
             sdl2.SDL_MapRGBA(surface.contents.format, *colour))
 
     def fill_surface_rect(self, surface: _SDLSurface,
-                          x: int, y: int, w: int, h: int,
+                          x: float, y: float, w: float, h: float,
                           colour: _Colour) -> None:
         import sdl2
         sdl2.SDL_FillRect(
-            surface, sdl2.SDL_Rect(x, y, w, h),
+            surface, sdl2.SDL_Rect(round(x), round(y), round(w), round(h)),
             sdl2.SDL_MapRGBA(surface.contents.format, *colour))
 
     def blit_surface(self, src: _SDLSurface, dst: _SDLSurface,
-                     dst_x: int, dst_y: int) -> None:
+                     dst_x: float, dst_y: float) -> None:
         import sdl2
-        sdl2.SDL_BlitSurface(src, None, dst, sdl2.SDL_Rect(dst_x, dst_y, 0, 0))
+        sdl2.SDL_BlitSurface(
+            src, None, dst,
+            sdl2.SDL_Rect(round(dst_x), round(dst_y), 0, 0))
 
     def create_texture_from_surface(self, surface: _SDLSurface) -> _SDLTexture:
         import sdl2
@@ -202,8 +204,8 @@ class _Renderer:
         text_surface = font.render(key_text, TEXT_RGB)
 
         # Calculate box dimensions with padding.
-        h_padding = int(font.em * H_PADDING_EM)
-        v_padding = int(font.em * V_PADDING_EM)
+        h_padding = font.em * H_PADDING_EM
+        v_padding = font.em * V_PADDING_EM
         box_w = text_surface.contents.w + h_padding * 2
         box_h = text_surface.contents.h + v_padding * 2
 
@@ -214,7 +216,7 @@ class _Renderer:
         self.fill_surface(button_surface, BG_RGB)
 
         # Draw border.
-        t = round(BORDER_THICKNESS * self.display_scale)
+        t = BORDER_THICKNESS * self.display_scale
         top_line = (0, 0, box_w, t)
         bottom_line = (0, box_h - t, box_w, t)
         left_line = (0, 0, t, box_h)
