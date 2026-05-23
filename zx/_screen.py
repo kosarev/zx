@@ -358,13 +358,13 @@ class _OverlayScreen:
         renderer.free_surface(text_surface)
         return button_surface
 
-    def __rebuild(self, window_size: tuple[int, int],
-                  renderer: '_Renderer') -> None:
+    def __rebuild(self, renderer: '_Renderer') -> None:
         assert renderer.display_scale is not None
-        assert (self.__window_size != window_size or
+        assert renderer.window_size is not None
+        assert (self.__window_size != renderer.window_size or
                 self.__display_scale != renderer.display_scale)
 
-        width, height = window_size
+        width, height = renderer.window_size
         logical_width = width / renderer.display_scale
         logical_height = height / renderer.display_scale
 
@@ -431,19 +431,19 @@ class _OverlayScreen:
             renderer.destroy_texture(self.__texture)
         self.__texture = texture
 
-        self.__window_size = window_size
+        self.__window_size = renderer.window_size
         self.__display_scale = renderer.display_scale
 
-    def draw(self, window_size: tuple[int, int],
-             renderer: '_Renderer') -> None:
+    def draw(self, renderer: '_Renderer') -> None:
         if not self.active:
             return
 
-        if (self.__window_size != window_size or
+        assert renderer.window_size is not None
+        if (self.__window_size != renderer.window_size or
                 self.__display_scale != renderer.display_scale):
-            self.__rebuild(window_size, renderer)
+            self.__rebuild(renderer)
 
-        window_width, window_height = window_size
+        window_width, window_height = renderer.window_size
         renderer.copy(self.__texture, 0, 0, window_width, window_height)
 
 
@@ -634,7 +634,7 @@ class ScreenWindow(Device):
         self._screencast.on_draw(self.__pixel_texture)
 
         # Draw overlay screen.
-        self.__overlay.draw(window_size, self.__renderer)
+        self.__overlay.draw(self.__renderer)
 
         # Draw notifications.
         self._notification.draw(window_size, (width, height), self.__renderer)
