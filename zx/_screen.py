@@ -56,7 +56,7 @@ def rgb(colour: str, alpha: float = 1) -> tuple[int, int, int, int]:
 
 _SDLRenderer = typing.Any
 _DrawProc = typing.Callable[
-    [_SDLRenderer, float, float, float, float, float],
+    ['_Renderer', float, float, float, float, float],
     None]
 
 
@@ -84,28 +84,27 @@ class _Renderer:
         sdl2.SDL_RenderCopy(self.sdl_renderer, texture, None,
                             sdl2.SDL_Rect(x, y, w, h))
 
+    def draw_rect(self, x: int, y: int, w: int, h: int) -> None:
+        import sdl2
+        sdl2.SDL_RenderDrawRect(self.sdl_renderer, sdl2.SDL_Rect(x, y, w, h))
+
     def present(self) -> None:
         import sdl2
         sdl2.SDL_RenderPresent(self.sdl_renderer)
 
 
-def _draw_pause_sign(renderer: _SDLRenderer, x: float, y: float,
+def _draw_pause_sign(renderer: _Renderer, x: float, y: float,
                      size: float, alpha: float) -> None:
     w = 0.1 * size
     h = 0.4 * size
     d = 0.15 * size
 
-    import sdl2
-    sdl2.SDL_SetRenderDrawColor(renderer, *rgb('#ffffff', alpha))
-    sdl2.SDL_RenderFillRect(
-        renderer,
-        sdl2.SDL_Rect(int(x - d), int(y - h / 2), int(w), int(h)))
-    sdl2.SDL_RenderFillRect(
-        renderer,
-        sdl2.SDL_Rect(int(x + d - w), int(y - h / 2), int(w), int(h)))
+    renderer.set_draw_color(rgb('#ffffff', alpha))
+    renderer.fill_rect(int(x - d), int(y - h / 2), int(w), int(h))
+    renderer.fill_rect(int(x + d - w), int(y - h / 2), int(w), int(h))
 
 
-def _draw_tape_sign(renderer: _SDLRenderer, x: float, y: float,
+def _draw_tape_sign(renderer: _Renderer, x: float, y: float,
                     size: float, alpha: float, t: float = 0) -> None:
     R = 0.10
     D = 0.33 - R
@@ -115,40 +114,38 @@ def _draw_tape_sign(renderer: _SDLRenderer, x: float, y: float,
     # TODO: Animate the reels.
     a = t * -(RPM * 2 * PI / 60)
 
-    import sdl2
-    sdl2.SDL_SetRenderDrawColor(renderer, *rgb('#ffffff', alpha))
-    sdl2.SDL_RenderDrawRect(
-        renderer,
-        sdl2.SDL_Rect(int(x - size * 0.5), int(y - size * (H / 2)),
-                      int(size), int(size * H)))
+    renderer.set_draw_color(rgb('#ffffff', alpha))
+    renderer.draw_rect(int(x - size * 0.5), int(y - size * (H / 2)),
+                       int(size), int(size * H))
 
     import sdl2.sdlgfx  # type: ignore
     sdl2.sdlgfx.hlineRGBA(
-        renderer,
+        renderer.sdl_renderer,
         int(x - size * (D - 0.15)),
         int(x + size * (D - 0.15)),
         int(y - size * R),
         *rgb('#ffffff', alpha))
 
-    sdl2.sdlgfx.aacircleRGBA(renderer, int(x - size * (D - R / 2)), int(y),
-                             int(size * R), *rgb('#ffffff', alpha))
-    sdl2.sdlgfx.aacircleRGBA(renderer, int(x + size * (D - R / 2)), int(y),
-                             int(size * R), *rgb('#ffffff', alpha))
+    sdl2.sdlgfx.aacircleRGBA(
+        renderer.sdl_renderer,
+        int(x - size * (D - R / 2)), int(y),
+        int(size * R), *rgb('#ffffff', alpha))
+    sdl2.sdlgfx.aacircleRGBA(
+        renderer.sdl_renderer,
+        int(x + size * (D - R / 2)), int(y),
+        int(size * R), *rgb('#ffffff', alpha))
 
 
 # TODO: Move to the class. +Same for other drawing functions.
-def _draw_notification_circle(renderer: _SDLRenderer,
+def _draw_notification_circle(renderer: _Renderer,
                               x: float, y: float,
                               size: float, alpha: float) -> None:
-    import sdl2
-    sdl2.SDL_SetRenderDrawColor(renderer, *rgb('#1e1e1e', alpha))
-    sdl2.SDL_RenderFillRect(
-        renderer,
-        sdl2.SDL_Rect(int(x - size / 2), int(y - size / 2),
-                      int(size), int(size)))
+    renderer.set_draw_color(rgb('#1e1e1e', alpha))
+    renderer.fill_rect(int(x - size / 2), int(y - size / 2),
+                       int(size), int(size))
 
 
-def draw_pause_notification(renderer: _SDLRenderer,
+def draw_pause_notification(renderer: _Renderer,
                             x: float, y: float,
                             size: float, alpha: float = 1,
                             t: float = 0) -> None:
@@ -156,7 +153,7 @@ def draw_pause_notification(renderer: _SDLRenderer,
     _draw_pause_sign(renderer, x, y, size, alpha)
 
 
-def draw_tape_pause_notification(renderer: _SDLRenderer,
+def draw_tape_pause_notification(renderer: _Renderer,
                                  x: float, y: float,
                                  size: float, alpha: float = 1,
                                  t: float = 0) -> None:
@@ -165,7 +162,7 @@ def draw_tape_pause_notification(renderer: _SDLRenderer,
     _draw_pause_sign(renderer, x, y + size * 0.23, size * 0.5, alpha)
 
 
-def draw_tape_resume_notification(renderer: _SDLRenderer,
+def draw_tape_resume_notification(renderer: _Renderer,
                                   x: float, y: float,
                                   size: float, alpha: float = 1,
                                   t: float = 0) -> None:
@@ -209,7 +206,7 @@ class Notification(object):
             return
 
         assert self._draw is not None
-        self._draw(renderer.sdl_renderer, x + size / 2, y + size / 2, size,
+        self._draw(renderer, x + size / 2, y + size / 2, size,
                    alpha, self._time.get())
 
 
@@ -417,10 +414,8 @@ class _OverlayScreen:
                 self.__display_scale != renderer.display_scale):
             self.__rebuild(window_size, renderer)
 
-        import sdl2
         window_width, window_height = window_size
-        sdl2.SDL_RenderCopy(renderer.sdl_renderer, self.__texture, None,
-                            sdl2.SDL_Rect(0, 0, window_width, window_height))
+        renderer.copy(self.__texture, 0, 0, window_width, window_height)
 
 
 # TODO: A quick solution for making screencasts.
