@@ -45,7 +45,7 @@ SCREENCAST = False
 PI = 3.1415926535
 
 
-def rgb(colour: str, alpha: float = 1) -> tuple[float, float, float, float]:
+def rgb(colour: str, alpha: float = 1) -> tuple[int, int, int, int]:
     assert colour.startswith('#')
     assert len(colour) == 7
     r = int(colour[1:3], 16)
@@ -66,14 +66,36 @@ class _Renderer:
         self.sdl_renderer = sdl_renderer
         self.display_scale = display_scale
 
+    def clear(self) -> None:
+        import sdl2  # type: ignore[import-untyped]
+        sdl2.SDL_RenderClear(self.sdl_renderer)
 
-def _draw_pause_sign(renderer: int, x: float, y: float,
+    def set_draw_color(self, color: tuple[int, int, int, int]) -> None:
+        import sdl2
+        sdl2.SDL_SetRenderDrawColor(self.sdl_renderer, *color)
+
+    def fill_rect(self, x: int, y: int, w: int, h: int) -> None:
+        import sdl2
+        sdl2.SDL_RenderFillRect(self.sdl_renderer, sdl2.SDL_Rect(x, y, w, h))
+
+    def copy(self, texture: typing.Any,
+             x: int, y: int, w: int, h: int) -> None:
+        import sdl2
+        sdl2.SDL_RenderCopy(self.sdl_renderer, texture, None,
+                            sdl2.SDL_Rect(x, y, w, h))
+
+    def present(self) -> None:
+        import sdl2
+        sdl2.SDL_RenderPresent(self.sdl_renderer)
+
+
+def _draw_pause_sign(renderer: _SDLRenderer, x: float, y: float,
                      size: float, alpha: float) -> None:
     w = 0.1 * size
     h = 0.4 * size
     d = 0.15 * size
 
-    import sdl2  # type: ignore
+    import sdl2
     sdl2.SDL_SetRenderDrawColor(renderer, *rgb('#ffffff', alpha))
     sdl2.SDL_RenderFillRect(
         renderer,
@@ -83,7 +105,7 @@ def _draw_pause_sign(renderer: int, x: float, y: float,
         sdl2.SDL_Rect(int(x + d - w), int(y - h / 2), int(w), int(h)))
 
 
-def _draw_tape_sign(renderer: _Renderer, x: float, y: float,
+def _draw_tape_sign(renderer: _SDLRenderer, x: float, y: float,
                     size: float, alpha: float, t: float = 0) -> None:
     R = 0.10
     D = 0.33 - R
@@ -115,7 +137,7 @@ def _draw_tape_sign(renderer: _Renderer, x: float, y: float,
 
 
 # TODO: Move to the class. +Same for other drawing functions.
-def _draw_notification_circle(renderer: _Renderer,
+def _draw_notification_circle(renderer: _SDLRenderer,
                               x: float, y: float,
                               size: float, alpha: float) -> None:
     import sdl2
@@ -126,7 +148,7 @@ def _draw_notification_circle(renderer: _Renderer,
                       int(size), int(size)))
 
 
-def draw_pause_notification(renderer: _Renderer,
+def draw_pause_notification(renderer: _SDLRenderer,
                             x: float, y: float,
                             size: float, alpha: float = 1,
                             t: float = 0) -> None:
@@ -134,7 +156,7 @@ def draw_pause_notification(renderer: _Renderer,
     _draw_pause_sign(renderer, x, y, size, alpha)
 
 
-def draw_tape_pause_notification(renderer: _Renderer,
+def draw_tape_pause_notification(renderer: _SDLRenderer,
                                  x: float, y: float,
                                  size: float, alpha: float = 1,
                                  t: float = 0) -> None:
@@ -143,7 +165,7 @@ def draw_tape_pause_notification(renderer: _Renderer,
     _draw_pause_sign(renderer, x, y + size * 0.23, size * 0.5, alpha)
 
 
-def draw_tape_resume_notification(renderer: _Renderer,
+def draw_tape_resume_notification(renderer: _SDLRenderer,
                                   x: float, y: float,
                                   size: float, alpha: float = 1,
                                   t: float = 0) -> None:
@@ -572,22 +594,18 @@ class ScreenWindow(Device):
                      div_ceil(window_width * self.frame_height,
                               self.frame_width))
 
-        sdl2.SDL_RenderClear(self.__renderer)
+        renderer = _Renderer(self.__renderer, display_scale)
+        renderer.clear()
 
         # Draw the background.
-        sdl2.SDL_SetRenderDrawColor(self.__renderer, *rgb('#1e1e1e'))
-        sdl2.SDL_RenderFillRect(self.__renderer,
-                                sdl2.SDL_Rect(0, 0, *window_size))
+        renderer.set_draw_color(rgb('#1e1e1e'))
+        renderer.fill_rect(0, 0, *window_size)
 
         # Draw the emulated screen.
-        src_rect = None
-        sdl2.SDL_RenderCopy(
-            self.__renderer, self.__pixel_texture,
-            src_rect,
-            sdl2.SDL_Rect((window_width - width) // 2,
-                          (window_height - height) // 2,
-                          width,
-                          height))
+        renderer.copy(self.__pixel_texture,
+                      (window_width - width) // 2,
+                      (window_height - height) // 2,
+                      width, height)
 
         # TODO
         self._screencast.on_draw(self.__pixel_texture)
@@ -600,7 +618,7 @@ class ScreenWindow(Device):
         # Draw notifications.
         self._notification.draw(window_size, (width, height), renderer)
 
-        sdl2.SDL_RenderPresent(self.__renderer)
+        renderer.present()
 
     def _toggle_sidebar(self, devices: Dispatcher) -> None:
         self.__sidebar.active ^= True
