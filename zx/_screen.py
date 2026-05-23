@@ -188,6 +188,47 @@ class _Renderer:
         import sdl2
         sdl2.SDL_DestroyTexture(texture)
 
+    def draw_key_button(self, key_text: str) -> _SDLSurface:
+        TEXT_RGB: _Colour = (230, 230, 230, 255)
+        BORDER_RGB: _Colour = (180, 180, 180, 255)
+        BG_RGB: _Colour = (50, 50, 50, 255)
+        H_PADDING_EM = 0.4
+        V_PADDING_EM = 0.2
+        BORDER_THICKNESS = 1
+
+        assert self.display_scale is not None
+        assert self.key_button_font is not None
+        font = self.key_button_font
+        # Render the text.
+        text_surface = font.render(key_text, TEXT_RGB)
+
+        # Calculate box dimensions with padding.
+        h_padding = int(font.em * H_PADDING_EM)
+        v_padding = int(font.em * V_PADDING_EM)
+        box_w = text_surface.contents.w + h_padding * 2
+        box_h = text_surface.contents.h + v_padding * 2
+
+        # Create button surface.
+        button_surface = self.create_surface(box_w, box_h)
+
+        # Draw background.
+        self.fill_surface(button_surface, BG_RGB)
+
+        # Draw border.
+        t = round(BORDER_THICKNESS * self.display_scale)
+        top_line = (0, 0, box_w, t)
+        bottom_line = (0, box_h - t, box_w, t)
+        left_line = (0, 0, t, box_h)
+        right_line = (box_w - t, 0, t, box_h)
+        for rx, ry, rw, rh in (top_line, bottom_line, left_line, right_line):
+            self.fill_surface_rect(button_surface, rx, ry, rw, rh, BORDER_RGB)
+
+        # Blit text centered in the box.
+        self.blit_surface(text_surface, button_surface, h_padding, v_padding)
+
+        self.free_surface(text_surface)
+        return button_surface
+
 
 class _Font:
     def __init__(self, size: int) -> None:
@@ -327,14 +368,6 @@ class Notification(object):
 
 
 class _OverlayScreen:
-    # Key button styling.
-    __KEY_BUTTON_TEXT_RGB = (230, 230, 230, 255)
-    __KEY_BUTTON_BORDER_RGB = (180, 180, 180, 255)
-    __KEY_BUTTON_BG_RGB = (50, 50, 50, 255)
-    __KEY_BUTTON_H_PADDING_EM = 0.4
-    __KEY_BUTTON_V_PADDING_EM = 0.2
-    __KEY_BUTTON_BORDER_THICKNESS = 1
-
     # Overlay background styling.
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
 
@@ -343,49 +376,6 @@ class _OverlayScreen:
         self.__window_size: None | tuple[int, int] = None
         self.__display_scale: float = 0.0
         self.__texture = None
-
-    def __draw_key_button(self, key_text: str,
-                          renderer: '_Renderer') -> typing.Any:
-        """Draw a key name with a kbd-style box around it.
-
-        Returns a surface with the key button, similar to
-        TTF_RenderUTF8_Blended. Caller is responsible for freeing the surface.
-        """
-        assert renderer.display_scale is not None
-        assert renderer.key_button_font is not None
-        font = renderer.key_button_font
-        # Render the text.
-        text_surface = font.render(key_text, self.__KEY_BUTTON_TEXT_RGB)
-
-        # Calculate box dimensions with padding.
-        h_padding = int(font.em * self.__KEY_BUTTON_H_PADDING_EM)
-        v_padding = int(font.em * self.__KEY_BUTTON_V_PADDING_EM)
-        box_w = text_surface.contents.w + h_padding * 2
-        box_h = text_surface.contents.h + v_padding * 2
-
-        # Create button surface.
-        button_surface = renderer.create_surface(box_w, box_h)
-
-        # Draw background.
-        renderer.fill_surface(button_surface, self.__KEY_BUTTON_BG_RGB)
-
-        # Draw border.
-        t = round(self.__KEY_BUTTON_BORDER_THICKNESS * renderer.display_scale)
-        top_line = (0, 0, box_w, t)
-        bottom_line = (0, box_h - t, box_w, t)
-        left_line = (0, 0, t, box_h)
-        right_line = (box_w - t, 0, t, box_h)
-        for rx, ry, rw, rh in (top_line, bottom_line, left_line, right_line):
-            renderer.fill_surface_rect(
-                button_surface, rx, ry, rw, rh,
-                self.__KEY_BUTTON_BORDER_RGB)
-
-        # Blit text centered in the box.
-        renderer.blit_surface(
-            text_surface, button_surface, h_padding, v_padding)
-
-        renderer.free_surface(text_surface)
-        return button_surface
 
     def __rebuild(self, renderer: '_Renderer') -> None:
         assert renderer.display_scale is not None
@@ -414,6 +404,8 @@ class _OverlayScreen:
             ('F10', 'Quit'),
         ]
 
+        TEXT_RGB: _Colour = (230, 230, 230, 255)
+
         hotkey_offset = em * 5
         text_box_width = hotkey_offset + em * 14
         text_box_vspacing = line_height * 2.5
@@ -422,9 +414,8 @@ class _OverlayScreen:
         text_box_y = max(0, (height - text_box_height) // 2)
 
         for i, (hotkey, action) in enumerate(KEYS_HELP):
-            hotkey_surface = self.__draw_key_button(hotkey, renderer)
-            action_surface = renderer.normal_font.render(
-                action, self.__KEY_BUTTON_TEXT_RGB)
+            hotkey_surface = renderer.draw_key_button(hotkey)
+            action_surface = renderer.normal_font.render(action, TEXT_RGB)
             x = text_box_x + hotkey_offset
             y = int(text_box_y + i * text_box_vspacing +
                     (text_box_vspacing - em_height) / 2)
