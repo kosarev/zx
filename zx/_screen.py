@@ -102,6 +102,33 @@ class _Renderer:
         import sdl2
         sdl2.SDL_RenderPresent(self.sdl_renderer)
 
+    def create_font(self, size: int) -> '_Font':
+        return _Font(size)
+
+
+class _Font:
+    def __init__(self, size: int) -> None:
+        self.text_size = size
+
+        import importlib.resources
+        font_path = str(importlib.resources.files('zx').joinpath('fonts')
+                        .joinpath('DejaVuSans.ttf'))
+
+        import sdl2.sdlttf  # type: ignore[import-untyped]
+        self.__font = sdl2.sdlttf.TTF_OpenFont(
+            font_path.encode('utf-8'), size)
+
+        w, h = ctypes.c_int(), ctypes.c_int()
+        sdl2.sdlttf.TTF_SizeText(self.__font, b'M', w, h)
+        self.em = w.value
+        self.em_height = h.value
+        self.line_height = sdl2.sdlttf.TTF_FontLineSkip(self.__font)
+
+    def render(self, text: str, colour: typing.Any) -> typing.Any:
+        import sdl2.sdlttf
+        return sdl2.sdlttf.TTF_RenderUTF8_Blended(
+            self.__font, text.encode('utf-8'), colour)
+
 
 def _draw_pause_sign(renderer: _Renderer, x: float, y: float,
                      size: float, alpha: float) -> None:
@@ -227,40 +254,14 @@ class _OverlayScreen:
     # Overlay background styling.
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
 
-    class __Font:
-        def __init__(self, text_size: int) -> None:
-            self.text_size = text_size
-
-            import sdl2
-            import sdl2.sdlttf  # type: ignore
-            import importlib.resources
-            font_path = str(importlib.resources.files('zx').joinpath('fonts')
-                            .joinpath('DejaVuSans.ttf'))
-            self.__font = sdl2.sdlttf.TTF_OpenFont(
-                font_path.encode('utf-8'), text_size)
-
-            em_c_width = sdl2.c_int()
-            em_c_height = sdl2.c_int()
-            sdl2.sdlttf.TTF_SizeText(
-                self.__font, b'M', em_c_width, em_c_height)
-            self.em = em_c_width.value
-            self.em_height = em_c_height.value
-
-            self.line_height = sdl2.sdlttf.TTF_FontLineSkip(self.__font)
-
-        def render(self, text: str, colour: typing.Any) -> typing.Any:
-            import sdl2.sdlttf
-            return sdl2.sdlttf.TTF_RenderUTF8_Blended(
-                self.__font, text.encode('utf-8'), colour)
-
     def __init__(self) -> None:
         import sdl2
         self.active = False
         self.__window_size: None | tuple[int, int] = None
         self.__display_scale: float = 0.0
         self.__texture = None
-        self.__normal_font: None | _OverlayScreen.__Font = None
-        self.__key_button_font: None | _OverlayScreen.__Font = None
+        self.__normal_font: None | _Font = None
+        self.__key_button_font: None | _Font = None
 
         # Pre-create colours using RGBA32 format (used by all surfaces).
         format_rgba32 = sdl2.SDL_AllocFormat(sdl2.SDL_PIXELFORMAT_RGBA32)
@@ -274,7 +275,7 @@ class _OverlayScreen:
             format_rgba32, *self.__OVERLAY_BG_RGBA)
         sdl2.SDL_FreeFormat(format_rgba32)
 
-    def __draw_key_button(self, font: __Font,
+    def __draw_key_button(self, font: _Font,
                           key_text: str,
                           renderer: '_Renderer') -> typing.Any:
         """Draw a key name with a kbd-style box around it.
@@ -331,7 +332,6 @@ class _OverlayScreen:
         logical_height = height / renderer.display_scale
 
         # TODO: Use TTF_CloseFont().
-        import sdl2.sdlttf
         if logical_width < 450 or logical_height < 400:
             text_size = round(14 * renderer.display_scale)
         else:
@@ -340,10 +340,10 @@ class _OverlayScreen:
         # Create fonts if text size changed.
         if (self.__normal_font is None or
                 text_size != self.__normal_font.text_size):
-            self.__normal_font = self.__Font(text_size)
+            self.__normal_font = renderer.create_font(text_size)
             key_button_text_size = int(
                 text_size * self.__KEY_BUTTON_FONT_SCALE)
-            self.__key_button_font = self.__Font(key_button_text_size)
+            self.__key_button_font = renderer.create_font(key_button_text_size)
 
         assert self.__normal_font is not None
         assert self.__key_button_font is not None
