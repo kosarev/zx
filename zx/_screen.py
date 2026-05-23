@@ -67,8 +67,6 @@ _DrawProc = typing.Callable[
 
 
 class _Renderer:
-    __KEY_BUTTON_FONT_SCALE = 0.85
-
     window_size: None | tuple[int, int]
     display_scale: None | float
     normal_font: typing.Optional['_Font']
@@ -106,8 +104,9 @@ class _Renderer:
         if (self.normal_font is None or
                 physical_size != self.normal_font.text_size):
             self.normal_font = self.create_font(physical_size)
-            kb_size = round(
-                text_size * self.__KEY_BUTTON_FONT_SCALE * display_scale)
+
+            KEY_BUTTON_FONT_SCALE = 0.85
+            kb_size = round(text_size * KEY_BUTTON_FONT_SCALE * display_scale)
             self.key_button_font = self.create_font(kb_size)
 
     def clear(self) -> None:
