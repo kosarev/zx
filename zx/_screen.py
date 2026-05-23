@@ -66,10 +66,10 @@ _DrawProc = typing.Callable[
 
 
 class _Renderer:
-    def __init__(self, sdl_renderer: _SDLRenderer,
-                 display_scale: float) -> None:
+    display_scale: float
+
+    def __init__(self, sdl_renderer: _SDLRenderer) -> None:
         self.sdl_renderer = sdl_renderer
-        self.display_scale = display_scale
 
     def clear(self) -> None:
         import sdl2  # type: ignore[import-untyped]
@@ -516,16 +516,18 @@ class ScreenWindow(Device):
 
         rendering_driver_index = -1
         renderer_flags = 0
-        self.__renderer = sdl2.SDL_CreateRenderer(
+        sdl_renderer = sdl2.SDL_CreateRenderer(
             self.__window, rendering_driver_index, renderer_flags)
 
-        sdl2.SDL_SetRenderDrawBlendMode(self.__renderer,
+        sdl2.SDL_SetRenderDrawBlendMode(sdl_renderer,
                                         sdl2.SDL_BLENDMODE_BLEND)
+
+        self.__renderer = _Renderer(sdl_renderer)
 
         self.__pixels = bytearray()
 
         self.__pixel_texture = sdl2.SDL_CreateTexture(
-            self.__renderer,
+            sdl_renderer,
             sdl2.SDL_PIXELFORMAT_RGB888,
             sdl2.SDL_TEXTUREACCESS_STREAMING,
             self.frame_width, self.frame_height)
@@ -593,13 +595,12 @@ class ScreenWindow(Device):
         w, h = ctypes.c_int(), ctypes.c_int()
         lw, lh = ctypes.c_int(), ctypes.c_int()
         import sdl2
-        sdl2.SDL_GetRendererOutputSize(self.__renderer, ctypes.byref(w),
-                                       ctypes.byref(h))
+        sdl2.SDL_GetRendererOutputSize(self.__renderer.sdl_renderer,
+                                       ctypes.byref(w), ctypes.byref(h))
         sdl2.SDL_GetWindowSize(self.__window, ctypes.byref(lw),
                                ctypes.byref(lh))
         window_size = window_width, window_height = w.value, h.value
-        display_scale = w.value / lw.value
-        self.__display_scale = display_scale
+        self.__renderer.display_scale = w.value / lw.value
         width = min(window_width,
                     div_ceil(window_height * self.frame_width,
                              self.frame_height))
@@ -607,31 +608,28 @@ class ScreenWindow(Device):
                      div_ceil(window_width * self.frame_height,
                               self.frame_width))
 
-        renderer = _Renderer(self.__renderer, display_scale)
-        renderer.clear()
+        self.__renderer.clear()
 
         # Draw the background.
-        renderer.set_draw_colour(rgb('#1e1e1e'))
-        renderer.fill_rect(0, 0, *window_size)
+        self.__renderer.set_draw_colour(rgb('#1e1e1e'))
+        self.__renderer.fill_rect(0, 0, *window_size)
 
         # Draw the emulated screen.
-        renderer.copy(self.__pixel_texture,
-                      (window_width - width) // 2,
-                      (window_height - height) // 2,
-                      width, height)
+        self.__renderer.copy(self.__pixel_texture,
+                             (window_width - width) // 2,
+                             (window_height - height) // 2,
+                             width, height)
 
         # TODO
         self._screencast.on_draw(self.__pixel_texture)
 
-        renderer = _Renderer(self.__renderer, display_scale)
-
         # Draw sidebar.
-        self.__sidebar.draw(window_size, renderer)
+        self.__sidebar.draw(window_size, self.__renderer)
 
         # Draw notifications.
-        self._notification.draw(window_size, (width, height), renderer)
+        self._notification.draw(window_size, (width, height), self.__renderer)
 
-        renderer.present()
+        self.__renderer.present()
 
     def _toggle_sidebar(self, devices: Dispatcher) -> None:
         self.__sidebar.active ^= True
