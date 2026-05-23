@@ -66,10 +66,18 @@ _DrawProc = typing.Callable[
 
 
 class _Renderer:
-    display_scale: float
+    window_size: None | tuple[int, int]
+    display_scale: None | float
 
     def __init__(self, sdl_renderer: _SDLRenderer) -> None:
         self.sdl_renderer = sdl_renderer
+        self.window_size = None
+        self.display_scale = None
+
+    def reset(self, window_size: tuple[int, int],
+              display_scale: float) -> None:
+        self.window_size = window_size
+        self.display_scale = display_scale
 
     def clear(self) -> None:
         import sdl2  # type: ignore[import-untyped]
@@ -267,6 +275,7 @@ class Notification(object):
         if not self._timestamp:
             return
 
+        assert renderer.display_scale is not None
         width, height = screen_size
         window_width, window_height = window_size
 
@@ -315,6 +324,7 @@ class _OverlayScreen:
         Returns a surface with the key button, similar to
         TTF_RenderUTF8_Blended. Caller is responsible for freeing the surface.
         """
+        assert renderer.display_scale is not None
         # Render the text.
         text_surface = font.render(key_text, self.__KEY_BUTTON_TEXT_RGB)
 
@@ -350,6 +360,7 @@ class _OverlayScreen:
 
     def __rebuild(self, window_size: tuple[int, int],
                   renderer: '_Renderer') -> None:
+        assert renderer.display_scale is not None
         assert (self.__window_size != window_size or
                 self.__display_scale != renderer.display_scale)
 
@@ -599,7 +610,7 @@ class ScreenWindow(Device):
         sdl2.SDL_GetWindowSize(self.__window, ctypes.byref(lw),
                                ctypes.byref(lh))
         window_size = window_width, window_height = w.value, h.value
-        self.__renderer.display_scale = w.value / lw.value
+        self.__renderer.reset(window_size, w.value / lw.value)
         width = min(window_width,
                     div_ceil(window_height * self.frame_width,
                              self.frame_height))
