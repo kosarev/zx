@@ -409,30 +409,48 @@ class _MenuItem:
     y: float
     width: float
     height: float
+    __hotkey_surface: None | _Surface
+    __label_surface: None | _Surface
+    __hotkey_x: float
+    __label_x: float
 
     def __init__(self, hotkey: str, label: str) -> None:
         self.hotkey = hotkey
         self.label = label
+        self.x = 0.0
+        self.y = 0.0
+        self.width = 0.0
+        self.height = 0.0
+        self.__hotkey_surface = None
+        self.__label_surface = None
+        self.__hotkey_x = 0.0
+        self.__label_x = 0.0
 
     def rebuild(self, theme: _Theme) -> None:
         assert theme.normal_font is not None
         font = theme.normal_font
-        self.height = font.em_height
-        self.width = font.em * 5 + font.em * 14
+        TEXT_RGB: _Colour = (230, 230, 230, 255)
+        if self.__hotkey_surface:
+            self.__hotkey_surface.free()
+        if self.__label_surface:
+            self.__label_surface.free()
+        self.__hotkey_surface = theme.draw_key_button(self.hotkey)
+        self.__label_surface = font.render(self.label, TEXT_RGB)
+        self.__label_x = font.em * 5
+        self.__hotkey_x = (self.__label_x
+                           - self.__hotkey_surface.width - font.em)
+        self.width = self.__label_x + self.__label_surface.width
+        self.height = max(self.__hotkey_surface.height,
+                          self.__label_surface.height)
 
     def draw(self, surface: _Surface, theme: _Theme, font: _Font,
              parent_x: float = 0.0, parent_y: float = 0.0) -> None:
-        TEXT_RGB: _Colour = (230, 230, 230, 255)
+        assert self.__hotkey_surface is not None
+        assert self.__label_surface is not None
         x = parent_x + self.x
         y = parent_y + self.y
-        action_x = x + font.em * 5
-        hotkey_surface = theme.draw_key_button(self.hotkey)
-        action_surface = font.render(self.label, TEXT_RGB)
-        surface.blit(hotkey_surface,
-                     action_x - hotkey_surface.width - font.em, y)
-        surface.blit(action_surface, action_x, y)
-        hotkey_surface.free()
-        action_surface.free()
+        surface.blit(self.__hotkey_surface, x + self.__hotkey_x, y)
+        surface.blit(self.__label_surface, x + self.__label_x, y)
 
 
 class _Menu:
@@ -443,6 +461,10 @@ class _Menu:
 
     def __init__(self, items: list[_MenuItem]) -> None:
         self.__items = items
+        self.x = 0.0
+        self.y = 0.0
+        self.width = 0.0
+        self.height = 0.0
 
     def rebuild(self, theme: _Theme) -> None:
         assert theme.normal_font is not None
@@ -458,6 +480,13 @@ class _Menu:
             self.height += item.height + item_gap
         self.height -= item_gap
 
+    def item_at(self, x: float, y: float) -> None | _MenuItem:
+        for item in self.__items:
+            if (item.x <= x < item.x + item.width and
+                    item.y <= y < item.y + item.height):
+                return item
+        return None
+
     def draw(self, surface: _Surface, theme: _Theme, font: _Font) -> None:
         for item in self.__items:
             item.draw(surface, theme, font, self.x, self.y)
@@ -468,11 +497,13 @@ class _OverlayScreen:
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
 
     __texture: None | _Texture
+    __hovered_item: None | _MenuItem
 
     def __init__(self, theme: _Theme) -> None:
         self.active = False
         self.__theme = theme
         self.__texture = None
+        self.__hovered_item = None
 
         self.__emulation_item = _MenuItem('PAUSE', '')
         self.__tape_item = _MenuItem('F6', '')
@@ -490,6 +521,11 @@ class _OverlayScreen:
         if self.__texture:
             self.__texture.free()
         self.__texture = None
+        self.__hovered_item = None
+
+    def on_mouse_move(self, x: int, y: int) -> None:
+        self.__hovered_item = self.__menu.item_at(
+            x - self.__menu.x, y - self.__menu.y)
 
     def __rebuild(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         assert self.__texture is None
@@ -539,6 +575,13 @@ class _OverlayScreen:
         assert self.__texture is not None
         assert self.__theme.window_size is not None
         renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
+
+        if self.__hovered_item is not None:
+            item = self.__hovered_item
+            renderer.set_draw_colour((255, 255, 255, 30))
+            renderer.fill_rect(self.__menu.x + item.x,
+                               self.__menu.y + item.y,
+                               item.width, item.height)
 
 
 # TODO: A quick solution for making screencasts.
@@ -889,6 +932,11 @@ class ScreenWindow(Device):
         while sdl2.SDL_PollEvent(ctypes.byref(self.__sdl_event)) != 0:
             if self.__sdl_event.type == sdl2.SDL_QUIT:
                 self.__on_exit(dispatcher)
+            elif self.__sdl_event.type == sdl2.SDL_MOUSEMOTION:
+                e = self.__sdl_event.motion
+                scale = self.__theme.display_scale or 1.0
+                self.__overlay.on_mouse_move(
+                    round(e.x * scale), round(e.y * scale))
             elif self.__sdl_event.type == sdl2.SDL_MOUSEBUTTONDOWN:
                 self.__on_sdl_click(self.__sdl_event)
             elif self.__sdl_event.type in (sdl2.SDL_KEYDOWN, sdl2.SDL_KEYUP):
