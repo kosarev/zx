@@ -575,8 +575,9 @@ class _MainMenuPanel:
             self.__texture.free()
         self.__texture = None
 
-    def on_mouse_move(self, x: int, y: int) -> None:
-        self.__menu.select_at(x - self.__menu.x, y - self.__menu.y)
+    def __on_mouse_move(self, event: '_MouseMoveEvent') -> None:
+        self.__menu.select_at(
+            event.x - self.__menu.x, event.y - self.__menu.y)
 
     def __rebuild(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         assert self.__texture is None
@@ -670,6 +671,8 @@ class _MainMenuPanel:
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
         if isinstance(event, (PauseStateUpdated, TapeStateUpdated)):
             self.invalidate()
+        elif isinstance(event, _MouseMoveEvent):
+            self.__on_mouse_move(event)
         elif isinstance(event, _KeyEvent):
             self.__on_key(event.id, event.pressed, dispatcher)
         elif isinstance(event, _ClickEvent):
@@ -722,6 +725,12 @@ class _ClickType(enum.Enum):
 class _ClickEvent(DeviceEvent):
     def __init__(self, type: _ClickType) -> None:
         self.type = type
+
+
+class _MouseMoveEvent(DeviceEvent):
+    def __init__(self, x: int, y: int) -> None:
+        self.x = x
+        self.y = y
 
 
 class _ExceptionEvent(DeviceEvent):
@@ -1032,8 +1041,8 @@ class ScreenWindow(Device):
             elif self.__sdl_event.type == sdl2.SDL_MOUSEMOTION:
                 e = self.__sdl_event.motion
                 scale = self.__theme.display_scale or 1.0
-                self.__panel.on_mouse_move(
-                    round(e.x * scale), round(e.y * scale))
+                self.__queue_event(_MouseMoveEvent(
+                    round(e.x * scale), round(e.y * scale)))
             elif self.__sdl_event.type == sdl2.SDL_MOUSEBUTTONDOWN:
                 self.__on_sdl_click(self.__sdl_event)
             elif self.__sdl_event.type in (sdl2.SDL_KEYDOWN, sdl2.SDL_KEYUP):
