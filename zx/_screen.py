@@ -675,7 +675,7 @@ class ScreenWindow(Device):
         self.__overlay.draw(self.__renderer, dispatcher)
 
         # Draw notifications.
-        if self._notification:
+        if self._notification and not self.__overlay.active:
             self._notification.draw(window_size, (width, height),
                                     self.__renderer, self.__theme)
 
