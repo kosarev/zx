@@ -482,9 +482,10 @@ class _Menu:
             self.height += item.height
 
     def item_at(self, x: float, y: float) -> None | _MenuItem:
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            return None
         for item in self.__items:
-            if (item.x <= x < item.x + item.width and
-                    item.y <= y < item.y + item.height):
+            if item.y <= y < item.y + item.height:
                 return item
         return None
 
