@@ -495,6 +495,26 @@ class _Menu:
                 return item
         return None
 
+    def next_item(self, current: None | _MenuItem) -> None | _MenuItem:
+        if not self.__items:
+            return None
+        if current is None:
+            return self.__items[0]
+        idx = self.__items.index(current)
+        if idx + 1 < len(self.__items):
+            return self.__items[idx + 1]
+        return current
+
+    def prev_item(self, current: None | _MenuItem) -> None | _MenuItem:
+        if not self.__items:
+            return None
+        if current is None:
+            return self.__items[-1]
+        idx = self.__items.index(current)
+        if idx > 0:
+            return self.__items[idx - 1]
+        return current
+
     def item_at(self, x: float, y: float) -> None | _MenuItem:
         if not (0 <= y < self.height):
             return None
@@ -589,9 +609,18 @@ class _OverlayScreen:
                  dispatcher: Dispatcher) -> None:
         if not pressed:
             return
-        if key_id == 'RETURN' and self.active:
-            self.__activate_selected(dispatcher)
-            return
+        if self.active:
+            if key_id == 'RETURN':
+                self.__activate_selected(dispatcher)
+                return
+            if key_id == 'DOWN':
+                self.__selected_item = self.__menu.next_item(
+                    self.__selected_item)
+                return
+            if key_id == 'UP':
+                self.__selected_item = self.__menu.prev_item(
+                    self.__selected_item)
+                return
         item = self.__menu.item_for_key(key_id)
         if item is not None and item.action is not None:
             item.action(dispatcher)
