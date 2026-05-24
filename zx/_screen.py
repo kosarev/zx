@@ -413,6 +413,7 @@ class _MenuItem:
     __label_surface: None | _Surface
     __hotkey_x: float
     __label_x: float
+    __content_y: float
 
     def __init__(self, hotkey: str, label: str) -> None:
         self.hotkey = hotkey
@@ -425,6 +426,7 @@ class _MenuItem:
         self.__label_surface = None
         self.__hotkey_x = 0.0
         self.__label_x = 0.0
+        self.__content_y = 0.0
 
     def rebuild(self, theme: _Theme) -> None:
         assert theme.normal_font is not None
@@ -439,16 +441,19 @@ class _MenuItem:
         self.__label_x = font.em * 5
         self.__hotkey_x = (self.__label_x
                            - self.__hotkey_surface.width - font.em)
+        content_height = max(self.__hotkey_surface.height,
+                             self.__label_surface.height)
+        padding = content_height * 0.7
+        self.height = content_height + padding
+        self.__content_y = padding / 2
         self.width = self.__label_x + self.__label_surface.width
-        self.height = max(self.__hotkey_surface.height,
-                          self.__label_surface.height)
 
     def draw(self, surface: _Surface, theme: _Theme, font: _Font,
              parent_x: float = 0.0, parent_y: float = 0.0) -> None:
         assert self.__hotkey_surface is not None
         assert self.__label_surface is not None
         x = parent_x + self.x
-        y = parent_y + self.y
+        y = parent_y + self.y + self.__content_y
         surface.blit(self.__hotkey_surface, x + self.__hotkey_x, y)
         surface.blit(self.__label_surface, x + self.__label_x, y)
 
@@ -467,9 +472,6 @@ class _Menu:
         self.height = 0.0
 
     def rebuild(self, theme: _Theme) -> None:
-        assert theme.normal_font is not None
-        font = theme.normal_font
-        item_gap = font.em
         self.width = 0.0
         self.height = 0.0
         for item in self.__items:
@@ -477,8 +479,7 @@ class _Menu:
             item.x = 0.0
             item.y = self.height
             self.width = max(self.width, item.width)
-            self.height += item.height + item_gap
-        self.height -= item_gap
+            self.height += item.height
 
     def item_at(self, x: float, y: float) -> None | _MenuItem:
         for item in self.__items:
