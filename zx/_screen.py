@@ -120,9 +120,6 @@ class _Surface:
 
 class _Renderer:
     window_size: None | tuple[int, int]
-    display_scale: None | float
-    normal_font: typing.Optional['_Font']
-    key_button_font: typing.Optional['_Font']
 
     def __init__(self, window: _SDLWindow) -> None:
         import sdl2
@@ -133,37 +130,9 @@ class _Renderer:
         sdl2.SDL_SetRenderDrawBlendMode(
             self.sdl_renderer, sdl2.SDL_BLENDMODE_BLEND)
         self.window_size = None
-        self.display_scale = None
-        self.normal_font = None
-        self.key_button_font = None
 
-    def reset(self, window_size: tuple[int, int],
-              display_scale: float) -> None:
+    def reset(self, window_size: tuple[int, int]) -> None:
         self.window_size = window_size
-        self.display_scale = display_scale
-
-        width, height = window_size
-        logical_width = width / display_scale
-        logical_height = height / display_scale
-
-        # TODO: Use TTF_CloseFont().
-        if logical_width < 450 or logical_height < 400:
-            text_size = 14
-        else:
-            text_size = 17
-
-        physical_size = round(text_size * display_scale)
-        if (self.normal_font is None or
-                physical_size != self.normal_font.text_size):
-            self.normal_font = self.create_font(physical_size)
-
-            KEY_BUTTON_FONT_SCALE = 0.85
-            kb_size = round(text_size * KEY_BUTTON_FONT_SCALE * display_scale)
-            self.key_button_font = self.create_font(kb_size)
-
-    def scale(self, value: float) -> float:
-        assert self.display_scale is not None
-        return value * self.display_scale
 
     def clear(self) -> None:
         import sdl2
@@ -201,9 +170,6 @@ class _Renderer:
         import sdl2
         sdl2.SDL_RenderPresent(self.sdl_renderer)
 
-    def create_font(self, size: int) -> '_Font':
-        return _Font(size)
-
     def create_texture_from_surface(self, surface: _Surface) -> _SDLTexture:
         import sdl2
         texture = sdl2.SDL_CreateTextureFromSurface(
@@ -214,6 +180,69 @@ class _Renderer:
     def destroy_texture(self, texture: _SDLTexture) -> None:
         import sdl2
         sdl2.SDL_DestroyTexture(texture)
+
+
+class _Font:
+    def __init__(self, size: float) -> None:
+        self.text_size = size
+
+        import importlib.resources
+        font_path = str(importlib.resources.files('zx').joinpath('fonts')
+                        .joinpath('DejaVuSans.ttf'))
+
+        import sdl2.sdlttf  # type: ignore[import-untyped]
+        self.__font = sdl2.sdlttf.TTF_OpenFont(
+            font_path.encode('utf-8'), round(size))
+
+        w, h = ctypes.c_int(), ctypes.c_int()
+        sdl2.sdlttf.TTF_SizeText(self.__font, b'M', w, h)
+        self.em = w.value
+        self.em_height = h.value
+        self.line_height = sdl2.sdlttf.TTF_FontLineSkip(self.__font)
+
+    def render(self, text: str, colour: _Colour) -> _Surface:
+        import sdl2
+        import sdl2.sdlttf
+        return _Surface.from_sdl(sdl2.sdlttf.TTF_RenderUTF8_Blended(
+            self.__font, text.encode('utf-8'), sdl2.SDL_Color(*colour)))
+
+
+class _Theme:
+    display_scale: None | float
+    normal_font: None | _Font
+    key_button_font: None | _Font
+
+    def __init__(self) -> None:
+        self.display_scale = None
+        self.normal_font = None
+        self.key_button_font = None
+
+    def scale(self, value: float) -> float:
+        assert self.display_scale is not None
+        return value * self.display_scale
+
+    def update(self, window_size: tuple[int, int],
+               display_scale: float) -> None:
+        self.display_scale = display_scale
+
+        width, height = window_size
+        logical_width = width / display_scale
+        logical_height = height / display_scale
+
+        # TODO: Use TTF_CloseFont().
+        if logical_width < 450 or logical_height < 400:
+            text_size = 14
+        else:
+            text_size = 17
+
+        physical_size = self.scale(text_size)
+        if (self.normal_font is None or
+                physical_size != self.normal_font.text_size):
+            self.normal_font = _Font(physical_size)
+
+            KEY_BUTTON_FONT_SCALE = 0.85
+            self.key_button_font = _Font(
+                self.scale(text_size * KEY_BUTTON_FONT_SCALE))
 
     def draw_key_button(self, key_text: str) -> _Surface:
         TEXT_RGB: _Colour = (230, 230, 230, 255)
@@ -249,31 +278,6 @@ class _Renderer:
 
         text_surface.free()
         return button_surface
-
-
-class _Font:
-    def __init__(self, size: int) -> None:
-        self.text_size = size
-
-        import importlib.resources
-        font_path = str(importlib.resources.files('zx').joinpath('fonts')
-                        .joinpath('DejaVuSans.ttf'))
-
-        import sdl2.sdlttf  # type: ignore[import-untyped]
-        self.__font = sdl2.sdlttf.TTF_OpenFont(
-            font_path.encode('utf-8'), size)
-
-        w, h = ctypes.c_int(), ctypes.c_int()
-        sdl2.sdlttf.TTF_SizeText(self.__font, b'M', w, h)
-        self.em = w.value
-        self.em_height = h.value
-        self.line_height = sdl2.sdlttf.TTF_FontLineSkip(self.__font)
-
-    def render(self, text: str, colour: _Colour) -> _Surface:
-        import sdl2
-        import sdl2.sdlttf
-        return _Surface.from_sdl(sdl2.sdlttf.TTF_RenderUTF8_Blended(
-            self.__font, text.encode('utf-8'), sdl2.SDL_Color(*colour)))
 
 
 def _draw_pause_sign(renderer: _Renderer, x: float, y: float,
@@ -364,15 +368,15 @@ class Notification(object):
         self._draw = None
 
     def draw(self, window_size: tuple[int, int], screen_size: tuple[int, int],
-             renderer: _Renderer) -> None:
+             renderer: _Renderer, theme: _Theme) -> None:
         if not self._timestamp:
             return
 
-        assert renderer.display_scale is not None
+        assert theme.display_scale is not None
         width, height = screen_size
         window_width, window_height = window_size
 
-        size = min(80 * renderer.display_scale, width * 0.2)
+        size = min(80 * theme.display_scale, width * 0.2)
         x = (window_width - size) // 2
         y = (window_height - size) // 2
 
@@ -392,25 +396,27 @@ class _OverlayScreen:
     # Overlay background styling.
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
 
-    def __init__(self) -> None:
+    def __init__(self, theme: _Theme) -> None:
         self.active = False
+        self.__theme = theme
         self.__window_size: None | tuple[int, int] = None
         self.__display_scale: float = 0.0
         self.__texture = None
 
     def __rebuild(self, renderer: '_Renderer') -> None:
-        assert renderer.display_scale is not None
+        theme = self.__theme
+        assert theme.display_scale is not None
+        assert theme.normal_font is not None
+        assert theme.key_button_font is not None
         assert renderer.window_size is not None
-        assert renderer.normal_font is not None
-        assert renderer.key_button_font is not None
         assert (self.__window_size != renderer.window_size or
-                self.__display_scale != renderer.display_scale)
+                self.__display_scale != theme.display_scale)
 
         width, height = renderer.window_size
 
-        em = renderer.normal_font.em
-        em_height = renderer.normal_font.em_height
-        line_height = renderer.normal_font.line_height
+        em = theme.normal_font.em
+        em_height = theme.normal_font.em_height
+        line_height = theme.normal_font.line_height
 
         surface = _Surface(width, height)
         surface.fill(self.__OVERLAY_BG_RGBA)
@@ -435,8 +441,8 @@ class _OverlayScreen:
         text_box_y = max(0, (height - text_box_height) // 2)
 
         for i, (hotkey, action) in enumerate(KEYS_HELP):
-            hotkey_surface = renderer.draw_key_button(hotkey)
-            action_surface = renderer.normal_font.render(action, TEXT_RGB)
+            hotkey_surface = theme.draw_key_button(hotkey)
+            action_surface = theme.normal_font.render(action, TEXT_RGB)
             x = text_box_x + hotkey_offset
             y = int(text_box_y + i * text_box_vspacing +
                     (text_box_vspacing - em_height) / 2)
@@ -454,14 +460,14 @@ class _OverlayScreen:
         self.__texture = texture
 
         self.__window_size = renderer.window_size
-        self.__display_scale = renderer.display_scale
+        self.__display_scale = theme.display_scale
 
     def draw(self, renderer: '_Renderer') -> None:
         if not self.active:
             return
 
         if (self.__window_size != renderer.window_size or
-                self.__display_scale != renderer.display_scale):
+                self.__display_scale != self.__theme.display_scale):
             self.__rebuild(renderer)
 
         assert renderer.window_size is not None
@@ -586,7 +592,8 @@ class ScreenWindow(Device):
             Destroy: self.__on_destroy,
         }
 
-        self.__overlay = _OverlayScreen()
+        self.__theme = _Theme()
+        self.__overlay = _OverlayScreen(self.__theme)
         self._notification = Notification()
         self._screencast = Screencast()
 
@@ -623,7 +630,9 @@ class ScreenWindow(Device):
         sdl2.SDL_GetWindowSize(self.__window, ctypes.byref(lw),
                                ctypes.byref(lh))
         window_size = window_width, window_height = w.value, h.value
-        self.__renderer.reset(window_size, w.value / lw.value)
+        display_scale = w.value / lw.value
+        self.__renderer.reset(window_size)
+        self.__theme.update(window_size, display_scale)
         width = min(window_width,
                     div_ceil(window_height * self.frame_width,
                              self.frame_height))
@@ -650,7 +659,8 @@ class ScreenWindow(Device):
         self.__overlay.draw(self.__renderer)
 
         # Draw notifications.
-        self._notification.draw(window_size, (width, height), self.__renderer)
+        self._notification.draw(window_size, (width, height), self.__renderer,
+                                self.__theme)
 
         self.__renderer.present()
 
