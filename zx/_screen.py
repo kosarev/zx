@@ -404,6 +404,23 @@ class TapeResumeNotification(Notification):
                              alpha, t)
 
 
+class _MenuItem:
+    def __init__(self, hotkey: str, action: str) -> None:
+        self.hotkey = hotkey
+        self.action = action
+
+    def draw(self, surface: _Surface, theme: _Theme,
+             x: float, y: float, em: float, em_height: float) -> None:
+        TEXT_RGB: _Colour = (230, 230, 230, 255)
+        assert theme.normal_font is not None
+        hotkey_surface = theme.draw_key_button(self.hotkey)
+        action_surface = theme.normal_font.render(self.action, TEXT_RGB)
+        surface.blit(hotkey_surface, x - hotkey_surface.width - em, y)
+        surface.blit(action_surface, x, y)
+        hotkey_surface.free()
+        action_surface.free()
+
+
 class _OverlayScreen:
     # Overlay background styling.
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
@@ -442,36 +459,28 @@ class _OverlayScreen:
                             else 'Pause emulation')
         tape_paused = dispatcher.notify(IsTapePlayerPaused())
         tape_action = 'Resume tape' if tape_paused else 'Pause tape'
-        KEYS_HELP = [
-            ('ESC', 'Toggle help'),
-            ('F3', 'Load snapshot or tape file'),
-            ('F2', 'Save snapshot'),
-            ('PAUSE', emulation_action),
-            ('F6', tape_action),
-            ('F11', 'Toggle fullscreen'),
-            ('F10', 'Quit'),
+        items = [
+            _MenuItem('ESC', 'Toggle help'),
+            _MenuItem('F3', 'Load snapshot or tape file'),
+            _MenuItem('F2', 'Save snapshot'),
+            _MenuItem('PAUSE', emulation_action),
+            _MenuItem('F6', tape_action),
+            _MenuItem('F11', 'Toggle fullscreen'),
+            _MenuItem('F10', 'Quit'),
         ]
-
-        TEXT_RGB: _Colour = (230, 230, 230, 255)
 
         hotkey_offset = em * 5
         text_box_width = hotkey_offset + em * 14
         text_box_vspacing = line_height * 2.5
-        text_box_height = len(KEYS_HELP) * text_box_vspacing
+        text_box_height = len(items) * text_box_vspacing
         text_box_x = max(0, (width - text_box_width) // 2)
         text_box_y = max(0, (height - text_box_height) // 2)
 
-        for i, (hotkey, action) in enumerate(KEYS_HELP):
-            hotkey_surface = theme.draw_key_button(hotkey)
-            action_surface = theme.normal_font.render(action, TEXT_RGB)
+        for i, item in enumerate(items):
             x = text_box_x + hotkey_offset
             y = (text_box_y + i * text_box_vspacing +
                  (text_box_vspacing - em_height) / 2)
-            surface.blit(hotkey_surface,
-                         x - hotkey_surface.width - em, y)
-            surface.blit(action_surface, x, y)
-            hotkey_surface.free()
-            action_surface.free()
+            item.draw(surface, theme, x, y, em, em_height)
 
         texture = renderer.create_texture_from_surface(surface)
         surface.free()
