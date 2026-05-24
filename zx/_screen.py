@@ -165,6 +165,13 @@ class _Renderer:
         sdl2.sdlgfx.aacircleRGBA(self.sdl_renderer,
                                  round(x), round(y), round(r), *colour)
 
+    def arc(self, x: float, y: float, r: float,
+            start: float, end: float, colour: _Colour) -> None:
+        import sdl2.sdlgfx
+        sdl2.sdlgfx.arcRGBA(self.sdl_renderer,
+                            round(x), round(y), round(r),
+                            round(start), round(end), *colour)
+
     def present(self) -> None:
         import sdl2
         sdl2.SDL_RenderPresent(self.sdl_renderer)
@@ -316,24 +323,25 @@ class _Theme:
 
     def draw_tape_sign(self, renderer: _Renderer, x: float, y: float,
                        size: float, alpha: float, t: float = 0) -> None:
-        R = 0.10
-        D = 0.33 - R
         H = 0.6
-        RPM = 11
-
-        # TODO: Animate the reels.
-        a = t * -(RPM * 2 * PI / 60)
-
         colour = rgb(self.__SIGN_COLOUR, alpha)
         renderer.set_draw_colour(colour)
         renderer.draw_rect(x - size * 0.5, y - size * (H / 2),
                            size, size * H, self.scale(1))
 
+        R = 0.10
+        D = 0.33 - R
         renderer.hline(x - size * (D - 0.15), x + size * (D - 0.15),
                        y - size * R, colour)
 
-        renderer.aacircle(x - size * (D - R / 2), y, size * R, colour)
-        renderer.aacircle(x + size * (D - R / 2), y, size * R, colour)
+        RPM = 11
+        a = t * -(RPM * 2 * PI / 60)
+        a_deg = a * 180 / PI
+        REEL_GAP = 90
+        reel_start = a_deg + REEL_GAP
+        reel_d = size * (D - R / 2)
+        renderer.arc(x - reel_d, y, size * R, reel_start, a_deg, colour)
+        renderer.arc(x + reel_d, y, size * R, reel_start, a_deg, colour)
 
 
 class Notification(object):
@@ -365,6 +373,7 @@ class Notification(object):
 
         alpha = 1.5 - get_elapsed_time(self._timestamp)
         alpha = max(0, min(0.7, alpha))
+        alpha = 1
 
         if not alpha:
             self.clear()
