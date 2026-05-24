@@ -58,12 +58,57 @@ def rgb(colour: str, alpha: float = 1.0) -> _Colour:
 
 _SDLWindow = typing.Any
 _SDLRenderer = typing.Any
-_SDLSurface = typing.Any
 _SDLTexture = typing.Any
 _SDLFont = typing.Any
 _DrawProc = typing.Callable[
     ['_Renderer', float, float, float, float, float],
     None]
+
+
+class _Surface:
+    def __init__(self, w: float, h: float) -> None:
+        import sdl2  # type: ignore[import-untyped]
+        self.sdl_surface = sdl2.SDL_CreateRGBSurfaceWithFormat(
+            0, round(w), round(h), 32, sdl2.SDL_PIXELFORMAT_RGBA32)
+
+    @classmethod
+    def from_sdl(cls, sdl_surface: typing.Any) -> '_Surface':
+        self = cls.__new__(cls)
+        self.sdl_surface = sdl_surface
+        return self
+
+    @property
+    def width(self) -> float:
+        return float(self.sdl_surface.contents.w)
+
+    @property
+    def height(self) -> float:
+        return float(self.sdl_surface.contents.h)
+
+    def fill(self, colour: _Colour) -> None:
+        import sdl2
+        sdl2.SDL_FillRect(
+            self.sdl_surface, None,
+            sdl2.SDL_MapRGBA(self.sdl_surface.contents.format, *colour))
+
+    def fill_rect(self, x: float, y: float, w: float, h: float,
+                  colour: _Colour) -> None:
+        import sdl2
+        sdl2.SDL_FillRect(
+            self.sdl_surface,
+            sdl2.SDL_Rect(round(x), round(y), round(w), round(h)),
+            sdl2.SDL_MapRGBA(self.sdl_surface.contents.format, *colour))
+
+    def blit(self, src: '_Surface', dst_x: float, dst_y: float) -> None:
+        import sdl2
+        sdl2.SDL_BlitSurface(
+            src.sdl_surface, None, self.sdl_surface,
+            sdl2.SDL_Rect(round(dst_x), round(dst_y), 0, 0))
+
+    def free(self) -> None:
+        import sdl2
+        sdl2.SDL_FreeSurface(self.sdl_surface)
+        del self.sdl_surface
 
 
 class _Renderer:
@@ -73,7 +118,7 @@ class _Renderer:
     key_button_font: typing.Optional['_Font']
 
     def __init__(self, window: _SDLWindow) -> None:
-        import sdl2  # type: ignore[import-untyped]
+        import sdl2
         rendering_driver_index = -1
         renderer_flags = 0
         self.sdl_renderer = sdl2.SDL_CreateRenderer(
@@ -152,40 +197,10 @@ class _Renderer:
     def create_font(self, size: int) -> '_Font':
         return _Font(size)
 
-    def create_surface(self, w: float, h: float) -> _SDLSurface:
+    def create_texture_from_surface(self, surface: _Surface) -> _SDLTexture:
         import sdl2
-        return sdl2.SDL_CreateRGBSurfaceWithFormat(
-            0, round(w), round(h), 32, sdl2.SDL_PIXELFORMAT_RGBA32)
-
-    def free_surface(self, surface: _SDLSurface) -> None:
-        import sdl2
-        sdl2.SDL_FreeSurface(surface)
-
-    def fill_surface(self, surface: _SDLSurface,
-                     colour: _Colour) -> None:
-        import sdl2
-        sdl2.SDL_FillRect(
-            surface, None,
-            sdl2.SDL_MapRGBA(surface.contents.format, *colour))
-
-    def fill_surface_rect(self, surface: _SDLSurface,
-                          x: float, y: float, w: float, h: float,
-                          colour: _Colour) -> None:
-        import sdl2
-        sdl2.SDL_FillRect(
-            surface, sdl2.SDL_Rect(round(x), round(y), round(w), round(h)),
-            sdl2.SDL_MapRGBA(surface.contents.format, *colour))
-
-    def blit_surface(self, src: _SDLSurface, dst: _SDLSurface,
-                     dst_x: float, dst_y: float) -> None:
-        import sdl2
-        sdl2.SDL_BlitSurface(
-            src, None, dst,
-            sdl2.SDL_Rect(round(dst_x), round(dst_y), 0, 0))
-
-    def create_texture_from_surface(self, surface: _SDLSurface) -> _SDLTexture:
-        import sdl2
-        texture = sdl2.SDL_CreateTextureFromSurface(self.sdl_renderer, surface)
+        texture = sdl2.SDL_CreateTextureFromSurface(
+            self.sdl_renderer, surface.sdl_surface)
         sdl2.SDL_SetTextureBlendMode(texture, sdl2.SDL_BLENDMODE_BLEND)
         return texture
 
@@ -193,7 +208,7 @@ class _Renderer:
         import sdl2
         sdl2.SDL_DestroyTexture(texture)
 
-    def draw_key_button(self, key_text: str) -> _SDLSurface:
+    def draw_key_button(self, key_text: str) -> _Surface:
         TEXT_RGB: _Colour = (230, 230, 230, 255)
         BORDER_RGB: _Colour = (180, 180, 180, 255)
         BG_RGB: _Colour = (50, 50, 50, 255)
@@ -209,14 +224,14 @@ class _Renderer:
         # Calculate box dimensions with padding.
         h_padding = font.em * H_PADDING_EM
         v_padding = font.em * V_PADDING_EM
-        box_w = text_surface.contents.w + h_padding * 2
-        box_h = text_surface.contents.h + v_padding * 2
+        box_w = text_surface.width + h_padding * 2
+        box_h = text_surface.height + v_padding * 2
 
         # Create button surface.
-        button_surface = self.create_surface(box_w, box_h)
+        button_surface = _Surface(box_w, box_h)
 
         # Draw background.
-        self.fill_surface(button_surface, BG_RGB)
+        button_surface.fill(BG_RGB)
 
         # Draw border.
         t = self.scale(BORDER_THICKNESS)
@@ -225,12 +240,12 @@ class _Renderer:
         left_line = (0, 0, t, box_h)
         right_line = (box_w - t, 0, t, box_h)
         for rx, ry, rw, rh in (top_line, bottom_line, left_line, right_line):
-            self.fill_surface_rect(button_surface, rx, ry, rw, rh, BORDER_RGB)
+            button_surface.fill_rect(rx, ry, rw, rh, BORDER_RGB)
 
         # Blit text centered in the box.
-        self.blit_surface(text_surface, button_surface, h_padding, v_padding)
+        button_surface.blit(text_surface, h_padding, v_padding)
 
-        self.free_surface(text_surface)
+        text_surface.free()
         return button_surface
 
 
@@ -252,11 +267,11 @@ class _Font:
         self.em_height = h.value
         self.line_height = sdl2.sdlttf.TTF_FontLineSkip(self.__font)
 
-    def render(self, text: str, colour: _Colour) -> _SDLSurface:
+    def render(self, text: str, colour: _Colour) -> _Surface:
         import sdl2
         import sdl2.sdlttf
-        return sdl2.sdlttf.TTF_RenderUTF8_Blended(
-            self.__font, text.encode('utf-8'), sdl2.SDL_Color(*colour))
+        return _Surface.from_sdl(sdl2.sdlttf.TTF_RenderUTF8_Blended(
+            self.__font, text.encode('utf-8'), sdl2.SDL_Color(*colour)))
 
 
 def _draw_pause_sign(renderer: _Renderer, x: float, y: float,
@@ -395,8 +410,8 @@ class _OverlayScreen:
         em_height = renderer.normal_font.em_height
         line_height = renderer.normal_font.line_height
 
-        surface = renderer.create_surface(width, height)
-        renderer.fill_surface(surface, self.__OVERLAY_BG_RGBA)
+        surface = _Surface(width, height)
+        surface.fill(self.__OVERLAY_BG_RGBA)
 
         KEYS_HELP = [
             ('ESC', 'Toggle help'),
@@ -423,15 +438,14 @@ class _OverlayScreen:
             x = text_box_x + hotkey_offset
             y = int(text_box_y + i * text_box_vspacing +
                     (text_box_vspacing - em_height) / 2)
-            renderer.blit_surface(
-                hotkey_surface, surface,
-                x - hotkey_surface.contents.w - em, y)
-            renderer.blit_surface(action_surface, surface, x, y)
-            renderer.free_surface(hotkey_surface)
-            renderer.free_surface(action_surface)
+            surface.blit(hotkey_surface,
+                         x - hotkey_surface.width - em, y)
+            surface.blit(action_surface, x, y)
+            hotkey_surface.free()
+            action_surface.free()
 
         texture = renderer.create_texture_from_surface(surface)
-        renderer.free_surface(surface)
+        surface.free()
 
         if self.__texture:
             renderer.destroy_texture(self.__texture)
