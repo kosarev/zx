@@ -99,6 +99,13 @@ class _Surface:
             sdl2.SDL_Rect(round(x), round(y), round(w), round(h)),
             sdl2.SDL_MapRGBA(self.sdl_surface.contents.format, *colour))
 
+    def draw_rect(self, x: float, y: float, w: float, h: float,
+                  thickness: float, colour: _Colour) -> None:
+        self.fill_rect(x, y, w, thickness, colour)
+        self.fill_rect(x, y + h - thickness, w, thickness, colour)
+        self.fill_rect(x, y, thickness, h, colour)
+        self.fill_rect(x + w - thickness, y, thickness, h, colour)
+
     def blit(self, src: '_Surface', dst_x: float, dst_y: float) -> None:
         import sdl2
         sdl2.SDL_BlitSurface(
@@ -234,13 +241,8 @@ class _Renderer:
         button_surface.fill(BG_RGB)
 
         # Draw border.
-        t = self.scale(BORDER_THICKNESS)
-        top_line = (0, 0, box_w, t)
-        bottom_line = (0, box_h - t, box_w, t)
-        left_line = (0, 0, t, box_h)
-        right_line = (box_w - t, 0, t, box_h)
-        for rx, ry, rw, rh in (top_line, bottom_line, left_line, right_line):
-            button_surface.fill_rect(rx, ry, rw, rh, BORDER_RGB)
+        button_surface.draw_rect(0, 0, box_w, box_h,
+                                 self.scale(BORDER_THICKNESS), BORDER_RGB)
 
         # Blit text centered in the box.
         button_surface.blit(text_surface, h_padding, v_padding)
