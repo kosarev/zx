@@ -588,11 +588,23 @@ class _OverlayScreen:
         if item is not None and item.action is not None:
             item.action(dispatcher)
 
+    def __on_click(self, event: '_ClickEvent',
+                   dispatcher: Dispatcher) -> None:
+        if not self.active:
+            return
+        if event.type != _ClickType.Single:
+            return
+        item = self.__selected_item
+        if item is not None and item.action is not None:
+            item.action(dispatcher)
+
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
         if isinstance(event, (PauseStateUpdated, TapeStateUpdated)):
             self.invalidate()
         elif isinstance(event, _KeyEvent):
             self.__on_key(event.id, event.pressed, dispatcher)
+        elif isinstance(event, _ClickEvent):
+            self.__on_click(event, dispatcher)
 
     def draw(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         if not self.active:
