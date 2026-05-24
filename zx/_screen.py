@@ -146,11 +146,12 @@ class _Renderer:
                             sdl2.SDL_Rect(round(x), round(y),
                                           round(w), round(h)))
 
-    def draw_rect(self, x: float, y: float, w: float, h: float) -> None:
-        import sdl2
-        sdl2.SDL_RenderDrawRect(
-            self.sdl_renderer,
-            sdl2.SDL_Rect(round(x), round(y), round(w), round(h)))
+    def draw_rect(self, x: float, y: float, w: float, h: float,
+                  thickness: float = 1) -> None:
+        self.fill_rect(x, y, w, thickness)
+        self.fill_rect(x, y + h - thickness, w, thickness)
+        self.fill_rect(x, y, thickness, h)
+        self.fill_rect(x + w - thickness, y, thickness, h)
 
     def hline(self, x1: float, x2: float, y: float,
               colour: _Colour) -> None:
@@ -322,7 +323,7 @@ class _Theme:
 
         renderer.set_draw_colour(rgb('#ffffff', alpha))
         renderer.draw_rect(x - size * 0.5, y - size * (H / 2),
-                           size, size * H)
+                           size, size * H, self.scale(1))
 
         renderer.hline(x - size * (D - 0.15), x + size * (D - 0.15),
                        y - size * R, rgb('#ffffff', alpha))
