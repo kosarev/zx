@@ -109,6 +109,10 @@ class _Renderer:
             kb_size = round(text_size * KEY_BUTTON_FONT_SCALE * display_scale)
             self.key_button_font = self.create_font(kb_size)
 
+    def scale(self, value: float) -> float:
+        assert self.display_scale is not None
+        return value * self.display_scale
+
     def clear(self) -> None:
         import sdl2
         sdl2.SDL_RenderClear(self.sdl_renderer)
@@ -197,7 +201,6 @@ class _Renderer:
         V_PADDING_EM = 0.2
         BORDER_THICKNESS = 1
 
-        assert self.display_scale is not None
         assert self.key_button_font is not None
         font = self.key_button_font
         # Render the text.
@@ -216,7 +219,7 @@ class _Renderer:
         self.fill_surface(button_surface, BG_RGB)
 
         # Draw border.
-        t = BORDER_THICKNESS * self.display_scale
+        t = self.scale(BORDER_THICKNESS)
         top_line = (0, 0, box_w, t)
         bottom_line = (0, box_h - t, box_w, t)
         left_line = (0, 0, t, box_h)
