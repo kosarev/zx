@@ -410,12 +410,11 @@ class _MenuItem:
         self.action = action
 
     def draw(self, surface: _Surface, theme: _Theme,
-             x: float, y: float, em: float, em_height: float) -> None:
+             font: _Font, x: float, y: float) -> None:
         TEXT_RGB: _Colour = (230, 230, 230, 255)
-        assert theme.normal_font is not None
         hotkey_surface = theme.draw_key_button(self.hotkey)
-        action_surface = theme.normal_font.render(self.action, TEXT_RGB)
-        surface.blit(hotkey_surface, x - hotkey_surface.width - em, y)
+        action_surface = font.render(self.action, TEXT_RGB)
+        surface.blit(hotkey_surface, x - hotkey_surface.width - font.em, y)
         surface.blit(action_surface, x, y)
         hotkey_surface.free()
         action_surface.free()
@@ -447,9 +446,7 @@ class _OverlayScreen:
         assert theme.window_size is not None
         width, height = theme.window_size
 
-        em = theme.normal_font.em
-        em_height = theme.normal_font.em_height
-        line_height = theme.normal_font.line_height
+        font = theme.normal_font
 
         surface = _Surface(width, height)
         surface.fill(self.__OVERLAY_BG_RGBA)
@@ -469,9 +466,9 @@ class _OverlayScreen:
             _MenuItem('F10', 'Quit'),
         ]
 
-        hotkey_offset = em * 5
-        text_box_width = hotkey_offset + em * 14
-        text_box_vspacing = line_height * 2.5
+        hotkey_offset = font.em * 5
+        text_box_width = hotkey_offset + font.em * 14
+        text_box_vspacing = font.line_height * 2.5
         text_box_height = len(items) * text_box_vspacing
         text_box_x = max(0, (width - text_box_width) // 2)
         text_box_y = max(0, (height - text_box_height) // 2)
@@ -479,8 +476,8 @@ class _OverlayScreen:
         for i, item in enumerate(items):
             x = text_box_x + hotkey_offset
             y = (text_box_y + i * text_box_vspacing +
-                 (text_box_vspacing - em_height) / 2)
-            item.draw(surface, theme, x, y, em, em_height)
+                 (text_box_vspacing - font.em_height) / 2)
+            item.draw(surface, theme, font, x, y)
 
         texture = renderer.create_texture_from_surface(surface)
         surface.free()
