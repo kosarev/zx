@@ -558,7 +558,7 @@ class _MainMenuPanel:
         self.__tape_item = _MenuItem('F6', '',
                                      action=self.__on_toggle_tape_pause)
         self.__menu = _Menu([
-            _MenuItem('ESC', 'Toggle help', action=self.__on_toggle),
+            _MenuItem('ESC', 'Hide menu', action=self.__on_toggle),
             _MenuItem('F3', 'Load snapshot or tape file',
                       action=self.__on_load_file),
             _MenuItem('F2', 'Save snapshot',
