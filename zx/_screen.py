@@ -437,13 +437,16 @@ class _OverlayScreen:
         surface = _Surface(width, height)
         surface.fill(self.__OVERLAY_BG_RGBA)
 
+        emulation_paused = dispatcher.notify(GetEmulationPauseState())
+        emulation_action = ('Resume emulation' if emulation_paused
+                            else 'Pause emulation')
         tape_paused = dispatcher.notify(IsTapePlayerPaused())
         tape_action = 'Resume tape' if tape_paused else 'Pause tape'
         KEYS_HELP = [
             ('ESC', 'Toggle help'),
             ('F3', 'Load snapshot or tape file'),
             ('F2', 'Save snapshot'),
-            ('PAUSE', 'Pause/resume emulation'),
+            ('PAUSE', emulation_action),
             ('F6', tape_action),
             ('F11', 'Toggle fullscreen'),
             ('F10', 'Quit'),
@@ -815,6 +818,7 @@ class ScreenWindow(Device):
             self._notification = PauseNotification(time)
         else:
             self._notification = None
+        self.__overlay.invalidate()
 
     def _on_updated_tape_state(self, event: DeviceEvent,
                                devices: Dispatcher) -> None:
