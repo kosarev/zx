@@ -544,7 +544,8 @@ class _OverlayScreen:
 
         self.__emulation_item = _MenuItem('PAUSE', '',
                                           action=self.__on_toggle_pause)
-        self.__tape_item = _MenuItem('F6', '')
+        self.__tape_item = _MenuItem('F6', '',
+                                     action=self.__on_toggle_tape_pause)
         self.__menu = _Menu([
             _MenuItem('ESC', 'Toggle help'),
             _MenuItem('F3', 'Load snapshot or tape file'),
@@ -598,6 +599,9 @@ class _OverlayScreen:
 
     def __on_toggle_pause(self, dispatcher: Dispatcher) -> None:
         dispatcher.notify(ToggleEmulationPause())
+
+    def __on_toggle_tape_pause(self, dispatcher: Dispatcher) -> None:
+        dispatcher.notify(ToggleTapePause())
 
     def __on_toggle_fullscreen(self, dispatcher: Dispatcher) -> None:
         dispatcher.notify(ToggleFullscreen())
@@ -767,7 +771,6 @@ class ScreenWindow(Device):
             'F1': self._toggle_overlay,
             'F2': self._save_snapshot,
             'F3': self.__choose_and_load_file,
-            'F6': self.__toggle_tape_pause,
         }
 
         self._EVENT_HANDLERS: dict[type[DeviceEvent],
@@ -1037,9 +1040,6 @@ class ScreenWindow(Device):
             self.on_event(self.__events.pop(0), dispatcher, None)
 
         self.__update_screen(dispatcher)
-
-    def __toggle_tape_pause(self, devices: Dispatcher) -> None:
-        devices.notify(ToggleTapePause())
 
     def __on_destroy(self, event: DeviceEvent, devices: Dispatcher) -> None:
         import sdl2
