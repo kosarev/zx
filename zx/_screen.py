@@ -549,7 +549,7 @@ class _OverlayScreen:
         self.__tape_item = _MenuItem('F6', '',
                                      action=self.__on_toggle_tape_pause)
         self.__menu = _Menu([
-            _MenuItem('ESC', 'Toggle help'),
+            _MenuItem('ESC', 'Toggle help', action=self.__on_toggle),
             _MenuItem('F3', 'Load snapshot or tape file',
                       action=self.__on_load_file),
             _MenuItem('F2', 'Save snapshot',
@@ -601,6 +601,9 @@ class _OverlayScreen:
 
         self.__texture = texture
 
+    def __on_toggle(self, dispatcher: Dispatcher) -> None:
+        self.toggle()
+
     def __on_load_file(self, dispatcher: Dispatcher) -> None:
         dispatcher.notify(RequestLoadFile())
 
@@ -630,6 +633,9 @@ class _OverlayScreen:
     def __on_key(self, key_id: str, pressed: bool,
                  dispatcher: Dispatcher) -> None:
         if not pressed:
+            return
+        if key_id in ('ESCAPE', 'F1'):
+            self.__on_toggle(dispatcher)
             return
         if self.active:
             if key_id == 'RETURN':
@@ -776,11 +782,6 @@ class ScreenWindow(Device):
 
         self.__sdl_event = sdl2.SDL_Event()
 
-        self._KEY_HANDLERS: dict[str, typing.Callable[[Dispatcher], None]] = {
-            'ESCAPE': self._toggle_overlay,
-            'F1': self._toggle_overlay,
-        }
-
         self._EVENT_HANDLERS: dict[type[DeviceEvent],
                                    typing.Callable[[DeviceEvent, Dispatcher],
                                                    None]] = {
@@ -870,9 +871,6 @@ class ScreenWindow(Device):
 
         self.__renderer.present()
 
-    def _toggle_overlay(self, devices: Dispatcher) -> None:
-        self.__overlay.toggle()
-
     def __on_request_save_snapshot(self, event: DeviceEvent,
                                    devices: Dispatcher) -> None:
         # TODO: Add file filters.
@@ -924,9 +922,6 @@ class ScreenWindow(Device):
 
     def __on_key(self, event: DeviceEvent, devices: Dispatcher) -> typing.Any:
         assert isinstance(event, _KeyEvent)
-        if event.pressed and event.id in self._KEY_HANDLERS:
-            self._KEY_HANDLERS[event.id](devices)
-
         if not self.__overlay.active:
             zx_key_id = self.__SDL_KEYS_TO_ZX_KEYS.get(event.id, event.id)
             devices.notify(KeyStroke(zx_key_id, event.pressed))
@@ -1000,11 +995,11 @@ class ScreenWindow(Device):
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
-        self.__overlay.on_event(event, devices)
-
         event_type = type(event)
         if event_type in self._EVENT_HANDLERS:
             self._EVENT_HANDLERS[event_type](event, devices)
+
+        self.__overlay.on_event(event, devices)
         return result
 
     def _on_updated_pause_state(self, event: DeviceEvent,
