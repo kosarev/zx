@@ -60,9 +60,6 @@ _SDLWindow = typing.Any
 _SDLRenderer = typing.Any
 _SDLTexture = typing.Any
 _SDLFont = typing.Any
-_DrawProc = typing.Callable[
-    ['_Renderer', float, float, float, float, float],
-    None]
 
 
 class _Surface:
@@ -136,29 +133,36 @@ class _Renderer:
         import sdl2
         sdl2.SDL_SetRenderDrawColor(self.sdl_renderer, *colour)
 
-    def fill_rect(self, x: int, y: int, w: int, h: int) -> None:
+    def fill_rect(self, x: float, y: float, w: float, h: float) -> None:
         import sdl2
-        sdl2.SDL_RenderFillRect(self.sdl_renderer, sdl2.SDL_Rect(x, y, w, h))
+        sdl2.SDL_RenderFillRect(
+            self.sdl_renderer,
+            sdl2.SDL_Rect(round(x), round(y), round(w), round(h)))
 
     def copy(self, texture: _SDLTexture,
-             x: int, y: int, w: int, h: int) -> None:
+             x: float, y: float, w: float, h: float) -> None:
         import sdl2
         sdl2.SDL_RenderCopy(self.sdl_renderer, texture, None,
-                            sdl2.SDL_Rect(x, y, w, h))
+                            sdl2.SDL_Rect(round(x), round(y),
+                                          round(w), round(h)))
 
-    def draw_rect(self, x: int, y: int, w: int, h: int) -> None:
+    def draw_rect(self, x: float, y: float, w: float, h: float) -> None:
         import sdl2
-        sdl2.SDL_RenderDrawRect(self.sdl_renderer, sdl2.SDL_Rect(x, y, w, h))
+        sdl2.SDL_RenderDrawRect(
+            self.sdl_renderer,
+            sdl2.SDL_Rect(round(x), round(y), round(w), round(h)))
 
-    def hline(self, x1: int, x2: int, y: int,
+    def hline(self, x1: float, x2: float, y: float,
               colour: _Colour) -> None:
         import sdl2.sdlgfx  # type: ignore[import-untyped]
-        sdl2.sdlgfx.hlineRGBA(self.sdl_renderer, x1, x2, y, *colour)
+        sdl2.sdlgfx.hlineRGBA(self.sdl_renderer,
+                              round(x1), round(x2), round(y), *colour)
 
-    def aacircle(self, x: int, y: int, r: int,
+    def aacircle(self, x: float, y: float, r: float,
                  colour: _Colour) -> None:
         import sdl2.sdlgfx
-        sdl2.sdlgfx.aacircleRGBA(self.sdl_renderer, x, y, r, *colour)
+        sdl2.sdlgfx.aacircleRGBA(self.sdl_renderer,
+                                 round(x), round(y), round(r), *colour)
 
     def present(self) -> None:
         import sdl2
@@ -284,93 +288,64 @@ class _Theme:
         text_surface.free()
         return button_surface
 
+    def draw_pause_sign(self, renderer: _Renderer, x: float, y: float,
+                        size: float, alpha: float) -> None:
+        w = 0.1 * size
+        h = 0.4 * size
+        d = 0.15 * size
 
-def _draw_pause_sign(renderer: _Renderer, x: float, y: float,
-                     size: float, alpha: float) -> None:
-    w = 0.1 * size
-    h = 0.4 * size
-    d = 0.15 * size
+        renderer.set_draw_colour(rgb('#ffffff', alpha))
+        renderer.fill_rect(x - d, y - h / 2, w, h)
+        renderer.fill_rect(x + d - w, y - h / 2, w, h)
 
-    renderer.set_draw_colour(rgb('#ffffff', alpha))
-    renderer.fill_rect(int(x - d), int(y - h / 2), int(w), int(h))
-    renderer.fill_rect(int(x + d - w), int(y - h / 2), int(w), int(h))
+    def draw_tape_pause_sign(self, renderer: _Renderer, x: float, y: float,
+                             size: float, alpha: float, t: float) -> None:
+        self.draw_tape_sign(renderer, x, y - size * 0.13, size * 0.5,
+                            alpha, t)
+        self.draw_pause_sign(renderer, x, y + size * 0.23, size * 0.5, alpha)
 
+    def draw_notification_circle(self, renderer: _Renderer, x: float,
+                                 y: float, size: float,
+                                 alpha: float) -> None:
+        renderer.set_draw_colour(rgb('#1e1e1e', alpha))
+        renderer.fill_rect(x - size / 2, y - size / 2, size, size)
 
-def _draw_tape_sign(renderer: _Renderer, x: float, y: float,
-                    size: float, alpha: float, t: float = 0) -> None:
-    R = 0.10
-    D = 0.33 - R
-    H = 0.6
-    RPM = 11
+    def draw_tape_sign(self, renderer: _Renderer, x: float, y: float,
+                       size: float, alpha: float, t: float = 0) -> None:
+        R = 0.10
+        D = 0.33 - R
+        H = 0.6
+        RPM = 11
 
-    # TODO: Animate the reels.
-    a = t * -(RPM * 2 * PI / 60)
+        # TODO: Animate the reels.
+        a = t * -(RPM * 2 * PI / 60)
 
-    renderer.set_draw_colour(rgb('#ffffff', alpha))
-    renderer.draw_rect(int(x - size * 0.5), int(y - size * (H / 2)),
-                       int(size), int(size * H))
+        renderer.set_draw_colour(rgb('#ffffff', alpha))
+        renderer.draw_rect(x - size * 0.5, y - size * (H / 2),
+                           size, size * H)
 
-    renderer.hline(
-        int(x - size * (D - 0.15)),
-        int(x + size * (D - 0.15)),
-        int(y - size * R),
-        rgb('#ffffff', alpha))
+        renderer.hline(x - size * (D - 0.15), x + size * (D - 0.15),
+                       y - size * R, rgb('#ffffff', alpha))
 
-    renderer.aacircle(int(x - size * (D - R / 2)), int(y),
-                      int(size * R), rgb('#ffffff', alpha))
-    renderer.aacircle(int(x + size * (D - R / 2)), int(y),
-                      int(size * R), rgb('#ffffff', alpha))
-
-
-# TODO: Move to the class. +Same for other drawing functions.
-def _draw_notification_circle(renderer: _Renderer,
-                              x: float, y: float,
-                              size: float, alpha: float) -> None:
-    renderer.set_draw_colour(rgb('#1e1e1e', alpha))
-    renderer.fill_rect(int(x - size / 2), int(y - size / 2),
-                       int(size), int(size))
-
-
-def draw_pause_notification(renderer: _Renderer,
-                            x: float, y: float,
-                            size: float, alpha: float = 1,
-                            t: float = 0) -> None:
-    _draw_notification_circle(renderer, x, y, size, alpha)
-    _draw_pause_sign(renderer, x, y, size, alpha)
-
-
-def draw_tape_pause_notification(renderer: _Renderer,
-                                 x: float, y: float,
-                                 size: float, alpha: float = 1,
-                                 t: float = 0) -> None:
-    _draw_notification_circle(renderer, x, y, size, alpha)
-    _draw_tape_sign(renderer, x, y - size * 0.13, size * 0.5, alpha, t)
-    _draw_pause_sign(renderer, x, y + size * 0.23, size * 0.5, alpha)
-
-
-def draw_tape_resume_notification(renderer: _Renderer,
-                                  x: float, y: float,
-                                  size: float, alpha: float = 1,
-                                  t: float = 0) -> None:
-    _draw_notification_circle(renderer, x, y, size, alpha)
-    _draw_tape_sign(renderer, x, y - size * 0.015, size * 0.6, alpha, t)
+        renderer.aacircle(x - size * (D - R / 2), y,
+                          size * R, rgb('#ffffff', alpha))
+        renderer.aacircle(x + size * (D - R / 2), y,
+                          size * R, rgb('#ffffff', alpha))
 
 
 class Notification(object):
     _timestamp: None | float
-    _draw: None | _DrawProc
 
-    def __init__(self) -> None:
-        self.clear()
-
-    def set(self, draw: _DrawProc, time: Time) -> None:
+    def __init__(self, time: Time) -> None:
         self._timestamp = get_timestamp()
-        self._draw = draw
         self._time = time
 
     def clear(self) -> None:
         self._timestamp = None
-        self._draw = None
+
+    def _draw(self, theme: _Theme, renderer: _Renderer, x: float, y: float,
+              size: float, alpha: float, t: float) -> None:
+        raise NotImplementedError
 
     def draw(self, window_size: tuple[int, int], screen_size: tuple[int, int],
              renderer: _Renderer, theme: _Theme) -> None:
@@ -392,9 +367,30 @@ class Notification(object):
             self.clear()
             return
 
-        assert self._draw is not None
-        self._draw(renderer, x + size / 2, y + size / 2, size,
-                   alpha, self._time.get())
+        cx = x + size / 2
+        cy = y + size / 2
+        t = self._time.get()
+        theme.draw_notification_circle(renderer, cx, cy, size, alpha)
+        self._draw(theme, renderer, cx, cy, size, alpha, t)
+
+
+class PauseNotification(Notification):
+    def _draw(self, theme: _Theme, renderer: _Renderer, x: float, y: float,
+              size: float, alpha: float, t: float) -> None:
+        theme.draw_pause_sign(renderer, x, y, size, alpha)
+
+
+class TapePauseNotification(Notification):
+    def _draw(self, theme: _Theme, renderer: _Renderer, x: float, y: float,
+              size: float, alpha: float, t: float) -> None:
+        theme.draw_tape_pause_sign(renderer, x, y, size, alpha, t)
+
+
+class TapeResumeNotification(Notification):
+    def _draw(self, theme: _Theme, renderer: _Renderer, x: float, y: float,
+              size: float, alpha: float, t: float) -> None:
+        theme.draw_tape_sign(renderer, x, y - size * 0.015, size * 0.6,
+                             alpha, t)
 
 
 class _OverlayScreen:
@@ -593,7 +589,7 @@ class ScreenWindow(Device):
 
         self.__theme = _Theme()
         self.__overlay = _OverlayScreen(self.__theme)
-        self._notification = Notification()
+        self._notification: None | Notification = None
         self._screencast = Screencast()
 
         if SCREENCAST:
@@ -657,8 +653,9 @@ class ScreenWindow(Device):
         self.__overlay.draw(self.__renderer)
 
         # Draw notifications.
-        self._notification.draw(window_size, (width, height), self.__renderer,
-                                self.__theme)
+        if self._notification:
+            self._notification.draw(window_size, (width, height),
+                                    self.__renderer, self.__theme)
 
         self.__renderer.present()
 
@@ -796,18 +793,19 @@ class ScreenWindow(Device):
         assert isinstance(event, PauseStateUpdated)
         if devices.notify(GetEmulationPauseState()):
             time = devices.notify(GetEmulationTime())
-            self._notification.set(draw_pause_notification, time)
+            self._notification = PauseNotification(time)
         else:
-            self._notification.clear()
+            self._notification = None
 
     def _on_updated_tape_state(self, event: DeviceEvent,
                                devices: Dispatcher) -> None:
         assert isinstance(event, TapeStateUpdated)
         tape_paused = devices.notify(IsTapePlayerPaused())
-        draw = (draw_tape_pause_notification if tape_paused
-                else draw_tape_resume_notification)
         tape_time = devices.notify(GetTapePlayerTime())
-        self._notification.set(draw, tape_time)
+        if tape_paused:
+            self._notification = TapePauseNotification(tape_time)
+        else:
+            self._notification = TapeResumeNotification(tape_time)
 
     def _on_quantum_run(self, event: DeviceEvent,
                         dispatcher: Dispatcher) -> None:
