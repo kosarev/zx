@@ -503,13 +503,13 @@ class _OverlayScreen:
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
 
     __texture: None | _Texture
-    __hovered_item: None | _MenuItem
+    __selected_item: None | _MenuItem
 
     def __init__(self, theme: _Theme) -> None:
         self.active = False
         self.__theme = theme
         self.__texture = None
-        self.__hovered_item = None
+        self.__selected_item = None
 
         self.__emulation_item = _MenuItem('PAUSE', '')
         self.__tape_item = _MenuItem('F6', '')
@@ -527,10 +527,10 @@ class _OverlayScreen:
         if self.__texture:
             self.__texture.free()
         self.__texture = None
-        self.__hovered_item = None
+        self.__selected_item = None
 
     def on_mouse_move(self, x: int, y: int) -> None:
-        self.__hovered_item = self.__menu.item_at(
+        self.__selected_item = self.__menu.item_at(
             x - self.__menu.x, y - self.__menu.y)
 
     def __rebuild(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
@@ -582,8 +582,8 @@ class _OverlayScreen:
         assert self.__theme.window_size is not None
         renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
 
-        if self.__hovered_item is not None:
-            item = self.__hovered_item
+        if self.__selected_item is not None:
+            item = self.__selected_item
             renderer.set_draw_colour((255, 255, 255, 30))
             renderer.fill_rect(self.__menu.x,
                                self.__menu.y + item.y,
