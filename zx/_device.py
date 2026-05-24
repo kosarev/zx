@@ -99,6 +99,14 @@ class ReadPort(DeviceEvent):
         self.addr = addr
 
 
+class RequestLoadFile(DeviceEvent):
+    pass
+
+
+class RequestSaveSnapshot(DeviceEvent):
+    pass
+
+
 class SaveSnapshot(DeviceEvent):
     def __init__(self, filename: str):
         self.filename = filename

@@ -26,6 +26,8 @@ from ._device import IsTapePlayerPaused
 from ._device import KeyStroke
 from ._device import LoadFile
 from ._device import PauseStateUpdated
+from ._device import RequestLoadFile
+from ._device import RequestSaveSnapshot
 from ._device import QuantumRun
 from ._device import SaveSnapshot
 from ._device import OutputFrame
@@ -548,8 +550,10 @@ class _OverlayScreen:
                                      action=self.__on_toggle_tape_pause)
         self.__menu = _Menu([
             _MenuItem('ESC', 'Toggle help'),
-            _MenuItem('F3', 'Load snapshot or tape file'),
-            _MenuItem('F2', 'Save snapshot'),
+            _MenuItem('F3', 'Load snapshot or tape file',
+                      action=self.__on_load_file),
+            _MenuItem('F2', 'Save snapshot',
+                      action=self.__on_save_snapshot),
             self.__emulation_item,
             self.__tape_item,
             _MenuItem('F11', 'Toggle fullscreen',
@@ -596,6 +600,12 @@ class _OverlayScreen:
         surface.free()
 
         self.__texture = texture
+
+    def __on_load_file(self, dispatcher: Dispatcher) -> None:
+        dispatcher.notify(RequestLoadFile())
+
+    def __on_save_snapshot(self, dispatcher: Dispatcher) -> None:
+        dispatcher.notify(RequestSaveSnapshot())
 
     def __on_toggle_pause(self, dispatcher: Dispatcher) -> None:
         dispatcher.notify(ToggleEmulationPause())
@@ -769,8 +779,6 @@ class ScreenWindow(Device):
         self._KEY_HANDLERS: dict[str, typing.Callable[[Dispatcher], None]] = {
             'ESCAPE': self._toggle_overlay,
             'F1': self._toggle_overlay,
-            'F2': self._save_snapshot,
-            'F3': self.__choose_and_load_file,
         }
 
         self._EVENT_HANDLERS: dict[type[DeviceEvent],
@@ -783,6 +791,8 @@ class ScreenWindow(Device):
             QuantumRun: self._on_quantum_run,
             OutputFrame: self._on_output_frame,
             TapeStateUpdated: self._on_updated_tape_state,
+            RequestLoadFile: self.__on_request_load_file,
+            RequestSaveSnapshot: self.__on_request_save_snapshot,
             ToggleFullscreen: self.__on_toggle_fullscreen,
             Destroy: self.__on_destroy,
         }
@@ -863,7 +873,8 @@ class ScreenWindow(Device):
     def _toggle_overlay(self, devices: Dispatcher) -> None:
         self.__overlay.toggle()
 
-    def _save_snapshot(self, devices: Dispatcher) -> None:
+    def __on_request_save_snapshot(self, event: DeviceEvent,
+                                   devices: Dispatcher) -> None:
         # TODO: Add file filters.
         filename = tkinter.filedialog.asksaveasfilename(
             defaultextension=".z80",
@@ -879,7 +890,8 @@ class ScreenWindow(Device):
     def __error_box(self, title: str, message: str) -> None:
         tkinter.messagebox.showerror(title, message)
 
-    def __choose_and_load_file(self, devices: Dispatcher) -> None:
+    def __on_request_load_file(self, event: DeviceEvent,
+                               devices: Dispatcher) -> None:
         # TODO: Add file filters.
         filename = tkinter.filedialog.askopenfilename(
             title="Load file",
