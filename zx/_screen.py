@@ -434,11 +434,13 @@ class _OverlayScreen:
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
 
     __texture: None | _Texture
+    __items: list[_MenuItem]
 
     def __init__(self, theme: _Theme) -> None:
         self.active = False
         self.__theme = theme
         self.__texture = None
+        self.__items = []
 
     def invalidate(self) -> None:
         if self.__texture:
@@ -465,7 +467,7 @@ class _OverlayScreen:
                             else 'Pause emulation')
         tape_paused = dispatcher.notify(IsTapePlayerPaused())
         tape_action = 'Resume tape' if tape_paused else 'Pause tape'
-        items = [
+        self.__items = [
             _MenuItem('ESC', 'Toggle help'),
             _MenuItem('F3', 'Load snapshot or tape file'),
             _MenuItem('F2', 'Save snapshot'),
@@ -475,19 +477,19 @@ class _OverlayScreen:
             _MenuItem('F10', 'Quit'),
         ]
 
-        for item in items:
+        for item in self.__items:
             item.rebuild(theme)
 
         hotkey_offset = font.em * 5
         item_gap = font.em
-        text_box_width = max(item.width for item in items)
-        text_box_height = (sum(item.height for item in items) +
-                           item_gap * (len(items) - 1))
+        text_box_width = max(item.width for item in self.__items)
+        text_box_height = (sum(item.height for item in self.__items) +
+                           item_gap * (len(self.__items) - 1))
         text_box_x = max(0, (width - text_box_width) // 2)
         text_box_y = max(0, (height - text_box_height) // 2)
 
         y = text_box_y
-        for item in items:
+        for item in self.__items:
             item.draw(surface, theme, font, text_box_x + hotkey_offset, y)
             y += item.height + item_gap
 
