@@ -30,7 +30,7 @@ jobs:
       run: |
         sudo apt-get update
         python -m pip install --upgrade pip
-        python -m pip install --upgrade pycodestyle pytest numpy pyyaml mypy types-PyYAML
+        python -m pip install --upgrade pycodestyle pytest numpy pyyaml mypy types-PyYAML pysdl2
         python -m pip install --upgrade setuptools wheel evdev
     - name: Run pycodestyle and mypy
       run: |
