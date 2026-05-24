@@ -115,6 +115,16 @@ class _Surface:
         del self.sdl_surface
 
 
+class _Texture:
+    def __init__(self, sdl_texture: _SDLTexture) -> None:
+        self.sdl_texture = sdl_texture
+
+    def free(self) -> None:
+        import sdl2
+        sdl2.SDL_DestroyTexture(self.sdl_texture)
+        del self.sdl_texture
+
+
 class _Renderer:
     def __init__(self, window: _SDLWindow) -> None:
         import sdl2
@@ -139,10 +149,10 @@ class _Renderer:
             self.sdl_renderer,
             sdl2.SDL_Rect(round(x), round(y), round(w), round(h)))
 
-    def copy(self, texture: _SDLTexture,
+    def copy(self, texture: _Texture,
              x: float, y: float, w: float, h: float) -> None:
         import sdl2
-        sdl2.SDL_RenderCopy(self.sdl_renderer, texture, None,
+        sdl2.SDL_RenderCopy(self.sdl_renderer, texture.sdl_texture, None,
                             sdl2.SDL_Rect(round(x), round(y),
                                           round(w), round(h)))
 
@@ -176,16 +186,12 @@ class _Renderer:
         import sdl2
         sdl2.SDL_RenderPresent(self.sdl_renderer)
 
-    def create_texture_from_surface(self, surface: _Surface) -> _SDLTexture:
+    def create_texture_from_surface(self, surface: _Surface) -> _Texture:
         import sdl2
-        texture = sdl2.SDL_CreateTextureFromSurface(
+        sdl_texture = sdl2.SDL_CreateTextureFromSurface(
             self.sdl_renderer, surface.sdl_surface)
-        sdl2.SDL_SetTextureBlendMode(texture, sdl2.SDL_BLENDMODE_BLEND)
-        return texture
-
-    def destroy_texture(self, texture: _SDLTexture) -> None:
-        import sdl2
-        sdl2.SDL_DestroyTexture(texture)
+        sdl2.SDL_SetTextureBlendMode(sdl_texture, sdl2.SDL_BLENDMODE_BLEND)
+        return _Texture(sdl_texture)
 
 
 class _Font:
@@ -402,15 +408,21 @@ class _OverlayScreen:
     # Overlay background styling.
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
 
+    __texture: None | _Texture
+
     def __init__(self, theme: _Theme) -> None:
         self.active = False
         self.__theme = theme
         self.__texture = None
 
     def invalidate(self) -> None:
+        if self.__texture:
+            self.__texture.free()
         self.__texture = None
 
-    def __rebuild(self, renderer: '_Renderer') -> None:
+    def __rebuild(self, renderer: _Renderer) -> None:
+        assert self.__texture is None
+
         theme = self.__theme
         assert theme.normal_font is not None
         assert theme.key_button_font is not None
@@ -459,17 +471,16 @@ class _OverlayScreen:
         texture = renderer.create_texture_from_surface(surface)
         surface.free()
 
-        if self.__texture:
-            renderer.destroy_texture(self.__texture)
         self.__texture = texture
 
-    def draw(self, renderer: '_Renderer') -> None:
+    def draw(self, renderer: _Renderer) -> None:
         if not self.active:
             return
 
         if self.__texture is None:
             self.__rebuild(renderer)
 
+        assert self.__texture is not None
         assert self.__theme.window_size is not None
         renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
 
@@ -555,15 +566,15 @@ class ScreenWindow(Device):
 
         self.__pixels = bytearray()
 
-        self.__pixel_texture = sdl2.SDL_CreateTexture(
+        self.__pixel_texture = _Texture(sdl2.SDL_CreateTexture(
             self.__renderer.sdl_renderer,
             sdl2.SDL_PIXELFORMAT_RGB888,
             sdl2.SDL_TEXTUREACCESS_STREAMING,
-            self.frame_width, self.frame_height)
+            self.frame_width, self.frame_height))
 
         # TODO: Support as an option.
         if False:
-            sdl2.SDL_SetTextureScaleMode(self.__pixel_texture,
+            sdl2.SDL_SetTextureScaleMode(self.__pixel_texture.sdl_texture,
                                          sdl2.SDL_ScaleModeLinear)
 
         self.__sdl_event = sdl2.SDL_Event()
@@ -618,7 +629,7 @@ class ScreenWindow(Device):
         pixels = ctypes.c_void_p(ctypes.addressof(
             ctypes.c_char.from_buffer(self.__pixels)))
         import sdl2
-        sdl2.SDL_UpdateTexture(self.__pixel_texture, rect,
+        sdl2.SDL_UpdateTexture(self.__pixel_texture.sdl_texture, rect,
                                pixels, pitch)
 
     def __update_screen(self) -> None:
