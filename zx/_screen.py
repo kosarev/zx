@@ -560,7 +560,6 @@ class _OverlayScreen:
         if self.__texture:
             self.__texture.free()
         self.__texture = None
-        self.__selected_item = None
 
     def on_mouse_move(self, x: int, y: int) -> None:
         self.__selected_item = self.__menu.item_at(
