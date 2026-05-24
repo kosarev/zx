@@ -410,9 +410,9 @@ class _MenuItem:
     width: float
     height: float
 
-    def __init__(self, hotkey: str, action: str) -> None:
+    def __init__(self, hotkey: str, label: str) -> None:
         self.hotkey = hotkey
-        self.action = action
+        self.label = label
 
     def rebuild(self, theme: _Theme) -> None:
         assert theme.normal_font is not None
@@ -427,7 +427,7 @@ class _MenuItem:
         y = parent_y + self.y
         action_x = x + font.em * 5
         hotkey_surface = theme.draw_key_button(self.hotkey)
-        action_surface = font.render(self.action, TEXT_RGB)
+        action_surface = font.render(self.label, TEXT_RGB)
         surface.blit(hotkey_surface,
                      action_x - hotkey_surface.width - font.em, y)
         surface.blit(action_surface, action_x, y)
@@ -468,13 +468,23 @@ class _OverlayScreen:
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
 
     __texture: None | _Texture
-    __menu: None | _Menu
 
     def __init__(self, theme: _Theme) -> None:
         self.active = False
         self.__theme = theme
         self.__texture = None
-        self.__menu = None
+
+        self.__emulation_item = _MenuItem('PAUSE', '')
+        self.__tape_item = _MenuItem('F6', '')
+        self.__menu = _Menu([
+            _MenuItem('ESC', 'Toggle help'),
+            _MenuItem('F3', 'Load snapshot or tape file'),
+            _MenuItem('F2', 'Save snapshot'),
+            self.__emulation_item,
+            self.__tape_item,
+            _MenuItem('F11', 'Toggle fullscreen'),
+            _MenuItem('F10', 'Quit'),
+        ])
 
     def invalidate(self) -> None:
         if self.__texture:
@@ -497,19 +507,11 @@ class _OverlayScreen:
         surface.fill(self.__OVERLAY_BG_RGBA)
 
         emulation_paused = dispatcher.notify(GetEmulationPauseState())
-        emulation_action = ('Resume emulation' if emulation_paused
-                            else 'Pause emulation')
+        self.__emulation_item.label = ('Resume emulation' if emulation_paused
+                                       else 'Pause emulation')
         tape_paused = dispatcher.notify(IsTapePlayerPaused())
-        tape_action = 'Resume tape' if tape_paused else 'Pause tape'
-        self.__menu = _Menu([
-            _MenuItem('ESC', 'Toggle help'),
-            _MenuItem('F3', 'Load snapshot or tape file'),
-            _MenuItem('F2', 'Save snapshot'),
-            _MenuItem('PAUSE', emulation_action),
-            _MenuItem('F6', tape_action),
-            _MenuItem('F11', 'Toggle fullscreen'),
-            _MenuItem('F10', 'Quit'),
-        ])
+        self.__tape_item.label = 'Resume tape' if tape_paused else 'Pause tape'
+
         self.__menu.rebuild(theme)
         self.__menu.x = max(0, (width - self.__menu.width) // 2)
         self.__menu.y = max(0, (height - self.__menu.height) // 2)
