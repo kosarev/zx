@@ -9,6 +9,7 @@
 #   Published under the MIT license.
 
 import ctypes
+import abc
 import enum
 import numpy
 import os
@@ -542,7 +543,24 @@ class _Menu:
             item.draw(surface, theme, font, self.x, self.y)
 
 
-class _MainMenuPanel:
+class _Panel(abc.ABC):
+    active: bool
+
+    @abc.abstractmethod
+    def invalidate(self) -> None:
+        pass
+
+    def on_event(self, event: DeviceEvent,
+                 dispatcher: Dispatcher) -> None:
+        pass
+
+    @abc.abstractmethod
+    def draw(self, renderer: _Renderer,
+             dispatcher: Dispatcher) -> None:
+        pass
+
+
+class _MainMenuPanel(_Panel):
     # Overlay background styling.
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
 
