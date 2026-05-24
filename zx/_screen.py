@@ -209,6 +209,9 @@ class _Font:
 class _Theme:
     Signature = tuple[tuple[int, int], float]
 
+    __SIGN_COLOUR = '#ffffff'
+    __NOTIFICATION_BG_COLOUR = '#1e1e1e'
+
     window_size: None | tuple[int, int]
     display_scale: None | float
     normal_font: None | _Font
@@ -295,7 +298,7 @@ class _Theme:
         h = 0.4 * size
         d = 0.15 * size
 
-        renderer.set_draw_colour(rgb('#ffffff', alpha))
+        renderer.set_draw_colour(rgb(self.__SIGN_COLOUR, alpha))
         renderer.fill_rect(x - d, y - h / 2, w, h)
         renderer.fill_rect(x + d - w, y - h / 2, w, h)
 
@@ -308,7 +311,7 @@ class _Theme:
     def draw_notification_circle(self, renderer: _Renderer, x: float,
                                  y: float, size: float,
                                  alpha: float) -> None:
-        renderer.set_draw_colour(rgb('#1e1e1e', alpha))
+        renderer.set_draw_colour(rgb(self.__NOTIFICATION_BG_COLOUR, alpha))
         renderer.fill_rect(x - size / 2, y - size / 2, size, size)
 
     def draw_tape_sign(self, renderer: _Renderer, x: float, y: float,
@@ -321,17 +324,16 @@ class _Theme:
         # TODO: Animate the reels.
         a = t * -(RPM * 2 * PI / 60)
 
-        renderer.set_draw_colour(rgb('#ffffff', alpha))
+        colour = rgb(self.__SIGN_COLOUR, alpha)
+        renderer.set_draw_colour(colour)
         renderer.draw_rect(x - size * 0.5, y - size * (H / 2),
                            size, size * H, self.scale(1))
 
         renderer.hline(x - size * (D - 0.15), x + size * (D - 0.15),
-                       y - size * R, rgb('#ffffff', alpha))
+                       y - size * R, colour)
 
-        renderer.aacircle(x - size * (D - R / 2), y,
-                          size * R, rgb('#ffffff', alpha))
-        renderer.aacircle(x + size * (D - R / 2), y,
-                          size * R, rgb('#ffffff', alpha))
+        renderer.aacircle(x - size * (D - R / 2), y, size * R, colour)
+        renderer.aacircle(x + size * (D - R / 2), y, size * R, colour)
 
 
 class Notification(object):
