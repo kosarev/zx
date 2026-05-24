@@ -542,7 +542,8 @@ class _OverlayScreen:
         self.__texture = None
         self.__selected_item = None
 
-        self.__emulation_item = _MenuItem('PAUSE', '')
+        self.__emulation_item = _MenuItem('PAUSE', '',
+                                          action=self.__on_toggle_pause)
         self.__tape_item = _MenuItem('F6', '')
         self.__menu = _Menu([
             _MenuItem('ESC', 'Toggle help'),
@@ -595,6 +596,9 @@ class _OverlayScreen:
         surface.free()
 
         self.__texture = texture
+
+    def __on_toggle_pause(self, dispatcher: Dispatcher) -> None:
+        dispatcher.notify(ToggleEmulationPause())
 
     def __on_toggle_fullscreen(self, dispatcher: Dispatcher) -> None:
         dispatcher.notify(ToggleFullscreen())
@@ -765,7 +769,6 @@ class ScreenWindow(Device):
             'F2': self._save_snapshot,
             'F3': self.__choose_and_load_file,
             'F6': self.__toggle_tape_pause,
-            'PAUSE': self.__toggle_pause,
         }
 
         self._EVENT_HANDLERS: dict[type[DeviceEvent],
@@ -932,7 +935,7 @@ class ScreenWindow(Device):
         if self.__overlay.active:
             return
         if event.type == _ClickType.Single:
-            self.__toggle_pause(devices)
+            devices.notify(ToggleEmulationPause())
         elif event.type == _ClickType.Double:
             self.__on_toggle_fullscreen(event, devices)
 
@@ -1035,9 +1038,6 @@ class ScreenWindow(Device):
             self.on_event(self.__events.pop(0), dispatcher, None)
 
         self.__update_screen(dispatcher)
-
-    def __toggle_pause(self, devices: Dispatcher) -> None:
-        devices.notify(ToggleEmulationPause())
 
     def __toggle_tape_pause(self, devices: Dispatcher) -> None:
         devices.notify(ToggleTapePause())
