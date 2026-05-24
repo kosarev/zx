@@ -214,8 +214,6 @@ class _Font:
 
 
 class _Theme:
-    Signature = tuple[tuple[int, int], float]
-
     __SIGN_COLOUR = '#ffffff'
     __NOTIFICATION_BG_COLOUR = '#1e1e1e'
 
@@ -230,39 +228,32 @@ class _Theme:
         self.normal_font = None
         self.key_button_font = None
 
-    @property
-    def signature(self) -> Signature:
-        assert self.window_size is not None
-        assert self.display_scale is not None
-        return self.window_size, self.display_scale
-
     def scale(self, value: float) -> float:
         assert self.display_scale is not None
         return value * self.display_scale
 
     def update(self, window_size: tuple[int, int],
-               display_scale: float) -> None:
+               display_scale: float) -> bool:
+        changed = (window_size != self.window_size or
+                   display_scale != self.display_scale)
         self.window_size = window_size
         self.display_scale = display_scale
 
-        width, height = window_size
-        logical_width = width / display_scale
-        logical_height = height / display_scale
+        if changed or self.normal_font is None:
+            width, height = window_size
+            logical_width = width / display_scale
+            logical_height = height / display_scale
 
-        # TODO: Use TTF_CloseFont().
-        if logical_width < 450 or logical_height < 400:
-            text_size = 14
-        else:
-            text_size = 17
+            # TODO: Use TTF_CloseFont().
+            if logical_width < 450 or logical_height < 400:
+                text_size = 14
+            else:
+                text_size = 17
 
-        physical_size = self.scale(text_size)
-        if (self.normal_font is None or
-                physical_size != self.normal_font.text_size):
-            self.normal_font = _Font(physical_size)
+            self.normal_font = _Font(self.scale(text_size))
+            self.key_button_font = _Font(self.scale(text_size * 0.85))
 
-            KEY_BUTTON_FONT_SCALE = 0.85
-            self.key_button_font = _Font(
-                self.scale(text_size * KEY_BUTTON_FONT_SCALE))
+        return changed
 
     def draw_key_button(self, key_text: str) -> _Surface:
         TEXT_RGB: _Colour = (230, 230, 230, 255)
@@ -414,7 +405,9 @@ class _OverlayScreen:
     def __init__(self, theme: _Theme) -> None:
         self.active = False
         self.__theme = theme
-        self.__theme_signature: None | _Theme.Signature = None
+        self.__texture = None
+
+    def invalidate(self) -> None:
         self.__texture = None
 
     def __rebuild(self, renderer: '_Renderer') -> None:
@@ -474,13 +467,11 @@ class _OverlayScreen:
         if not self.active:
             return
 
-        theme = self.__theme
-        if self.__theme_signature != theme.signature:
+        if self.__texture is None:
             self.__rebuild(renderer)
-            self.__theme_signature = theme.signature
 
-        assert theme.window_size is not None
-        renderer.copy(self.__texture, 0, 0, *theme.window_size)
+        assert self.__theme.window_size is not None
+        renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
 
 
 # TODO: A quick solution for making screencasts.
@@ -640,7 +631,8 @@ class ScreenWindow(Device):
                                ctypes.byref(lh))
         window_size = window_width, window_height = w.value, h.value
         display_scale = w.value / lw.value
-        self.__theme.update(window_size, display_scale)
+        if self.__theme.update(window_size, display_scale):
+            self.__overlay.invalidate()
         width = min(window_width,
                     div_ceil(window_height * self.frame_width,
                              self.frame_height))
