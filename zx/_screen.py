@@ -581,8 +581,8 @@ class ScreenWindow(Device):
 
         self._KEY_HANDLERS: dict[str, typing.Callable[[Dispatcher], None]] = {
             'F10': self.__on_exit,
-            'ESCAPE': self._toggle_sidebar,
-            'F1': self._toggle_sidebar,
+            'ESCAPE': self._toggle_overlay,
+            'F1': self._toggle_overlay,
             'F2': self._save_snapshot,
             'F3': self.__choose_and_load_file,
             'F6': self.__toggle_tape_pause,
@@ -676,7 +676,7 @@ class ScreenWindow(Device):
 
         self.__renderer.present()
 
-    def _toggle_sidebar(self, devices: Dispatcher) -> None:
+    def _toggle_overlay(self, devices: Dispatcher) -> None:
         self.__overlay.active ^= True
 
     def _save_snapshot(self, devices: Dispatcher) -> None:
