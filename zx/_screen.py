@@ -478,6 +478,13 @@ class _OverlayScreen:
 
         self.__texture = texture
 
+    def toggle(self) -> None:
+        self.active ^= True
+
+    def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
+        if isinstance(event, (PauseStateUpdated, TapeStateUpdated)):
+            self.invalidate()
+
     def draw(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         if not self.active:
             return
@@ -682,7 +689,7 @@ class ScreenWindow(Device):
         self.__renderer.present()
 
     def _toggle_overlay(self, devices: Dispatcher) -> None:
-        self.__overlay.active ^= True
+        self.__overlay.toggle()
 
     def _save_snapshot(self, devices: Dispatcher) -> None:
         # TODO: Add file filters.
@@ -805,6 +812,8 @@ class ScreenWindow(Device):
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
+        self.__overlay.on_event(event, devices)
+
         event_type = type(event)
         if event_type in self._EVENT_HANDLERS:
             self._EVENT_HANDLERS[event_type](event, devices)
@@ -818,7 +827,6 @@ class ScreenWindow(Device):
             self._notification = PauseNotification(time)
         else:
             self._notification = None
-        self.__overlay.invalidate()
 
     def _on_updated_tape_state(self, event: DeviceEvent,
                                devices: Dispatcher) -> None:
@@ -829,7 +837,6 @@ class ScreenWindow(Device):
             self._notification = TapePauseNotification(tape_time)
         else:
             self._notification = TapeResumeNotification(tape_time)
-        self.__overlay.invalidate()
 
     def _on_quantum_run(self, event: DeviceEvent,
                         dispatcher: Dispatcher) -> None:
