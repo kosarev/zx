@@ -119,8 +119,6 @@ class _Surface:
 
 
 class _Renderer:
-    window_size: None | tuple[int, int]
-
     def __init__(self, window: _SDLWindow) -> None:
         import sdl2
         rendering_driver_index = -1
@@ -129,10 +127,6 @@ class _Renderer:
             window, rendering_driver_index, renderer_flags)
         sdl2.SDL_SetRenderDrawBlendMode(
             self.sdl_renderer, sdl2.SDL_BLENDMODE_BLEND)
-        self.window_size = None
-
-    def reset(self, window_size: tuple[int, int]) -> None:
-        self.window_size = window_size
 
     def clear(self) -> None:
         import sdl2
@@ -208,11 +202,13 @@ class _Font:
 
 
 class _Theme:
+    window_size: None | tuple[int, int]
     display_scale: None | float
     normal_font: None | _Font
     key_button_font: None | _Font
 
     def __init__(self) -> None:
+        self.window_size = None
         self.display_scale = None
         self.normal_font = None
         self.key_button_font = None
@@ -223,6 +219,7 @@ class _Theme:
 
     def update(self, window_size: tuple[int, int],
                display_scale: float) -> None:
+        self.window_size = window_size
         self.display_scale = display_scale
 
         width, height = window_size
@@ -405,14 +402,14 @@ class _OverlayScreen:
 
     def __rebuild(self, renderer: '_Renderer') -> None:
         theme = self.__theme
+        assert theme.window_size is not None
         assert theme.display_scale is not None
         assert theme.normal_font is not None
         assert theme.key_button_font is not None
-        assert renderer.window_size is not None
-        assert (self.__window_size != renderer.window_size or
+        assert (self.__window_size != theme.window_size or
                 self.__display_scale != theme.display_scale)
 
-        width, height = renderer.window_size
+        width, height = theme.window_size
 
         em = theme.normal_font.em
         em_height = theme.normal_font.em_height
@@ -459,19 +456,20 @@ class _OverlayScreen:
             renderer.destroy_texture(self.__texture)
         self.__texture = texture
 
-        self.__window_size = renderer.window_size
+        self.__window_size = theme.window_size
         self.__display_scale = theme.display_scale
 
     def draw(self, renderer: '_Renderer') -> None:
         if not self.active:
             return
 
-        if (self.__window_size != renderer.window_size or
-                self.__display_scale != self.__theme.display_scale):
+        theme = self.__theme
+        if (self.__window_size != theme.window_size or
+                self.__display_scale != theme.display_scale):
             self.__rebuild(renderer)
 
-        assert renderer.window_size is not None
-        renderer.copy(self.__texture, 0, 0, *renderer.window_size)
+        assert theme.window_size is not None
+        renderer.copy(self.__texture, 0, 0, *theme.window_size)
 
 
 # TODO: A quick solution for making screencasts.
@@ -631,7 +629,6 @@ class ScreenWindow(Device):
                                ctypes.byref(lh))
         window_size = window_width, window_height = w.value, h.value
         display_scale = w.value / lw.value
-        self.__renderer.reset(window_size)
         self.__theme.update(window_size, display_scale)
         width = min(window_width,
                     div_ceil(window_height * self.frame_width,
