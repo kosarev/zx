@@ -835,8 +835,9 @@ class ScreenWindow(Device):
         if event.pressed and event.id in self._KEY_HANDLERS:
             self._KEY_HANDLERS[event.id](devices)
 
-        zx_key_id = self.__SDL_KEYS_TO_ZX_KEYS.get(event.id, event.id)
-        devices.notify(KeyStroke(zx_key_id, event.pressed))
+        if not self.__overlay.active:
+            zx_key_id = self.__SDL_KEYS_TO_ZX_KEYS.get(event.id, event.id)
+            devices.notify(KeyStroke(zx_key_id, event.pressed))
 
     def __on_sdl_click(self, event: typing.Any) -> bool:
         TYPES = {
@@ -853,6 +854,8 @@ class ScreenWindow(Device):
     def __on_click(self, event: DeviceEvent,
                    devices: Dispatcher) -> typing.Any:
         assert isinstance(event, _ClickEvent)
+        if self.__overlay.active:
+            return
         if event.type == _ClickType.Single:
             self.__toggle_pause(devices)
         elif event.type == _ClickType.Double:
