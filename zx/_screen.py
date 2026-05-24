@@ -315,9 +315,9 @@ class _Theme:
                             alpha, t)
         self.draw_pause_sign(renderer, x, y + size * 0.23, size * 0.5, alpha)
 
-    def draw_notification_circle(self, renderer: _Renderer, x: float,
-                                 y: float, size: float,
-                                 alpha: float) -> None:
+    def draw_notification_background(self, renderer: _Renderer, x: float,
+                                     y: float, size: float,
+                                     alpha: float) -> None:
         renderer.set_draw_colour(rgb(self.__NOTIFICATION_BG_COLOUR, alpha))
         renderer.fill_rect(x - size / 2, y - size / 2, size, size)
 
@@ -384,7 +384,7 @@ class Notification(object):
         cx = x + size / 2
         cy = y + size / 2
         t = self._time.get()
-        theme.draw_notification_circle(renderer, cx, cy, size, alpha)
+        theme.draw_notification_background(renderer, cx, cy, size, alpha)
         self._draw(theme, renderer, cx, cy, size, alpha, t)
 
 
