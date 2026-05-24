@@ -580,9 +580,17 @@ class _OverlayScreen:
     def toggle(self) -> None:
         self.active ^= True
 
+    def __activate_selected(self, dispatcher: Dispatcher) -> None:
+        item = self.__selected_item
+        if item is not None and item.action is not None:
+            item.action(dispatcher)
+
     def __on_key(self, key_id: str, pressed: bool,
                  dispatcher: Dispatcher) -> None:
         if not pressed:
+            return
+        if key_id == 'RETURN' and self.active:
+            self.__activate_selected(dispatcher)
             return
         item = self.__menu.item_for_key(key_id)
         if item is not None and item.action is not None:
@@ -594,9 +602,7 @@ class _OverlayScreen:
             return
         if event.type != _ClickType.Single:
             return
-        item = self.__selected_item
-        if item is not None and item.action is not None:
-            item.action(dispatcher)
+        self.__activate_selected(dispatcher)
 
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
         if isinstance(event, (PauseStateUpdated, TapeStateUpdated)):
