@@ -581,9 +581,9 @@ class _OverlayScreen:
         if self.__hovered_item is not None:
             item = self.__hovered_item
             renderer.set_draw_colour((255, 255, 255, 30))
-            renderer.fill_rect(self.__menu.x + item.x,
+            renderer.fill_rect(self.__menu.x,
                                self.__menu.y + item.y,
-                               item.width, item.height)
+                               self.__menu.width, item.height)
 
 
 # TODO: A quick solution for making screencasts.
