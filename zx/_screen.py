@@ -420,16 +420,47 @@ class _MenuItem:
         self.height = font.em_height
         self.width = font.em * 5 + font.em * 14
 
-    def draw(self, surface: _Surface, theme: _Theme, font: _Font) -> None:
+    def draw(self, surface: _Surface, theme: _Theme, font: _Font,
+             parent_x: float = 0.0, parent_y: float = 0.0) -> None:
         TEXT_RGB: _Colour = (230, 230, 230, 255)
-        action_x = self.x + font.em * 5
+        x = parent_x + self.x
+        y = parent_y + self.y
+        action_x = x + font.em * 5
         hotkey_surface = theme.draw_key_button(self.hotkey)
         action_surface = font.render(self.action, TEXT_RGB)
         surface.blit(hotkey_surface,
-                     action_x - hotkey_surface.width - font.em, self.y)
-        surface.blit(action_surface, action_x, self.y)
+                     action_x - hotkey_surface.width - font.em, y)
+        surface.blit(action_surface, action_x, y)
         hotkey_surface.free()
         action_surface.free()
+
+
+class _Menu:
+    x: float
+    y: float
+    width: float
+    height: float
+
+    def __init__(self, items: list[_MenuItem]) -> None:
+        self.__items = items
+
+    def rebuild(self, theme: _Theme) -> None:
+        assert theme.normal_font is not None
+        font = theme.normal_font
+        item_gap = font.em
+        self.width = 0.0
+        self.height = 0.0
+        for item in self.__items:
+            item.rebuild(theme)
+            item.x = 0.0
+            item.y = self.height
+            self.width = max(self.width, item.width)
+            self.height += item.height + item_gap
+        self.height -= item_gap
+
+    def draw(self, surface: _Surface, theme: _Theme, font: _Font) -> None:
+        for item in self.__items:
+            item.draw(surface, theme, font, self.x, self.y)
 
 
 class _OverlayScreen:
@@ -437,13 +468,13 @@ class _OverlayScreen:
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
 
     __texture: None | _Texture
-    __items: list[_MenuItem]
+    __menu: None | _Menu
 
     def __init__(self, theme: _Theme) -> None:
         self.active = False
         self.__theme = theme
         self.__texture = None
-        self.__items = []
+        self.__menu = None
 
     def invalidate(self) -> None:
         if self.__texture:
@@ -470,7 +501,7 @@ class _OverlayScreen:
                             else 'Pause emulation')
         tape_paused = dispatcher.notify(IsTapePlayerPaused())
         tape_action = 'Resume tape' if tape_paused else 'Pause tape'
-        self.__items = [
+        self.__menu = _Menu([
             _MenuItem('ESC', 'Toggle help'),
             _MenuItem('F3', 'Load snapshot or tape file'),
             _MenuItem('F2', 'Save snapshot'),
@@ -478,25 +509,11 @@ class _OverlayScreen:
             _MenuItem('F6', tape_action),
             _MenuItem('F11', 'Toggle fullscreen'),
             _MenuItem('F10', 'Quit'),
-        ]
-
-        item_gap = font.em
-        text_box_width = 0.0
-        text_box_height = 0.0
-        for item in self.__items:
-            item.rebuild(theme)
-            item.x = 0.0
-            item.y = text_box_height
-            text_box_width = max(text_box_width, item.width)
-            text_box_height += item.height + item_gap
-        text_box_height -= item_gap
-
-        text_box_x = max(0, (width - text_box_width) // 2)
-        text_box_y = max(0, (height - text_box_height) // 2)
-        for item in self.__items:
-            item.x += text_box_x
-            item.y += text_box_y
-            item.draw(surface, theme, font)
+        ])
+        self.__menu.rebuild(theme)
+        self.__menu.x = max(0, (width - self.__menu.width) // 2)
+        self.__menu.y = max(0, (height - self.__menu.height) // 2)
+        self.__menu.draw(surface, theme, font)
 
         texture = renderer.create_texture_from_surface(surface)
         surface.free()
