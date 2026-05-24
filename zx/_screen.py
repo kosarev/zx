@@ -710,6 +710,24 @@ class _MainMenuPanel(_Panel):
         self.__menu.highlight(renderer)
 
 
+class _FileBrowserPanel(_Panel):
+    def __init__(self) -> None:
+        self.active = True
+
+    def invalidate(self) -> None:
+        pass
+
+    def on_event(self, event: DeviceEvent,
+                 dispatcher: Dispatcher) -> None:
+        if isinstance(event, _KeyEvent) and event.pressed:
+            if event.id == 'ESCAPE':
+                dispatcher.notify(_PopPanelEvent())
+
+    def draw(self, renderer: _Renderer,
+             dispatcher: Dispatcher) -> None:
+        pass
+
+
 # TODO: A quick solution for making screencasts.
 class Screencast(object):
     _counter: int
@@ -749,6 +767,10 @@ class _MouseMoveEvent(DeviceEvent):
     def __init__(self, x: int, y: int) -> None:
         self.x = x
         self.y = y
+
+
+class _PopPanelEvent(DeviceEvent):
+    pass
 
 
 class _ExceptionEvent(DeviceEvent):
@@ -820,6 +842,7 @@ class ScreenWindow(Device):
             QuantumRun: self._on_quantum_run,
             OutputFrame: self._on_output_frame,
             TapeStateUpdated: self._on_updated_tape_state,
+            _PopPanelEvent: self.__on_pop_panel,
             RequestLoadFile: self.__on_request_load_file,
             RequestSaveSnapshot: self.__on_request_save_snapshot,
             ToggleFullscreen: self.__on_toggle_fullscreen,
@@ -916,18 +939,24 @@ class ScreenWindow(Device):
     def __error_box(self, title: str, message: str) -> None:
         tkinter.messagebox.showerror(title, message)
 
+    def __on_pop_panel(self, event: DeviceEvent,
+                       devices: Dispatcher) -> None:
+        assert len(self.__panels) > 1
+        self.__panels.pop()
+
     def __on_request_load_file(self, event: DeviceEvent,
                                devices: Dispatcher) -> None:
+        self.__panels.append(_FileBrowserPanel())
+        # TODO: Remove once file browser panel supports all of this.
         # TODO: Add file filters.
-        filename = tkinter.filedialog.askopenfilename(
-            title="Load file",
-            filetypes=[("All Files", "*.*")])
-
-        if isinstance(filename, str):
-            try:
-                devices.notify(LoadFile(filename))
-            except USER_ERRORS as e:
-                self.__error_box('File error', verbalize_error(e))
+        # filename = tkinter.filedialog.askopenfilename(
+        #     title="Load file",
+        #     filetypes=[("All Files", "*.*")])
+        # if isinstance(filename, str):
+        #     try:
+        #         devices.notify(LoadFile(filename))
+        #     except USER_ERRORS as e:
+        #         self.__error_box('File error', verbalize_error(e))
 
     def __on_toggle_fullscreen(self, event: DeviceEvent,
                                devices: Dispatcher) -> None:
