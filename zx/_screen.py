@@ -405,9 +405,18 @@ class TapeResumeNotification(Notification):
 
 
 class _MenuItem:
+    width: float
+    height: float
+
     def __init__(self, hotkey: str, action: str) -> None:
         self.hotkey = hotkey
         self.action = action
+
+    def rebuild(self, theme: _Theme) -> None:
+        assert theme.normal_font is not None
+        font = theme.normal_font
+        self.height = font.em_height
+        self.width = font.em * 5 + font.em * 14
 
     def draw(self, surface: _Surface, theme: _Theme,
              font: _Font, x: float, y: float) -> None:
@@ -466,18 +475,21 @@ class _OverlayScreen:
             _MenuItem('F10', 'Quit'),
         ]
 
+        for item in items:
+            item.rebuild(theme)
+
         hotkey_offset = font.em * 5
-        text_box_width = hotkey_offset + font.em * 14
-        text_box_vspacing = font.line_height * 2.5
-        text_box_height = len(items) * text_box_vspacing
+        item_gap = font.em
+        text_box_width = max(item.width for item in items)
+        text_box_height = (sum(item.height for item in items) +
+                           item_gap * (len(items) - 1))
         text_box_x = max(0, (width - text_box_width) // 2)
         text_box_y = max(0, (height - text_box_height) // 2)
 
-        for i, item in enumerate(items):
-            x = text_box_x + hotkey_offset
-            y = (text_box_y + i * text_box_vspacing +
-                 (text_box_vspacing - font.em_height) / 2)
-            item.draw(surface, theme, font, x, y)
+        y = text_box_y
+        for item in items:
+            item.draw(surface, theme, font, text_box_x + hotkey_offset, y)
+            y += item.height + item_gap
 
         texture = renderer.create_texture_from_surface(surface)
         surface.free()
