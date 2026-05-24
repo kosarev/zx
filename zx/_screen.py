@@ -472,14 +472,18 @@ class _Menu:
         self.height = 0.0
 
     def rebuild(self, theme: _Theme) -> None:
-        self.width = 0.0
+        font = theme.normal_font
+        assert font is not None
+        padding = font.em * 3
+        items_width = 0.0
         self.height = 0.0
         for item in self.__items:
             item.rebuild(theme)
-            item.x = 0.0
+            item.x = padding
             item.y = self.height
-            self.width = max(self.width, item.width)
+            items_width = max(items_width, item.width)
             self.height += item.height
+        self.width = items_width + 2 * padding
 
     def item_at(self, x: float, y: float) -> None | _MenuItem:
         if not (0 <= y < self.height):
