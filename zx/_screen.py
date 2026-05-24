@@ -542,7 +542,7 @@ class _Menu:
             item.draw(surface, theme, font, self.x, self.y)
 
 
-class _OverlayScreen:
+class _MainMenuPanel:
     # Overlay background styling.
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
 
@@ -800,7 +800,7 @@ class ScreenWindow(Device):
         }
 
         self.__theme = _Theme()
-        self.__overlay = _OverlayScreen(self.__theme)
+        self.__panel = _MainMenuPanel(self.__theme)
         self._notification: None | Notification = None
         self._screencast = Screencast()
 
@@ -839,7 +839,7 @@ class ScreenWindow(Device):
         window_size = window_width, window_height = w.value, h.value
         display_scale = w.value / lw.value
         if self.__theme.update(window_size, display_scale):
-            self.__overlay.invalidate()
+            self.__panel.invalidate()
         width = min(window_width,
                     div_ceil(window_height * self.frame_width,
                              self.frame_height))
@@ -863,10 +863,10 @@ class ScreenWindow(Device):
         self._screencast.on_draw(self.__pixel_texture)
 
         # Draw overlay screen.
-        self.__overlay.draw(self.__renderer, dispatcher)
+        self.__panel.draw(self.__renderer, dispatcher)
 
         # Draw notifications.
-        if self._notification and not self.__overlay.active:
+        if self._notification and not self.__panel.active:
             self._notification.draw(window_size, (width, height),
                                     self.__renderer, self.__theme)
 
@@ -923,7 +923,7 @@ class ScreenWindow(Device):
 
     def __on_key(self, event: DeviceEvent, devices: Dispatcher) -> typing.Any:
         assert isinstance(event, _KeyEvent)
-        if not self.__overlay.active:
+        if not self.__panel.active:
             zx_key_id = self.__SDL_KEYS_TO_ZX_KEYS.get(event.id, event.id)
             devices.notify(KeyStroke(zx_key_id, event.pressed))
 
@@ -942,7 +942,7 @@ class ScreenWindow(Device):
     def __on_click(self, event: DeviceEvent,
                    devices: Dispatcher) -> typing.Any:
         assert isinstance(event, _ClickEvent)
-        if self.__overlay.active:
+        if self.__panel.active:
             return
         if event.type == _ClickType.Single:
             devices.notify(ToggleEmulationPause())
@@ -1000,7 +1000,7 @@ class ScreenWindow(Device):
         if event_type in self._EVENT_HANDLERS:
             self._EVENT_HANDLERS[event_type](event, devices)
 
-        self.__overlay.on_event(event, devices)
+        self.__panel.on_event(event, devices)
         return result
 
     def _on_updated_pause_state(self, event: DeviceEvent,
@@ -1032,7 +1032,7 @@ class ScreenWindow(Device):
             elif self.__sdl_event.type == sdl2.SDL_MOUSEMOTION:
                 e = self.__sdl_event.motion
                 scale = self.__theme.display_scale or 1.0
-                self.__overlay.on_mouse_move(
+                self.__panel.on_mouse_move(
                     round(e.x * scale), round(e.y * scale))
             elif self.__sdl_event.type == sdl2.SDL_MOUSEBUTTONDOWN:
                 self.__on_sdl_click(self.__sdl_event)
