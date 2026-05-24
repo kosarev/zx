@@ -415,9 +415,13 @@ class _MenuItem:
     __label_x: float
     __content_y: float
 
-    def __init__(self, hotkey: str, label: str) -> None:
+    def __init__(self, hotkey: str, label: str, *,
+                 action: (None |
+                          typing.Callable[[Dispatcher], None]) = None
+                 ) -> None:
         self.hotkey = hotkey
         self.label = label
+        self.action = action
         self.x = 0.0
         self.y = 0.0
         self.width = 0.0
@@ -485,6 +489,12 @@ class _Menu:
             self.height += item.height
         self.width = items_width + 2 * padding
 
+    def item_for_key(self, key_id: str) -> None | _MenuItem:
+        for item in self.__items:
+            if item.hotkey == key_id:
+                return item
+        return None
+
     def item_at(self, x: float, y: float) -> None | _MenuItem:
         if not (0 <= y < self.height):
             return None
@@ -520,7 +530,7 @@ class _OverlayScreen:
             self.__emulation_item,
             self.__tape_item,
             _MenuItem('F11', 'Toggle fullscreen'),
-            _MenuItem('F10', 'Quit'),
+            _MenuItem('F10', 'Quit', action=self.__on_exit),
         ])
 
     def invalidate(self) -> None:
@@ -564,12 +574,25 @@ class _OverlayScreen:
 
         self.__texture = texture
 
+    def __on_exit(self, dispatcher: Dispatcher) -> None:
+        dispatcher.notify(_ExceptionEvent(EmulationExit()))
+
     def toggle(self) -> None:
         self.active ^= True
+
+    def __on_key(self, key_id: str, pressed: bool,
+                 dispatcher: Dispatcher) -> None:
+        if not pressed:
+            return
+        item = self.__menu.item_for_key(key_id)
+        if item is not None and item.action is not None:
+            item.action(dispatcher)
 
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
         if isinstance(event, (PauseStateUpdated, TapeStateUpdated)):
             self.invalidate()
+        elif isinstance(event, _KeyEvent):
+            self.__on_key(event.id, event.pressed, dispatcher)
 
     def draw(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         if not self.active:
@@ -685,7 +708,6 @@ class ScreenWindow(Device):
         self.__sdl_event = sdl2.SDL_Event()
 
         self._KEY_HANDLERS: dict[str, typing.Callable[[Dispatcher], None]] = {
-            'F10': self.__on_exit,
             'ESCAPE': self._toggle_overlay,
             'F1': self._toggle_overlay,
             'F2': self._save_snapshot,
