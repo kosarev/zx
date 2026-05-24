@@ -441,8 +441,8 @@ class _OverlayScreen:
             hotkey_surface = theme.draw_key_button(hotkey)
             action_surface = theme.normal_font.render(action, TEXT_RGB)
             x = text_box_x + hotkey_offset
-            y = int(text_box_y + i * text_box_vspacing +
-                    (text_box_vspacing - em_height) / 2)
+            y = (text_box_y + i * text_box_vspacing +
+                 (text_box_vspacing - em_height) / 2)
             surface.blit(hotkey_surface,
                          x - hotkey_surface.width - em, y)
             surface.blit(action_surface, x, y)
