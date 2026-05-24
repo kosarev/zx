@@ -202,6 +202,8 @@ class _Font:
 
 
 class _Theme:
+    Signature = tuple[tuple[int, int], float]
+
     window_size: None | tuple[int, int]
     display_scale: None | float
     normal_font: None | _Font
@@ -212,6 +214,12 @@ class _Theme:
         self.display_scale = None
         self.normal_font = None
         self.key_button_font = None
+
+    @property
+    def signature(self) -> Signature:
+        assert self.window_size is not None
+        assert self.display_scale is not None
+        return self.window_size, self.display_scale
 
     def scale(self, value: float) -> float:
         assert self.display_scale is not None
@@ -396,19 +404,15 @@ class _OverlayScreen:
     def __init__(self, theme: _Theme) -> None:
         self.active = False
         self.__theme = theme
-        self.__window_size: None | tuple[int, int] = None
-        self.__display_scale: float = 0.0
+        self.__theme_signature: None | _Theme.Signature = None
         self.__texture = None
 
     def __rebuild(self, renderer: '_Renderer') -> None:
         theme = self.__theme
-        assert theme.window_size is not None
-        assert theme.display_scale is not None
         assert theme.normal_font is not None
         assert theme.key_button_font is not None
-        assert (self.__window_size != theme.window_size or
-                self.__display_scale != theme.display_scale)
 
+        assert theme.window_size is not None
         width, height = theme.window_size
 
         em = theme.normal_font.em
@@ -456,17 +460,14 @@ class _OverlayScreen:
             renderer.destroy_texture(self.__texture)
         self.__texture = texture
 
-        self.__window_size = theme.window_size
-        self.__display_scale = theme.display_scale
-
     def draw(self, renderer: '_Renderer') -> None:
         if not self.active:
             return
 
         theme = self.__theme
-        if (self.__window_size != theme.window_size or
-                self.__display_scale != theme.display_scale):
+        if self.__theme_signature != theme.signature:
             self.__rebuild(renderer)
+            self.__theme_signature = theme.signature
 
         assert theme.window_size is not None
         renderer.copy(self.__texture, 0, 0, *theme.window_size)
