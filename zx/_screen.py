@@ -334,14 +334,17 @@ class _Theme:
         renderer.hline(x - size * (D - 0.15), x + size * (D - 0.15),
                        y - size * R, colour)
 
-        RPM = 11
+        RPM = 15
         a = t * -(RPM * 2 * PI / 60)
+        REEL_GAP = 0.7 * 180 / PI
+        REEL_PHASE = 36
         a_deg = a * 180 / PI
-        REEL_GAP = 90
-        reel_start = a_deg + REEL_GAP
         reel_d = size * (D - R / 2)
-        renderer.arc(x - reel_d, y, size * R, reel_start, a_deg, colour)
-        renderer.arc(x + reel_d, y, size * R, reel_start, a_deg, colour)
+        renderer.arc(x - reel_d, y, size * R,
+                     a_deg, a_deg + 360 - REEL_GAP, colour)
+        renderer.arc(x + reel_d, y, size * R,
+                     a_deg + REEL_PHASE, a_deg + REEL_PHASE + 360 - REEL_GAP,
+                     colour)
 
 
 class Notification(object):
@@ -373,7 +376,6 @@ class Notification(object):
 
         alpha = 1.5 - get_elapsed_time(self._timestamp)
         alpha = max(0, min(0.7, alpha))
-        alpha = 1
 
         if not alpha:
             self.clear()
