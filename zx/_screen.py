@@ -31,6 +31,7 @@ from ._device import SaveSnapshot
 from ._device import OutputFrame
 from ._device import TapeStateUpdated
 from ._device import ToggleEmulationPause
+from ._device import ToggleFullscreen
 from ._device import ToggleTapePause
 from ._device import Dispatcher
 from ._error import USER_ERRORS
@@ -549,7 +550,8 @@ class _OverlayScreen:
             _MenuItem('F2', 'Save snapshot'),
             self.__emulation_item,
             self.__tape_item,
-            _MenuItem('F11', 'Toggle fullscreen'),
+            _MenuItem('F11', 'Toggle fullscreen',
+                      action=self.__on_toggle_fullscreen),
             _MenuItem('F10', 'Quit', action=self.__on_exit),
         ])
 
@@ -593,6 +595,9 @@ class _OverlayScreen:
         surface.free()
 
         self.__texture = texture
+
+    def __on_toggle_fullscreen(self, dispatcher: Dispatcher) -> None:
+        dispatcher.notify(ToggleFullscreen())
 
     def __on_exit(self, dispatcher: Dispatcher) -> None:
         dispatcher.notify(_ExceptionEvent(EmulationExit()))
@@ -760,7 +765,6 @@ class ScreenWindow(Device):
             'F2': self._save_snapshot,
             'F3': self.__choose_and_load_file,
             'F6': self.__toggle_tape_pause,
-            'F11': self.__toggle_fullscreen,
             'PAUSE': self.__toggle_pause,
         }
 
@@ -774,6 +778,7 @@ class ScreenWindow(Device):
             QuantumRun: self._on_quantum_run,
             OutputFrame: self._on_output_frame,
             TapeStateUpdated: self._on_updated_tape_state,
+            ToggleFullscreen: self.__on_toggle_fullscreen,
             Destroy: self.__on_destroy,
         }
 
@@ -881,7 +886,8 @@ class ScreenWindow(Device):
             except USER_ERRORS as e:
                 self.__error_box('File error', verbalize_error(e))
 
-    def __toggle_fullscreen(self, devices: Dispatcher) -> None:
+    def __on_toggle_fullscreen(self, event: DeviceEvent,
+                               devices: Dispatcher) -> None:
         import sdl2
         flags = sdl2.SDL_GetWindowFlags(self.__window)
         flags &= sdl2.SDL_WINDOW_FULLSCREEN_DESKTOP
@@ -928,7 +934,7 @@ class ScreenWindow(Device):
         if event.type == _ClickType.Single:
             self.__toggle_pause(devices)
         elif event.type == _ClickType.Double:
-            self.__toggle_fullscreen(devices)
+            self.__on_toggle_fullscreen(event, devices)
 
     def __on_controller_event(self, event: typing.Any,
                               dispatcher: Dispatcher) -> None:

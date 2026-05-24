@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2025 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -109,6 +109,10 @@ class TapeStateUpdated(DeviceEvent):
 
 
 class ToggleEmulationPause(DeviceEvent):
+    pass
+
+
+class ToggleFullscreen(DeviceEvent):
     pass
 
 
