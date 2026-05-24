@@ -827,7 +827,7 @@ class ScreenWindow(Device):
         }
 
         self.__theme = _Theme()
-        self.__panel = _MainMenuPanel(self.__theme)
+        self.__panels: list[_Panel] = [_MainMenuPanel(self.__theme)]
         self._notification: None | Notification = None
         self._screencast = Screencast()
 
@@ -866,7 +866,7 @@ class ScreenWindow(Device):
         window_size = window_width, window_height = w.value, h.value
         display_scale = w.value / lw.value
         if self.__theme.update(window_size, display_scale):
-            self.__panel.invalidate()
+            self.__panels[-1].invalidate()
         width = min(window_width,
                     div_ceil(window_height * self.frame_width,
                              self.frame_height))
@@ -890,10 +890,10 @@ class ScreenWindow(Device):
         self._screencast.on_draw(self.__pixel_texture)
 
         # Draw overlay screen.
-        self.__panel.draw(self.__renderer, dispatcher)
+        self.__panels[-1].draw(self.__renderer, dispatcher)
 
         # Draw notifications.
-        if self._notification and not self.__panel.active:
+        if self._notification and not self.__panels[-1].active:
             self._notification.draw(window_size, (width, height),
                                     self.__renderer, self.__theme)
 
@@ -950,7 +950,7 @@ class ScreenWindow(Device):
 
     def __on_key(self, event: DeviceEvent, devices: Dispatcher) -> typing.Any:
         assert isinstance(event, _KeyEvent)
-        if not self.__panel.active:
+        if not self.__panels[-1].active:
             zx_key_id = self.__SDL_KEYS_TO_ZX_KEYS.get(event.id, event.id)
             devices.notify(KeyStroke(zx_key_id, event.pressed))
 
@@ -969,7 +969,7 @@ class ScreenWindow(Device):
     def __on_click(self, event: DeviceEvent,
                    devices: Dispatcher) -> typing.Any:
         assert isinstance(event, _ClickEvent)
-        if self.__panel.active:
+        if self.__panels[-1].active:
             return
         if event.type == _ClickType.Single:
             devices.notify(ToggleEmulationPause())
@@ -1027,7 +1027,7 @@ class ScreenWindow(Device):
         if event_type in self._EVENT_HANDLERS:
             self._EVENT_HANDLERS[event_type](event, devices)
 
-        self.__panel.on_event(event, devices)
+        self.__panels[-1].on_event(event, devices)
         return result
 
     def _on_updated_pause_state(self, event: DeviceEvent,
