@@ -420,7 +420,7 @@ class _OverlayScreen:
             self.__texture.free()
         self.__texture = None
 
-    def __rebuild(self, renderer: _Renderer) -> None:
+    def __rebuild(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         assert self.__texture is None
 
         theme = self.__theme
@@ -437,12 +437,14 @@ class _OverlayScreen:
         surface = _Surface(width, height)
         surface.fill(self.__OVERLAY_BG_RGBA)
 
+        tape_paused = dispatcher.notify(IsTapePlayerPaused())
+        tape_action = 'Resume tape' if tape_paused else 'Pause tape'
         KEYS_HELP = [
             ('ESC', 'Toggle help'),
             ('F3', 'Load snapshot or tape file'),
             ('F2', 'Save snapshot'),
             ('PAUSE', 'Pause/resume emulation'),
-            ('F6', 'Pause/resume tape'),
+            ('F6', tape_action),
             ('F11', 'Toggle fullscreen'),
             ('F10', 'Quit'),
         ]
@@ -473,12 +475,12 @@ class _OverlayScreen:
 
         self.__texture = texture
 
-    def draw(self, renderer: _Renderer) -> None:
+    def draw(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         if not self.active:
             return
 
         if self.__texture is None:
-            self.__rebuild(renderer)
+            self.__rebuild(renderer, dispatcher)
 
         assert self.__texture is not None
         assert self.__theme.window_size is not None
@@ -632,7 +634,7 @@ class ScreenWindow(Device):
         sdl2.SDL_UpdateTexture(self.__pixel_texture.sdl_texture, rect,
                                pixels, pitch)
 
-    def __update_screen(self) -> None:
+    def __update_screen(self, dispatcher: Dispatcher) -> None:
         w, h = ctypes.c_int(), ctypes.c_int()
         lw, lh = ctypes.c_int(), ctypes.c_int()
         import sdl2
@@ -667,7 +669,7 @@ class ScreenWindow(Device):
         self._screencast.on_draw(self.__pixel_texture)
 
         # Draw overlay screen.
-        self.__overlay.draw(self.__renderer)
+        self.__overlay.draw(self.__renderer, dispatcher)
 
         # Draw notifications.
         if self._notification:
@@ -823,6 +825,7 @@ class ScreenWindow(Device):
             self._notification = TapePauseNotification(tape_time)
         else:
             self._notification = TapeResumeNotification(tape_time)
+        self.__overlay.invalidate()
 
     def _on_quantum_run(self, event: DeviceEvent,
                         dispatcher: Dispatcher) -> None:
@@ -844,7 +847,7 @@ class ScreenWindow(Device):
         while self.__events:
             self.on_event(self.__events.pop(0), dispatcher, None)
 
-        self.__update_screen()
+        self.__update_screen(dispatcher)
 
     def __toggle_pause(self, devices: Dispatcher) -> None:
         devices.notify(ToggleEmulationPause())
