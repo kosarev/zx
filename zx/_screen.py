@@ -473,6 +473,7 @@ class _Menu:
 
     def __init__(self, items: list[_MenuItem]) -> None:
         self.__items = items
+        self.selected_item: None | _MenuItem = None
         self.x = 0.0
         self.y = 0.0
         self.width = 0.0
@@ -498,25 +499,35 @@ class _Menu:
                 return item
         return None
 
-    def next_item(self, current: None | _MenuItem) -> None | _MenuItem:
+    def select_next(self) -> None:
         if not self.__items:
-            return None
-        if current is None:
-            return self.__items[0]
-        idx = self.__items.index(current)
+            return
+        if self.selected_item is None:
+            self.selected_item = self.__items[0]
+            return
+        idx = self.__items.index(self.selected_item)
         if idx + 1 < len(self.__items):
-            return self.__items[idx + 1]
-        return current
+            self.selected_item = self.__items[idx + 1]
 
-    def prev_item(self, current: None | _MenuItem) -> None | _MenuItem:
+    def select_prev(self) -> None:
         if not self.__items:
-            return None
-        if current is None:
-            return self.__items[-1]
-        idx = self.__items.index(current)
+            return
+        if self.selected_item is None:
+            self.selected_item = self.__items[-1]
+            return
+        idx = self.__items.index(self.selected_item)
         if idx > 0:
-            return self.__items[idx - 1]
-        return current
+            self.selected_item = self.__items[idx - 1]
+
+    def select_at(self, x: float, y: float) -> None:
+        self.selected_item = self.item_at(x, y)
+
+    def highlight(self, renderer: '_Renderer') -> None:
+        if self.selected_item is None:
+            return
+        renderer.set_draw_colour((255, 255, 255, 30))
+        renderer.fill_rect(self.x, self.y + self.selected_item.y,
+                           self.width, self.selected_item.height)
 
     def item_at(self, x: float, y: float) -> None | _MenuItem:
         if not (0 <= y < self.height):
@@ -536,13 +547,11 @@ class _OverlayScreen:
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
 
     __texture: None | _Texture
-    __selected_item: None | _MenuItem
 
     def __init__(self, theme: _Theme) -> None:
         self.active = False
         self.__theme = theme
         self.__texture = None
-        self.__selected_item = None
 
         self.__emulation_item = _MenuItem('PAUSE', '',
                                           action=self.__on_toggle_pause)
@@ -567,8 +576,7 @@ class _OverlayScreen:
         self.__texture = None
 
     def on_mouse_move(self, x: int, y: int) -> None:
-        self.__selected_item = self.__menu.item_at(
-            x - self.__menu.x, y - self.__menu.y)
+        self.__menu.select_at(x - self.__menu.x, y - self.__menu.y)
 
     def __rebuild(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         assert self.__texture is None
@@ -626,7 +634,7 @@ class _OverlayScreen:
         self.active ^= True
 
     def __activate_selected(self, dispatcher: Dispatcher) -> None:
-        item = self.__selected_item
+        item = self.__menu.selected_item
         if item is not None and item.action is not None:
             item.action(dispatcher)
 
@@ -642,12 +650,10 @@ class _OverlayScreen:
                 self.__activate_selected(dispatcher)
                 return
             if key_id == 'DOWN':
-                self.__selected_item = self.__menu.next_item(
-                    self.__selected_item)
+                self.__menu.select_next()
                 return
             if key_id == 'UP':
-                self.__selected_item = self.__menu.prev_item(
-                    self.__selected_item)
+                self.__menu.select_prev()
                 return
         item = self.__menu.item_for_key(key_id)
         if item is not None and item.action is not None:
@@ -680,12 +686,7 @@ class _OverlayScreen:
         assert self.__theme.window_size is not None
         renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
 
-        if self.__selected_item is not None:
-            item = self.__selected_item
-            renderer.set_draw_colour((255, 255, 255, 30))
-            renderer.fill_rect(self.__menu.x,
-                               self.__menu.y + item.y,
-                               self.__menu.width, item.height)
+        self.__menu.highlight(renderer)
 
 
 # TODO: A quick solution for making screencasts.
