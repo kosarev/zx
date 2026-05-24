@@ -405,6 +405,8 @@ class TapeResumeNotification(Notification):
 
 
 class _MenuItem:
+    x: float
+    y: float
     width: float
     height: float
 
@@ -418,13 +420,14 @@ class _MenuItem:
         self.height = font.em_height
         self.width = font.em * 5 + font.em * 14
 
-    def draw(self, surface: _Surface, theme: _Theme,
-             font: _Font, x: float, y: float) -> None:
+    def draw(self, surface: _Surface, theme: _Theme, font: _Font) -> None:
         TEXT_RGB: _Colour = (230, 230, 230, 255)
+        action_x = self.x + font.em * 5
         hotkey_surface = theme.draw_key_button(self.hotkey)
         action_surface = font.render(self.action, TEXT_RGB)
-        surface.blit(hotkey_surface, x - hotkey_surface.width - font.em, y)
-        surface.blit(action_surface, x, y)
+        surface.blit(hotkey_surface,
+                     action_x - hotkey_surface.width - font.em, self.y)
+        surface.blit(action_surface, action_x, self.y)
         hotkey_surface.free()
         action_surface.free()
 
@@ -477,21 +480,23 @@ class _OverlayScreen:
             _MenuItem('F10', 'Quit'),
         ]
 
+        item_gap = font.em
+        text_box_width = 0.0
+        text_box_height = 0.0
         for item in self.__items:
             item.rebuild(theme)
+            item.x = 0.0
+            item.y = text_box_height
+            text_box_width = max(text_box_width, item.width)
+            text_box_height += item.height + item_gap
+        text_box_height -= item_gap
 
-        hotkey_offset = font.em * 5
-        item_gap = font.em
-        text_box_width = max(item.width for item in self.__items)
-        text_box_height = (sum(item.height for item in self.__items) +
-                           item_gap * (len(self.__items) - 1))
         text_box_x = max(0, (width - text_box_width) // 2)
         text_box_y = max(0, (height - text_box_height) // 2)
-
-        y = text_box_y
         for item in self.__items:
-            item.draw(surface, theme, font, text_box_x + hotkey_offset, y)
-            y += item.height + item_gap
+            item.x += text_box_x
+            item.y += text_box_y
+            item.draw(surface, theme, font)
 
         texture = renderer.create_texture_from_surface(surface)
         surface.free()
