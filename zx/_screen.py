@@ -499,7 +499,6 @@ class _Menu:
         font = theme.normal_font
         assert font is not None
 
-        padding = font.em * 3
         items_width = 0.0
         self.height = 0.0
         for item in self.__items:
@@ -508,7 +507,7 @@ class _Menu:
             items_width = max(items_width, item.width)
             self.height += item.height
 
-        self.width = max(items_width + 2 * padding, min_width)
+        self.width = max(items_width, min_width)
         item_x = (self.width - items_width) * indent
         for item in self.__items:
             item.x = item_x
