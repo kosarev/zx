@@ -116,6 +116,17 @@ class _Surface:
             src.sdl_surface, None, self.sdl_surface,
             sdl2.SDL_Rect(round(dst_x), round(dst_y), 0, 0))
 
+    def set_clip_rect(self, x: float, y: float,
+                      w: float, h: float) -> None:
+        import sdl2
+        sdl2.SDL_SetClipRect(
+            self.sdl_surface,
+            sdl2.SDL_Rect(round(x), round(y), round(w), round(h)))
+
+    def clear_clip_rect(self) -> None:
+        import sdl2
+        sdl2.SDL_SetClipRect(self.sdl_surface, None)
+
     def free(self) -> None:
         import sdl2
         sdl2.SDL_FreeSurface(self.sdl_surface)
@@ -576,8 +587,14 @@ class _Menu:
             self.width, self.selected_item.height)
 
     def draw(self, surface: _Surface, theme: _Theme, font: _Font) -> None:
+        surface.set_clip_rect(self.x, self.y, self.width, self.height)
         for item in self.__items:
+            if item.y + item.height <= self.__scroll_y:
+                continue
+            if item.y >= self.__scroll_y + self.__max_height:
+                break
             item.draw(surface, theme, font, self.x, self.y - self.__scroll_y)
+        surface.clear_clip_rect()
 
 
 class _KeyEvent(DeviceEvent):
