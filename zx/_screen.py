@@ -535,7 +535,6 @@ class _Menu:
     max_height: float
 
     def __init__(self, items: list[_MenuItem]) -> None:
-        self.items = items
         self.selected_item: None | _MenuItem = None
         self.__scroll_y = 0.0
         self.__total_height = 0.0
@@ -548,6 +547,20 @@ class _Menu:
         self.indent = 0.0
         self.padding = 0.0
         self.max_height = float('inf')
+        self.items = items
+
+    @property
+    def items(self) -> list[_MenuItem]:
+        return self.__items
+
+    @items.setter
+    def items(self, value: list[_MenuItem]) -> None:
+        self.__items = value
+        selected = self.selected_item
+        if selected is not None:
+            self.selected_item = next(
+                (item for item in value
+                 if item.descriptor is selected.descriptor), None)
 
     def rebuild(self, theme: _Theme) -> None:
         total_height = 0.0
@@ -748,15 +761,11 @@ class _MainMenuPanel(_Panel):
     def __rebuild(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         assert self.__texture is None
 
-        selected = (self.__menu.selected_item.descriptor
-                    if self.__menu.selected_item else None)
         descriptors: list[MenuItemDescriptor] = dispatcher.notify(
             GetMainMenuItems(), result=[])
         existing = {item.descriptor: item for item in self.__menu.items}
-        items = [existing.get(d) or _MenuItem(d) for d in descriptors]
-        self.__menu = _Menu(items)
-        if selected is not None:
-            self.__menu.select_by_descriptor(selected)
+        self.__menu.items = [existing.get(d) or _MenuItem(d)
+                             for d in descriptors]
 
         theme = self.__theme
         assert theme.normal_font is not None
