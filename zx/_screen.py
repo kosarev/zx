@@ -465,31 +465,31 @@ class _Button:
     width: float
     height: float
     label_width: float
+    v_padding: float
+    min_width: float
 
     def __init__(self, label: str,
                  hotkey: None | str = None) -> None:
         self.__label = label
         self.__hotkey = hotkey
         self.__surface: None | _Surface = None
-        self.__v_padding = 0.0
         self.x = 0.0
         self.y = 0.0
         self.width = 0.0
         self.height = 0.0
         self.label_width = 0.0
+        self.v_padding = 0.0
+        self.min_width = 0.0
         self.__content_x = 0.0
 
-    def rebuild(self, theme: _Theme, *,
-                v_padding: float = 0.0,
-                min_width: float = 0.0) -> None:
+    def rebuild(self, theme: _Theme) -> None:
         if self.__surface is not None:
             self.__surface.free()
         surface, self.label_width = theme.draw_action_hint(
             self.__hotkey, self.__label)
         self.__surface = surface
-        self.__v_padding = v_padding
-        self.width = max(surface.width, min_width)
-        self.height = surface.height + v_padding * 2
+        self.width = max(surface.width, self.min_width)
+        self.height = surface.height + self.v_padding * 2
         self.__content_x = (self.width - surface.width) / 2
 
     def contains(self, x: float, y: float) -> bool:
@@ -510,27 +510,14 @@ class _Button:
         assert self.__surface is not None
         target.blit(self.__surface,
                     parent_x + self.x + self.__content_x,
-                    parent_y + self.y + self.__v_padding)
+                    parent_y + self.y + self.v_padding)
 
 
-class _MenuItem:
-    x: float
-    y: float
-    width: float
-    height: float
-    label_width: float
-    __content_surface: None | _Surface
-    __content_y: float
-
+class _MenuItem(_Button):
     def __init__(self, descriptor: MenuItemDescriptor) -> None:
+        super().__init__(descriptor.label, descriptor.hotkey)
         self.descriptor = descriptor
-        self.x = 0.0
         self.y = 0.0
-        self.width = 0.0
-        self.height = 0.0
-        self.label_width = 0.0
-        self.__content_surface = None
-        self.__content_y = 0.0
 
     @property
     def hotkey(self) -> None | str:
@@ -542,24 +529,8 @@ class _MenuItem:
 
     def rebuild(self, theme: _Theme) -> None:
         assert theme.normal_font is not None
-        font = theme.normal_font
-        TEXT_RGB: _Colour = (230, 230, 230, 255)
-        if self.__content_surface is not None:
-            self.__content_surface.free()
-        self.__content_surface, self.label_width = (
-            theme.draw_action_hint(self.hotkey, self.label))
-        content_height = self.__content_surface.height
-        padding = content_height * 0.7
-        self.height = content_height + padding
-        self.__content_y = padding / 2
-        self.width = self.__content_surface.width
-
-    def draw(self, surface: _Surface,
-             parent_x: float = 0.0, parent_y: float = 0.0) -> None:
-        assert self.__content_surface is not None
-        x = parent_x + self.x
-        y = parent_y + self.y + self.__content_y
-        surface.blit(self.__content_surface, x, y)
+        self.v_padding = theme.normal_font.line_height * 0.35
+        super().rebuild(theme)
 
 
 class _Menu:
@@ -1017,8 +988,9 @@ class _ErrorPanel(_Panel):
         font = theme.normal_font
         title_font = theme.title_font
 
-        self.__close_button.rebuild(theme, v_padding=font.em * 0.7,
-                                    min_width=float(width))
+        self.__close_button.v_padding = font.em * 0.7
+        self.__close_button.min_width = float(width)
+        self.__close_button.rebuild(theme)
 
         surface = _Surface(width, height)
         surface.fill(theme.overlay_bg)
