@@ -456,6 +456,27 @@ class TapeResumeNotification(Notification):
                              alpha, t)
 
 
+class _Button:
+    x: float
+    y: float
+    width: float
+    height: float
+
+    def __init__(self, surface: _Surface) -> None:
+        self.__surface = surface
+        self.x = 0.0
+        self.y = 0.0
+        self.width = surface.width
+        self.height = surface.height
+
+    def free(self) -> None:
+        self.__surface.free()
+
+    def draw(self, target: _Surface,
+             parent_x: float = 0.0, parent_y: float = 0.0) -> None:
+        target.blit(self.__surface, parent_x + self.x, parent_y + self.y)
+
+
 class _MenuItem:
     x: float
     y: float
