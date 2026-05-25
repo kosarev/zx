@@ -934,17 +934,23 @@ class _ErrorPanel(_Panel):
         TEXT_RGB: _Colour = (230, 230, 230, 255)
         STRIP_RGB: _Colour = (30, 30, 30, 255)
         margin = font.em * 4
+        title_surface = font.render('Error', TEXT_RGB)
         msg_surface = font.render(self.__message, TEXT_RGB,
                                   float(width) - margin * 2)
 
         padding = font.line_height * 1.5
-        strip_h = msg_surface.height + padding * 2
+        gap = font.line_height * 0.5
+        content_h = title_surface.height + gap + msg_surface.height
+        strip_h = content_h + padding * 2
         strip_y = (height - strip_h) / 2
         surface.fill_rect(0, strip_y, float(width), strip_h, STRIP_RGB)
 
-        x = (width - msg_surface.width) / 2
         y = strip_y + padding
-        surface.blit(msg_surface, x, y)
+        surface.blit(title_surface, (width - title_surface.width) / 2, y)
+        y += title_surface.height + gap
+        title_surface.free()
+
+        surface.blit(msg_surface, (width - msg_surface.width) / 2, y)
         msg_surface.free()
 
         self.__texture = renderer.create_texture_from_surface(surface)
