@@ -517,7 +517,6 @@ class _MenuItem(_Button):
     def __init__(self, descriptor: MenuItemDescriptor) -> None:
         super().__init__(descriptor.label, descriptor.hotkey)
         self.descriptor = descriptor
-        self.y = 0.0
 
     def rebuild(self, theme: _Theme) -> None:
         assert theme.normal_font is not None
