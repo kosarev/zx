@@ -230,11 +230,13 @@ class _Font:
         self.em_height = float(h.value)
         self.line_height = float(sdl2.sdlttf.TTF_FontLineSkip(self.__font))
 
-    def render(self, text: str, colour: _Colour) -> _Surface:
+    def render(self, text: str, colour: _Colour,
+               wrap_width: float = 0) -> _Surface:
         import sdl2
         import sdl2.sdlttf
-        return _Surface.from_sdl(sdl2.sdlttf.TTF_RenderUTF8_Blended(
-            self.__font, text.encode('utf-8'), sdl2.SDL_Color(*colour)))
+        return _Surface.from_sdl(sdl2.sdlttf.TTF_RenderUTF8_Blended_Wrapped(
+            self.__font, text.encode('utf-8'), sdl2.SDL_Color(*colour),
+            round(wrap_width)))
 
 
 class _Theme:
@@ -930,7 +932,9 @@ class _ErrorPanel(_Panel):
         surface.fill(theme.overlay_bg)
 
         ERROR_RGB: _Colour = (255, 100, 100, 255)
-        msg_surface = font.render(self.__message, ERROR_RGB)
+        margin = font.em * 4
+        msg_surface = font.render(self.__message, ERROR_RGB,
+                                  float(width) - margin * 2)
         x = (width - msg_surface.width) / 2
         y = (height - msg_surface.height) / 2
         surface.blit(msg_surface, x, y)
