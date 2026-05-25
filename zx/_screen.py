@@ -473,6 +473,10 @@ class _Button:
         self.height = surface.height + v_padding * 2
         self.__content_x = (self.width - surface.width) / 2
 
+    def contains(self, x: float, y: float) -> bool:
+        return (self.x <= x < self.x + self.width and
+                self.y <= y < self.y + self.height)
+
     def free(self) -> None:
         self.__surface.free()
 
@@ -1039,9 +1043,7 @@ class _ErrorPanel(_Panel):
                  dispatcher: Dispatcher) -> None:
         if isinstance(event, _MouseMoveEvent):
             button = self.__close_button
-            if (button is not None and
-                    button.x <= event.x < button.x + button.width and
-                    button.y <= event.y < button.y + button.height):
+            if button is not None and button.contains(event.x, event.y):
                 self.__selected_button = button
             else:
                 self.__selected_button = None
