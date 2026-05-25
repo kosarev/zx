@@ -230,6 +230,10 @@ class _Font:
         self.em_height = float(h.value)
         self.line_height = float(sdl2.sdlttf.TTF_FontLineSkip(self.__font))
 
+    def free(self) -> None:
+        import sdl2.sdlttf
+        sdl2.sdlttf.TTF_CloseFont(self.__font)
+
     def render(self, text: str, colour: _Colour,
                wrap_width: float = 0) -> _Surface:
         import sdl2
@@ -273,11 +277,15 @@ class _Theme:
             logical_width = width / display_scale
             logical_height = height / display_scale
 
-            # TODO: Use TTF_CloseFont().
             if logical_width < 450 or logical_height < 400:
                 text_size = 14
             else:
                 text_size = 17
+
+            for font in (self.normal_font, self.title_font,
+                         self.key_button_font):
+                if font is not None:
+                    font.free()
 
             self.normal_font = _Font(self.scale(text_size))
             self.title_font = _Font(self.scale(text_size * 1.3))
