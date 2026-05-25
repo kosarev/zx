@@ -1063,6 +1063,9 @@ class _ErrorPanel(_Panel):
         elif isinstance(event, _ClickEvent):
             if self.__selected_button is not None:
                 dispatcher.notify(_DismissError())
+        elif isinstance(event, _KeyEvent):
+            if event.pressed and event.id in ('ESCAPE', 'RETURN', 'BACKSPACE'):
+                dispatcher.notify(_DismissError())
 
     def draw(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         if self.__texture is None:
@@ -1334,9 +1337,7 @@ class ScreenWindow(Device):
         assert isinstance(event, _KeyEvent)
         if event.pressed:
             if event.id == 'ESCAPE':
-                if self.__error_panel is not None:
-                    self.__error_panel = None
-                else:
+                if self.__error_panel is None:
                     devices.notify(_TogglePanel())
                 return result
 
@@ -1345,14 +1346,13 @@ class ScreenWindow(Device):
                 return result
 
             if event.id == 'BACKSPACE' and self.__panel_active:
-                if self.__error_panel is not None:
-                    self.__error_panel = None
-                else:
+                if self.__error_panel is None:
                     self.__activate_panel(self.__main_menu_panel)
                 return result
 
+            # Prevent hotkey lookup from firing while error panel is up;
+            # the panel itself handles dismissal via _DismissError.
             if event.id == 'RETURN' and self.__error_panel is not None:
-                self.__error_panel = None
                 return result
 
             items: list[MenuItemDescriptor] = devices.notify(
