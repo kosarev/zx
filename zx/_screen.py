@@ -580,11 +580,15 @@ class _Menu:
     def highlight(self, renderer: _Renderer) -> None:
         if self.selected_item is None:
             return
+        item = self.selected_item
+        # Clip to visible area.
+        top = max(self.y + item.y - self.__scroll_y, self.y)
+        bottom = min(self.y + item.y - self.__scroll_y + item.height,
+                     self.y + self.height)
+        if bottom <= top:
+            return
         renderer.set_draw_colour((255, 255, 255, 30))
-        renderer.fill_rect(
-            self.x,
-            self.y + self.selected_item.y - self.__scroll_y,
-            self.width, self.selected_item.height)
+        renderer.fill_rect(self.x, top, self.width, bottom - top)
 
     def draw(self, surface: _Surface, theme: _Theme, font: _Font) -> None:
         surface.set_clip_rect(self.x, self.y, self.width, self.height)
