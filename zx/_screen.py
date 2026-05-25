@@ -500,12 +500,6 @@ class _Menu:
             self.height += item.height
         self.width = items_width + 2 * padding
 
-    def item_for_key(self, key_id: str) -> None | _MenuItem:
-        for item in self.__items:
-            if item.hotkey == key_id:
-                return item
-        return None
-
     def select_next(self) -> None:
         if not self.__items:
             return
@@ -525,6 +519,13 @@ class _Menu:
         idx = self.__items.index(self.selected_item)
         if idx > 0:
             self.selected_item = self.__items[idx - 1]
+
+    def select_by_descriptor(self,
+                             descriptor: MenuItemDescriptor) -> None:
+        for item in self.__items:
+            if item.descriptor is descriptor:
+                self.selected_item = item
+                return
 
     def select_at(self, x: float, y: float) -> None:
         self.selected_item = self.item_at(x, y)
@@ -594,9 +595,13 @@ class _MainMenuPanel(_Panel):
     def __rebuild(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         assert self.__texture is None
 
-        items: list[MenuItemDescriptor] = dispatcher.notify(
+        selected = (self.__menu.selected_item.descriptor
+                    if self.__menu.selected_item else None)
+        descriptors: list[MenuItemDescriptor] = dispatcher.notify(
             GetMainMenuItems(), result=[])
-        self.__menu = _Menu([_MenuItem(item) for item in items])
+        self.__menu = _Menu([_MenuItem(d) for d in descriptors])
+        if selected is not None:
+            self.__menu.select_by_descriptor(selected)
 
         theme = self.__theme
         assert theme.normal_font is not None
@@ -677,7 +682,7 @@ class _FileBrowserPanel(_Panel):
     def __init__(self, theme: _Theme) -> None:
         self.__theme = theme
         self.__texture = None
-        self.__path = os.path.expanduser('~')
+        self.__path = os.path.expanduser('.')
         self.__entries = []
         self.__selected = 0
         self.__item_x = 0.0
@@ -902,6 +907,20 @@ class ScreenWindow(Device):
         }
 
         self.__theme = _Theme()
+        self.__emulation_item = _PrimaryMainMenuItem(
+            ToggleEmulationPause, 'PAUSE', 'Pause emulation')
+        self.__tape_item = _PrimaryMainMenuItem(
+            ToggleTapePause, 'F6', 'Pause tape')
+        self.__menu_descriptors: list[MenuItemDescriptor] = [
+            _PrimaryMainMenuItem(_TogglePanel, 'ESC', 'Hide menu'),
+            _PrimaryMainMenuItem(RequestLoadFile, 'F3',
+                                 'Load snapshot or tape file'),
+            _PrimaryMainMenuItem(RequestSaveSnapshot, 'F2', 'Save snapshot'),
+            self.__emulation_item,
+            self.__tape_item,
+            _PrimaryMainMenuItem(ToggleFullscreen, 'F11', 'Toggle fullscreen'),
+            _PrimaryMainMenuItem(_Exit, 'F10', 'Quit'),
+        ]
         self.__main_menu_panel = _MainMenuPanel(self.__theme)
         self.__file_browser_panel = _FileBrowserPanel(self.__theme)
         self.__panel: _Panel = self.__main_menu_panel
@@ -1128,21 +1147,10 @@ class ScreenWindow(Device):
             result: list[MenuItemDescriptor]) -> list[MenuItemDescriptor]:
         emulation_paused = devices.notify(GetEmulationPauseState())
         tape_paused = devices.notify(IsTapePlayerPaused())
-        result.extend([
-            _PrimaryMainMenuItem(_TogglePanel, 'ESC', 'Hide menu'),
-            _PrimaryMainMenuItem(RequestLoadFile, 'F3',
-                                 'Load snapshot or tape file'),
-            _PrimaryMainMenuItem(RequestSaveSnapshot, 'F2', 'Save snapshot'),
-            _PrimaryMainMenuItem(ToggleEmulationPause, 'PAUSE',
-                                 'Resume emulation' if emulation_paused
-                                 else 'Pause emulation'),
-            _PrimaryMainMenuItem(ToggleTapePause, 'F6',
-                                 'Resume tape' if tape_paused
-                                 else 'Pause tape'),
-            _PrimaryMainMenuItem(ToggleFullscreen, 'F11',
-                                 'Toggle fullscreen'),
-            _PrimaryMainMenuItem(_Exit, 'F10', 'Quit'),
-        ])
+        self.__emulation_item.label = ('Resume emulation' if emulation_paused
+                                       else 'Pause emulation')
+        self.__tape_item.label = 'Resume tape' if tape_paused else 'Pause tape'
+        result.extend(self.__menu_descriptors)
         return result
 
     def __on_toggle_panel(self, event: DeviceEvent,
