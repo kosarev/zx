@@ -22,9 +22,10 @@ class DeviceEvent(object):
 
 
 class MenuItemDescriptor(object):
-    def __init__(self, hotkey: str, label: str) -> None:
-        self.hotkey = hotkey
+    def __init__(self, label: str,
+                 hotkey: None | str = None) -> None:
         self.label = label
+        self.hotkey = hotkey
 
 
 class GetMainMenuItems(DeviceEvent):

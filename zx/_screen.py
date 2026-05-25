@@ -436,7 +436,7 @@ class _MenuItem:
         self.__content_y = 0.0
 
     @property
-    def hotkey(self) -> str:
+    def hotkey(self) -> None | str:
         return self.descriptor.hotkey
 
     @property
@@ -451,13 +451,19 @@ class _MenuItem:
             self.__hotkey_surface.free()
         if self.__label_surface:
             self.__label_surface.free()
-        self.__hotkey_surface = theme.draw_key_button(self.hotkey)
         self.__label_surface = font.render(self.label, TEXT_RGB)
-        self.__label_x = font.em * 5
-        self.__hotkey_x = (self.__label_x
-                           - self.__hotkey_surface.width - font.em)
-        content_height = max(self.__hotkey_surface.height,
-                             self.__label_surface.height)
+        if self.hotkey:
+            self.__hotkey_surface = theme.draw_key_button(self.hotkey)
+            self.__label_x = font.em * 5
+            self.__hotkey_x = (self.__label_x
+                               - self.__hotkey_surface.width - font.em)
+        else:
+            self.__hotkey_surface = None
+            self.__label_x = font.em
+            self.__hotkey_x = 0.0
+        hotkey_height = (self.__hotkey_surface.height
+                         if self.__hotkey_surface else 0.0)
+        content_height = max(hotkey_height, self.__label_surface.height)
         padding = content_height * 0.7
         self.height = content_height + padding
         self.__content_y = padding / 2
@@ -465,11 +471,11 @@ class _MenuItem:
 
     def draw(self, surface: _Surface, theme: _Theme, font: _Font,
              parent_x: float = 0.0, parent_y: float = 0.0) -> None:
-        assert self.__hotkey_surface is not None
         assert self.__label_surface is not None
         x = parent_x + self.x
         y = parent_y + self.y + self.__content_y
-        surface.blit(self.__hotkey_surface, x + self.__hotkey_x, y)
+        if self.__hotkey_surface is not None:
+            surface.blit(self.__hotkey_surface, x + self.__hotkey_x, y)
         surface.blit(self.__label_surface, x + self.__label_x, y)
 
 
@@ -565,9 +571,9 @@ class _Panel(abc.ABC):
 
 
 class _PrimaryMainMenuItem(MenuItemDescriptor):
-    def __init__(self, event_type: type[DeviceEvent],
-                 hotkey: str, label: str) -> None:
-        super().__init__(hotkey, label)
+    def __init__(self, label: str, event_type: type[DeviceEvent],
+                 hotkey: None | str = None) -> None:
+        super().__init__(label, hotkey)
         self.event_type = event_type
 
 
@@ -664,25 +670,36 @@ class _MainMenuPanel(_Panel):
         self.__menu.highlight(renderer)
 
 
+class _FileEntryDescriptor(MenuItemDescriptor):
+    def __init__(self, name: str, path: str) -> None:
+        super().__init__(name)
+        self.path = path
+        self.is_dir = os.path.isdir(path)
+
+
 class _FileBrowserPanel(_Panel):
     __texture: None | _Texture
-    __entries: list[str]
-    __selected: int
-    __item_x: float
-    __item_y: float
-    __item_width: float
-    __item_height: float
+    __descriptors: list[_FileEntryDescriptor]
 
     def __init__(self, theme: _Theme) -> None:
         self.__theme = theme
         self.__texture = None
-        self.__path = os.path.expanduser('.')
-        self.__entries = []
-        self.__selected = 0
-        self.__item_x = 0.0
-        self.__item_y = 0.0
-        self.__item_width = 0.0
-        self.__item_height = 0.0
+        self.__path = os.getcwd()
+        self.__descriptors = []
+        self.__menu: _Menu = _Menu([])
+        self.__load_entries()
+
+    def __load_entries(self) -> None:
+        try:
+            names = sorted(os.listdir(self.__path))
+        except OSError:
+            names = []
+        parent = os.path.normpath(os.path.join(self.__path, '..'))
+        self.__descriptors = (
+            [_FileEntryDescriptor('..', parent)] +
+            [_FileEntryDescriptor(n, os.path.normpath(
+                os.path.join(self.__path, n))) for n in names]
+        )
 
     def invalidate(self) -> None:
         if self.__texture:
@@ -697,61 +714,53 @@ class _FileBrowserPanel(_Panel):
         width, height = theme.window_size
         font = theme.normal_font
 
-        try:
-            raw = sorted(os.listdir(self.__path))
-        except OSError:
-            raw = []
-        self.__entries = ['..'] + raw
+        selected = (self.__menu.selected_item.descriptor
+                    if self.__menu.selected_item else None)
+        self.__menu = _Menu([_MenuItem(d) for d in self.__descriptors])
+        if selected is not None:
+            self.__menu.select_by_descriptor(selected)
 
-        TEXT_RGB: _Colour = (230, 230, 230, 255)
         DIM_RGB: _Colour = (150, 150, 150, 255)
-        PADDING = font.em
 
         surface = _Surface(width, height)
         surface.fill(theme.overlay_bg)
 
         path_surface = font.render(self.__path, DIM_RGB)
-        surface.blit(path_surface, PADDING, PADDING)
+        surface.blit(path_surface, font.em, font.em)
         path_surface.free()
 
-        self.__item_x = PADDING
-        self.__item_y = PADDING + font.line_height * 1.5
-        self.__item_width = width - 2 * PADDING
-        self.__item_height = font.line_height
-
-        y = self.__item_y
-        for entry in self.__entries:
-            entry_surface = font.render(entry, TEXT_RGB)
-            surface.blit(entry_surface, PADDING * 2, y)
-            entry_surface.free()
-            y += self.__item_height
+        self.__menu.rebuild(theme)
+        self.__menu.x = font.em
+        self.__menu.y = font.em + font.line_height * 1.5
+        self.__menu.draw(surface, theme, font)
 
         texture = renderer.create_texture_from_surface(surface)
         surface.free()
         self.__texture = texture
 
+    def __navigate(self, path: str) -> None:
+        self.__path = path
+        self.__load_entries()
+        self.invalidate()
+
     def __activate_selected(self, dispatcher: Dispatcher) -> None:
-        if not self.__entries:
+        item = self.__menu.selected_item
+        if item is None:
             return
-        entry = self.__entries[self.__selected]
-        path = os.path.normpath(os.path.join(self.__path, entry))
-        if os.path.isdir(path):
-            self.__path = path
-            self.__selected = 0
-            self.invalidate()
+        assert isinstance(item.descriptor, _FileEntryDescriptor)
+        if item.descriptor.is_dir:
+            self.__navigate(item.descriptor.path)
         else:
-            dispatcher.notify(LoadFile(path))
+            dispatcher.notify(LoadFile(item.descriptor.path))
 
     def __on_key(self, key_id: str, pressed: bool,
                  dispatcher: Dispatcher) -> None:
         if not pressed:
             return
-        if key_id == 'DOWN' and self.__selected < len(self.__entries) - 1:
-            self.__selected += 1
-            self.invalidate()
-        elif key_id == 'UP' and self.__selected > 0:
-            self.__selected -= 1
-            self.invalidate()
+        if key_id == 'DOWN':
+            self.__menu.select_next()
+        elif key_id == 'UP':
+            self.__menu.select_prev()
         elif key_id == 'RETURN':
             self.__activate_selected(dispatcher)
 
@@ -767,11 +776,7 @@ class _FileBrowserPanel(_Panel):
         assert self.__texture is not None
         assert self.__theme.window_size is not None
         renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
-        if self.__entries:
-            renderer.set_draw_colour((255, 255, 255, 30))
-            y = self.__item_y + self.__selected * self.__item_height
-            renderer.fill_rect(self.__item_x, y,
-                               self.__item_width, self.__item_height)
+        self.__menu.highlight(renderer)
 
 
 # TODO: A quick solution for making screencasts.
@@ -902,18 +907,18 @@ class ScreenWindow(Device):
 
         self.__theme = _Theme()
         self.__emulation_item = _PrimaryMainMenuItem(
-            ToggleEmulationPause, 'PAUSE', 'Pause emulation')
+            'Pause emulation', ToggleEmulationPause, 'PAUSE')
         self.__tape_item = _PrimaryMainMenuItem(
-            ToggleTapePause, 'F6', 'Pause tape')
+            'Pause tape', ToggleTapePause, 'F6')
         self.__menu_descriptors: list[MenuItemDescriptor] = [
-            _PrimaryMainMenuItem(_TogglePanel, 'ESC', 'Hide menu'),
-            _PrimaryMainMenuItem(RequestLoadFile, 'F3',
-                                 'Load snapshot or tape file'),
-            _PrimaryMainMenuItem(RequestSaveSnapshot, 'F2', 'Save snapshot'),
+            _PrimaryMainMenuItem('Hide menu', _TogglePanel, 'ESC'),
+            _PrimaryMainMenuItem('Load snapshot or tape file',
+                                 RequestLoadFile, 'F3'),
+            _PrimaryMainMenuItem('Save snapshot', RequestSaveSnapshot, 'F2'),
             self.__emulation_item,
             self.__tape_item,
-            _PrimaryMainMenuItem(ToggleFullscreen, 'F11', 'Toggle fullscreen'),
-            _PrimaryMainMenuItem(_Exit, 'F10', 'Quit'),
+            _PrimaryMainMenuItem('Toggle fullscreen', ToggleFullscreen, 'F11'),
+            _PrimaryMainMenuItem('Quit', _Exit, 'F10'),
         ]
         self.__main_menu_panel = _MainMenuPanel(self.__theme)
         self.__file_browser_panel = _FileBrowserPanel(self.__theme)
