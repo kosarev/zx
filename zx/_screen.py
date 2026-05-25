@@ -521,6 +521,8 @@ class _MenuItem(_Button):
     def rebuild(self, theme: _Theme) -> None:
         assert theme.normal_font is not None
         self.v_padding = theme.normal_font.line_height * 0.35
+        self.label = self.descriptor.label
+        self.hotkey = self.descriptor.hotkey
         super().rebuild(theme)
 
 
