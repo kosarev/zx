@@ -320,6 +320,31 @@ class _Theme:
         text_surface.free()
         return button_surface
 
+    def draw_action_hint(self, hotkey: str, label: str) -> _Surface:
+        import sdl2
+        assert self.normal_font is not None
+        font = self.normal_font
+        TEXT_RGB: _Colour = (230, 230, 230, 255)
+
+        key_surface = self.draw_key_button(hotkey)
+        label_surface = font.render(label, TEXT_RGB)
+
+        gap = font.em * 0.5
+        key_w = key_surface.width
+        content_h = max(key_surface.height, label_surface.height)
+        total_w = key_w + gap + label_surface.width
+
+        result = _Surface(total_w, content_h)
+        sdl2.SDL_SetSurfaceBlendMode(result.sdl_surface,
+                                     sdl2.SDL_BLENDMODE_BLEND)
+        result.fill((0, 0, 0, 0))
+        result.blit(key_surface, 0, (content_h - key_surface.height) / 2)
+        key_surface.free()
+        result.blit(label_surface, key_w + gap,
+                    (content_h - label_surface.height) / 2)
+        label_surface.free()
+        return result
+
     def draw_pause_sign(self, renderer: _Renderer, x: float, y: float,
                         size: float, alpha: float) -> None:
         w = 0.1 * size
@@ -944,9 +969,12 @@ class _ErrorPanel(_Panel):
         msg_surface = font.render(self.__message, TEXT_RGB,
                                   float(width) - margin * 2)
 
+        hint_surface = theme.draw_action_hint('ESC', 'Close')
+
         padding = font.line_height * 1.5
         gap = font.line_height * 1.5
-        content_h = title_surface.height + gap + msg_surface.height
+        content_h = (title_surface.height + gap + msg_surface.height
+                     + gap + hint_surface.height)
         strip_h = content_h + padding * 2
         strip_y = (height - strip_h) / 2
         surface.fill_rect(0, strip_y, float(width), strip_h, STRIP_RGB)
@@ -957,7 +985,11 @@ class _ErrorPanel(_Panel):
         title_surface.free()
 
         surface.blit(msg_surface, (width - msg_surface.width) / 2, y)
+        y += msg_surface.height + gap
         msg_surface.free()
+
+        surface.blit(hint_surface, (width - hint_surface.width) / 2, y)
+        hint_surface.free()
 
         self.__texture = renderer.create_texture_from_surface(surface)
         surface.free()
