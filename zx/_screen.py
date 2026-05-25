@@ -1161,6 +1161,7 @@ class ScreenWindow(Device):
         panel.invalidate()
         self.__panel = panel
         self.__panel_active = True
+        self.__error_panel = None
 
     def __on_request_load_file(self, event: DeviceEvent,
                                devices: Dispatcher,
@@ -1317,6 +1318,7 @@ class ScreenWindow(Device):
                           devices: Dispatcher,
                           result: typing.Any) -> typing.Any:
         self.__panel_active ^= True
+        self.__error_panel = None
         return result
 
     def __on_menu_item_hit(self, event: DeviceEvent,
