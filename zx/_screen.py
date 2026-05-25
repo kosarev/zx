@@ -538,26 +538,27 @@ class _Menu:
     y: float
     width: float
     height: float
+    min_width: float
+    indent: float
+    padding: float
+    max_height: float
 
     def __init__(self, items: list[_MenuItem]) -> None:
         self.__items = items
         self.selected_item: None | _MenuItem = None
         self.__scroll_y = 0.0
         self.__total_height = 0.0
-        self.__max_height = float('inf')
         self.__line_height = 0.0
         self.x = 0.0
         self.y = 0.0
         self.width = 0.0
         self.height = 0.0
+        self.min_width = 0.0
+        self.indent = 0.0
+        self.padding = 0.0
+        self.max_height = float('inf')
 
-    def rebuild(self, theme: _Theme, *,
-                min_width: float = 0.0,
-                indent: float = 0.0,
-                padding: float = 0.0,
-                max_height: float = float('inf')) -> None:
-        self.__max_height = max_height
-
+    def rebuild(self, theme: _Theme) -> None:
         total_height = 0.0
         for item in self.__items:
             item.rebuild(theme)
@@ -576,10 +577,10 @@ class _Menu:
         self.__total_height = total_height
         assert theme.normal_font is not None
         self.__line_height = theme.normal_font.line_height
-        self.width = max(items_width, min_width)
-        self.height = min(total_height, max_height)
+        self.width = max(items_width, self.min_width)
+        self.height = min(total_height, self.max_height)
 
-        item_x = (self.width - items_width) * indent + padding
+        item_x = (self.width - items_width) * self.indent + self.padding
         for item in self.__items:
             item.x += item_x
 
@@ -594,7 +595,7 @@ class _Menu:
             return False
         self.selected_item = self.__items[idx + 1]
         item = self.selected_item
-        overflow = item.y + item.height - self.__scroll_y - self.__max_height
+        overflow = item.y + item.height - self.__scroll_y - self.max_height
         if overflow > 0:
             self.__scroll_y += overflow
             return True
@@ -619,7 +620,7 @@ class _Menu:
     def scroll(self, delta: int) -> bool:
         old = self.__scroll_y
         dy = -delta * self.__line_height * 3
-        limit = max(0.0, self.__total_height - self.__max_height)
+        limit = max(0.0, self.__total_height - self.max_height)
         self.__scroll_y = max(0.0, min(self.__scroll_y + dy, limit))
         return self.__scroll_y != old
 
@@ -658,7 +659,7 @@ class _Menu:
         for item in self.__items:
             if item.y + item.height <= self.__scroll_y:
                 continue
-            if item.y >= self.__scroll_y + self.__max_height:
+            if item.y >= self.__scroll_y + self.max_height:
                 break
             item.draw(surface, self.x, self.y - self.__scroll_y)
         surface.clear_clip_rect()
@@ -776,7 +777,9 @@ class _MainMenuPanel(_Panel):
         surface = _Surface(width, height)
         surface.fill(theme.overlay_bg)
 
-        self.__menu.rebuild(theme, min_width=float(width), indent=0.5)
+        self.__menu.min_width = float(width)
+        self.__menu.indent = 0.5
+        self.__menu.rebuild(theme)
         self.__menu.x = 0.0
         self.__menu.y = max(0, (height - self.__menu.height) // 2)
         self.__menu.draw(surface)
@@ -888,9 +891,10 @@ class _FileBrowserPanel(_Panel):
         path_surface.free()
 
         menu_y = font.em + font.line_height * 1.5
-        self.__menu.rebuild(theme, min_width=float(width),
-                            padding=font.em,
-                            max_height=float(height) - menu_y)
+        self.__menu.min_width = float(width)
+        self.__menu.padding = font.em
+        self.__menu.max_height = float(height) - menu_y
+        self.__menu.rebuild(theme)
         self.__menu.x = 0.0
         self.__menu.y = menu_y
         self.__menu.draw(surface)
