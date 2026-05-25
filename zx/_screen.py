@@ -957,19 +957,25 @@ class _FileBrowserPanel(_Panel):
 
 class _ErrorPanel(_Panel):
     __texture: None | _Texture
+    __close_button: None | _Button
 
     def __init__(self, theme: _Theme, message: str) -> None:
         self.__theme = theme
         self.__message = message
         self.__texture = None
+        self.__close_button = None
 
     def invalidate(self) -> None:
         if self.__texture:
             self.__texture.free()
         self.__texture = None
+        if self.__close_button:
+            self.__close_button.free()
+        self.__close_button = None
 
     def __rebuild(self, renderer: _Renderer) -> None:
         assert self.__texture is None
+        assert self.__close_button is None
         theme = self.__theme
         assert theme.window_size is not None
         assert theme.normal_font is not None
@@ -989,11 +995,12 @@ class _ErrorPanel(_Panel):
                                   float(width) - margin * 2)
 
         hint_surface, _ = theme.draw_action_hint('ESC', 'Close')
+        close_button = _Button(hint_surface)
 
         padding = font.line_height * 1.5
         gap = font.line_height * 1.5
         content_h = (title_surface.height + gap + msg_surface.height
-                     + gap + hint_surface.height)
+                     + gap + close_button.height)
         strip_h = content_h + padding * 2
         strip_y = (height - strip_h) / 2
         surface.fill_rect(0, strip_y, float(width), strip_h, STRIP_RGB)
@@ -1007,9 +1014,11 @@ class _ErrorPanel(_Panel):
         y += msg_surface.height + gap
         msg_surface.free()
 
-        surface.blit(hint_surface, (width - hint_surface.width) / 2, y)
-        hint_surface.free()
+        close_button.x = (width - close_button.width) / 2
+        close_button.y = y
+        close_button.draw(surface)
 
+        self.__close_button = close_button
         self.__texture = renderer.create_texture_from_surface(surface)
         surface.free()
 
