@@ -4,7 +4,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2025 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -611,7 +611,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         # Scan keyboard.
         n = 0xbf
-        v = self.devices.notify(ReadPort(addr), 0xff)
+        v = self.devices.notify(ReadPort(addr), result=0xff)
         assert isinstance(v, int)
         n &= v
 

@@ -22,10 +22,13 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
+from ._device import GetMainMenuItems
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
 from ._device import KeyStroke
 from ._device import LoadFile
+from ._device import MenuItemDescriptor
+from ._device import MenuItemHit
 from ._device import PauseStateUpdated
 from ._device import RequestLoadFile
 from ._device import RequestSaveSnapshot
@@ -419,13 +422,8 @@ class _MenuItem:
     __label_x: float
     __content_y: float
 
-    def __init__(self, hotkey: str, label: str, *,
-                 action: (None |
-                          typing.Callable[[Dispatcher], None]) = None
-                 ) -> None:
-        self.hotkey = hotkey
-        self.label = label
-        self.action = action
+    def __init__(self, descriptor: MenuItemDescriptor) -> None:
+        self.descriptor = descriptor
         self.x = 0.0
         self.y = 0.0
         self.width = 0.0
@@ -435,6 +433,14 @@ class _MenuItem:
         self.__hotkey_x = 0.0
         self.__label_x = 0.0
         self.__content_y = 0.0
+
+    @property
+    def hotkey(self) -> str:
+        return self.descriptor.hotkey
+
+    @property
+    def label(self) -> str:
+        return self.descriptor.label
 
     def rebuild(self, theme: _Theme) -> None:
         assert theme.normal_font is not None
@@ -558,24 +564,23 @@ class _Panel(abc.ABC):
         pass
 
 
+class _PrimaryMainMenuItem(MenuItemDescriptor):
+    def __init__(self, event_type: type[DeviceEvent],
+                 hotkey: str, label: str) -> None:
+        super().__init__(hotkey, label)
+        self.event_type = event_type
+
+
 class _MainMenuPanel(_Panel):
     # Overlay background styling.
     __OVERLAY_BG_RGBA = (0, 0, 0, 180)
 
     __texture: None | _Texture
 
-    def __init__(
-            self, theme: _Theme,
-            entries: dict[str, tuple[str,
-                                     None | typing.Callable[[Dispatcher],
-                                                            None]]],
-    ) -> None:
+    def __init__(self, theme: _Theme) -> None:
         self.__theme = theme
         self.__texture = None
-        self.__menu = _Menu([_MenuItem(h, l, action=a)
-                             for h, (l, a) in entries.items()])
-        self.__emulation_item = self.__menu.item_for_key('PAUSE')
-        self.__tape_item = self.__menu.item_for_key('F6')
+        self.__menu: _Menu = _Menu([])
 
     def invalidate(self) -> None:
         if self.__texture:
@@ -589,6 +594,10 @@ class _MainMenuPanel(_Panel):
     def __rebuild(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         assert self.__texture is None
 
+        items: list[MenuItemDescriptor] = dispatcher.notify(
+            GetMainMenuItems(), result=[])
+        self.__menu = _Menu([_MenuItem(item) for item in items])
+
         theme = self.__theme
         assert theme.normal_font is not None
         assert theme.key_button_font is not None
@@ -600,14 +609,6 @@ class _MainMenuPanel(_Panel):
 
         surface = _Surface(width, height)
         surface.fill(self.__OVERLAY_BG_RGBA)
-
-        assert self.__emulation_item is not None
-        emulation_paused = dispatcher.notify(GetEmulationPauseState())
-        self.__emulation_item.label = ('Resume emulation' if emulation_paused
-                                       else 'Pause emulation')
-        assert self.__tape_item is not None
-        tape_paused = dispatcher.notify(IsTapePlayerPaused())
-        self.__tape_item.label = 'Resume tape' if tape_paused else 'Pause tape'
 
         self.__menu.rebuild(theme)
         self.__menu.x = max(0, (width - self.__menu.width) // 2)
@@ -621,8 +622,8 @@ class _MainMenuPanel(_Panel):
 
     def __activate_selected(self, dispatcher: Dispatcher) -> None:
         item = self.__menu.selected_item
-        if item is not None and item.action is not None:
-            item.action(dispatcher)
+        if item is not None:
+            dispatcher.notify(MenuItemHit(item.descriptor))
 
     def __on_key(self, key_id: str, pressed: bool,
                  dispatcher: Dispatcher) -> None:
@@ -719,9 +720,18 @@ class _MouseMoveEvent(DeviceEvent):
         self.y = y
 
 
+class _TogglePanel(DeviceEvent):
+    pass
+
+
 class _ExceptionEvent(DeviceEvent):
     def __init__(self, exception: Exception) -> None:
         self.exception = exception
+
+
+class _Exit(_ExceptionEvent):
+    def __init__(self) -> None:
+        super().__init__(EmulationExit())
 
 
 class ScreenWindow(Device):
@@ -784,6 +794,7 @@ class ScreenWindow(Device):
             _ClickEvent: self.__on_click,
             _ExceptionEvent: self.__on_exception,
             _KeyEvent: self.__on_key,
+            _TogglePanel: self.__on_toggle_panel,
             PauseStateUpdated: self._on_updated_pause_state,
             QuantumRun: self._on_quantum_run,
             OutputFrame: self._on_output_frame,
@@ -795,20 +806,7 @@ class ScreenWindow(Device):
         }
 
         self.__theme = _Theme()
-
-        _Action = None | typing.Callable[[Dispatcher], None]
-        self.__menu_entries: dict[str, tuple[str, _Action]] = {
-            'ESC':   ('Hide menu', None),
-            'F3':    ('Load snapshot or tape file', self.__on_load_file),
-            'F2':    ('Save snapshot', self.__on_save_snapshot),
-            'PAUSE': ('', self.__on_toggle_pause),
-            'F6':    ('', self.__on_toggle_tape_pause),
-            'F11':   ('Toggle fullscreen', self.__on_toggle_fullscreen_action),
-            'F10':   ('Quit', self.__on_exit_action),
-        }
-
-        self.__main_menu_panel = _MainMenuPanel(self.__theme,
-                                                self.__menu_entries)
+        self.__main_menu_panel = _MainMenuPanel(self.__theme)
         self.__panel: _Panel = self.__main_menu_panel
         self.__panel_active = False
         self._notification: None | Notification = None
@@ -924,24 +922,6 @@ class ScreenWindow(Device):
         flags ^= sdl2.SDL_WINDOW_FULLSCREEN_DESKTOP
         sdl2.SDL_SetWindowFullscreen(self.__window, flags)
 
-    def __on_load_file(self, dispatcher: Dispatcher) -> None:
-        dispatcher.notify(RequestLoadFile())
-
-    def __on_save_snapshot(self, dispatcher: Dispatcher) -> None:
-        dispatcher.notify(RequestSaveSnapshot())
-
-    def __on_toggle_pause(self, dispatcher: Dispatcher) -> None:
-        dispatcher.notify(ToggleEmulationPause())
-
-    def __on_toggle_tape_pause(self, dispatcher: Dispatcher) -> None:
-        dispatcher.notify(ToggleTapePause())
-
-    def __on_toggle_fullscreen_action(self, dispatcher: Dispatcher) -> None:
-        dispatcher.notify(ToggleFullscreen())
-
-    def __on_exit_action(self, dispatcher: Dispatcher) -> None:
-        self.__queue_event(_ExceptionEvent(EmulationExit()))
-
     def __queue_event(self, event: DeviceEvent) -> None:
         self.__events.append(event)
 
@@ -958,7 +938,7 @@ class ScreenWindow(Device):
         # so that panels never see them and cannot interfere with navigation.
         if pressed:
             if key_id in ('ESCAPE', 'F1'):
-                self.__panel_active ^= True
+                self.__queue_event(_TogglePanel())
                 return
             if key_id == 'BACKSPACE' and self.__panel_active:
                 self.__activate_panel(self.__main_menu_panel)
@@ -969,10 +949,12 @@ class ScreenWindow(Device):
     def __on_key(self, event: DeviceEvent, devices: Dispatcher) -> typing.Any:
         assert isinstance(event, _KeyEvent)
         if event.pressed:
-            _, action = self.__menu_entries.get(event.id, ('', None))
-            if action is not None:
-                action(devices)
-                return
+            items: list[MenuItemDescriptor] = devices.notify(
+                GetMainMenuItems(), result=[])
+            for item in items:
+                if item.hotkey == event.id:
+                    devices.notify(MenuItemHit(item))
+                    return
         if not self.__panel_active:
             zx_key_id = self.__SDL_KEYS_TO_ZX_KEYS.get(event.id, event.id)
             devices.notify(KeyStroke(zx_key_id, event.pressed))
@@ -1042,13 +1024,53 @@ class ScreenWindow(Device):
         raise event.exception
 
     def __on_exit(self, devices: Dispatcher) -> None:
-        self.__queue_event(_ExceptionEvent(EmulationExit()))
+        self.__queue_event(_Exit())
+
+    def __on_get_main_menu_items(
+            self, event: DeviceEvent, devices: Dispatcher,
+            result: list[MenuItemDescriptor]) -> list[MenuItemDescriptor]:
+        emulation_paused = devices.notify(GetEmulationPauseState())
+        tape_paused = devices.notify(IsTapePlayerPaused())
+        result.extend([
+            _PrimaryMainMenuItem(_TogglePanel, 'ESC', 'Hide menu'),
+            _PrimaryMainMenuItem(RequestLoadFile, 'F3',
+                                 'Load snapshot or tape file'),
+            _PrimaryMainMenuItem(RequestSaveSnapshot, 'F2', 'Save snapshot'),
+            _PrimaryMainMenuItem(ToggleEmulationPause, 'PAUSE',
+                                 'Resume emulation' if emulation_paused
+                                 else 'Pause emulation'),
+            _PrimaryMainMenuItem(ToggleTapePause, 'F6',
+                                 'Resume tape' if tape_paused
+                                 else 'Pause tape'),
+            _PrimaryMainMenuItem(ToggleFullscreen, 'F11',
+                                 'Toggle fullscreen'),
+            _PrimaryMainMenuItem(_Exit, 'F10', 'Quit'),
+        ])
+        return result
+
+    def __on_toggle_panel(self, event: DeviceEvent,
+                          devices: Dispatcher) -> None:
+        self.__panel_active ^= True
+
+    def __on_menu_item_hit(self, event: DeviceEvent,
+                           devices: Dispatcher) -> None:
+        assert isinstance(event, MenuItemHit)
+        item = event.item
+        if not isinstance(item, _PrimaryMainMenuItem):
+            return
+        devices.notify(item.event_type())
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
-        event_type = type(event)
-        if event_type in self._EVENT_HANDLERS:
-            self._EVENT_HANDLERS[event_type](event, devices)
+        if isinstance(event, GetMainMenuItems):
+            return self.__on_get_main_menu_items(event, devices, result)
+        if isinstance(event, MenuItemHit):
+            self.__on_menu_item_hit(event, devices)
+            return result
+
+        for event_type, handler in self._EVENT_HANDLERS.items():
+            if isinstance(event, event_type):
+                handler(event, devices)
 
         if self.__panel_active:
             self.__panel.on_event(event, devices)

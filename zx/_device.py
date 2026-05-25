@@ -21,6 +21,21 @@ class DeviceEvent(object):
     pass
 
 
+class MenuItemDescriptor(object):
+    def __init__(self, hotkey: str, label: str) -> None:
+        self.hotkey = hotkey
+        self.label = label
+
+
+class GetMainMenuItems(DeviceEvent):
+    pass
+
+
+class MenuItemHit(DeviceEvent):
+    def __init__(self, item: MenuItemDescriptor) -> None:
+        self.item = item
+
+
 class Destroy(DeviceEvent):
     pass
 
@@ -153,7 +168,7 @@ class Dispatcher(object):
 
     # TODO: Since this now can return values, it needs a
     # different name.
-    def notify(self, event: DeviceEvent,
+    def notify(self, event: DeviceEvent, *,
                result: typing.Any = None) -> typing.Any:
         for device in self:
             result = device.on_event(event, self, result)
