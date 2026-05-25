@@ -863,6 +863,7 @@ class _FileBrowserPanel(_Panel):
         else:
             try:
                 dispatcher.notify(LoadFile(item.descriptor.path))
+                dispatcher.notify(_TogglePanel())
             except USER_ERRORS as e:
                 dispatcher.notify(_ShowError(verbalize_error(e)))
 
