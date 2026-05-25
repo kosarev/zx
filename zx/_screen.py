@@ -458,10 +458,8 @@ class _MenuItem:
     y: float
     width: float
     height: float
-    __hotkey_surface: None | _Surface
-    __label_surface: None | _Surface
-    __hotkey_x: float
-    __label_x: float
+    __content_surface: None | _Surface
+    __content_x: float
     __content_y: float
 
     def __init__(self, descriptor: MenuItemDescriptor) -> None:
@@ -470,10 +468,8 @@ class _MenuItem:
         self.y = 0.0
         self.width = 0.0
         self.height = 0.0
-        self.__hotkey_surface = None
-        self.__label_surface = None
-        self.__hotkey_x = 0.0
-        self.__label_x = 0.0
+        self.__content_surface = None
+        self.__content_x = 0.0
         self.__content_y = 0.0
 
     @property
@@ -488,36 +484,26 @@ class _MenuItem:
         assert theme.normal_font is not None
         font = theme.normal_font
         TEXT_RGB: _Colour = (230, 230, 230, 255)
-        if self.__hotkey_surface:
-            self.__hotkey_surface.free()
-        if self.__label_surface:
-            self.__label_surface.free()
-        self.__label_surface = font.render(self.label, TEXT_RGB)
+        if self.__content_surface is not None:
+            self.__content_surface.free()
         if self.hotkey:
-            self.__hotkey_surface = theme.draw_key_button(self.hotkey)
-            self.__label_x = font.em * 5
-            self.__hotkey_x = (self.__label_x
-                               - self.__hotkey_surface.width - font.em)
+            self.__content_surface = theme.draw_action_hint(
+                self.hotkey, self.label)
         else:
-            self.__hotkey_surface = None
-            self.__label_x = font.em
-            self.__hotkey_x = 0.0
-        hotkey_height = (self.__hotkey_surface.height
-                         if self.__hotkey_surface else 0.0)
-        content_height = max(hotkey_height, self.__label_surface.height)
+            self.__content_surface = font.render(self.label, TEXT_RGB)
+        content_height = self.__content_surface.height
         padding = content_height * 0.7
         self.height = content_height + padding
+        self.__content_x = font.em
         self.__content_y = padding / 2
-        self.width = self.__label_x + self.__label_surface.width
+        self.width = self.__content_x + self.__content_surface.width
 
-    def draw(self, surface: _Surface, theme: _Theme, font: _Font,
+    def draw(self, surface: _Surface,
              parent_x: float = 0.0, parent_y: float = 0.0) -> None:
-        assert self.__label_surface is not None
-        x = parent_x + self.x
+        assert self.__content_surface is not None
+        x = parent_x + self.x + self.__content_x
         y = parent_y + self.y + self.__content_y
-        if self.__hotkey_surface is not None:
-            surface.blit(self.__hotkey_surface, x + self.__hotkey_x, y)
-        surface.blit(self.__label_surface, x + self.__label_x, y)
+        surface.blit(self.__content_surface, x, y)
 
 
 class _Menu:
@@ -632,14 +618,14 @@ class _Menu:
         renderer.set_draw_colour((255, 255, 255, 30))
         renderer.fill_rect(self.x, top, self.width, bottom - top)
 
-    def draw(self, surface: _Surface, theme: _Theme, font: _Font) -> None:
+    def draw(self, surface: _Surface) -> None:
         surface.set_clip_rect(self.x, self.y, self.width, self.height)
         for item in self.__items:
             if item.y + item.height <= self.__scroll_y:
                 continue
             if item.y >= self.__scroll_y + self.__max_height:
                 break
-            item.draw(surface, theme, font, self.x, self.y - self.__scroll_y)
+            item.draw(surface, self.x, self.y - self.__scroll_y)
         surface.clear_clip_rect()
 
 
@@ -754,7 +740,7 @@ class _MainMenuPanel(_Panel):
         self.__menu.rebuild(theme, min_width=float(width), indent=0.5)
         self.__menu.x = 0.0
         self.__menu.y = max(0, (height - self.__menu.height) // 2)
-        self.__menu.draw(surface, theme, font)
+        self.__menu.draw(surface)
 
         texture = renderer.create_texture_from_surface(surface)
         surface.free()
@@ -867,7 +853,7 @@ class _FileBrowserPanel(_Panel):
                             max_height=float(height) - menu_y)
         self.__menu.x = 0.0
         self.__menu.y = menu_y
-        self.__menu.draw(surface, theme, font)
+        self.__menu.draw(surface)
 
         texture = renderer.create_texture_from_surface(surface)
         surface.free()
