@@ -979,7 +979,7 @@ class _ErrorPanel(_Panel):
         self.__message = message
         self.__texture = None
         self.__close_button = _Button('Close', hotkey='ESC')
-        self.__selected_button = None
+        self.__selected_button: None | _Button = self.__close_button
 
     def invalidate(self) -> None:
         if self.__texture:
