@@ -1004,26 +1004,30 @@ class _ErrorPanel(_Panel):
         surface.fill(theme.overlay_bg)
 
         TEXT_RGB: _Colour = (230, 230, 230, 255)
-        STRIP_RGB: _Colour = (30, 30, 30, 255)
+        TITLE_STRIP_RGB: _Colour = (80, 20, 20, 255)
+        BODY_STRIP_RGB: _Colour = (30, 30, 30, 255)
         margin = font.em * 4
         title_surface = title_font.render('Error', TEXT_RGB)
         msg_surface = font.render(self.__message, TEXT_RGB,
                                   float(width) - margin * 2)
 
         close_button = self.__close_button
+        title_padding = title_font.line_height * 0.5
         padding = font.line_height * 1.5
         gap = font.line_height * 1.5
-        content_h = (title_surface.height + gap + msg_surface.height
-                     + gap + close_button.height)
-        strip_h = content_h + padding * 2
-        strip_y = (height - strip_h) / 2
-        surface.fill_rect(0, strip_y, float(width), strip_h, STRIP_RGB)
+        title_strip_h = title_surface.height + title_padding * 2
+        body_h = msg_surface.height + gap + close_button.height + padding * 2
+        strip_y = (height - title_strip_h - body_h) / 2
+        surface.fill_rect(0, strip_y,
+                          float(width), title_strip_h, TITLE_STRIP_RGB)
+        surface.fill_rect(0, strip_y + title_strip_h,
+                          float(width), body_h, BODY_STRIP_RGB)
 
-        y = strip_y + padding
+        y = strip_y + title_padding
         surface.blit(title_surface, (width - title_surface.width) / 2, y)
-        y += title_surface.height + gap
         title_surface.free()
 
+        y = strip_y + title_strip_h + padding
         surface.blit(msg_surface, (width - msg_surface.width) / 2, y)
         y += msg_surface.height + gap
         msg_surface.free()
