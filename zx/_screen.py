@@ -711,6 +711,10 @@ class _ShowError(DeviceEvent):
         self.message = message
 
 
+class _DismissError(DeviceEvent):
+    pass
+
+
 class _ExceptionEvent(DeviceEvent):
     def __init__(self, exception: Exception) -> None:
         self.exception = exception
@@ -1047,6 +1051,9 @@ class _ErrorPanel(_Panel):
                 self.__selected_button = button
             else:
                 self.__selected_button = None
+        elif isinstance(event, _ClickEvent):
+            if self.__selected_button is not None:
+                dispatcher.notify(_DismissError())
 
     def draw(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         if self.__texture is None:
@@ -1139,6 +1146,7 @@ class ScreenWindow(Device):
             _ClickEvent: self.__on_click,
             _ExceptionEvent: self.__on_exception,
             _KeyEvent: self.__on_key,
+            _DismissError: self.__on_dismiss_error,
             _ShowError: self.__on_show_error,
             _TogglePanel: self.__on_toggle_panel,
             PauseStateUpdated: self._on_updated_pause_state,
@@ -1427,6 +1435,11 @@ class ScreenWindow(Device):
                                        else 'Pause emulation')
         self.__tape_item.label = 'Resume tape' if tape_paused else 'Pause tape'
         result.extend(self.__menu_descriptors)
+        return result
+
+    def __on_dismiss_error(self, event: DeviceEvent, devices: Dispatcher,
+                           result: typing.Any) -> typing.Any:
+        self.__error_panel = None
         return result
 
     def __on_show_error(self, event: DeviceEvent, devices: Dispatcher,
