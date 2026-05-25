@@ -488,6 +488,8 @@ class _Menu:
     def __init__(self, items: list[_MenuItem]) -> None:
         self.__items = items
         self.selected_item: None | _MenuItem = None
+        self.__scroll_y = 0.0
+        self.__max_height = float('inf')
         self.x = 0.0
         self.y = 0.0
         self.width = 0.0
@@ -495,42 +497,57 @@ class _Menu:
 
     def rebuild(self, theme: _Theme, *,
                 min_width: float = 0.0,
-                indent: float = 0.0) -> None:
-        font = theme.normal_font
-        assert font is not None
+                indent: float = 0.0,
+                max_height: float = float('inf')) -> None:
+        self.__max_height = max_height
 
         items_width = 0.0
-        self.height = 0.0
+        total_height = 0.0
         for item in self.__items:
             item.rebuild(theme)
-            item.y = self.height
+            item.y = total_height
             items_width = max(items_width, item.width)
-            self.height += item.height
+            total_height += item.height
 
         self.width = max(items_width, min_width)
+        self.height = min(total_height, max_height)
+
         item_x = (self.width - items_width) * indent
         for item in self.__items:
             item.x = item_x
 
-    def select_next(self) -> None:
+    def select_next(self) -> bool:
         if not self.__items:
-            return
+            return False
         if self.selected_item is None:
             self.selected_item = self.__items[0]
-            return
+            return False
         idx = self.__items.index(self.selected_item)
-        if idx + 1 < len(self.__items):
-            self.selected_item = self.__items[idx + 1]
+        if idx + 1 >= len(self.__items):
+            return False
+        self.selected_item = self.__items[idx + 1]
+        item = self.selected_item
+        overflow = item.y + item.height - self.__scroll_y - self.__max_height
+        if overflow > 0:
+            self.__scroll_y += overflow
+            return True
+        return False
 
-    def select_prev(self) -> None:
+    def select_prev(self) -> bool:
         if not self.__items:
-            return
+            return False
         if self.selected_item is None:
             self.selected_item = self.__items[-1]
-            return
+            return False
         idx = self.__items.index(self.selected_item)
-        if idx > 0:
-            self.selected_item = self.__items[idx - 1]
+        if idx == 0:
+            return False
+        self.selected_item = self.__items[idx - 1]
+        item = self.selected_item
+        if item.y < self.__scroll_y:
+            self.__scroll_y = item.y
+            return True
+        return False
 
     def select_by_descriptor(self,
                              descriptor: MenuItemDescriptor) -> None:
@@ -543,8 +560,9 @@ class _Menu:
         if not (0 <= y < self.height):
             self.selected_item = None
             return
+        adj_y = y + self.__scroll_y
         for item in self.__items:
-            if item.y <= y < item.y + item.height:
+            if item.y <= adj_y < item.y + item.height:
                 self.selected_item = item
                 return
 
@@ -552,12 +570,14 @@ class _Menu:
         if self.selected_item is None:
             return
         renderer.set_draw_colour((255, 255, 255, 30))
-        renderer.fill_rect(self.x, self.y + self.selected_item.y,
-                           self.width, self.selected_item.height)
+        renderer.fill_rect(
+            self.x,
+            self.y + self.selected_item.y - self.__scroll_y,
+            self.width, self.selected_item.height)
 
     def draw(self, surface: _Surface, theme: _Theme, font: _Font) -> None:
         for item in self.__items:
-            item.draw(surface, theme, font, self.x, self.y)
+            item.draw(surface, theme, font, self.x, self.y - self.__scroll_y)
 
 
 class _KeyEvent(DeviceEvent):
@@ -680,9 +700,11 @@ class _MainMenuPanel(_Panel):
         if key_id == 'RETURN':
             self.__activate_selected(dispatcher)
         elif key_id == 'DOWN':
-            self.__menu.select_next()
+            if self.__menu.select_next():
+                self.invalidate()
         elif key_id == 'UP':
-            self.__menu.select_prev()
+            if self.__menu.select_prev():
+                self.invalidate()
 
     def __on_click(self, event: _ClickEvent,
                    dispatcher: Dispatcher) -> None:
@@ -726,7 +748,6 @@ class _FileBrowserPanel(_Panel):
         self.__theme = theme
         self.__texture = None
         self.__path = os.getcwd()
-        self.__descriptors = []
         self.__menu: _Menu = _Menu([])
         self.__load_entries()
 
@@ -736,11 +757,12 @@ class _FileBrowserPanel(_Panel):
         except OSError:
             names = []
         parent = os.path.normpath(os.path.join(self.__path, '..'))
-        self.__descriptors = (
+        descriptors = (
             [_FileEntryDescriptor('..', parent)] +
             [_FileEntryDescriptor(n, os.path.normpath(
                 os.path.join(self.__path, n))) for n in names]
         )
+        self.__menu = _Menu([_MenuItem(d) for d in descriptors])
 
     def invalidate(self) -> None:
         if self.__texture:
@@ -755,12 +777,6 @@ class _FileBrowserPanel(_Panel):
         width, height = theme.window_size
         font = theme.normal_font
 
-        selected = (self.__menu.selected_item.descriptor
-                    if self.__menu.selected_item else None)
-        self.__menu = _Menu([_MenuItem(d) for d in self.__descriptors])
-        if selected is not None:
-            self.__menu.select_by_descriptor(selected)
-
         DIM_RGB: _Colour = (150, 150, 150, 255)
 
         surface = _Surface(width, height)
@@ -770,9 +786,11 @@ class _FileBrowserPanel(_Panel):
         surface.blit(path_surface, font.em, font.em)
         path_surface.free()
 
-        self.__menu.rebuild(theme, min_width=float(width))
+        menu_y = font.em + font.line_height * 1.5
+        self.__menu.rebuild(theme, min_width=float(width),
+                            max_height=float(height) - menu_y)
         self.__menu.x = 0.0
-        self.__menu.y = font.em + font.line_height * 1.5
+        self.__menu.y = menu_y
         self.__menu.draw(surface, theme, font)
 
         texture = renderer.create_texture_from_surface(surface)
@@ -799,9 +817,11 @@ class _FileBrowserPanel(_Panel):
         if not pressed:
             return
         if key_id == 'DOWN':
-            self.__menu.select_next()
+            if self.__menu.select_next():
+                self.invalidate()
         elif key_id == 'UP':
-            self.__menu.select_prev()
+            if self.__menu.select_prev():
+                self.invalidate()
         elif key_id == 'RETURN':
             self.__activate_selected(dispatcher)
 
