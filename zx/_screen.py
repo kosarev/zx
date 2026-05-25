@@ -470,8 +470,8 @@ class _Button:
 
     def __init__(self, label: str,
                  hotkey: None | str = None) -> None:
-        self.__label = label
-        self.__hotkey = hotkey
+        self.label = label
+        self.hotkey = hotkey
         self.__surface: None | _Surface = None
         self.x = 0.0
         self.y = 0.0
@@ -486,7 +486,7 @@ class _Button:
         if self.__surface is not None:
             self.__surface.free()
         surface, self.label_width = theme.draw_action_hint(
-            self.__hotkey, self.__label)
+            self.hotkey, self.label)
         self.__surface = surface
         self.width = max(surface.width, self.min_width)
         self.height = surface.height + self.v_padding * 2
@@ -518,14 +518,6 @@ class _MenuItem(_Button):
         super().__init__(descriptor.label, descriptor.hotkey)
         self.descriptor = descriptor
         self.y = 0.0
-
-    @property
-    def hotkey(self) -> None | str:
-        return self.descriptor.hotkey
-
-    @property
-    def label(self) -> str:
-        return self.descriptor.label
 
     def rebuild(self, theme: _Theme) -> None:
         assert theme.normal_font is not None
