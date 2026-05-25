@@ -1223,6 +1223,10 @@ class ScreenWindow(Device):
                     self.__activate_panel(self.__main_menu_panel)
                 return result
 
+            if event.id == 'RETURN' and self.__error_panel is not None:
+                self.__error_panel = None
+                return result
+
             items: list[MenuItemDescriptor] = devices.notify(
                 GetMainMenuItems(), result=[])
             for item in items:
@@ -1338,11 +1342,12 @@ class ScreenWindow(Device):
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
+        error_panel = self.__error_panel
         for event_type, handler in self._EVENT_HANDLERS.items():
             if isinstance(event, event_type):
                 result = handler(event, devices, result)
 
-        if self.__panel_active and self.__error_panel is None:
+        if self.__panel_active and error_panel is None:
             self.__panel.on_event(event, devices)
         return result
 
