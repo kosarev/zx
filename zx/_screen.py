@@ -664,19 +664,115 @@ class _MainMenuPanel(_Panel):
 
 
 class _FileBrowserPanel(_Panel):
-    def __init__(self) -> None:
-        pass
+    __OVERLAY_BG_RGBA: _Colour = (0, 0, 0, 200)
+
+    __texture: None | _Texture
+    __entries: list[str]
+    __selected: int
+    __item_x: float
+    __item_y: float
+    __item_width: float
+    __item_height: float
+
+    def __init__(self, theme: _Theme) -> None:
+        self.__theme = theme
+        self.__texture = None
+        self.__path = os.path.expanduser('~')
+        self.__entries = []
+        self.__selected = 0
+        self.__item_x = 0.0
+        self.__item_y = 0.0
+        self.__item_width = 0.0
+        self.__item_height = 0.0
 
     def invalidate(self) -> None:
-        pass
+        if self.__texture:
+            self.__texture.free()
+        self.__texture = None
+
+    def __rebuild(self, renderer: _Renderer) -> None:
+        assert self.__texture is None
+        theme = self.__theme
+        assert theme.window_size is not None
+        assert theme.normal_font is not None
+        width, height = theme.window_size
+        font = theme.normal_font
+
+        try:
+            raw = sorted(os.listdir(self.__path))
+        except OSError:
+            raw = []
+        self.__entries = ['..'] + raw
+
+        TEXT_RGB: _Colour = (230, 230, 230, 255)
+        DIM_RGB: _Colour = (150, 150, 150, 255)
+        PADDING = float(font.em)
+
+        surface = _Surface(width, height)
+        surface.fill(self.__OVERLAY_BG_RGBA)
+
+        path_surface = font.render(self.__path, DIM_RGB)
+        surface.blit(path_surface, PADDING, PADDING)
+        path_surface.free()
+
+        self.__item_x = PADDING
+        self.__item_y = PADDING + font.line_height * 1.5
+        self.__item_width = float(width) - 2 * PADDING
+        self.__item_height = float(font.line_height)
+
+        y = self.__item_y
+        for entry in self.__entries:
+            entry_surface = font.render(entry, TEXT_RGB)
+            surface.blit(entry_surface, PADDING * 2, y)
+            entry_surface.free()
+            y += self.__item_height
+
+        texture = renderer.create_texture_from_surface(surface)
+        surface.free()
+        self.__texture = texture
+
+    def __activate_selected(self, dispatcher: Dispatcher) -> None:
+        if not self.__entries:
+            return
+        entry = self.__entries[self.__selected]
+        path = os.path.normpath(os.path.join(self.__path, entry))
+        if os.path.isdir(path):
+            self.__path = path
+            self.__selected = 0
+            self.invalidate()
+        else:
+            dispatcher.notify(LoadFile(path))
+
+    def __on_key(self, key_id: str, pressed: bool,
+                 dispatcher: Dispatcher) -> None:
+        if not pressed:
+            return
+        if key_id == 'DOWN' and self.__selected < len(self.__entries) - 1:
+            self.__selected += 1
+            self.invalidate()
+        elif key_id == 'UP' and self.__selected > 0:
+            self.__selected -= 1
+            self.invalidate()
+        elif key_id == 'RETURN':
+            self.__activate_selected(dispatcher)
 
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
-        pass
+        if isinstance(event, _KeyEvent):
+            self.__on_key(event.id, event.pressed, dispatcher)
 
     def draw(self, renderer: _Renderer,
              dispatcher: Dispatcher) -> None:
-        pass
+        if self.__texture is None:
+            self.__rebuild(renderer)
+        assert self.__texture is not None
+        assert self.__theme.window_size is not None
+        renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
+        if self.__entries:
+            renderer.set_draw_colour((255, 255, 255, 30))
+            y = self.__item_y + self.__selected * self.__item_height
+            renderer.fill_rect(self.__item_x, y,
+                               self.__item_width, self.__item_height)
 
 
 # TODO: A quick solution for making screencasts.
@@ -807,6 +903,7 @@ class ScreenWindow(Device):
 
         self.__theme = _Theme()
         self.__main_menu_panel = _MainMenuPanel(self.__theme)
+        self.__file_browser_panel = _FileBrowserPanel(self.__theme)
         self.__panel: _Panel = self.__main_menu_panel
         self.__panel_active = False
         self._notification: None | Notification = None
@@ -902,7 +999,7 @@ class ScreenWindow(Device):
 
     def __on_request_load_file(self, event: DeviceEvent,
                                devices: Dispatcher) -> None:
-        self.__activate_panel(_FileBrowserPanel())
+        self.__activate_panel(self.__file_browser_panel)
         # TODO: Remove once file browser panel supports all of this.
         # TODO: Add file filters.
         # filename = tkinter.filedialog.askopenfilename(
