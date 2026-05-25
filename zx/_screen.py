@@ -931,12 +931,19 @@ class _ErrorPanel(_Panel):
         surface = _Surface(width, height)
         surface.fill(theme.overlay_bg)
 
-        ERROR_RGB: _Colour = (255, 100, 100, 255)
+        TEXT_RGB: _Colour = (230, 230, 230, 255)
+        STRIP_RGB: _Colour = (30, 30, 30, 255)
         margin = font.em * 4
-        msg_surface = font.render(self.__message, ERROR_RGB,
+        msg_surface = font.render(self.__message, TEXT_RGB,
                                   float(width) - margin * 2)
+
+        padding = font.line_height * 1.5
+        strip_h = msg_surface.height + padding * 2
+        strip_y = (height - strip_h) / 2
+        surface.fill_rect(0, strip_y, float(width), strip_h, STRIP_RGB)
+
         x = (width - msg_surface.width) / 2
-        y = (height - msg_surface.height) / 2
+        y = strip_y + padding
         surface.blit(msg_surface, x, y)
         msg_surface.free()
 
