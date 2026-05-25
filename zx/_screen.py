@@ -215,9 +215,9 @@ class _Font:
 
         w, h = ctypes.c_int(), ctypes.c_int()
         sdl2.sdlttf.TTF_SizeText(self.__font, b'M', w, h)
-        self.em = w.value
-        self.em_height = h.value
-        self.line_height = sdl2.sdlttf.TTF_FontLineSkip(self.__font)
+        self.em = float(w.value)
+        self.em_height = float(h.value)
+        self.line_height = float(sdl2.sdlttf.TTF_FontLineSkip(self.__font))
 
     def render(self, text: str, colour: _Colour) -> _Surface:
         import sdl2
@@ -709,7 +709,7 @@ class _FileBrowserPanel(_Panel):
 
         TEXT_RGB: _Colour = (230, 230, 230, 255)
         DIM_RGB: _Colour = (150, 150, 150, 255)
-        PADDING = float(font.em)
+        PADDING = font.em
 
         surface = _Surface(width, height)
         surface.fill(self.__OVERLAY_BG_RGBA)
@@ -720,8 +720,8 @@ class _FileBrowserPanel(_Panel):
 
         self.__item_x = PADDING
         self.__item_y = PADDING + font.line_height * 1.5
-        self.__item_width = float(width) - 2 * PADDING
-        self.__item_height = float(font.line_height)
+        self.__item_width = width - 2 * PADDING
+        self.__item_height = font.line_height
 
         y = self.__item_y
         for entry in self.__entries:
