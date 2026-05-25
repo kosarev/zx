@@ -530,6 +530,7 @@ class _Menu:
     def rebuild(self, theme: _Theme, *,
                 min_width: float = 0.0,
                 indent: float = 0.0,
+                padding: float = 0.0,
                 max_height: float = float('inf')) -> None:
         self.__max_height = max_height
 
@@ -554,7 +555,7 @@ class _Menu:
         self.width = max(items_width, min_width)
         self.height = min(total_height, max_height)
 
-        item_x = (self.width - items_width) * indent
+        item_x = (self.width - items_width) * indent + padding
         for item in self.__items:
             item.x += item_x
 
@@ -860,6 +861,7 @@ class _FileBrowserPanel(_Panel):
 
         menu_y = font.em + font.line_height * 1.5
         self.__menu.rebuild(theme, min_width=float(width),
+                            padding=font.em,
                             max_height=float(height) - menu_y)
         self.__menu.x = 0.0
         self.__menu.y = menu_y
