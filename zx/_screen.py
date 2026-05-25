@@ -654,8 +654,8 @@ class _MainMenuPanel(_Panel):
         surface = _Surface(width, height)
         surface.fill(theme.overlay_bg)
 
-        self.__menu.rebuild(theme)
-        self.__menu.x = max(0, (width - self.__menu.width) // 2)
+        self.__menu.rebuild(theme, min_width=float(width))
+        self.__menu.x = 0.0
         self.__menu.y = max(0, (height - self.__menu.height) // 2)
         self.__menu.draw(surface, theme, font)
 
