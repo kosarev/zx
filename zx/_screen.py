@@ -500,7 +500,9 @@ class _Menu:
         self.__items = items
         self.selected_item: None | _MenuItem = None
         self.__scroll_y = 0.0
+        self.__total_height = 0.0
         self.__max_height = float('inf')
+        self.__line_height = 0.0
         self.x = 0.0
         self.y = 0.0
         self.width = 0.0
@@ -520,6 +522,9 @@ class _Menu:
             items_width = max(items_width, item.width)
             total_height += item.height
 
+        self.__total_height = total_height
+        assert theme.normal_font is not None
+        self.__line_height = theme.normal_font.line_height
         self.width = max(items_width, min_width)
         self.height = min(total_height, max_height)
 
@@ -559,6 +564,13 @@ class _Menu:
             self.__scroll_y = item.y
             return True
         return False
+
+    def scroll(self, delta: int) -> bool:
+        old = self.__scroll_y
+        dy = -delta * self.__line_height * 3
+        limit = max(0.0, self.__total_height - self.__max_height)
+        self.__scroll_y = max(0.0, min(self.__scroll_y + dy, limit))
+        return self.__scroll_y != old
 
     def select_by_descriptor(self,
                              descriptor: MenuItemDescriptor) -> None:
@@ -621,6 +633,11 @@ class _MouseMoveEvent(DeviceEvent):
     def __init__(self, x: int, y: int) -> None:
         self.x = x
         self.y = y
+
+
+class _ScrollEvent(DeviceEvent):
+    def __init__(self, delta: int) -> None:
+        self.delta = delta
 
 
 class _TogglePanel(DeviceEvent):
@@ -738,6 +755,9 @@ class _MainMenuPanel(_Panel):
             self.invalidate()
         elif isinstance(event, _MouseMoveEvent):
             self.__on_mouse_move(event)
+        elif isinstance(event, _ScrollEvent):
+            if self.__menu.scroll(event.delta):
+                self.invalidate()
         elif isinstance(event, _KeyEvent):
             self.__on_key(event.id, event.pressed, dispatcher)
         elif isinstance(event, _ClickEvent):
@@ -859,6 +879,9 @@ class _FileBrowserPanel(_Panel):
                  dispatcher: Dispatcher) -> None:
         if isinstance(event, _MouseMoveEvent):
             self.__on_mouse_move(event)
+        elif isinstance(event, _ScrollEvent):
+            if self.__menu.scroll(event.delta):
+                self.invalidate()
         elif isinstance(event, _KeyEvent):
             self.__on_key(event.id, event.pressed, dispatcher)
         elif isinstance(event, _ClickEvent):
@@ -1272,6 +1295,9 @@ class ScreenWindow(Device):
                     round(e.x * scale), round(e.y * scale)))
             elif self.__sdl_event.type == sdl2.SDL_MOUSEBUTTONDOWN:
                 self.__on_sdl_click(self.__sdl_event)
+            elif self.__sdl_event.type == sdl2.SDL_MOUSEWHEEL:
+                self.__queue_event(
+                    _ScrollEvent(self.__sdl_event.wheel.y))
             elif self.__sdl_event.type in (sdl2.SDL_KEYDOWN, sdl2.SDL_KEYUP):
                 self.__on_sdl_key(self.__sdl_event)
             elif self.__sdl_event.type in (sdl2.SDL_CONTROLLERDEVICEADDED,
