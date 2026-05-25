@@ -320,7 +320,8 @@ class _Theme:
         text_surface.free()
         return button_surface
 
-    def draw_action_hint(self, hotkey: str, label: str) -> _Surface:
+    def draw_action_hint(self, hotkey: str, label: str,
+                         ) -> tuple[_Surface, float]:
         import sdl2
         assert self.normal_font is not None
         font = self.normal_font
@@ -330,20 +331,22 @@ class _Theme:
         label_surface = font.render(label, TEXT_RGB)
 
         gap = font.em * 0.5
-        key_w = key_surface.width
+        hotkey_width = key_surface.width
         content_h = max(key_surface.height, label_surface.height)
-        total_w = key_w + gap + label_surface.width
+        total_w = hotkey_width + gap + label_surface.width
 
         result = _Surface(total_w, content_h)
         sdl2.SDL_SetSurfaceBlendMode(result.sdl_surface,
                                      sdl2.SDL_BLENDMODE_BLEND)
         result.fill((0, 0, 0, 0))
-        result.blit(key_surface, 0, (content_h - key_surface.height) / 2)
+        result.blit(key_surface, 0,
+                    (content_h - key_surface.height) / 2)
         key_surface.free()
-        result.blit(label_surface, key_w + gap,
+        label_width = label_surface.width
+        result.blit(label_surface, hotkey_width + gap,
                     (content_h - label_surface.height) / 2)
         label_surface.free()
-        return result
+        return result, label_width
 
     def draw_pause_sign(self, renderer: _Renderer, x: float, y: float,
                         size: float, alpha: float) -> None:
@@ -458,8 +461,8 @@ class _MenuItem:
     y: float
     width: float
     height: float
+    label_width: float
     __content_surface: None | _Surface
-    __content_x: float
     __content_y: float
 
     def __init__(self, descriptor: MenuItemDescriptor) -> None:
@@ -468,8 +471,8 @@ class _MenuItem:
         self.y = 0.0
         self.width = 0.0
         self.height = 0.0
+        self.label_width = 0.0
         self.__content_surface = None
-        self.__content_x = 0.0
         self.__content_y = 0.0
 
     @property
@@ -487,21 +490,21 @@ class _MenuItem:
         if self.__content_surface is not None:
             self.__content_surface.free()
         if self.hotkey:
-            self.__content_surface = theme.draw_action_hint(
-                self.hotkey, self.label)
+            self.__content_surface, self.label_width = (
+                theme.draw_action_hint(self.hotkey, self.label))
         else:
             self.__content_surface = font.render(self.label, TEXT_RGB)
+            self.label_width = self.__content_surface.width
         content_height = self.__content_surface.height
         padding = content_height * 0.7
         self.height = content_height + padding
-        self.__content_x = font.em
         self.__content_y = padding / 2
-        self.width = self.__content_x + self.__content_surface.width
+        self.width = self.__content_surface.width
 
     def draw(self, surface: _Surface,
              parent_x: float = 0.0, parent_y: float = 0.0) -> None:
         assert self.__content_surface is not None
-        x = parent_x + self.x + self.__content_x
+        x = parent_x + self.x
         y = parent_y + self.y + self.__content_y
         surface.blit(self.__content_surface, x, y)
 
@@ -530,13 +533,20 @@ class _Menu:
                 max_height: float = float('inf')) -> None:
         self.__max_height = max_height
 
-        items_width = 0.0
         total_height = 0.0
         for item in self.__items:
             item.rebuild(theme)
             item.y = total_height
-            items_width = max(items_width, item.width)
             total_height += item.height
+
+        max_label_offset = max(
+            (item.width - item.label_width for item in self.__items),
+            default=0.0)
+        for item in self.__items:
+            item.x = max_label_offset - (item.width - item.label_width)
+
+        items_width = max(
+            (item.x + item.width for item in self.__items), default=0.0)
 
         self.__total_height = total_height
         assert theme.normal_font is not None
@@ -546,7 +556,7 @@ class _Menu:
 
         item_x = (self.width - items_width) * indent
         for item in self.__items:
-            item.x = item_x
+            item.x += item_x
 
     def select_next(self) -> bool:
         if not self.__items:
@@ -955,7 +965,7 @@ class _ErrorPanel(_Panel):
         msg_surface = font.render(self.__message, TEXT_RGB,
                                   float(width) - margin * 2)
 
-        hint_surface = theme.draw_action_hint('ESC', 'Close')
+        hint_surface, _ = theme.draw_action_hint('ESC', 'Close')
 
         padding = font.line_height * 1.5
         gap = font.line_height * 1.5
