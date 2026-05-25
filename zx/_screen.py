@@ -464,6 +464,7 @@ class _Button:
     y: float
     width: float
     height: float
+    label_width: float
 
     def __init__(self, label: str,
                  hotkey: None | str = None) -> None:
@@ -475,6 +476,7 @@ class _Button:
         self.y = 0.0
         self.width = 0.0
         self.height = 0.0
+        self.label_width = 0.0
         self.__content_x = 0.0
 
     def rebuild(self, theme: _Theme, *,
@@ -482,7 +484,8 @@ class _Button:
                 min_width: float = 0.0) -> None:
         if self.__surface is not None:
             self.__surface.free()
-        surface, _ = theme.draw_action_hint(self.__hotkey, self.__label)
+        surface, self.label_width = theme.draw_action_hint(
+            self.__hotkey, self.__label)
         self.__surface = surface
         self.__v_padding = v_padding
         self.width = max(surface.width, min_width)
