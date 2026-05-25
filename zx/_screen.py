@@ -463,13 +463,15 @@ class _Button:
     height: float
 
     def __init__(self, surface: _Surface,
-                 v_padding: float = 0.0) -> None:
+                 v_padding: float = 0.0,
+                 width: float = 0.0) -> None:
         self.__surface = surface
         self.__v_padding = v_padding
         self.x = 0.0
         self.y = 0.0
-        self.width = surface.width
+        self.width = max(surface.width, width)
         self.height = surface.height + v_padding * 2
+        self.__content_x = (self.width - surface.width) / 2
 
     def free(self) -> None:
         self.__surface.free()
@@ -481,7 +483,7 @@ class _Button:
     def draw(self, target: _Surface,
              parent_x: float = 0.0, parent_y: float = 0.0) -> None:
         target.blit(self.__surface,
-                    parent_x + self.x,
+                    parent_x + self.x + self.__content_x,
                     parent_y + self.y + self.__v_padding)
 
 
@@ -1005,7 +1007,8 @@ class _ErrorPanel(_Panel):
                                   float(width) - margin * 2)
 
         hint_surface, _ = theme.draw_action_hint('ESC', 'Close')
-        close_button = _Button(hint_surface, v_padding=font.em * 0.7)
+        close_button = _Button(hint_surface, v_padding=font.em * 0.7,
+                               width=float(width))
 
         padding = font.line_height * 1.5
         gap = font.line_height * 1.5
@@ -1024,7 +1027,7 @@ class _ErrorPanel(_Panel):
         y += msg_surface.height + gap
         msg_surface.free()
 
-        close_button.x = (width - close_button.width) / 2
+        close_button.x = 0.0
         close_button.y = y
         close_button.draw(surface)
 
