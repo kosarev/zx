@@ -644,6 +644,11 @@ class _TogglePanel(DeviceEvent):
     pass
 
 
+class _ShowError(DeviceEvent):
+    def __init__(self, message: str) -> None:
+        self.message = message
+
+
 class _ExceptionEvent(DeviceEvent):
     def __init__(self, exception: Exception) -> None:
         self.exception = exception
@@ -851,7 +856,10 @@ class _FileBrowserPanel(_Panel):
         if item.descriptor.is_dir:
             self.__navigate(item.descriptor.path)
         else:
-            dispatcher.notify(LoadFile(item.descriptor.path))
+            try:
+                dispatcher.notify(LoadFile(item.descriptor.path))
+            except USER_ERRORS as e:
+                dispatcher.notify(_ShowError(verbalize_error(e)))
 
     def __on_key(self, key_id: str, pressed: bool,
                  dispatcher: Dispatcher) -> None:
@@ -895,6 +903,48 @@ class _FileBrowserPanel(_Panel):
         assert self.__theme.window_size is not None
         renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
         self.__menu.highlight(renderer)
+
+
+class _ErrorPanel(_Panel):
+    __texture: None | _Texture
+
+    def __init__(self, theme: _Theme, message: str) -> None:
+        self.__theme = theme
+        self.__message = message
+        self.__texture = None
+
+    def invalidate(self) -> None:
+        if self.__texture:
+            self.__texture.free()
+        self.__texture = None
+
+    def __rebuild(self, renderer: _Renderer) -> None:
+        assert self.__texture is None
+        theme = self.__theme
+        assert theme.window_size is not None
+        assert theme.normal_font is not None
+        width, height = theme.window_size
+        font = theme.normal_font
+
+        surface = _Surface(width, height)
+        surface.fill(theme.overlay_bg)
+
+        ERROR_RGB: _Colour = (255, 100, 100, 255)
+        msg_surface = font.render(self.__message, ERROR_RGB)
+        x = (width - msg_surface.width) / 2
+        y = (height - msg_surface.height) / 2
+        surface.blit(msg_surface, x, y)
+        msg_surface.free()
+
+        self.__texture = renderer.create_texture_from_surface(surface)
+        surface.free()
+
+    def draw(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
+        if self.__texture is None:
+            self.__rebuild(renderer)
+        assert self.__texture is not None
+        assert self.__theme.window_size is not None
+        renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
 
 
 # TODO: A quick solution for making screencasts.
@@ -978,6 +1028,7 @@ class ScreenWindow(Device):
             _ClickEvent: self.__on_click,
             _ExceptionEvent: self.__on_exception,
             _KeyEvent: self.__on_key,
+            _ShowError: self.__on_show_error,
             _TogglePanel: self.__on_toggle_panel,
             PauseStateUpdated: self._on_updated_pause_state,
             QuantumRun: self._on_quantum_run,
@@ -1008,6 +1059,7 @@ class ScreenWindow(Device):
         self.__file_browser_panel = _FileBrowserPanel(self.__theme)
         self.__panel: _Panel = self.__main_menu_panel
         self.__panel_active = False
+        self.__error_panel: None | _ErrorPanel = None
         self._notification: None | Notification = None
         self._screencast = Screencast()
 
@@ -1049,6 +1101,8 @@ class ScreenWindow(Device):
         display_scale = w.value / lw.value
         if self.__theme.update(window_size, display_scale):
             self.__panel.invalidate()
+            if self.__error_panel is not None:
+                self.__error_panel.invalidate()
         width = min(window_width,
                     div_ceil(window_height * self.frame_width,
                              self.frame_height))
@@ -1073,7 +1127,12 @@ class ScreenWindow(Device):
 
         if self.__panel_active:
             self.__panel.draw(self.__renderer, dispatcher)
-        elif self._notification:
+
+        if self.__error_panel is not None:
+            self.__error_panel.draw(self.__renderer, dispatcher)
+
+        if (not self.__panel_active and self.__error_panel is None
+                and self._notification):
             self._notification.draw(window_size, (width, height),
                                     self.__renderer, self.__theme)
 
@@ -1139,24 +1198,24 @@ class ScreenWindow(Device):
         key_id = sdl2.SDL_GetKeyName(
             event.key.keysym.sym).decode('utf-8').upper()
         pressed = event.type == sdl2.SDL_KEYDOWN
-
-        # F1, ESC, and Backspace are panel management keys owned by the window,
-        # not by any panel. They are handled here, before events are queued,
-        # so that panels never see them and cannot interfere with navigation.
-        if pressed:
-            if key_id in ('ESCAPE', 'F1'):
-                self.__queue_event(_TogglePanel())
-                return
-            if key_id == 'BACKSPACE' and self.__panel_active:
-                self.__activate_panel(self.__main_menu_panel)
-                return
-
         self.__queue_event(_KeyEvent(key_id, pressed))
 
     def __on_key(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
         assert isinstance(event, _KeyEvent)
         if event.pressed:
+            if event.id == 'ESCAPE':
+                if self.__error_panel is not None:
+                    self.__error_panel = None
+                else:
+                    devices.notify(_TogglePanel())
+                return result
+            if event.id == 'F1':
+                devices.notify(_TogglePanel())
+                return result
+            if event.id == 'BACKSPACE' and self.__panel_active:
+                self.__activate_panel(self.__main_menu_panel)
+                return result
             items: list[MenuItemDescriptor] = devices.notify(
                 GetMainMenuItems(), result=[])
             for item in items:
@@ -1248,6 +1307,12 @@ class ScreenWindow(Device):
         result.extend(self.__menu_descriptors)
         return result
 
+    def __on_show_error(self, event: DeviceEvent, devices: Dispatcher,
+                        result: typing.Any) -> typing.Any:
+        assert isinstance(event, _ShowError)
+        self.__error_panel = _ErrorPanel(self.__theme, event.message)
+        return result
+
     def __on_toggle_panel(self, event: DeviceEvent,
                           devices: Dispatcher,
                           result: typing.Any) -> typing.Any:
@@ -1269,7 +1334,7 @@ class ScreenWindow(Device):
             if isinstance(event, event_type):
                 result = handler(event, devices, result)
 
-        if self.__panel_active:
+        if self.__panel_active and self.__error_panel is None:
             self.__panel.on_event(event, devices)
         return result
 
