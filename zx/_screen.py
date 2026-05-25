@@ -472,6 +472,10 @@ class _Button:
     def free(self) -> None:
         self.__surface.free()
 
+    def highlight(self, renderer: _Renderer) -> None:
+        renderer.set_draw_colour((255, 255, 255, 30))
+        renderer.fill_rect(self.x, self.y, self.width, self.height)
+
     def draw(self, target: _Surface,
              parent_x: float = 0.0, parent_y: float = 0.0) -> None:
         target.blit(self.__surface, parent_x + self.x, parent_y + self.y)
@@ -958,12 +962,14 @@ class _FileBrowserPanel(_Panel):
 class _ErrorPanel(_Panel):
     __texture: None | _Texture
     __close_button: None | _Button
+    __selected_button: None | _Button
 
     def __init__(self, theme: _Theme, message: str) -> None:
         self.__theme = theme
         self.__message = message
         self.__texture = None
         self.__close_button = None
+        self.__selected_button = None
 
     def invalidate(self) -> None:
         if self.__texture:
@@ -1022,12 +1028,25 @@ class _ErrorPanel(_Panel):
         self.__texture = renderer.create_texture_from_surface(surface)
         surface.free()
 
+    def on_event(self, event: DeviceEvent,
+                 dispatcher: Dispatcher) -> None:
+        if isinstance(event, _MouseMoveEvent):
+            button = self.__close_button
+            if (button is not None and
+                    button.x <= event.x < button.x + button.width and
+                    button.y <= event.y < button.y + button.height):
+                self.__selected_button = button
+            else:
+                self.__selected_button = None
+
     def draw(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         if self.__texture is None:
             self.__rebuild(renderer)
         assert self.__texture is not None
         assert self.__theme.window_size is not None
         renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
+        if self.__selected_button is not None:
+            self.__selected_button.highlight(renderer)
 
 
 # TODO: A quick solution for making screencasts.
@@ -1430,7 +1449,9 @@ class ScreenWindow(Device):
             if isinstance(event, event_type):
                 result = handler(event, devices, result)
 
-        if self.__panel_active and error_panel is None:
+        if error_panel is not None:
+            error_panel.on_event(event, devices)
+        elif self.__panel_active:
             self.__panel.on_event(event, devices)
         return result
 
