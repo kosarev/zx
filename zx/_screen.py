@@ -229,6 +229,7 @@ class _Font:
 class _Theme:
     __SIGN_COLOUR = '#ffffff'
     __NOTIFICATION_BG_COLOUR = '#1e1e1e'
+    overlay_bg = rgb('#000000', 0.75)
 
     window_size: None | tuple[int, int]
     display_scale: None | float
@@ -571,9 +572,6 @@ class _PrimaryMainMenuItem(MenuItemDescriptor):
 
 
 class _MainMenuPanel(_Panel):
-    # Overlay background styling.
-    __OVERLAY_BG_RGBA = (0, 0, 0, 180)
-
     __texture: None | _Texture
 
     def __init__(self, theme: _Theme) -> None:
@@ -611,7 +609,7 @@ class _MainMenuPanel(_Panel):
         font = theme.normal_font
 
         surface = _Surface(width, height)
-        surface.fill(self.__OVERLAY_BG_RGBA)
+        surface.fill(theme.overlay_bg)
 
         self.__menu.rebuild(theme)
         self.__menu.x = max(0, (width - self.__menu.width) // 2)
@@ -667,8 +665,6 @@ class _MainMenuPanel(_Panel):
 
 
 class _FileBrowserPanel(_Panel):
-    __OVERLAY_BG_RGBA: _Colour = (0, 0, 0, 200)
-
     __texture: None | _Texture
     __entries: list[str]
     __selected: int
@@ -712,7 +708,7 @@ class _FileBrowserPanel(_Panel):
         PADDING = font.em
 
         surface = _Surface(width, height)
-        surface.fill(self.__OVERLAY_BG_RGBA)
+        surface.fill(theme.overlay_bg)
 
         path_surface = font.render(self.__path, DIM_RGB)
         surface.blit(path_surface, PADDING, PADDING)
