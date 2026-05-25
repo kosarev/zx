@@ -535,7 +535,7 @@ class _Menu:
     max_height: float
 
     def __init__(self, items: list[_MenuItem]) -> None:
-        self.__items = items
+        self.items = items
         self.selected_item: None | _MenuItem = None
         self.__scroll_y = 0.0
         self.__total_height = 0.0
@@ -551,19 +551,19 @@ class _Menu:
 
     def rebuild(self, theme: _Theme) -> None:
         total_height = 0.0
-        for item in self.__items:
+        for item in self.items:
             item.rebuild(theme)
             item.y = total_height
             total_height += item.height
 
         max_label_offset = max(
-            (item.width - item.label_width for item in self.__items),
+            (item.width - item.label_width for item in self.items),
             default=0.0)
-        for item in self.__items:
+        for item in self.items:
             item.x = max_label_offset - (item.width - item.label_width)
 
         items_width = max(
-            (item.x + item.width for item in self.__items), default=0.0)
+            (item.x + item.width for item in self.items), default=0.0)
 
         self.__total_height = total_height
         assert theme.normal_font is not None
@@ -572,19 +572,19 @@ class _Menu:
         self.height = min(total_height, self.max_height)
 
         item_x = (self.width - items_width) * self.indent + self.padding
-        for item in self.__items:
+        for item in self.items:
             item.x += item_x
 
     def select_next(self) -> bool:
-        if not self.__items:
+        if not self.items:
             return False
         if self.selected_item is None:
-            self.selected_item = self.__items[0]
+            self.selected_item = self.items[0]
             return False
-        idx = self.__items.index(self.selected_item)
-        if idx + 1 >= len(self.__items):
+        idx = self.items.index(self.selected_item)
+        if idx + 1 >= len(self.items):
             return False
-        self.selected_item = self.__items[idx + 1]
+        self.selected_item = self.items[idx + 1]
         item = self.selected_item
         overflow = item.y + item.height - self.__scroll_y - self.max_height
         if overflow > 0:
@@ -593,15 +593,15 @@ class _Menu:
         return False
 
     def select_prev(self) -> bool:
-        if not self.__items:
+        if not self.items:
             return False
         if self.selected_item is None:
-            self.selected_item = self.__items[-1]
+            self.selected_item = self.items[-1]
             return False
-        idx = self.__items.index(self.selected_item)
+        idx = self.items.index(self.selected_item)
         if idx == 0:
             return False
-        self.selected_item = self.__items[idx - 1]
+        self.selected_item = self.items[idx - 1]
         item = self.selected_item
         if item.y < self.__scroll_y:
             self.__scroll_y = item.y
@@ -617,7 +617,7 @@ class _Menu:
 
     def select_by_descriptor(self,
                              descriptor: MenuItemDescriptor) -> None:
-        for item in self.__items:
+        for item in self.items:
             if item.descriptor is descriptor:
                 self.selected_item = item
                 return
@@ -627,7 +627,7 @@ class _Menu:
             self.selected_item = None
             return
         adj_y = y + self.__scroll_y
-        for item in self.__items:
+        for item in self.items:
             if item.y <= adj_y < item.y + item.height:
                 self.selected_item = item
                 return
@@ -647,7 +647,7 @@ class _Menu:
 
     def draw(self, surface: _Surface) -> None:
         surface.set_clip_rect(self.x, self.y, self.width, self.height)
-        for item in self.__items:
+        for item in self.items:
             if item.y + item.height <= self.__scroll_y:
                 continue
             if item.y >= self.__scroll_y + self.max_height:
@@ -752,7 +752,9 @@ class _MainMenuPanel(_Panel):
                     if self.__menu.selected_item else None)
         descriptors: list[MenuItemDescriptor] = dispatcher.notify(
             GetMainMenuItems(), result=[])
-        self.__menu = _Menu([_MenuItem(d) for d in descriptors])
+        existing = {item.descriptor: item for item in self.__menu.items}
+        items = [existing.get(d) or _MenuItem(d) for d in descriptors]
+        self.__menu = _Menu(items)
         if selected is not None:
             self.__menu.select_by_descriptor(selected)
 
