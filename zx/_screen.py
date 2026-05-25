@@ -247,12 +247,14 @@ class _Theme:
     window_size: None | tuple[int, int]
     display_scale: None | float
     normal_font: None | _Font
+    title_font: None | _Font
     key_button_font: None | _Font
 
     def __init__(self) -> None:
         self.window_size = None
         self.display_scale = None
         self.normal_font = None
+        self.title_font = None
         self.key_button_font = None
 
     def scale(self, value: float) -> float:
@@ -278,6 +280,7 @@ class _Theme:
                 text_size = 17
 
             self.normal_font = _Font(self.scale(text_size))
+            self.title_font = _Font(self.scale(text_size * 1.3))
             self.key_button_font = _Font(self.scale(text_size * 0.85))
 
         return changed
@@ -925,8 +928,10 @@ class _ErrorPanel(_Panel):
         theme = self.__theme
         assert theme.window_size is not None
         assert theme.normal_font is not None
+        assert theme.title_font is not None
         width, height = theme.window_size
         font = theme.normal_font
+        title_font = theme.title_font
 
         surface = _Surface(width, height)
         surface.fill(theme.overlay_bg)
@@ -934,12 +939,12 @@ class _ErrorPanel(_Panel):
         TEXT_RGB: _Colour = (230, 230, 230, 255)
         STRIP_RGB: _Colour = (30, 30, 30, 255)
         margin = font.em * 4
-        title_surface = font.render('Error', TEXT_RGB)
+        title_surface = title_font.render('Error', TEXT_RGB)
         msg_surface = font.render(self.__message, TEXT_RGB,
                                   float(width) - margin * 2)
 
         padding = font.line_height * 1.5
-        gap = font.line_height * 0.5
+        gap = font.line_height * 1.5
         content_h = title_surface.height + gap + msg_surface.height
         strip_h = content_h + padding * 2
         strip_y = (height - strip_h) / 2
