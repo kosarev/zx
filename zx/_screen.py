@@ -543,7 +543,7 @@ class _Menu:
                 self.selected_item = item
                 return
 
-    def highlight(self, renderer: '_Renderer') -> None:
+    def highlight(self, renderer: _Renderer) -> None:
         if self.selected_item is None:
             return
         renderer.set_draw_colour((255, 255, 255, 30))
@@ -553,6 +553,42 @@ class _Menu:
     def draw(self, surface: _Surface, theme: _Theme, font: _Font) -> None:
         for item in self.__items:
             item.draw(surface, theme, font, self.x, self.y)
+
+
+class _KeyEvent(DeviceEvent):
+    def __init__(self, id: str, pressed: bool) -> None:
+        self.id = id
+        self.pressed = pressed
+
+
+class _ClickType(enum.Enum):
+    Single = enum.auto()
+    Double = enum.auto()
+
+
+class _ClickEvent(DeviceEvent):
+    def __init__(self, type: _ClickType) -> None:
+        self.type = type
+
+
+class _MouseMoveEvent(DeviceEvent):
+    def __init__(self, x: int, y: int) -> None:
+        self.x = x
+        self.y = y
+
+
+class _TogglePanel(DeviceEvent):
+    pass
+
+
+class _ExceptionEvent(DeviceEvent):
+    def __init__(self, exception: Exception) -> None:
+        self.exception = exception
+
+
+class _Exit(_ExceptionEvent):
+    def __init__(self) -> None:
+        super().__init__(EmulationExit())
 
 
 class _Panel(abc.ABC):
@@ -590,7 +626,7 @@ class _MainMenuPanel(_Panel):
             self.__texture.free()
         self.__texture = None
 
-    def __on_mouse_move(self, event: '_MouseMoveEvent') -> None:
+    def __on_mouse_move(self, event: _MouseMoveEvent) -> None:
         self.__menu.select_at(
             event.x - self.__menu.x, event.y - self.__menu.y)
 
@@ -643,7 +679,7 @@ class _MainMenuPanel(_Panel):
         elif key_id == 'UP':
             self.__menu.select_prev()
 
-    def __on_click(self, event: '_ClickEvent',
+    def __on_click(self, event: _ClickEvent,
                    dispatcher: Dispatcher) -> None:
         if event.type != _ClickType.Single:
             return
@@ -796,42 +832,6 @@ class Screencast(object):
         surface.write_to_png(filename)
         self._counter += 1
         '''
-
-
-class _KeyEvent(DeviceEvent):
-    def __init__(self, id: str, pressed: bool) -> None:
-        self.id = id
-        self.pressed = pressed
-
-
-class _ClickType(enum.Enum):
-    Single = enum.auto()
-    Double = enum.auto()
-
-
-class _ClickEvent(DeviceEvent):
-    def __init__(self, type: _ClickType) -> None:
-        self.type = type
-
-
-class _MouseMoveEvent(DeviceEvent):
-    def __init__(self, x: int, y: int) -> None:
-        self.x = x
-        self.y = y
-
-
-class _TogglePanel(DeviceEvent):
-    pass
-
-
-class _ExceptionEvent(DeviceEvent):
-    def __init__(self, exception: Exception) -> None:
-        self.exception = exception
-
-
-class _Exit(_ExceptionEvent):
-    def __init__(self) -> None:
-        super().__init__(EmulationExit())
 
 
 class ScreenWindow(Device):
