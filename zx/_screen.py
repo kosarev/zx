@@ -1211,15 +1211,18 @@ class ScreenWindow(Device):
                 else:
                     devices.notify(_TogglePanel())
                 return result
+
             if event.id == 'F1':
                 devices.notify(_TogglePanel())
                 return result
+
             if event.id == 'BACKSPACE' and self.__panel_active:
                 if self.__error_panel is not None:
                     self.__error_panel = None
                 else:
                     self.__activate_panel(self.__main_menu_panel)
                 return result
+
             items: list[MenuItemDescriptor] = devices.notify(
                 GetMainMenuItems(), result=[])
             for item in items:
