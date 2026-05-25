@@ -493,7 +493,8 @@ class _Menu:
         self.width = 0.0
         self.height = 0.0
 
-    def rebuild(self, theme: _Theme) -> None:
+    def rebuild(self, theme: _Theme, *,
+                min_width: float = 0.0) -> None:
         font = theme.normal_font
         assert font is not None
         padding = font.em * 3
@@ -505,7 +506,7 @@ class _Menu:
             item.y = self.height
             items_width = max(items_width, item.width)
             self.height += item.height
-        self.width = items_width + 2 * padding
+        self.width = max(items_width + 2 * padding, min_width)
 
     def select_next(self) -> None:
         if not self.__items:
@@ -765,8 +766,8 @@ class _FileBrowserPanel(_Panel):
         surface.blit(path_surface, font.em, font.em)
         path_surface.free()
 
-        self.__menu.rebuild(theme)
-        self.__menu.x = font.em
+        self.__menu.rebuild(theme, min_width=float(width))
+        self.__menu.x = 0.0
         self.__menu.y = font.em + font.line_height * 1.5
         self.__menu.draw(surface, theme, font)
 
