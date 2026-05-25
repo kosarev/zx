@@ -800,10 +800,23 @@ class _FileBrowserPanel(_Panel):
         elif key_id == 'RETURN':
             self.__activate_selected(dispatcher)
 
+    def __on_mouse_move(self, event: _MouseMoveEvent) -> None:
+        self.__menu.select_at(
+            event.x - self.__menu.x, event.y - self.__menu.y)
+
+    def __on_click(self, event: _ClickEvent,
+                   dispatcher: Dispatcher) -> None:
+        if event.type == _ClickType.Single:
+            self.__activate_selected(dispatcher)
+
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
-        if isinstance(event, _KeyEvent):
+        if isinstance(event, _MouseMoveEvent):
+            self.__on_mouse_move(event)
+        elif isinstance(event, _KeyEvent):
             self.__on_key(event.id, event.pressed, dispatcher)
+        elif isinstance(event, _ClickEvent):
+            self.__on_click(event, dispatcher)
 
     def draw(self, renderer: _Renderer,
              dispatcher: Dispatcher) -> None:
