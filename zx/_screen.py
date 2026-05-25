@@ -494,19 +494,24 @@ class _Menu:
         self.height = 0.0
 
     def rebuild(self, theme: _Theme, *,
-                min_width: float = 0.0) -> None:
+                min_width: float = 0.0,
+                indent: float = 0.0) -> None:
         font = theme.normal_font
         assert font is not None
+
         padding = font.em * 3
         items_width = 0.0
         self.height = 0.0
         for item in self.__items:
             item.rebuild(theme)
-            item.x = padding
             item.y = self.height
             items_width = max(items_width, item.width)
             self.height += item.height
+
         self.width = max(items_width + 2 * padding, min_width)
+        item_x = (self.width - items_width) * indent
+        for item in self.__items:
+            item.x = item_x
 
     def select_next(self) -> None:
         if not self.__items:
@@ -654,7 +659,7 @@ class _MainMenuPanel(_Panel):
         surface = _Surface(width, height)
         surface.fill(theme.overlay_bg)
 
-        self.__menu.rebuild(theme, min_width=float(width))
+        self.__menu.rebuild(theme, min_width=float(width), indent=0.5)
         self.__menu.x = 0.0
         self.__menu.y = max(0, (height - self.__menu.height) // 2)
         self.__menu.draw(surface, theme, font)
