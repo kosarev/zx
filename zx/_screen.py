@@ -320,20 +320,24 @@ class _Theme:
         text_surface.free()
         return button_surface
 
-    def draw_action_hint(self, hotkey: str, label: str,
+    def draw_action_hint(self, hotkey: None | str, label: str,
                          ) -> tuple[_Surface, float]:
-        import sdl2
         assert self.normal_font is not None
         font = self.normal_font
         TEXT_RGB: _Colour = (230, 230, 230, 255)
 
-        key_surface = self.draw_key_button(hotkey)
         label_surface = font.render(label, TEXT_RGB)
+        label_width = label_surface.width
 
+        if hotkey is None:
+            return label_surface, label_width
+
+        import sdl2
+        key_surface = self.draw_key_button(hotkey)
         gap = font.em * 0.5
         hotkey_width = key_surface.width
         content_h = max(key_surface.height, label_surface.height)
-        total_w = hotkey_width + gap + label_surface.width
+        total_w = hotkey_width + gap + label_width
 
         result = _Surface(total_w, content_h)
         sdl2.SDL_SetSurfaceBlendMode(result.sdl_surface,
@@ -342,7 +346,6 @@ class _Theme:
         result.blit(key_surface, 0,
                     (content_h - key_surface.height) / 2)
         key_surface.free()
-        label_width = label_surface.width
         result.blit(label_surface, hotkey_width + gap,
                     (content_h - label_surface.height) / 2)
         label_surface.free()
@@ -462,14 +465,27 @@ class _Button:
     width: float
     height: float
 
-    def __init__(self, surface: _Surface,
-                 v_padding: float = 0.0,
-                 width: float = 0.0) -> None:
-        self.__surface = surface
-        self.__v_padding = v_padding
+    def __init__(self, label: str,
+                 hotkey: None | str = None) -> None:
+        self.__label = label
+        self.__hotkey = hotkey
+        self.__surface: None | _Surface = None
+        self.__v_padding = 0.0
         self.x = 0.0
         self.y = 0.0
-        self.width = max(surface.width, width)
+        self.width = 0.0
+        self.height = 0.0
+        self.__content_x = 0.0
+
+    def rebuild(self, theme: _Theme, *,
+                v_padding: float = 0.0,
+                min_width: float = 0.0) -> None:
+        if self.__surface is not None:
+            self.__surface.free()
+        surface, _ = theme.draw_action_hint(self.__hotkey, self.__label)
+        self.__surface = surface
+        self.__v_padding = v_padding
+        self.width = max(surface.width, min_width)
         self.height = surface.height + v_padding * 2
         self.__content_x = (self.width - surface.width) / 2
 
@@ -478,7 +494,9 @@ class _Button:
                 self.y <= y < self.y + self.height)
 
     def free(self) -> None:
-        self.__surface.free()
+        if self.__surface is not None:
+            self.__surface.free()
+            self.__surface = None
 
     def highlight(self, renderer: _Renderer) -> None:
         renderer.set_draw_colour((255, 255, 255, 30))
@@ -486,6 +504,7 @@ class _Button:
 
     def draw(self, target: _Surface,
              parent_x: float = 0.0, parent_y: float = 0.0) -> None:
+        assert self.__surface is not None
         target.blit(self.__surface,
                     parent_x + self.x + self.__content_x,
                     parent_y + self.y + self.__v_padding)
@@ -524,12 +543,8 @@ class _MenuItem:
         TEXT_RGB: _Colour = (230, 230, 230, 255)
         if self.__content_surface is not None:
             self.__content_surface.free()
-        if self.hotkey:
-            self.__content_surface, self.label_width = (
-                theme.draw_action_hint(self.hotkey, self.label))
-        else:
-            self.__content_surface = font.render(self.label, TEXT_RGB)
-            self.label_width = self.__content_surface.width
+        self.__content_surface, self.label_width = (
+            theme.draw_action_hint(self.hotkey, self.label))
         content_height = self.__content_surface.height
         padding = content_height * 0.7
         self.height = content_height + padding
@@ -975,27 +990,22 @@ class _FileBrowserPanel(_Panel):
 
 class _ErrorPanel(_Panel):
     __texture: None | _Texture
-    __close_button: None | _Button
     __selected_button: None | _Button
 
     def __init__(self, theme: _Theme, message: str) -> None:
         self.__theme = theme
         self.__message = message
         self.__texture = None
-        self.__close_button = None
+        self.__close_button = _Button('Close', hotkey='ESC')
         self.__selected_button = None
 
     def invalidate(self) -> None:
         if self.__texture:
             self.__texture.free()
         self.__texture = None
-        if self.__close_button:
-            self.__close_button.free()
-        self.__close_button = None
 
     def __rebuild(self, renderer: _Renderer) -> None:
         assert self.__texture is None
-        assert self.__close_button is None
         theme = self.__theme
         assert theme.window_size is not None
         assert theme.normal_font is not None
@@ -1003,6 +1013,9 @@ class _ErrorPanel(_Panel):
         width, height = theme.window_size
         font = theme.normal_font
         title_font = theme.title_font
+
+        self.__close_button.rebuild(theme, v_padding=font.em * 0.7,
+                                    min_width=float(width))
 
         surface = _Surface(width, height)
         surface.fill(theme.overlay_bg)
@@ -1014,10 +1027,7 @@ class _ErrorPanel(_Panel):
         msg_surface = font.render(self.__message, TEXT_RGB,
                                   float(width) - margin * 2)
 
-        hint_surface, _ = theme.draw_action_hint('ESC', 'Close')
-        close_button = _Button(hint_surface, v_padding=font.em * 0.7,
-                               width=float(width))
-
+        close_button = self.__close_button
         padding = font.line_height * 1.5
         gap = font.line_height * 1.5
         content_h = (title_surface.height + gap + msg_surface.height
@@ -1039,7 +1049,6 @@ class _ErrorPanel(_Panel):
         close_button.y = y
         close_button.draw(surface)
 
-        self.__close_button = close_button
         self.__texture = renderer.create_texture_from_surface(surface)
         surface.free()
 
