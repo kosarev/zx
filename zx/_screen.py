@@ -528,7 +528,13 @@ class _Menu:
                 return
 
     def select_at(self, x: float, y: float) -> None:
-        self.selected_item = self.item_at(x, y)
+        if not (0 <= y < self.height):
+            self.selected_item = None
+            return
+        for item in self.__items:
+            if item.y <= y < item.y + item.height:
+                self.selected_item = item
+                return
 
     def highlight(self, renderer: '_Renderer') -> None:
         if self.selected_item is None:
@@ -536,14 +542,6 @@ class _Menu:
         renderer.set_draw_colour((255, 255, 255, 30))
         renderer.fill_rect(self.x, self.y + self.selected_item.y,
                            self.width, self.selected_item.height)
-
-    def item_at(self, x: float, y: float) -> None | _MenuItem:
-        if not (0 <= y < self.height):
-            return None
-        for item in self.__items:
-            if item.y <= y < item.y + item.height:
-                return item
-        return None
 
     def draw(self, surface: _Surface, theme: _Theme, font: _Font) -> None:
         for item in self.__items:
