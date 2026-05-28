@@ -646,7 +646,8 @@ class _Menu:
             # so this step brings us to the next page.
             self.selected_item = item
             if down:
-                self.__view_y = item.y
+                limit = max(0.0, self.__total_height - self.max_height)
+                self.__view_y = min(item.y, limit)
             else:
                 self.__view_y = max(
                     0.0, item.y + item.height - self.max_height)
