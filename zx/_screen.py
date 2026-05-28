@@ -546,7 +546,7 @@ class _Menu:
 
     def __init__(self, items: list[_MenuItem]) -> None:
         self.selected_item: None | _MenuItem = None
-        self.__scroll_y = 0.0
+        self.__view_y = 0.0
         self.__total_height = 0.0
         self.__line_height = 0.0
         self.x = 0.0
@@ -598,30 +598,30 @@ class _Menu:
         for item in self.items:
             item.x += item_x
 
-    def __compute_step(self, selected: None | _MenuItem, scroll_y: float,
+    def __compute_step(self, selected: None | _MenuItem, view_y: float,
                        down: bool) -> tuple[_MenuItem, float]:
         if selected is None:
-            return self.items[0 if down else -1], scroll_y
+            return self.items[0 if down else -1], view_y
 
         idx = self.items.index(selected)
         new_idx = idx + (1 if down else -1)
         if not (0 <= new_idx < len(self.items)):
-            return selected, scroll_y
+            return selected, view_y
 
         item = self.items[new_idx]
         if down:
-            scroll_y = max(scroll_y, item.y + item.height - self.max_height)
+            view_y = max(view_y, item.y + item.height - self.max_height)
         else:
-            scroll_y = min(scroll_y, item.y)
-        return item, scroll_y
+            view_y = min(view_y, item.y)
+        return item, view_y
 
     def __select_adjacent(self, down: bool) -> bool:
         if not self.items:
             return False
-        old_scroll_y = self.__scroll_y
-        self.selected_item, self.__scroll_y = self.__compute_step(
-            self.selected_item, self.__scroll_y, down)
-        return self.__scroll_y != old_scroll_y
+        old_view_y = self.__view_y
+        self.selected_item, self.__view_y = self.__compute_step(
+            self.selected_item, self.__view_y, down)
+        return self.__view_y != old_view_y
 
     def select_next(self) -> bool:
         return self.__select_adjacent(down=True)
@@ -630,11 +630,11 @@ class _Menu:
         return self.__select_adjacent(down=False)
 
     def scroll(self, delta: int) -> bool:
-        old = self.__scroll_y
+        old = self.__view_y
         dy = -delta * self.__line_height * 3
         limit = max(0.0, self.__total_height - self.max_height)
-        self.__scroll_y = max(0.0, min(self.__scroll_y + dy, limit))
-        return self.__scroll_y != old
+        self.__view_y = max(0.0, min(self.__view_y + dy, limit))
+        return self.__view_y != old
 
     def select_by_descriptor(self,
                              descriptor: MenuItemDescriptor) -> None:
@@ -647,7 +647,7 @@ class _Menu:
         if not (0 <= y < self.height):
             self.selected_item = None
             return
-        adj_y = y + self.__scroll_y
+        adj_y = y + self.__view_y
         for item in self.items:
             if item.y <= adj_y < item.y + item.height:
                 self.selected_item = item
@@ -658,8 +658,8 @@ class _Menu:
             return
         item = self.selected_item
         # Clip to visible area.
-        top = max(self.y + item.y - self.__scroll_y, self.y)
-        bottom = min(self.y + item.y - self.__scroll_y + item.height,
+        top = max(self.y + item.y - self.__view_y, self.y)
+        bottom = min(self.y + item.y - self.__view_y + item.height,
                      self.y + self.height)
         if bottom <= top:
             return
@@ -669,11 +669,11 @@ class _Menu:
     def draw(self, surface: _Surface) -> None:
         surface.set_clip_rect(self.x, self.y, self.width, self.height)
         for item in self.items:
-            if item.y + item.height <= self.__scroll_y:
+            if item.y + item.height <= self.__view_y:
                 continue
-            if item.y >= self.__scroll_y + self.max_height:
+            if item.y >= self.__view_y + self.max_height:
                 break
-            item.draw(surface, self.x, self.y - self.__scroll_y)
+            item.draw(surface, self.x, self.y - self.__view_y)
         surface.clear_clip_rect()
 
 
