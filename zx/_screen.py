@@ -663,6 +663,15 @@ class _Menu:
     def select_page_up(self) -> bool:
         return self.__select_page(down=False)
 
+    def scroll_to_selected(self) -> None:
+        if self.selected_item is None:
+            return
+        item = self.selected_item
+        self.__view_y = min(self.__view_y, item.y)
+        self.__view_y = max(self.__view_y,
+                            item.y + item.height - self.max_height)
+        self.__view_y = max(0.0, self.__view_y)
+
     def select_first(self) -> bool:
         if not self.items:
             return False
@@ -975,6 +984,7 @@ class _FileBrowserPanel(_Panel):
         self.__menu.padding = font.em
         self.__menu.max_height = height - menu_y - buttons_h
         self.__menu.rebuild(theme)
+        self.__menu.scroll_to_selected()
         self.__menu.x = 0.0
         self.__menu.y = menu_y
         surface.fill_rect(0, menu_y, width, self.__menu.height, FILE_LIST_BG)
@@ -993,8 +1003,14 @@ class _FileBrowserPanel(_Panel):
         self.__texture = texture
 
     def __navigate(self, path: str) -> None:
+        prev_path = self.__path
         self.__path = path
         self.__load_entries()
+        for item in self.__menu.items:
+            assert isinstance(item.descriptor, _FileEntryDescriptor)
+            if item.descriptor.path == prev_path:
+                self.__menu.selected_item = item
+                break
         self.invalidate()
 
     def __activate_selected(self, dispatcher: Dispatcher) -> None:
