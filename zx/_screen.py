@@ -879,6 +879,7 @@ class _FileBrowserPanel(_Panel):
                 os.path.join(self.__path, n))) for n in names]
         )
         self.__menu = _Menu([_MenuItem(d) for d in descriptors])
+        self.__menu.select_next()
 
     def invalidate(self) -> None:
         if self.__texture:
