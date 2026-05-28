@@ -629,6 +629,45 @@ class _Menu:
     def select_prev(self) -> bool:
         return self.__select_adjacent(down=False)
 
+    def __select_page(self, down: bool) -> bool:
+        if not self.items:
+            return False
+        if self.selected_item is None:
+            return self.__select_adjacent(down)
+
+        # Take one step. If we didn't move, we're already at the boundary.
+        item, view_y = self.__compute_step(
+            self.selected_item, self.__view_y, down)
+        if item is self.selected_item:
+            return False
+
+        if view_y != self.__view_y:
+            # view_y changed: we were at the last/first visible item,
+            # so this step brings us to the next page.
+            self.selected_item = item
+            if down:
+                self.__view_y = item.y
+            else:
+                self.__view_y = max(
+                    0.0, item.y + item.height - self.max_height)
+            return True
+
+        # Stepped within the current page; keep stepping to the boundary.
+        while True:
+            next_item, next_view_y = self.__compute_step(item, view_y, down)
+            if next_item is item or next_view_y != view_y:
+                break
+            item, view_y = next_item, next_view_y
+
+        self.selected_item = item
+        return False
+
+    def select_page_down(self) -> bool:
+        return self.__select_page(down=True)
+
+    def select_page_up(self) -> bool:
+        return self.__select_page(down=False)
+
     def scroll(self, delta: int) -> bool:
         old = self.__view_y
         dy = -delta * self.__line_height * 3
@@ -942,6 +981,12 @@ class _FileBrowserPanel(_Panel):
                 self.invalidate()
         elif key_id == 'UP':
             if self.__menu.select_prev():
+                self.invalidate()
+        elif key_id == 'PAGEDOWN':
+            if self.__menu.select_page_down():
+                self.invalidate()
+        elif key_id == 'PAGEUP':
+            if self.__menu.select_page_up():
                 self.invalidate()
         elif key_id == 'RETURN':
             self.__activate_selected(dispatcher)
