@@ -819,13 +819,22 @@ class _Exit(_ExceptionEvent):
 
 
 class _Panel(abc.ABC):
+    def __init__(self) -> None:
+        self._controls: list[_Control] = []
+        self._selected_control: None | _Control = None
+
     @abc.abstractmethod
     def invalidate(self) -> None:
         pass
 
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
-        pass
+        if (isinstance(event, _KeyEvent) and event.pressed
+                and event.id == 'TAB' and self._controls):
+            idx = (self._controls.index(self._selected_control)
+                   if self._selected_control in self._controls else -1)
+            self._selected_control = self._controls[
+                (idx + 1) % len(self._controls)]
 
     @abc.abstractmethod
     def draw(self, renderer: _Renderer,
@@ -948,12 +957,14 @@ class _FileBrowserPanel(_Panel):
     __descriptors: list[_FileEntryDescriptor]
 
     def __init__(self, theme: _Theme) -> None:
+        super().__init__()
         self.__theme = theme
         self.__texture = None
         self.__path = os.getcwd()
         self.__menu: _Menu = _Menu([])
         self.__menu_button = _Button('Main menu', hotkey='BACKSPACE')
         self.__load_entries()
+        self._controls.extend([self.__menu, self.__menu_button])
 
     def __load_entries(self) -> None:
         try:
@@ -966,11 +977,9 @@ class _FileBrowserPanel(_Panel):
             [_FileEntryDescriptor(n, os.path.normpath(
                 os.path.join(self.__path, n))) for n in names]
         )
-        self.__menu = _Menu([_MenuItem(d) for d in descriptors])
+        self.__menu.items[:] = [_MenuItem(d) for d in descriptors]
         self.__menu.select_next()
-        self.__current_control: _Control = self.__menu
-        self.__controls: list[_Control] = [
-            self.__menu, self.__menu_button]
+        self._selected_control = self.__menu
 
     def invalidate(self) -> None:
         if self.__texture:
@@ -1050,16 +1059,12 @@ class _FileBrowserPanel(_Panel):
             return
         invalidated = self.__menu.on_key(key_id)
         if invalidated is not None:
-            self.__current_control = self.__menu
+            self._selected_control = self.__menu
             if invalidated:
                 self.invalidate()
             return
-        if key_id == 'TAB':
-            idx = self.__controls.index(self.__current_control)
-            self.__current_control = self.__controls[
-                (idx + 1) % len(self.__controls)]
-        elif key_id == 'RETURN':
-            if self.__current_control is self.__menu_button:
+        if key_id == 'RETURN':
+            if self._selected_control is self.__menu_button:
                 dispatcher.notify(_ShowMainMenu())
             else:
                 self.__activate_selected(dispatcher)
@@ -1067,27 +1072,28 @@ class _FileBrowserPanel(_Panel):
             dispatcher.notify(_ShowMainMenu())
 
     def __on_mouse_move(self, x: float, y: float) -> None:
-        for control in self.__controls:
+        for control in self._controls:
             if control.contains(x, y):
-                self.__current_control = control
+                self._selected_control = control
                 break
-        if isinstance(self.__current_control, _Menu):
-            self.__current_control.select_at(
-                x - self.__current_control.x,
-                y - self.__current_control.y)
+        if isinstance(self._selected_control, _Menu):
+            self._selected_control.select_at(
+                x - self._selected_control.x,
+                y - self._selected_control.y)
 
     def __on_click(self, event: _ClickEvent,
                    dispatcher: Dispatcher) -> None:
         if event.type != _ClickType.Single:
             return
         self.__on_mouse_move(event.x, event.y)
-        if self.__current_control is self.__menu_button:
+        if self._selected_control is self.__menu_button:
             dispatcher.notify(_ShowMainMenu())
         else:
             self.__activate_selected(dispatcher)
 
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
+        super().on_event(event, dispatcher)
         if isinstance(event, _MouseMoveEvent):
             self.__on_mouse_move(event.x, event.y)
         elif isinstance(event, _ScrollEvent):
@@ -1105,19 +1111,20 @@ class _FileBrowserPanel(_Panel):
         assert self.__texture is not None
         assert self.__theme.window_size is not None
         renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
-        self.__current_control.highlight(renderer)
+        self._selected_control.highlight(renderer)
 
 
 class _ErrorPanel(_Panel):
     __texture: None | _Texture
-    __selected_button: None | _Button
 
     def __init__(self, theme: _Theme, message: str) -> None:
+        super().__init__()
         self.__theme = theme
         self.__message = message
         self.__texture = None
         self.__close_button = _Button('Close', hotkey='ESC')
-        self.__selected_button: None | _Button = self.__close_button
+        self._controls.extend([self.__close_button])
+        self._selected_control = self.__close_button
 
     def invalidate(self) -> None:
         if self.__texture:
@@ -1179,14 +1186,14 @@ class _ErrorPanel(_Panel):
 
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
+        super().on_event(event, dispatcher)
         if isinstance(event, _MouseMoveEvent):
             button = self.__close_button
-            if button is not None and button.contains(event.x, event.y):
-                self.__selected_button = button
-            else:
-                self.__selected_button = None
+            self._selected_control = (button
+                                      if button.contains(event.x, event.y)
+                                      else None)
         elif isinstance(event, _ClickEvent):
-            if self.__selected_button is not None:
+            if self._selected_control is not None:
                 dispatcher.notify(_DismissError())
         elif isinstance(event, _KeyEvent):
             if event.pressed and event.id in ('ESCAPE', 'RETURN', 'BACKSPACE'):
@@ -1198,8 +1205,8 @@ class _ErrorPanel(_Panel):
         assert self.__texture is not None
         assert self.__theme.window_size is not None
         renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
-        if self.__selected_button is not None:
-            self.__selected_button.highlight(renderer)
+        if self._selected_control is not None:
+            self._selected_control.highlight(renderer)
 
 
 # TODO: A quick solution for making screencasts.
