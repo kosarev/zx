@@ -950,6 +950,7 @@ class _FileBrowserPanel(_Panel):
         font = theme.normal_font
 
         DIM_RGB: _Colour = (150, 150, 150, 255)
+        FILE_LIST_BG: _Colour = (0, 0, 0, 170)
 
         surface = _Surface(width, height)
         surface.fill(theme.overlay_bg)
@@ -975,6 +976,7 @@ class _FileBrowserPanel(_Panel):
         self.__menu.rebuild(theme)
         self.__menu.x = 0.0
         self.__menu.y = menu_y
+        surface.fill_rect(0, menu_y, width, self.__menu.height, FILE_LIST_BG)
         self.__menu.draw(surface)
 
         self.__load_button.x = buttons_x
