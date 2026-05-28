@@ -774,8 +774,10 @@ class _ClickType(enum.Enum):
 
 
 class _ClickEvent(DeviceEvent):
-    def __init__(self, type: _ClickType) -> None:
+    def __init__(self, type: _ClickType, x: float, y: float) -> None:
         self.type = type
+        self.x = x
+        self.y = y
 
 
 class _MouseMoveEvent(DeviceEvent):
@@ -1064,20 +1066,21 @@ class _FileBrowserPanel(_Panel):
         elif key_id == 'BACKSPACE':
             dispatcher.notify(_ShowMainMenu())
 
-    def __on_mouse_move(self, event: _MouseMoveEvent) -> None:
+    def __on_mouse_move(self, x: float, y: float) -> None:
         for control in self.__controls:
-            if control.contains(event.x, event.y):
+            if control.contains(x, y):
                 self.__current_control = control
                 break
         if isinstance(self.__current_control, _Menu):
             self.__current_control.select_at(
-                event.x - self.__current_control.x,
-                event.y - self.__current_control.y)
+                x - self.__current_control.x,
+                y - self.__current_control.y)
 
     def __on_click(self, event: _ClickEvent,
                    dispatcher: Dispatcher) -> None:
         if event.type != _ClickType.Single:
             return
+        self.__on_mouse_move(event.x, event.y)
         if self.__current_control is self.__menu_button:
             dispatcher.notify(_ShowMainMenu())
         else:
@@ -1086,7 +1089,7 @@ class _FileBrowserPanel(_Panel):
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
         if isinstance(event, _MouseMoveEvent):
-            self.__on_mouse_move(event)
+            self.__on_mouse_move(event.x, event.y)
         elif isinstance(event, _ScrollEvent):
             if self.__menu.scroll(event.delta):
                 self.invalidate()
@@ -1491,7 +1494,10 @@ class ScreenWindow(Device):
         }
 
         if event.button.clicks in TYPES:
-            self.__queue_event(_ClickEvent(TYPES[event.button.clicks]))
+            scale = self.__theme.display_scale or 1.0
+            self.__queue_event(_ClickEvent(TYPES[event.button.clicks],
+                                           round(event.button.x * scale),
+                                           round(event.button.y * scale)))
             return True
 
         return False
