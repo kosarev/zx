@@ -918,6 +918,8 @@ class _FileBrowserPanel(_Panel):
         self.__texture = None
         self.__path = os.getcwd()
         self.__menu: _Menu = _Menu([])
+        self.__load_button = _Button('Load file', hotkey='RETURN')
+        self.__menu_button = _Button('Main menu', hotkey='BACKSPACE')
         self.__load_entries()
 
     def __load_entries(self) -> None:
@@ -944,7 +946,7 @@ class _FileBrowserPanel(_Panel):
         theme = self.__theme
         assert theme.window_size is not None
         assert theme.normal_font is not None
-        width, height = theme.window_size
+        width, height = (float(v) for v in theme.window_size)
         font = theme.normal_font
 
         DIM_RGB: _Colour = (150, 150, 150, 255)
@@ -956,14 +958,29 @@ class _FileBrowserPanel(_Panel):
         surface.blit(path_surface, font.em, font.em)
         path_surface.free()
 
+        for button in (self.__load_button, self.__menu_button):
+            button.v_padding = font.em * 0.7
+            button.min_width = width
+            button.rebuild(theme)
+
+        buttons_h = self.__load_button.height + self.__menu_button.height
+
         menu_y = font.em + font.line_height * 1.5
-        self.__menu.min_width = float(width)
+        self.__menu.min_width = width
         self.__menu.padding = font.em
-        self.__menu.max_height = float(height) - menu_y
+        self.__menu.max_height = height - menu_y - buttons_h
         self.__menu.rebuild(theme)
         self.__menu.x = 0.0
         self.__menu.y = menu_y
         self.__menu.draw(surface)
+
+        self.__load_button.x = 0.0
+        self.__load_button.y = height - buttons_h
+        self.__load_button.draw(surface)
+
+        self.__menu_button.x = 0.0
+        self.__menu_button.y = height - self.__menu_button.height
+        self.__menu_button.draw(surface)
 
         texture = renderer.create_texture_from_surface(surface)
         surface.free()
