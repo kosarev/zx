@@ -982,15 +982,13 @@ class _FileBrowserPanel(_Panel):
         surface.blit(path_surface, font.em, (menu_y - font.line_height) / 2)
         path_surface.free()
 
-        self.__menu_button.v_padding = font.em * 1.5
-        self.__menu_button.min_width = 0.0
+        self.__menu_button.v_padding = font.em_height * 0.7
+        self.__menu_button.min_width = width
         self.__menu_button.rebuild(theme)
-
-        buttons_h = self.__menu_button.height
 
         self.__menu.min_width = width
         self.__menu.padding = font.em
-        self.__menu.max_height = height - menu_y - buttons_h
+        self.__menu.max_height = height - menu_y - self.__menu_button.height
         self.__menu.rebuild(theme)
         self.__menu.scroll_to_selected()
         self.__menu.x = 0.0
@@ -998,8 +996,8 @@ class _FileBrowserPanel(_Panel):
         surface.fill_rect(0, menu_y, width, self.__menu.height, FILE_LIST_BG)
         self.__menu.draw(surface)
 
-        self.__menu_button.x = (width - self.__menu_button.width) / 2
-        self.__menu_button.y = height - buttons_h
+        self.__menu_button.x = 0.0
+        self.__menu_button.y = height - self.__menu_button.height
         self.__menu_button.draw(surface)
 
         texture = renderer.create_texture_from_surface(surface)
@@ -1125,7 +1123,7 @@ class _ErrorPanel(_Panel):
         font = theme.normal_font
         title_font = theme.title_font
 
-        self.__close_button.v_padding = font.em * 0.7
+        self.__close_button.v_padding = font.em_height * 0.7
         self.__close_button.min_width = float(width)
         self.__close_button.rebuild(theme)
 
@@ -1145,7 +1143,7 @@ class _ErrorPanel(_Panel):
         padding = font.line_height * 1.5
         gap = font.line_height * 1.5
         title_strip_h = title_surface.height + title_padding * 2
-        body_h = msg_surface.height + gap + close_button.height + padding * 2
+        body_h = msg_surface.height + gap + close_button.height + padding
         strip_y = (height - title_strip_h - body_h) / 2
         surface.fill_rect(0, strip_y,
                           float(width), title_strip_h, TITLE_STRIP_RGB)
