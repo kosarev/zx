@@ -598,38 +598,36 @@ class _Menu:
         for item in self.items:
             item.x += item_x
 
-    def select_next(self) -> bool:
+    def __select_adjacent(self, direction: int) -> bool:
+        assert direction in (+1, -1)
         if not self.items:
             return False
+
         if self.selected_item is None:
-            self.selected_item = self.items[0]
+            self.selected_item = self.items[0 if direction > 0 else -1]
             return False
+
         idx = self.items.index(self.selected_item)
-        if idx + 1 >= len(self.items):
+        new_idx = idx + direction
+        if not (0 <= new_idx < len(self.items)):
             return False
-        self.selected_item = self.items[idx + 1]
+
+        self.selected_item = self.items[new_idx]
+
+        # Scroll to keep the newly selected item fully visible.
         item = self.selected_item
-        overflow = item.y + item.height - self.__scroll_y - self.max_height
-        if overflow > 0:
-            self.__scroll_y += overflow
-            return True
-        return False
+        old = self.__scroll_y
+        if direction > 0:
+            self.__scroll_y = max(old, item.y + item.height - self.max_height)
+        else:
+            self.__scroll_y = min(old, item.y)
+        return self.__scroll_y != old
+
+    def select_next(self) -> bool:
+        return self.__select_adjacent(+1)
 
     def select_prev(self) -> bool:
-        if not self.items:
-            return False
-        if self.selected_item is None:
-            self.selected_item = self.items[-1]
-            return False
-        idx = self.items.index(self.selected_item)
-        if idx == 0:
-            return False
-        self.selected_item = self.items[idx - 1]
-        item = self.selected_item
-        if item.y < self.__scroll_y:
-            self.__scroll_y = item.y
-            return True
-        return False
+        return self.__select_adjacent(-1)
 
     def scroll(self, delta: int) -> bool:
         old = self.__scroll_y
