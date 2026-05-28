@@ -899,12 +899,10 @@ class _MainMenuPanel(_Panel):
             return
         if key_id == 'RETURN':
             self.__activate_selected(dispatcher)
-        elif key_id == 'DOWN':
-            if self.__menu.select_next():
-                self.invalidate()
-        elif key_id == 'UP':
-            if self.__menu.select_prev():
-                self.invalidate()
+            return
+        invalidated = self.__menu.on_key(key_id)
+        if invalidated:
+            self.invalidate()
 
     def __on_click(self, event: _ClickEvent,
                    dispatcher: Dispatcher) -> None:
