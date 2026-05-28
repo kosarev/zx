@@ -647,18 +647,10 @@ class _Menu:
 
         # Select the item at the same visual offset in the new view.
         target_y = new_view_y + (self.selected_item.y - self.__view_y)
-        if down:
-            new_item = self.items[-1]
-            for item in self.items:
-                if item.y >= target_y:
-                    new_item = item
-                    break
-        else:
-            new_item = self.items[0]
-            for item in reversed(self.items):
-                if item.y <= target_y:
-                    new_item = item
-                    break
+        new_item = self.__item_at(target_y) or self.items[-1 if down else 0]
+
+        # Ensure the item's top is visible.
+        new_view_y = min(new_view_y, new_item.y)
 
         self.selected_item = new_item
         self.__view_y = new_view_y
@@ -684,15 +676,19 @@ class _Menu:
                 self.selected_item = item
                 return
 
+    def __item_at(self, y: float) -> None | _MenuItem:
+        for item in self.items:
+            if item.y <= y < item.y + item.height:
+                return item
+        return None
+
     def select_at(self, x: float, y: float) -> None:
         if not (0 <= y < self.height):
             self.selected_item = None
             return
-        adj_y = y + self.__view_y
-        for item in self.items:
-            if item.y <= adj_y < item.y + item.height:
-                self.selected_item = item
-                return
+        item = self.__item_at(y + self.__view_y)
+        if item is not None:
+            self.selected_item = item
 
     def highlight(self, renderer: _Renderer) -> None:
         if self.selected_item is None:
