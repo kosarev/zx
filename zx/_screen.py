@@ -663,6 +663,23 @@ class _Menu:
     def select_page_up(self) -> bool:
         return self.__select_page(down=False)
 
+    def select_first(self) -> bool:
+        if not self.items:
+            return False
+        self.selected_item = self.items[0]
+        old_view_y = self.__view_y
+        self.__view_y = 0.0
+        return self.__view_y != old_view_y
+
+    def select_last(self) -> bool:
+        if not self.items:
+            return False
+        self.selected_item = self.items[-1]
+        old_view_y = self.__view_y
+        limit = max(0.0, self.__total_height - self.max_height)
+        self.__view_y = limit
+        return self.__view_y != old_view_y
+
     def scroll(self, delta: int) -> bool:
         old = self.__view_y
         dy = -delta * self.__line_height * 3
@@ -986,6 +1003,12 @@ class _FileBrowserPanel(_Panel):
                 self.invalidate()
         elif key_id == 'PAGEUP':
             if self.__menu.select_page_up():
+                self.invalidate()
+        elif key_id == 'HOME':
+            if self.__menu.select_first():
+                self.invalidate()
+        elif key_id == 'END':
+            if self.__menu.select_last():
                 self.invalidate()
         elif key_id == 'RETURN':
             self.__activate_selected(dispatcher)
