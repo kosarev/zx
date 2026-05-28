@@ -933,7 +933,6 @@ class _FileBrowserPanel(_Panel):
         self.__texture = None
         self.__path = os.getcwd()
         self.__menu: _Menu = _Menu([])
-        self.__load_button = _Button('Load file', hotkey='RETURN')
         self.__menu_button = _Button('Main menu', hotkey='BACKSPACE')
         self.__load_entries()
 
@@ -952,7 +951,7 @@ class _FileBrowserPanel(_Panel):
         self.__menu.select_next()
         self.__current_control: _Control = self.__menu
         self.__controls: list[_Control] = [
-            self.__menu, self.__load_button, self.__menu_button]
+            self.__menu, self.__menu_button]
 
     def invalidate(self) -> None:
         if self.__texture:
@@ -979,15 +978,11 @@ class _FileBrowserPanel(_Panel):
         surface.blit(path_surface, font.em, (menu_y - font.line_height) / 2)
         path_surface.free()
 
-        gap = font.em * 2
-        for button in (self.__load_button, self.__menu_button):
-            button.v_padding = font.em * 1.5
-            button.min_width = 0.0
-            button.rebuild(theme)
+        self.__menu_button.v_padding = font.em * 1.5
+        self.__menu_button.min_width = 0.0
+        self.__menu_button.rebuild(theme)
 
-        buttons_h = self.__load_button.height
-        buttons_w = self.__load_button.width + gap + self.__menu_button.width
-        buttons_x = (width - buttons_w) / 2
+        buttons_h = self.__menu_button.height
 
         self.__menu.min_width = width
         self.__menu.padding = font.em
@@ -999,11 +994,7 @@ class _FileBrowserPanel(_Panel):
         surface.fill_rect(0, menu_y, width, self.__menu.height, FILE_LIST_BG)
         self.__menu.draw(surface)
 
-        self.__load_button.x = buttons_x
-        self.__load_button.y = height - buttons_h
-        self.__load_button.draw(surface)
-
-        self.__menu_button.x = buttons_x + self.__load_button.width + gap
+        self.__menu_button.x = (width - self.__menu_button.width) / 2
         self.__menu_button.y = height - buttons_h
         self.__menu_button.draw(surface)
 
