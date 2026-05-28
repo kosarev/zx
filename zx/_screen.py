@@ -646,7 +646,8 @@ class _Menu:
             return False
 
         # Select the item at the same visual offset in the new view.
-        target_y = new_view_y + (self.selected_item.y - self.__view_y)
+        item_mid = self.selected_item.y + self.selected_item.height / 2
+        target_y = new_view_y + (item_mid - self.__view_y)
         new_item = self.__item_at(target_y) or self.items[-1 if down else 0]
 
         # Ensure the item's top is visible.
