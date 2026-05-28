@@ -977,6 +977,7 @@ class _FileBrowserPanel(_Panel):
             [_FileEntryDescriptor(n, os.path.normpath(
                 os.path.join(self.__path, n))) for n in names]
         )
+        self.__menu.selected_item = None
         self.__menu.items[:] = [_MenuItem(d) for d in descriptors]
         self.__menu.select_next()
         self._selected_control = self.__menu
