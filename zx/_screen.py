@@ -959,7 +959,7 @@ class _FileBrowserPanel(_Panel):
         path_surface.free()
 
         for button in (self.__load_button, self.__menu_button):
-            button.v_padding = font.em * 0.7
+            button.v_padding = font.em * 1.5
             button.min_width = width / 2
             button.rebuild(theme)
 
