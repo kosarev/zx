@@ -960,10 +960,10 @@ class _FileBrowserPanel(_Panel):
 
         for button in (self.__load_button, self.__menu_button):
             button.v_padding = font.em * 0.7
-            button.min_width = width
+            button.min_width = width / 2
             button.rebuild(theme)
 
-        buttons_h = self.__load_button.height + self.__menu_button.height
+        buttons_h = self.__load_button.height
 
         menu_y = font.em + font.line_height * 1.5
         self.__menu.min_width = width
@@ -978,8 +978,8 @@ class _FileBrowserPanel(_Panel):
         self.__load_button.y = height - buttons_h
         self.__load_button.draw(surface)
 
-        self.__menu_button.x = 0.0
-        self.__menu_button.y = height - self.__menu_button.height
+        self.__menu_button.x = width / 2
+        self.__menu_button.y = height - buttons_h
         self.__menu_button.draw(surface)
 
         texture = renderer.create_texture_from_surface(surface)
