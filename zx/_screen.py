@@ -1112,6 +1112,7 @@ class _FileBrowserPanel(_Panel):
         assert self.__texture is not None
         assert self.__theme.window_size is not None
         renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
+        assert self._selected_control is not None
         self._selected_control.highlight(renderer)
 
 
