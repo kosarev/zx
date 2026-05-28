@@ -1055,6 +1055,8 @@ class _FileBrowserPanel(_Panel):
                 self.invalidate()
         elif key_id == 'RETURN':
             self.__activate_selected(dispatcher)
+        elif key_id == 'BACKSPACE':
+            dispatcher.notify(_ShowMainMenu())
 
     def __on_mouse_move(self, event: _MouseMoveEvent) -> None:
         for control in self.__controls:
@@ -1458,11 +1460,6 @@ class ScreenWindow(Device):
 
             if event.id == 'F1':
                 devices.notify(_TogglePanel())
-                return result
-
-            if event.id == 'BACKSPACE' and self.__panel_active:
-                if self.__error_panel is None:
-                    self.__activate_panel(self.__main_menu_panel)
                 return result
 
             # Prevent hotkey lookup from firing while error panel is up;
