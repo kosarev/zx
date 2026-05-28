@@ -695,6 +695,21 @@ class _Menu(_Control):
         self.__view_y = limit
         return self.__view_y != old_view_y
 
+    def on_key(self, key_id: str) -> None | bool:
+        if key_id == 'DOWN':
+            return self.select_next()
+        if key_id == 'UP':
+            return self.select_prev()
+        if key_id == 'PAGEDOWN':
+            return self.select_page_down()
+        if key_id == 'PAGEUP':
+            return self.select_page_up()
+        if key_id == 'HOME':
+            return self.select_first()
+        if key_id == 'END':
+            return self.select_last()
+        return None
+
     def scroll(self, delta: int) -> bool:
         old = self.__view_y
         dy = -delta * self.__line_height * 3
@@ -1033,25 +1048,13 @@ class _FileBrowserPanel(_Panel):
                  dispatcher: Dispatcher) -> None:
         if not pressed:
             return
-        if key_id == 'DOWN':
-            if self.__menu.select_next():
+        invalidated = self.__menu.on_key(key_id)
+        if invalidated is not None:
+            self.__current_control = self.__menu
+            if invalidated:
                 self.invalidate()
-        elif key_id == 'UP':
-            if self.__menu.select_prev():
-                self.invalidate()
-        elif key_id == 'PAGEDOWN':
-            if self.__menu.select_page_down():
-                self.invalidate()
-        elif key_id == 'PAGEUP':
-            if self.__menu.select_page_up():
-                self.invalidate()
-        elif key_id == 'HOME':
-            if self.__menu.select_first():
-                self.invalidate()
-        elif key_id == 'END':
-            if self.__menu.select_last():
-                self.invalidate()
-        elif key_id == 'TAB':
+            return
+        if key_id == 'TAB':
             idx = self.__controls.index(self.__current_control)
             self.__current_control = self.__controls[
                 (idx + 1) % len(self.__controls)]
