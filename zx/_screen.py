@@ -958,12 +958,15 @@ class _FileBrowserPanel(_Panel):
         surface.blit(path_surface, font.em, font.em)
         path_surface.free()
 
+        gap = font.em * 2
         for button in (self.__load_button, self.__menu_button):
             button.v_padding = font.em * 1.5
-            button.min_width = width / 2
+            button.min_width = 0.0
             button.rebuild(theme)
 
         buttons_h = self.__load_button.height
+        buttons_w = self.__load_button.width + gap + self.__menu_button.width
+        buttons_x = (width - buttons_w) / 2
 
         menu_y = font.em + font.line_height * 1.5
         self.__menu.min_width = width
@@ -974,11 +977,11 @@ class _FileBrowserPanel(_Panel):
         self.__menu.y = menu_y
         self.__menu.draw(surface)
 
-        self.__load_button.x = 0.0
+        self.__load_button.x = buttons_x
         self.__load_button.y = height - buttons_h
         self.__load_button.draw(surface)
 
-        self.__menu_button.x = width / 2
+        self.__menu_button.x = buttons_x + self.__load_button.width + gap
         self.__menu_button.y = height - buttons_h
         self.__menu_button.draw(surface)
 
