@@ -635,33 +635,34 @@ class _Menu:
         if self.selected_item is None:
             return self.__select_adjacent(down)
 
-        # Take one step. If we didn't move, we're already at the boundary.
-        item, view_y = self.__compute_step(
-            self.selected_item, self.__view_y, down)
-        if item is self.selected_item:
+        # Shift the view by one page, keeping one row visible for context.
+        sign = 1.0 if down else -1.0
+        shift = self.max_height - self.__line_height * 2
+        limit = max(0.0, self.__total_height - self.max_height)
+        new_view_y = max(0.0, min(self.__view_y + sign * shift, limit))
+        if new_view_y == self.__view_y:
+            # No more pages; jump to the first/last item.
+            self.selected_item = self.items[-1 if down else 0]
             return False
 
-        if view_y != self.__view_y:
-            # view_y changed: we were at the last/first visible item,
-            # so this step brings us to the next page.
-            self.selected_item = item
-            if down:
-                limit = max(0.0, self.__total_height - self.max_height)
-                self.__view_y = min(item.y, limit)
-            else:
-                self.__view_y = max(
-                    0.0, item.y + item.height - self.max_height)
-            return True
+        # Select the item at the same visual offset in the new view.
+        target_y = new_view_y + (self.selected_item.y - self.__view_y)
+        if down:
+            new_item = self.items[-1]
+            for item in self.items:
+                if item.y >= target_y:
+                    new_item = item
+                    break
+        else:
+            new_item = self.items[0]
+            for item in reversed(self.items):
+                if item.y <= target_y:
+                    new_item = item
+                    break
 
-        # Stepped within the current page; keep stepping to the boundary.
-        while True:
-            next_item, next_view_y = self.__compute_step(item, view_y, down)
-            if next_item is item or next_view_y != view_y:
-                break
-            item, view_y = next_item, next_view_y
-
-        self.selected_item = item
-        return False
+        self.selected_item = new_item
+        self.__view_y = new_view_y
+        return True
 
     def select_page_down(self) -> bool:
         return self.__select_page(down=True)
