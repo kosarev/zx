@@ -598,36 +598,36 @@ class _Menu:
         for item in self.items:
             item.x += item_x
 
-    def __select_adjacent(self, direction: int) -> bool:
-        assert direction in (+1, -1)
+    def __compute_step(self, selected: None | _MenuItem, scroll_y: float,
+                       down: bool) -> tuple[_MenuItem, float]:
+        if selected is None:
+            return self.items[0 if down else -1], scroll_y
+
+        idx = self.items.index(selected)
+        new_idx = idx + (1 if down else -1)
+        if not (0 <= new_idx < len(self.items)):
+            return selected, scroll_y
+
+        item = self.items[new_idx]
+        if down:
+            scroll_y = max(scroll_y, item.y + item.height - self.max_height)
+        else:
+            scroll_y = min(scroll_y, item.y)
+        return item, scroll_y
+
+    def __select_adjacent(self, down: bool) -> bool:
         if not self.items:
             return False
-
-        if self.selected_item is None:
-            self.selected_item = self.items[0 if direction > 0 else -1]
-            return False
-
-        idx = self.items.index(self.selected_item)
-        new_idx = idx + direction
-        if not (0 <= new_idx < len(self.items)):
-            return False
-
-        self.selected_item = self.items[new_idx]
-
-        # Scroll to keep the newly selected item fully visible.
-        item = self.selected_item
-        old = self.__scroll_y
-        if direction > 0:
-            self.__scroll_y = max(old, item.y + item.height - self.max_height)
-        else:
-            self.__scroll_y = min(old, item.y)
-        return self.__scroll_y != old
+        old_scroll_y = self.__scroll_y
+        self.selected_item, self.__scroll_y = self.__compute_step(
+            self.selected_item, self.__scroll_y, down)
+        return self.__scroll_y != old_scroll_y
 
     def select_next(self) -> bool:
-        return self.__select_adjacent(+1)
+        return self.__select_adjacent(down=True)
 
     def select_prev(self) -> bool:
-        return self.__select_adjacent(-1)
+        return self.__select_adjacent(down=False)
 
     def scroll(self, delta: int) -> bool:
         old = self.__scroll_y
