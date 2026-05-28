@@ -1056,7 +1056,10 @@ class _FileBrowserPanel(_Panel):
             self.__current_control = self.__controls[
                 (idx + 1) % len(self.__controls)]
         elif key_id == 'RETURN':
-            self.__activate_selected(dispatcher)
+            if self.__current_control is self.__menu_button:
+                dispatcher.notify(_ShowMainMenu())
+            else:
+                self.__activate_selected(dispatcher)
         elif key_id == 'BACKSPACE':
             dispatcher.notify(_ShowMainMenu())
 
