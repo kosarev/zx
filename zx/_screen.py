@@ -1051,6 +1051,10 @@ class _FileBrowserPanel(_Panel):
         elif key_id == 'END':
             if self.__menu.select_last():
                 self.invalidate()
+        elif key_id == 'TAB':
+            idx = self.__controls.index(self.__current_control)
+            self.__current_control = self.__controls[
+                (idx + 1) % len(self.__controls)]
         elif key_id == 'RETURN':
             self.__activate_selected(dispatcher)
         elif key_id == 'BACKSPACE':
