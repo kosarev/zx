@@ -778,6 +778,10 @@ class _TogglePanel(DeviceEvent):
     pass
 
 
+class _ShowMainMenu(DeviceEvent):
+    pass
+
+
 class _ShowError(DeviceEvent):
     def __init__(self, message: str) -> None:
         self.message = message
@@ -1064,7 +1068,11 @@ class _FileBrowserPanel(_Panel):
 
     def __on_click(self, event: _ClickEvent,
                    dispatcher: Dispatcher) -> None:
-        if event.type == _ClickType.Single:
+        if event.type != _ClickType.Single:
+            return
+        if self.__current_control is self.__menu_button:
+            dispatcher.notify(_ShowMainMenu())
+        else:
             self.__activate_selected(dispatcher)
 
     def on_event(self, event: DeviceEvent,
@@ -1267,6 +1275,7 @@ class ScreenWindow(Device):
             _DismissError: self.__on_dismiss_error,
             _ShowError: self.__on_show_error,
             _TogglePanel: self.__on_toggle_panel,
+            _ShowMainMenu: self.__on_show_main_menu,
             PauseStateUpdated: self._on_updated_pause_state,
             QuantumRun: self._on_quantum_run,
             OutputFrame: self._on_output_frame,
@@ -1568,6 +1577,12 @@ class ScreenWindow(Device):
                           result: typing.Any) -> typing.Any:
         self.__panel_active ^= True
         self.__error_panel = None
+        return result
+
+    def __on_show_main_menu(self, event: DeviceEvent,
+                            devices: Dispatcher,
+                            result: typing.Any) -> typing.Any:
+        self.__activate_panel(self.__main_menu_panel)
         return result
 
     def __on_menu_item_hit(self, event: DeviceEvent,
