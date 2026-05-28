@@ -952,11 +952,13 @@ class _FileBrowserPanel(_Panel):
         DIM_RGB: _Colour = (150, 150, 150, 255)
         FILE_LIST_BG: _Colour = (0, 0, 0, 170)
 
+        menu_y = font.em + font.line_height * 2
+
         surface = _Surface(width, height)
         surface.fill(theme.overlay_bg)
 
         path_surface = font.render(self.__path, DIM_RGB)
-        surface.blit(path_surface, font.em, font.em)
+        surface.blit(path_surface, font.em, (menu_y - font.line_height) / 2)
         path_surface.free()
 
         gap = font.em * 2
@@ -969,7 +971,6 @@ class _FileBrowserPanel(_Panel):
         buttons_w = self.__load_button.width + gap + self.__menu_button.width
         buttons_x = (width - buttons_w) / 2
 
-        menu_y = font.em + font.line_height * 1.5
         self.__menu.min_width = width
         self.__menu.padding = font.em
         self.__menu.max_height = height - menu_y - buttons_h
