@@ -467,11 +467,21 @@ class TapeResumeNotification(Notification):
                              alpha, t)
 
 
-class _Button:
+class _Control:
     x: float
     y: float
     width: float
     height: float
+
+    def contains(self, x: float, y: float) -> bool:
+        return (self.x <= x < self.x + self.width and
+                self.y <= y < self.y + self.height)
+
+    def highlight(self, renderer: _Renderer) -> None:
+        pass
+
+
+class _Button(_Control):
     label_width: float
     v_padding: float
     min_width: float
@@ -534,11 +544,7 @@ class _MenuItem(_Button):
         super().rebuild(theme)
 
 
-class _Menu:
-    x: float
-    y: float
-    width: float
-    height: float
+class _Menu(_Control):
     min_width: float
     indent: float
     padding: float
@@ -944,6 +950,9 @@ class _FileBrowserPanel(_Panel):
         )
         self.__menu = _Menu([_MenuItem(d) for d in descriptors])
         self.__menu.select_next()
+        self.__current_control: _Control = self.__menu
+        self.__controls: list[_Control] = [
+            self.__menu, self.__load_button, self.__menu_button]
 
     def invalidate(self) -> None:
         if self.__texture:
@@ -1053,8 +1062,14 @@ class _FileBrowserPanel(_Panel):
             self.__activate_selected(dispatcher)
 
     def __on_mouse_move(self, event: _MouseMoveEvent) -> None:
-        self.__menu.select_at(
-            event.x - self.__menu.x, event.y - self.__menu.y)
+        for control in self.__controls:
+            if control.contains(event.x, event.y):
+                self.__current_control = control
+                break
+        if isinstance(self.__current_control, _Menu):
+            self.__current_control.select_at(
+                event.x - self.__current_control.x,
+                event.y - self.__current_control.y)
 
     def __on_click(self, event: _ClickEvent,
                    dispatcher: Dispatcher) -> None:
@@ -1080,7 +1095,7 @@ class _FileBrowserPanel(_Panel):
         assert self.__texture is not None
         assert self.__theme.window_size is not None
         renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
-        self.__menu.highlight(renderer)
+        self.__current_control.highlight(renderer)
 
 
 class _ErrorPanel(_Panel):
