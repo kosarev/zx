@@ -544,6 +544,45 @@ class _MenuItem(_Button):
         super().rebuild(theme)
 
 
+class _TextInput(_Control):
+    v_padding: float
+    h_padding: float
+    min_width: float
+
+    def __init__(self) -> None:
+        self.text = ''
+        self.x = 0.0
+        self.y = 0.0
+        self.width = 0.0
+        self.height = 0.0
+        self.v_padding = 0.0
+        self.h_padding = 0.0
+        self.min_width = 0.0
+        self.__font: None | _Font = None
+
+    def rebuild(self, theme: _Theme) -> None:
+        assert theme.normal_font is not None
+        self.__font = theme.normal_font
+        self.height = theme.normal_font.line_height + self.v_padding * 2
+        self.width = self.min_width
+
+    def highlight(self, renderer: _Renderer) -> None:
+        renderer.set_draw_colour((255, 255, 255, 30))
+        renderer.fill_rect(self.x, self.y, self.width, self.height)
+
+    def draw(self, target: _Surface,
+             parent_x: float = 0.0, parent_y: float = 0.0) -> None:
+        assert self.__font is not None
+        BG: _Colour = (20, 20, 20, 220)
+        TEXT: _Colour = (230, 230, 230, 255)
+        x = parent_x + self.x
+        y = parent_y + self.y
+        target.fill_rect(x, y, self.width, self.height, BG)
+        text_surface = self.__font.render(self.text + '|', TEXT)
+        target.blit(text_surface, x + self.h_padding, y + self.v_padding)
+        text_surface.free()
+
+
 class _Menu(_Control):
     min_width: float
     indent: float
