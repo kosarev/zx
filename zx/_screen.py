@@ -847,12 +847,12 @@ class _Panel(abc.ABC):
             self._dialog.on_event(event, dispatcher)
             return
 
-        if (isinstance(event, _KeyEvent) and event.pressed
-                and event.id == 'TAB' and self._controls):
-            idx = (self._controls.index(self._selected_control)
-                   if self._selected_control in self._controls else -1)
-            self._selected_control = self._controls[
-                (idx + 1) % len(self._controls)]
+        if isinstance(event, _KeyEvent) and event.pressed:
+            if event.id == 'TAB' and self._controls:
+                idx = (self._controls.index(self._selected_control)
+                       if self._selected_control in self._controls else -1)
+                self._selected_control = self._controls[
+                    (idx + 1) % len(self._controls)]
 
     def draw(self, renderer: _Renderer,
              dispatcher: Dispatcher) -> None:
@@ -927,11 +927,11 @@ class _MainMenuPanel(_Panel):
                  dispatcher: Dispatcher) -> None:
         if not pressed:
             return
+        if key_id in ('ESCAPE', 'F1', 'BACKSPACE'):
+            dispatcher.notify(_TogglePanel())
+            return
         if key_id == 'RETURN':
             self.__activate_selected(dispatcher)
-            return
-        if key_id == 'BACKSPACE':
-            dispatcher.notify(_TogglePanel())
             return
         invalidated = self.__menu.on_key(key_id)
         if invalidated:
@@ -944,6 +944,11 @@ class _MainMenuPanel(_Panel):
         self.__activate_selected(dispatcher)
 
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
+        dialog = self._dialog
+        super().on_event(event, dispatcher)
+        if dialog is not None:
+            return
+
         if isinstance(event, (PauseStateUpdated, TapeStateUpdated)):
             self.invalidate()
         elif isinstance(event, _MouseMoveEvent):
@@ -1092,6 +1097,8 @@ class _FileBrowserPanel(_Panel):
                 dispatcher.notify(_ShowMainMenu())
             else:
                 self.__activate_selected(dispatcher)
+        elif key_id in ('ESCAPE', 'F1'):
+            dispatcher.notify(_TogglePanel())
         elif key_id == 'BACKSPACE':
             dispatcher.notify(_ShowMainMenu())
 
@@ -1491,7 +1498,8 @@ class ScreenWindow(Device):
         assert isinstance(event, _KeyEvent)
         if event.pressed:
             if event.id in ('ESCAPE', 'F1'):
-                devices.notify(_TogglePanel())
+                if not self.__panel_active:
+                    devices.notify(_TogglePanel())
                 return result
 
             items: list[MenuItemDescriptor] = devices.notify(
