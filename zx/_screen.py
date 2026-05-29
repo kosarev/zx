@@ -1054,6 +1054,12 @@ class _FileBrowserPanel(_Panel):
             self._selected_control = self.__menu
 
     def __load_entries(self) -> None:
+        selected = self.__menu.selected_item
+        selected_path: None | str = None
+        if selected is not None:
+            assert isinstance(selected.descriptor, _FileEntryDescriptor)
+            selected_path = selected.descriptor.path
+
         try:
             names = sorted(os.listdir(self.__path))
         except OSError:
@@ -1066,7 +1072,16 @@ class _FileBrowserPanel(_Panel):
         )
         self.__menu.selected_item = None
         self.__menu.items[:] = [_MenuItem(d) for d in descriptors]
-        self.__menu.select_next()
+
+        if selected_path is not None:
+            for item in self.__menu.items:
+                assert isinstance(item.descriptor, _FileEntryDescriptor)
+                if item.descriptor.path == selected_path:
+                    self.__menu.selected_item = item
+                    break
+
+        if self.__menu.selected_item is None:
+            self.__menu.select_next()
         self._selected_control = self.__menu
 
     def activate(self) -> None:
