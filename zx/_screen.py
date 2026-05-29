@@ -791,6 +791,11 @@ class _ScrollEvent(DeviceEvent):
         self.delta = delta
 
 
+class _TextInputEvent(DeviceEvent):
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+
 class _TogglePanel(DeviceEvent):
     pass
 
@@ -1672,6 +1677,9 @@ class ScreenWindow(Device):
                     _ScrollEvent(self.__sdl_event.wheel.y))
             elif self.__sdl_event.type in (sdl2.SDL_KEYDOWN, sdl2.SDL_KEYUP):
                 self.__on_sdl_key(self.__sdl_event)
+            elif self.__sdl_event.type == sdl2.SDL_TEXTINPUT:
+                text = self.__sdl_event.text.text.decode('utf-8')
+                self.__queue_event(_TextInputEvent(text))
             elif self.__sdl_event.type in (sdl2.SDL_CONTROLLERDEVICEADDED,
                                            sdl2.SDL_CONTROLLERDEVICEREMOVED,
                                            sdl2.SDL_CONTROLLERBUTTONUP,
