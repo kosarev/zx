@@ -819,16 +819,34 @@ class _Exit(_ExceptionEvent):
 
 
 class _Panel(abc.ABC):
-    def __init__(self) -> None:
+    def __init__(self, theme: '_Theme') -> None:
+        self._theme = theme
         self._controls: list[_Control] = []
         self._selected_control: None | _Control = None
+        self._dialog: None | '_Panel' = None
 
-    @abc.abstractmethod
     def invalidate(self) -> None:
-        pass
+        if self._dialog is not None:
+            self._dialog.invalidate()
+
+    def activate(self) -> None:
+        self._dialog = None
+        self.invalidate()
 
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
+        if isinstance(event, _ShowError):
+            self._dialog = _ErrorPanel(self._theme, event.message)
+            return
+
+        if isinstance(event, _DismissError):
+            self._dialog = None
+            return
+
+        if self._dialog is not None:
+            self._dialog.on_event(event, dispatcher)
+            return
+
         if (isinstance(event, _KeyEvent) and event.pressed
                 and event.id == 'TAB' and self._controls):
             idx = (self._controls.index(self._selected_control)
@@ -836,10 +854,10 @@ class _Panel(abc.ABC):
             self._selected_control = self._controls[
                 (idx + 1) % len(self._controls)]
 
-    @abc.abstractmethod
     def draw(self, renderer: _Renderer,
              dispatcher: Dispatcher) -> None:
-        pass
+        if self._dialog is not None:
+            self._dialog.draw(renderer, dispatcher)
 
 
 class _PrimaryMainMenuItem(MenuItemDescriptor):
@@ -853,11 +871,12 @@ class _MainMenuPanel(_Panel):
     __texture: None | _Texture
 
     def __init__(self, theme: _Theme) -> None:
-        self.__theme = theme
+        super().__init__(theme)
         self.__texture = None
         self.__menu: _Menu = _Menu([])
 
     def invalidate(self) -> None:
+        super().invalidate()
         if self.__texture:
             self.__texture.free()
         self.__texture = None
@@ -875,7 +894,7 @@ class _MainMenuPanel(_Panel):
         self.__menu.items = [existing.get(d) or _MenuItem(d)
                              for d in descriptors]
 
-        theme = self.__theme
+        theme = self._theme
         assert theme.normal_font is not None
         assert theme.key_button_font is not None
 
@@ -942,8 +961,9 @@ class _MainMenuPanel(_Panel):
             self.__rebuild(renderer, dispatcher)
 
         assert self.__texture is not None
-        assert self.__theme.window_size is not None
-        renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
+        assert self._theme.window_size is not None
+        renderer.copy(self.__texture, 0, 0, *self._theme.window_size)
+        super().draw(renderer, dispatcher)
 
         self.__menu.highlight(renderer)
 
@@ -960,8 +980,7 @@ class _FileBrowserPanel(_Panel):
     __descriptors: list[_FileEntryDescriptor]
 
     def __init__(self, theme: _Theme) -> None:
-        super().__init__()
-        self.__theme = theme
+        super().__init__(theme)
         self.__texture = None
         self.__path = os.getcwd()
         self.__menu: _Menu = _Menu([])
@@ -986,13 +1005,14 @@ class _FileBrowserPanel(_Panel):
         self._selected_control = self.__menu
 
     def invalidate(self) -> None:
+        super().invalidate()
         if self.__texture:
             self.__texture.free()
         self.__texture = None
 
     def __rebuild(self, renderer: _Renderer) -> None:
         assert self.__texture is None
-        theme = self.__theme
+        theme = self._theme
         assert theme.window_size is not None
         assert theme.normal_font is not None
         width, height = (float(v) for v in theme.window_size)
@@ -1097,7 +1117,11 @@ class _FileBrowserPanel(_Panel):
 
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
+        dialog = self._dialog
         super().on_event(event, dispatcher)
+        if dialog is not None:
+            return
+
         if isinstance(event, _MouseMoveEvent):
             self.__on_mouse_move(event.x, event.y)
         elif isinstance(event, _ScrollEvent):
@@ -1113,18 +1137,18 @@ class _FileBrowserPanel(_Panel):
         if self.__texture is None:
             self.__rebuild(renderer)
         assert self.__texture is not None
-        assert self.__theme.window_size is not None
-        renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
+        assert self._theme.window_size is not None
+        renderer.copy(self.__texture, 0, 0, *self._theme.window_size)
         assert self._selected_control is not None
         self._selected_control.highlight(renderer)
+        super().draw(renderer, dispatcher)
 
 
 class _ErrorPanel(_Panel):
     __texture: None | _Texture
 
     def __init__(self, theme: _Theme, message: str) -> None:
-        super().__init__()
-        self.__theme = theme
+        super().__init__(theme)
         self.__message = message
         self.__texture = None
         self.__close_button = _Button('Close', hotkey='ESC')
@@ -1132,13 +1156,14 @@ class _ErrorPanel(_Panel):
         self._selected_control = self.__close_button
 
     def invalidate(self) -> None:
+        super().invalidate()
         if self.__texture:
             self.__texture.free()
         self.__texture = None
 
     def __rebuild(self, renderer: _Renderer) -> None:
         assert self.__texture is None
-        theme = self.__theme
+        theme = self._theme
         assert theme.window_size is not None
         assert theme.normal_font is not None
         assert theme.title_font is not None
@@ -1208,10 +1233,11 @@ class _ErrorPanel(_Panel):
         if self.__texture is None:
             self.__rebuild(renderer)
         assert self.__texture is not None
-        assert self.__theme.window_size is not None
-        renderer.copy(self.__texture, 0, 0, *self.__theme.window_size)
+        assert self._theme.window_size is not None
+        renderer.copy(self.__texture, 0, 0, *self._theme.window_size)
         if self._selected_control is not None:
             self._selected_control.highlight(renderer)
+        super().draw(renderer, dispatcher)
 
 
 # TODO: A quick solution for making screencasts.
@@ -1295,8 +1321,6 @@ class ScreenWindow(Device):
             _ClickEvent: self.__on_click,
             _ExceptionEvent: self.__on_exception,
             _KeyEvent: self.__on_key,
-            _DismissError: self.__on_dismiss_error,
-            _ShowError: self.__on_show_error,
             _TogglePanel: self.__on_toggle_panel,
             _ShowMainMenu: self.__on_show_main_menu,
             PauseStateUpdated: self._on_updated_pause_state,
@@ -1309,7 +1333,7 @@ class ScreenWindow(Device):
             Destroy: self.__on_destroy,
         }
 
-        self.__theme = _Theme()
+        self._theme = _Theme()
         self.__emulation_item = _PrimaryMainMenuItem(
             'Pause emulation', ToggleEmulationPause, 'PAUSE')
         self.__tape_item = _PrimaryMainMenuItem(
@@ -1324,11 +1348,10 @@ class ScreenWindow(Device):
             _PrimaryMainMenuItem('Toggle fullscreen', ToggleFullscreen, 'F11'),
             _PrimaryMainMenuItem('Quit', _Exit, 'F10'),
         ]
-        self.__main_menu_panel = _MainMenuPanel(self.__theme)
-        self.__file_browser_panel = _FileBrowserPanel(self.__theme)
+        self.__main_menu_panel = _MainMenuPanel(self._theme)
+        self.__file_browser_panel = _FileBrowserPanel(self._theme)
         self.__panel: _Panel = self.__main_menu_panel
         self.__panel_active = False
-        self.__error_panel: None | _ErrorPanel = None
         self._notification: None | Notification = None
         self._screencast = Screencast()
 
@@ -1368,10 +1391,8 @@ class ScreenWindow(Device):
                                ctypes.byref(lh))
         window_size = window_width, window_height = w.value, h.value
         display_scale = w.value / lw.value
-        if self.__theme.update(window_size, display_scale):
+        if self._theme.update(window_size, display_scale):
             self.__panel.invalidate()
-            if self.__error_panel is not None:
-                self.__error_panel.invalidate()
         width = min(window_width,
                     div_ceil(window_height * self.frame_width,
                              self.frame_height))
@@ -1397,13 +1418,9 @@ class ScreenWindow(Device):
         if self.__panel_active:
             self.__panel.draw(self.__renderer, dispatcher)
 
-        if self.__error_panel is not None:
-            self.__error_panel.draw(self.__renderer, dispatcher)
-
-        if (not self.__panel_active and self.__error_panel is None
-                and self._notification):
+        if not self.__panel_active and self._notification:
             self._notification.draw(window_size, (width, height),
-                                    self.__renderer, self.__theme)
+                                    self.__renderer, self._theme)
 
         self.__renderer.present()
 
@@ -1427,10 +1444,9 @@ class ScreenWindow(Device):
         tkinter.messagebox.showerror(title, message)
 
     def __activate_panel(self, panel: _Panel) -> None:
-        panel.invalidate()
+        panel.activate()
         self.__panel = panel
         self.__panel_active = True
-        self.__error_panel = None
 
     def __on_request_load_file(self, event: DeviceEvent,
                                devices: Dispatcher,
@@ -1474,18 +1490,8 @@ class ScreenWindow(Device):
                  result: typing.Any) -> typing.Any:
         assert isinstance(event, _KeyEvent)
         if event.pressed:
-            if event.id == 'ESCAPE':
-                if self.__error_panel is None:
-                    devices.notify(_TogglePanel())
-                return result
-
-            if event.id == 'F1':
+            if event.id in ('ESCAPE', 'F1'):
                 devices.notify(_TogglePanel())
-                return result
-
-            # Prevent hotkey lookup from firing while error panel is up;
-            # the panel itself handles dismissal via _DismissError.
-            if event.id == 'RETURN' and self.__error_panel is not None:
                 return result
 
             items: list[MenuItemDescriptor] = devices.notify(
@@ -1506,7 +1512,7 @@ class ScreenWindow(Device):
         }
 
         if event.button.clicks in TYPES:
-            scale = self.__theme.display_scale or 1.0
+            scale = self._theme.display_scale or 1.0
             self.__queue_event(_ClickEvent(TYPES[event.button.clicks],
                                            round(event.button.x * scale),
                                            round(event.button.y * scale)))
@@ -1582,22 +1588,10 @@ class ScreenWindow(Device):
         result.extend(self.__menu_descriptors)
         return result
 
-    def __on_dismiss_error(self, event: DeviceEvent, devices: Dispatcher,
-                           result: typing.Any) -> typing.Any:
-        self.__error_panel = None
-        return result
-
-    def __on_show_error(self, event: DeviceEvent, devices: Dispatcher,
-                        result: typing.Any) -> typing.Any:
-        assert isinstance(event, _ShowError)
-        self.__error_panel = _ErrorPanel(self.__theme, event.message)
-        return result
-
     def __on_toggle_panel(self, event: DeviceEvent,
                           devices: Dispatcher,
                           result: typing.Any) -> typing.Any:
         self.__panel_active ^= True
-        self.__error_panel = None
         return result
 
     def __on_show_main_menu(self, event: DeviceEvent,
@@ -1617,14 +1611,11 @@ class ScreenWindow(Device):
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
-        error_panel = self.__error_panel
         for event_type, handler in self._EVENT_HANDLERS.items():
             if isinstance(event, event_type):
                 result = handler(event, devices, result)
 
-        if error_panel is not None:
-            error_panel.on_event(event, devices)
-        elif self.__panel_active:
+        if self.__panel_active:
             self.__panel.on_event(event, devices)
         return result
 
@@ -1661,7 +1652,7 @@ class ScreenWindow(Device):
                 self.__on_exit(dispatcher)
             elif self.__sdl_event.type == sdl2.SDL_MOUSEMOTION:
                 e = self.__sdl_event.motion
-                scale = self.__theme.display_scale or 1.0
+                scale = self._theme.display_scale or 1.0
                 self.__queue_event(_MouseMoveEvent(
                     round(e.x * scale), round(e.y * scale)))
             elif self.__sdl_event.type == sdl2.SDL_MOUSEBUTTONDOWN:
