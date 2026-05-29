@@ -1069,6 +1069,10 @@ class _FileBrowserPanel(_Panel):
         self.__menu.select_next()
         self._selected_control = self.__menu
 
+    def activate(self) -> None:
+        self.__load_entries()
+        super().activate()
+
     def invalidate(self) -> None:
         super().invalidate()
         if self.__texture:
