@@ -1084,6 +1084,7 @@ class _FileBrowserPanel(_Panel):
 
     def activate(self) -> None:
         self.__load_entries()
+        self.__update_controls()
         super().activate()
 
     def invalidate(self) -> None:
