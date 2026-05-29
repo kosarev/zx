@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2025 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -14,12 +14,13 @@ import typing
 
 from ._data import SoundPulses
 from ._data import SpectrumModel
+from ._device import Destroy
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
+from ._device import EmulatorReset
 from ._device import NewSoundFrame
 from ._device import OutputFrame
-from ._device import Destroy
 
 
 class PulseStream(object):
@@ -32,6 +33,10 @@ class PulseStream(object):
         # The last pulse may happen past the end of the previous
         # frame. When this happens, we store the carried out pulse here.
         self.__carry_pulse: None | tuple[numpy.uint32, numpy.uint32] = None
+
+    def reset(self) -> None:
+        self.__current_level = numpy.uint32(0)
+        self.__carry_pulse = None
 
     def stream_frame(self, levels: numpy.typing.NDArray[numpy.uint32],
                      ticks: numpy.typing.NDArray[numpy.uint32]) -> SoundPulses:
@@ -161,7 +166,9 @@ class SoundDevice(Device):
 
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher,
                  result: typing.Any) -> typing.Any:
-        if isinstance(event, NewSoundFrame):
+        if isinstance(event, EmulatorReset):
+            self.__frame_events.clear()
+        elif isinstance(event, NewSoundFrame):
             self.__new_sound_frame(event)
         elif isinstance(event, OutputFrame):
             if not event.fast_forward:

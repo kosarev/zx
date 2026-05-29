@@ -41,6 +41,12 @@ class Destroy(DeviceEvent):
     pass
 
 
+# Dispatched when the emulator state is replaced (e.g. snapshot load).
+# Devices should discard any accumulated transient state.
+class EmulatorReset(DeviceEvent):
+    pass
+
+
 class EndOfFrame(DeviceEvent):
     def __init__(self, *,
                  port_writes: numpy.typing.NDArray[numpy.uint64]):

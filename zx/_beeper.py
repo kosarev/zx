@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2025 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -15,6 +15,7 @@ from ._data import SpectrumModel
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
+from ._device import EmulatorReset
 from ._device import EndOfFrame
 from ._device import NewSoundFrame
 from ._sound import PulseStream
@@ -40,7 +41,9 @@ class Beeper(Device):
 
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher,
                  result: typing.Any) -> typing.Any:
-        if isinstance(event, EndOfFrame):
+        if isinstance(event, EmulatorReset):
+            self.__stream.reset()
+        elif isinstance(event, EndOfFrame):
             self.__handle_port_writes(event.port_writes, dispatcher)
 
         return result
