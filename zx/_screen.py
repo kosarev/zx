@@ -1316,10 +1316,11 @@ class _MessageDialog(_Panel):
         self.__title_colour = title_colour
         self.__message = message
         self.__texture = None
-        self.__buttons = [(_Button(label, hotkey=hotkey), event_type)
-                          for label, hotkey, event_type in buttons]
-        self._controls[:] = [b for b, _ in self.__buttons]
-        self._selected_control = self.__buttons[-1][0]
+        self.__buttons: dict[_Button, type[DeviceEvent]] = {
+            _Button(label, hotkey=hotkey): event_type
+            for label, hotkey, event_type in buttons}
+        self._controls[:] = list(self.__buttons)
+        self._selected_control = self._controls[-1]
 
     def invalidate(self) -> None:
         super().invalidate()
@@ -1342,12 +1343,12 @@ class _MessageDialog(_Panel):
 
         n = len(self.__buttons)
         button_width = float(width) / n
-        for button, _ in self.__buttons:
+        for button in self.__buttons:
             button.v_padding = font.em_height * 0.7
             button.min_width = button_width
             button.rebuild(theme)
 
-        button_height = self.__buttons[0][0].height
+        button_height = next(iter(self.__buttons)).height
 
         surface = _Surface(width, height)
         surface.fill(theme.overlay_bg)
@@ -1378,7 +1379,7 @@ class _MessageDialog(_Panel):
         y += msg_surface.height + gap
         msg_surface.free()
 
-        for i, (button, _) in enumerate(self.__buttons):
+        for i, button in enumerate(self.__buttons):
             button.x = i * button_width
             button.y = y
             button.draw(surface)
@@ -1389,10 +1390,9 @@ class _MessageDialog(_Panel):
     def __activate(self, button: _Button,
                    dispatcher: Dispatcher) -> None:
         dispatcher.notify(_DismissError())
-        for b, event_type in self.__buttons:
-            if b is button and event_type is not _DismissError:
-                dispatcher.notify(event_type())
-                break
+        event_type = self.__buttons[button]
+        if event_type is not _DismissError:
+            dispatcher.notify(event_type())
 
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
@@ -1400,7 +1400,7 @@ class _MessageDialog(_Panel):
 
         if isinstance(event, _MouseMoveEvent):
             self._selected_control = next(
-                (b for b, _ in self.__buttons
+                (b for b in self.__buttons
                  if b.contains(event.x, event.y)), None)
         elif isinstance(event, _ClickEvent):
             if (event.type == _ClickType.Single
@@ -1412,6 +1412,15 @@ class _MessageDialog(_Panel):
                 if self._selected_control is not None:
                     assert isinstance(self._selected_control, _Button)
                     self.__activate(self._selected_control, dispatcher)
+            elif event.id in ('LEFT', 'RIGHT'):
+                buttons = list(self.__buttons)
+                sel = self._selected_control
+                idx = (buttons.index(sel)
+                       if isinstance(sel, _Button) and sel in self.__buttons
+                       else -1)
+                delta = 1 if event.id == 'RIGHT' else -1
+                self._selected_control = buttons[(idx + delta) % len(buttons)]
+                self.invalidate()
             elif event.id in ('ESCAPE', 'BACKSPACE'):
                 dispatcher.notify(_DismissError())
 
