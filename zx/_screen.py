@@ -1038,10 +1038,10 @@ class _FileBrowserPanel(_Panel):
         self.__path = os.getcwd()
         self.__menu: _Menu = _Menu([])
         self.__menu_button = _Button('Main menu', hotkey='BACKSPACE')
+        self.__save_button = _Button('Save', hotkey='RETURN')
         self.__text_input = _TextInput()
         self.__text_input.text = 'snapshot.z80'
         self.__save_mode = False
-        self.__pending_save_path: None | str = None
         self.__load_entries()
         self.__update_controls()
 
@@ -1052,7 +1052,7 @@ class _FileBrowserPanel(_Panel):
     def __update_controls(self) -> None:
         if self.__save_mode:
             self._controls[:] = [self.__menu, self.__text_input,
-                                 self.__menu_button]
+                                 self.__save_button, self.__menu_button]
             self._selected_control = self.__text_input
         else:
             self._controls[:] = [self.__menu, self.__menu_button]
@@ -1121,10 +1121,14 @@ class _FileBrowserPanel(_Panel):
         path_surface.free()
 
         self.__menu_button.v_padding = font.em_height * 0.7
-        self.__menu_button.min_width = width
+        self.__menu_button.min_width = width / 2 if self.__save_mode else width
         self.__menu_button.rebuild(theme)
 
         if self.__save_mode:
+            self.__save_button.v_padding = font.em_height * 0.7
+            self.__save_button.min_width = width / 2
+            self.__save_button.rebuild(theme)
+
             self.__text_input.v_padding = font.em_height * 0.5
             self.__text_input.h_padding = font.em
             self.__text_input.min_width = width
@@ -1149,7 +1153,11 @@ class _FileBrowserPanel(_Panel):
             self.__text_input.y = menu_y + self.__menu.height
             self.__text_input.draw(surface)
 
-        self.__menu_button.x = 0.0
+            self.__save_button.x = 0.0
+            self.__save_button.y = height - self.__save_button.height
+            self.__save_button.draw(surface)
+
+        self.__menu_button.x = width / 2 if self.__save_mode else 0.0
         self.__menu_button.y = height - self.__menu_button.height
         self.__menu_button.draw(surface)
 
@@ -1248,7 +1256,9 @@ class _FileBrowserPanel(_Panel):
         self.__on_mouse_move(event.x, event.y)
         if self._selected_control is self.__menu_button:
             dispatcher.notify(_ShowMainMenu())
-        else:
+        elif self._selected_control is self.__save_button:
+            self.__save(dispatcher)
+        elif self._selected_control is not self.__text_input:
             self.__activate_selected(dispatcher)
 
     def on_event(self, event: DeviceEvent,
