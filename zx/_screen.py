@@ -1034,8 +1034,24 @@ class _FileBrowserPanel(_Panel):
         self.__path = os.getcwd()
         self.__menu: _Menu = _Menu([])
         self.__menu_button = _Button('Main menu', hotkey='BACKSPACE')
+        self.__text_input = _TextInput()
+        self.__text_input.text = 'snapshot.z80'
+        self.__save_mode = False
         self.__load_entries()
-        self._controls.extend([self.__menu, self.__menu_button])
+        self.__update_controls()
+
+    def set_save_mode(self, save: bool) -> None:
+        self.__save_mode = save
+        self.__update_controls()
+
+    def __update_controls(self) -> None:
+        if self.__save_mode:
+            self._controls[:] = [self.__menu, self.__text_input,
+                                 self.__menu_button]
+            self._selected_control = self.__text_input
+        else:
+            self._controls[:] = [self.__menu, self.__menu_button]
+            self._selected_control = self.__menu
 
     def __load_entries(self) -> None:
         try:
@@ -1083,15 +1099,30 @@ class _FileBrowserPanel(_Panel):
         self.__menu_button.min_width = width
         self.__menu_button.rebuild(theme)
 
+        if self.__save_mode:
+            self.__text_input.v_padding = font.em_height * 0.5
+            self.__text_input.h_padding = font.em
+            self.__text_input.min_width = width
+            self.__text_input.rebuild(theme)
+
+        bottom_height = self.__menu_button.height
+        if self.__save_mode:
+            bottom_height += self.__text_input.height
+
         self.__menu.min_width = width
         self.__menu.padding = font.em
-        self.__menu.max_height = height - menu_y - self.__menu_button.height
+        self.__menu.max_height = height - menu_y - bottom_height
         self.__menu.rebuild(theme)
         self.__menu.scroll_to_selected()
         self.__menu.x = 0.0
         self.__menu.y = menu_y
         surface.fill_rect(0, menu_y, width, self.__menu.height, FILE_LIST_BG)
         self.__menu.draw(surface)
+
+        if self.__save_mode:
+            self.__text_input.x = 0.0
+            self.__text_input.y = menu_y + self.__menu.height
+            self.__text_input.draw(surface)
 
         self.__menu_button.x = 0.0
         self.__menu_button.y = height - self.__menu_button.height
@@ -1112,6 +1143,17 @@ class _FileBrowserPanel(_Panel):
                 break
         self.invalidate()
 
+    def __save(self, dispatcher: Dispatcher) -> None:
+        filename = self.__text_input.text.strip()
+        if not filename:
+            return
+        path = os.path.join(self.__path, filename)
+        try:
+            dispatcher.notify(SaveSnapshot(path))
+            dispatcher.notify(_TogglePanel())
+        except USER_ERRORS as e:
+            dispatcher.notify(_ShowError(verbalize_error(e)))
+
     def __activate_selected(self, dispatcher: Dispatcher) -> None:
         item = self.__menu.selected_item
         if item is None:
@@ -1119,6 +1161,10 @@ class _FileBrowserPanel(_Panel):
         assert isinstance(item.descriptor, _FileEntryDescriptor)
         if item.descriptor.is_dir:
             self.__navigate(item.descriptor.path)
+        elif self.__save_mode:
+            self.__text_input.text = item.descriptor.label
+            self._selected_control = self.__text_input
+            self.invalidate()
         else:
             try:
                 dispatcher.notify(LoadFile(item.descriptor.path))
@@ -1130,6 +1176,15 @@ class _FileBrowserPanel(_Panel):
                  dispatcher: Dispatcher) -> None:
         if not pressed:
             return
+        if (self.__save_mode
+                and self._selected_control is self.__text_input):
+            if key_id == 'BACKSPACE':
+                self.__text_input.text = self.__text_input.text[:-1]
+                self.invalidate()
+                return
+            if key_id in ('RETURN', 'SPACE'):
+                self.__save(dispatcher)
+                return
         invalidated = self.__menu.on_key(key_id)
         if invalidated is not None:
             self._selected_control = self.__menu
@@ -1139,6 +1194,8 @@ class _FileBrowserPanel(_Panel):
         if key_id in ('RETURN', 'SPACE'):
             if self._selected_control is self.__menu_button:
                 dispatcher.notify(_ShowMainMenu())
+            elif self.__save_mode:
+                self.__save(dispatcher)
             else:
                 self.__activate_selected(dispatcher)
         elif key_id in ('ESCAPE', 'F1'):
@@ -1173,7 +1230,12 @@ class _FileBrowserPanel(_Panel):
         if dialog is not None:
             return
 
-        if isinstance(event, _MouseMoveEvent):
+        if isinstance(event, _TextInputEvent):
+            if (self.__save_mode
+                    and self._selected_control is self.__text_input):
+                self.__text_input.text += event.text
+                self.invalidate()
+        elif isinstance(event, _MouseMoveEvent):
             self.__on_mouse_move(event.x, event.y)
         elif isinstance(event, _ScrollEvent):
             if self.__menu.scroll(event.delta):
@@ -1479,21 +1541,24 @@ class ScreenWindow(Device):
     def __on_request_save_snapshot(self, event: DeviceEvent,
                                    devices: Dispatcher,
                                    result: typing.Any) -> typing.Any:
+        self.__file_browser_panel.set_save_mode(True)
+        self.__activate_panel(self.__file_browser_panel)
+
+        # TODO: Remove once SDL-based saving supports all of this.
         # TODO: Add file filters.
-        filename = tkinter.filedialog.asksaveasfilename(
-            defaultextension=".z80",
-            filetypes=[("All files", "*.*")],
-            title="Save snapshot")
+        # filename = tkinter.filedialog.asksaveasfilename(
+        #     defaultextension=".z80",
+        #     filetypes=[("All files", "*.*")],
+        #     title="Save snapshot")
+        #
+        # if isinstance(filename, str):
+        #     try:
+        #         devices.notify(SaveSnapshot(filename))
+        #     except USER_ERRORS as e:
+        #         tkinter.messagebox.showerror(
+        #             'File error', verbalize_error(e))
 
-        if isinstance(filename, str):
-            try:
-                devices.notify(SaveSnapshot(filename))
-            except USER_ERRORS as e:
-                self.__error_box('File error', verbalize_error(e))
         return result
-
-    def __error_box(self, title: str, message: str) -> None:
-        tkinter.messagebox.showerror(title, message)
 
     def __activate_panel(self, panel: _Panel) -> None:
         panel.activate()
@@ -1503,6 +1568,7 @@ class ScreenWindow(Device):
     def __on_request_load_file(self, event: DeviceEvent,
                                devices: Dispatcher,
                                result: typing.Any) -> typing.Any:
+        self.__file_browser_panel.set_save_mode(False)
         self.__activate_panel(self.__file_browser_panel)
         # TODO: Remove once file browser panel supports all of this.
         # TODO: Add file filters.
