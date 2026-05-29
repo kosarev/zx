@@ -911,6 +911,9 @@ class _MainMenuPanel(_Panel):
         if key_id == 'RETURN':
             self.__activate_selected(dispatcher)
             return
+        if key_id == 'BACKSPACE':
+            dispatcher.notify(_TogglePanel())
+            return
         invalidated = self.__menu.on_key(key_id)
         if invalidated:
             self.invalidate()
