@@ -1619,11 +1619,12 @@ class ScreenWindow(Device):
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
+        panel_active = self.__panel_active
         for event_type, handler in self._EVENT_HANDLERS.items():
             if isinstance(event, event_type):
                 result = handler(event, devices, result)
 
-        if self.__panel_active:
+        if panel_active:
             self.__panel.on_event(event, devices)
         return result
 
