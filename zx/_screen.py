@@ -930,7 +930,7 @@ class _MainMenuPanel(_Panel):
         if key_id in ('ESCAPE', 'F1', 'BACKSPACE'):
             dispatcher.notify(_TogglePanel())
             return
-        if key_id == 'RETURN':
+        if key_id in ('RETURN', 'SPACE'):
             self.__activate_selected(dispatcher)
             return
         invalidated = self.__menu.on_key(key_id)
@@ -1092,7 +1092,7 @@ class _FileBrowserPanel(_Panel):
             if invalidated:
                 self.invalidate()
             return
-        if key_id == 'RETURN':
+        if key_id in ('RETURN', 'SPACE'):
             if self._selected_control is self.__menu_button:
                 dispatcher.notify(_ShowMainMenu())
             else:
@@ -1233,7 +1233,8 @@ class _ErrorPanel(_Panel):
             if self._selected_control is not None:
                 dispatcher.notify(_DismissError())
         elif isinstance(event, _KeyEvent):
-            if event.pressed and event.id in ('ESCAPE', 'RETURN', 'BACKSPACE'):
+            if event.pressed and event.id in (
+                    'ESCAPE', 'RETURN', 'SPACE', 'BACKSPACE'):
                 dispatcher.notify(_DismissError())
 
     def draw(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
