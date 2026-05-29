@@ -850,6 +850,10 @@ class _DismissError(DeviceEvent):
     pass
 
 
+class _ConfirmOverwrite(DeviceEvent):
+    pass
+
+
 class _ExceptionEvent(DeviceEvent):
     def __init__(self, exception: Exception) -> None:
         self.exception = exception
@@ -878,7 +882,9 @@ class _Panel(abc.ABC):
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
         if isinstance(event, _ShowError):
-            self._dialog = _ErrorPanel(self._theme, event.message)
+            self._dialog = _MessageDialog(
+                self._theme, 'Error', (80, 20, 20, 255), event.message,
+                [('Close', 'ESC', _DismissError)])
             return
 
         if isinstance(event, _DismissError):
@@ -1035,6 +1041,7 @@ class _FileBrowserPanel(_Panel):
         self.__text_input = _TextInput()
         self.__text_input.text = 'snapshot.z80'
         self.__save_mode = False
+        self.__pending_save_path: None | str = None
         self.__load_entries()
         self.__update_controls()
 
@@ -1166,11 +1173,14 @@ class _FileBrowserPanel(_Panel):
         if not filename:
             return
         path = os.path.join(self.__path, filename)
-        try:
-            dispatcher.notify(SaveSnapshot(path))
-            dispatcher.notify(_TogglePanel())
-        except USER_ERRORS as e:
-            dispatcher.notify(_ShowError(verbalize_error(e)))
+        if os.path.exists(path):
+            self._dialog = _MessageDialog(
+                self._theme, 'Overwrite?', (80, 60, 20, 255),
+                f'{filename!r} already exists. Overwrite?',
+                [('Yes', None, _ConfirmOverwrite),
+                 ('No', 'ESC', _DismissError)])
+            return
+        dispatcher.notify(_ConfirmOverwrite())
 
     def __activate_selected(self, dispatcher: Dispatcher) -> None:
         item = self.__menu.selected_item
@@ -1248,7 +1258,15 @@ class _FileBrowserPanel(_Panel):
         if dialog is not None:
             return
 
-        if isinstance(event, _TextInputEvent):
+        if isinstance(event, _ConfirmOverwrite):
+            filename = self.__text_input.text.strip()
+            path = os.path.join(self.__path, filename)
+            try:
+                dispatcher.notify(SaveSnapshot(path))
+                dispatcher.notify(_TogglePanel())
+            except USER_ERRORS as e:
+                dispatcher.notify(_ShowError(verbalize_error(e)))
+        elif isinstance(event, _TextInputEvent):
             if (self.__save_mode
                     and self._selected_control is self.__text_input):
                 self.__text_input.text += event.text
@@ -1275,16 +1293,23 @@ class _FileBrowserPanel(_Panel):
         super().draw(renderer, dispatcher)
 
 
-class _ErrorPanel(_Panel):
+_ButtonSpec = tuple[str, None | str, type[DeviceEvent]]
+
+
+class _MessageDialog(_Panel):
     __texture: None | _Texture
 
-    def __init__(self, theme: _Theme, message: str) -> None:
+    def __init__(self, theme: _Theme, title: str, title_colour: _Colour,
+                 message: str, buttons: list[_ButtonSpec]) -> None:
         super().__init__(theme)
+        self.__title = title
+        self.__title_colour = title_colour
         self.__message = message
         self.__texture = None
-        self.__close_button = _Button('Close', hotkey='ESC')
-        self._controls.extend([self.__close_button])
-        self._selected_control = self.__close_button
+        self.__buttons = [(_Button(label, hotkey=hotkey), event_type)
+                          for label, hotkey, event_type in buttons]
+        self._controls[:] = [b for b, _ in self.__buttons]
+        self._selected_control = self.__buttons[-1][0]
 
     def invalidate(self) -> None:
         super().invalidate()
@@ -1302,30 +1327,35 @@ class _ErrorPanel(_Panel):
         font = theme.normal_font
         title_font = theme.title_font
 
-        self.__close_button.v_padding = font.em_height * 0.7
-        self.__close_button.min_width = float(width)
-        self.__close_button.rebuild(theme)
+        TEXT_RGB: _Colour = (230, 230, 230, 255)
+        BODY_STRIP_RGB: _Colour = (30, 30, 30, 255)
+
+        n = len(self.__buttons)
+        button_width = float(width) / n
+        for button, _ in self.__buttons:
+            button.v_padding = font.em_height * 0.7
+            button.min_width = button_width
+            button.rebuild(theme)
+
+        button_height = self.__buttons[0][0].height
 
         surface = _Surface(width, height)
         surface.fill(theme.overlay_bg)
 
-        TEXT_RGB: _Colour = (230, 230, 230, 255)
-        TITLE_STRIP_RGB: _Colour = (80, 20, 20, 255)
-        BODY_STRIP_RGB: _Colour = (30, 30, 30, 255)
         margin = font.em * 4
-        title_surface = title_font.render('Error', TEXT_RGB)
+        title_surface = title_font.render(self.__title, TEXT_RGB)
         msg_surface = font.render(self.__message, TEXT_RGB,
                                   float(width) - margin * 2)
 
-        close_button = self.__close_button
         title_padding = title_font.line_height * 0.5
         padding = font.line_height * 1.5
         gap = font.line_height * 1.5
         title_strip_h = title_surface.height + title_padding * 2
-        body_h = msg_surface.height + gap + close_button.height + padding
+        body_h = msg_surface.height + gap + button_height + padding
         strip_y = (height - title_strip_h - body_h) / 2
+
         surface.fill_rect(0, strip_y,
-                          float(width), title_strip_h, TITLE_STRIP_RGB)
+                          float(width), title_strip_h, self.__title_colour)
         surface.fill_rect(0, strip_y + title_strip_h,
                           float(width), body_h, BODY_STRIP_RGB)
 
@@ -1338,27 +1368,41 @@ class _ErrorPanel(_Panel):
         y += msg_surface.height + gap
         msg_surface.free()
 
-        close_button.x = 0.0
-        close_button.y = y
-        close_button.draw(surface)
+        for i, (button, _) in enumerate(self.__buttons):
+            button.x = i * button_width
+            button.y = y
+            button.draw(surface)
 
         self.__texture = renderer.create_texture_from_surface(surface)
         surface.free()
 
+    def __activate(self, button: _Button,
+                   dispatcher: Dispatcher) -> None:
+        dispatcher.notify(_DismissError())
+        for b, event_type in self.__buttons:
+            if b is button and event_type is not _DismissError:
+                dispatcher.notify(event_type())
+                break
+
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
         super().on_event(event, dispatcher)
+
         if isinstance(event, _MouseMoveEvent):
-            button = self.__close_button
-            self._selected_control = (button
-                                      if button.contains(event.x, event.y)
-                                      else None)
+            self._selected_control = next(
+                (b for b, _ in self.__buttons
+                 if b.contains(event.x, event.y)), None)
         elif isinstance(event, _ClickEvent):
-            if self._selected_control is not None:
-                dispatcher.notify(_DismissError())
-        elif isinstance(event, _KeyEvent):
-            if event.pressed and event.id in (
-                    'ESCAPE', 'RETURN', 'SPACE', 'BACKSPACE'):
+            if (event.type == _ClickType.Single
+                    and self._selected_control is not None):
+                assert isinstance(self._selected_control, _Button)
+                self.__activate(self._selected_control, dispatcher)
+        elif isinstance(event, _KeyEvent) and event.pressed:
+            if event.id in ('RETURN', 'SPACE'):
+                if self._selected_control is not None:
+                    assert isinstance(self._selected_control, _Button)
+                    self.__activate(self._selected_control, dispatcher)
+            elif event.id in ('ESCAPE', 'BACKSPACE'):
                 dispatcher.notify(_DismissError())
 
     def draw(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
