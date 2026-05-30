@@ -189,7 +189,7 @@ jobs:
   # One-time setup required in GitHub:
   #   Go to Settings → Environments → New environment, name it "pypi".
   release:
-    needs: [build-sdist, build-wheels]
+    needs: [build-sdist, build-wheels, build-standalone]
     runs-on: ubuntu-latest
 
     permissions:
@@ -199,17 +199,33 @@ jobs:
     environment: pypi
 
     steps:
-    - name: Download all dist artifacts
+    - name: Download wheels and sdist
       uses: actions/download-artifact@v4
       with:
-        pattern: dist-*
+        pattern: dist-sdist
         merge-multiple: true
         path: dist/
+
+    - name: Download wheels
+      uses: actions/download-artifact@v4
+      with:
+        pattern: dist-*-latest
+        merge-multiple: true
+        path: dist/
+
+    - name: Download standalone executables
+      uses: actions/download-artifact@v4
+      with:
+        pattern: dist-standalone-*
+        merge-multiple: true
+        path: standalone/
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        files: dist/*
+        files: |
+          dist/*
+          standalone/*
 
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
