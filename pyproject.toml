@@ -30,3 +30,7 @@ packages = ['zx']
 
 [tool.setuptools.package-data]
 zx = ['roms/*', 'fonts/*', 'py.typed']
+
+[tool.cibuildwheel]
+build = "cp310-* cp311-* cp312-* cp313-*"
+test-command = "python -c \"import zx\""
