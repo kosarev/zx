@@ -93,10 +93,8 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            archive: zx-linux-x86_64.tar.gz
             artifact: dist-standalone-linux
           - os: windows-latest
-            archive: zx-windows-x86_64.zip
             artifact: dist-standalone-windows
 
     steps:
@@ -163,16 +161,20 @@ jobs:
 
     - name: Package (Linux)
       if: matrix.os == 'ubuntu-latest'
-      run: tar -czf zx-linux-x86_64.tar.gz -C dist zx
+      run: |
+        VER=${GITHUB_REF_NAME#v}
+        tar -czf "zx-${VER}-linux-x86_64.tar.gz" -C dist zx
 
     - name: Package (Windows)
       if: matrix.os == 'windows-latest'
-      run: python -m zipfile -c zx-windows-x86_64.zip dist/zx
+      run: |
+        $VER = $env:GITHUB_REF_NAME -replace '^v', ''
+        python -m zipfile -c "zx-${VER}-windows-x86_64.zip" dist/zx
 
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact }}
-        path: ${{ matrix.archive }}
+        path: zx-*
 
   # Publishes to PyPI using OIDC Trusted Publishing (no stored tokens).
   #
