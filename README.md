@@ -84,28 +84,6 @@ $ zx https://www.worldofspectrum.org/pub/sinclair/games/e/EricTheFloaters.tzx.zi
 ```
 
 
-### Converting files
-
-```shell
-$ zx jack.tzx jack.wav
-```
-
-```shell
-$ zx eric.tap eric.z80
-```
-
-
-### Dumping files
-
-```shell
-$ zx dump rick.z80
-OrderedDict([('id', 'z80_snapshot'), ('a', 213), ('f', 66), ...
-```
-
-On the `dump` command, **zx** parses the specified file (that can
-be of any supported format) in the form of raw Python data.
-
-
 ### Reference papers
 
 * [Screen timings](https://github.com/kosarev/zx/blob/master/test/screen_timing/SCREEN_TIMING.md)
