@@ -4,7 +4,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2025 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -270,7 +270,7 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
     _, dest_ext = os.path.splitext(dest_filename)
     dest_format = detect_file_format(image=None, filename_extension=dest_ext)
     if not dest_format:
-        raise Error('Cannot determine the format of file %r.' % (
+        raise Error("Cannot determine the format of file '%s'." % (
                         dest_filename))
 
     CONVERTERS: list[tuple[

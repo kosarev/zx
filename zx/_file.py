@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2025 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -100,7 +100,7 @@ def parse_file_image(filename: str, image: Bytes) -> DataRecord:
     base, ext = os.path.splitext(filename)
     format = detect_file_format(image, ext)
     if not format:
-        raise Error('Cannot determine the format of file %r.' % filename)
+        raise Error("Cannot determine the format of file '%s'." % filename)
 
     if issubclass(format, ArchiveFile):
         candidates = _parse_archive(format, image)
