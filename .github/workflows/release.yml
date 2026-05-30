@@ -127,11 +127,17 @@ jobs:
         sp = sysconfig.get_path('platlib')
         print(glob.glob(os.path.join(sp, 'zx', '_spectrumbase*'))[0])
         ")
+        SDL2=$(ldconfig -p | awk '/libSDL2-2\.0\.so\.0/{print $NF}' | head -1)
+        SDL2_TTF=$(ldconfig -p | awk '/libSDL2_ttf-2\.0\.so\.0/{print $NF}' | head -1)
+        SDL2_GFX=$(ldconfig -p | awk '/libSDL2_gfx-1\.0\.so\.0/{print $NF}' | head -1)
         pyinstaller --onedir --name zx \
           --collect-data zx \
           --collect-all sdl2 \
           --hidden-import zx._spectrumbase \
           --add-binary "$SO:zx" \
+          --add-binary "$SDL2:." \
+          --add-binary "$SDL2_TTF:." \
+          --add-binary "$SDL2_GFX:." \
           _entry.py
 
     - name: Build standalone executable (Windows)
