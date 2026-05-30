@@ -56,6 +56,7 @@ setup(name='zx',
       author_email='mail@ivankosarev.com',
       url='https://github.com/kosarev/zx/',
       license='MIT',
+      python_requires='>=3.10',
       ext_modules=[zx_emulatorbase_module],
       packages=['zx'],
       install_requires=[

@@ -37,25 +37,23 @@ ZX Spectrum emulation framework in Python and C++
 
 ### Installation and running
 
-For the latest release:
+Install from PyPI (pre-built wheels for Linux and Windows, source for other platforms):
 ```shell
-$ pip install --upgrade pip
-$ pip install --upgrade setuptools wheel
-
 $ pip install zx
 ```
 
-Or directly from the repository for current development version:
+Standalone executables for Linux x86\_64 and Windows x64 are available on the
+[Releases page](https://github.com/kosarev/zx/releases).
+
+For the current development version:
 ```shell
-$ pip install --upgrade setuptools wheel
 $ pip install git+https://github.com/kosarev/zx
 ```
 
-Local development setups are also supported:
+Local development setup:
 ```shell
 $ git clone --recursive https://github.com/kosarev/zx
 $ cd zx
-$ pip install --upgrade setuptools wheel
 $ pip install --editable .
 ```
 
