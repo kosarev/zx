@@ -86,7 +86,17 @@ jobs:
 
   build-standalone:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            archive: zx-linux-x86_64.tar.gz
+            artifact: dist-standalone-linux
+          - os: windows-latest
+            archive: zx-windows-x86_64.zip
+            artifact: dist-standalone-windows
 
     steps:
     - uses: actions/checkout@v4
@@ -98,7 +108,8 @@ jobs:
       with:
         python-version: '3.12'
 
-    - name: Install SDL2 system libraries
+    - name: Install SDL2 system libraries (Linux)
+      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update -q
         sudo apt-get install -y libsdl2-2.0-0 libsdl2-ttf-2.0-0 libsdl2-gfx-1.0-0
@@ -108,7 +119,8 @@ jobs:
         python -m pip install --upgrade pip pyinstaller
         pip install .
 
-    - name: Build standalone executable
+    - name: Build standalone executable (Linux)
+      if: matrix.os == 'ubuntu-latest'
       run: |
         echo "from zx import main; main()" > _entry.py
         pyinstaller --onedir --name zx \
@@ -116,16 +128,36 @@ jobs:
           --collect-all sdl2 \
           _entry.py
 
-    - name: Smoke-test executable
+    - name: Build standalone executable (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        echo "from zx import main; main()" > _entry.py
+        pyinstaller --onedir --name zx `
+          --collect-all zx `
+          --collect-all sdl2 `
+          --collect-all sdl2dll `
+          _entry.py
+
+    - name: Smoke-test executable (Linux)
+      if: matrix.os == 'ubuntu-latest'
       run: dist/zx/zx help
 
-    - name: Package
+    - name: Smoke-test executable (Windows)
+      if: matrix.os == 'windows-latest'
+      run: dist\zx\zx.exe help
+
+    - name: Package (Linux)
+      if: matrix.os == 'ubuntu-latest'
       run: tar -czf zx-linux-x86_64.tar.gz -C dist zx
+
+    - name: Package (Windows)
+      if: matrix.os == 'windows-latest'
+      run: python -m zipfile -c zx-windows-x86_64.zip dist/zx
 
     - uses: actions/upload-artifact@v4
       with:
-        name: dist-standalone
-        path: zx-linux-x86_64.tar.gz
+        name: ${{ matrix.artifact }}
+        path: ${{ matrix.archive }}
 
   # Publishes to PyPI using OIDC Trusted Publishing (no stored tokens).
   #
