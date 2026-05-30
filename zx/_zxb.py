@@ -24,7 +24,7 @@ class ZXBasicCompilerProgram(DataRecord, format_name='ZXB'):
     def parse(cls, filename: str,
               image: Bytes) -> 'ZXBasicCompilerProgram':
         try:
-            from src.zxbc import (  # type: ignore[attr-defined]
+            from src.zxbc import (  # type: ignore
                 main as zxb_main, CodeEmitter)
         except ModuleNotFoundError:
             raise Error('The ZX Basic compiler does not seem to be installed.')
