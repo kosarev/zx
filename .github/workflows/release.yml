@@ -60,7 +60,48 @@ jobs:
     - name: Build sdist and wheel
       run: python -m build
 
+    - name: Upload dist artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist/
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
         files: dist/*
+
+  # Publishes to TestPyPI using OIDC Trusted Publishing (no stored tokens).
+  #
+  # One-time setup required in TestPyPI:
+  #   1. Log in at https://test.pypi.org and go to your account's
+  #      "Publishing" page (or the project page once it exists).
+  #   2. Add a new Trusted Publisher with these values:
+  #        PyPI project name:  zx
+  #        Owner:              kosarev
+  #        Repository:         zx
+  #        Workflow filename:  release.yml
+  #        Environment name:   testpypi
+  #
+  # One-time setup required in GitHub:
+  #   Go to Settings → Environments → New environment, name it "testpypi".
+  publish-testpypi:
+    needs: release
+    runs-on: ubuntu-latest
+
+    environment: testpypi
+
+    permissions:
+      id-token: write
+
+    steps:
+    - name: Download dist artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist
+        path: dist/
+
+    - name: Publish to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
