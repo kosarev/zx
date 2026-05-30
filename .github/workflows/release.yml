@@ -89,6 +89,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -126,6 +127,7 @@ jobs:
         pyinstaller --onedir --name zx \
           --collect-all zx \
           --collect-all sdl2 \
+          --hidden-import zx._spectrumbase \
           _entry.py
 
     - name: Build standalone executable (Windows)
@@ -136,6 +138,7 @@ jobs:
           --collect-all zx `
           --collect-all sdl2 `
           --collect-all sdl2dll `
+          --hidden-import zx._spectrumbase `
           _entry.py
 
     - name: Smoke-test executable (Linux)
