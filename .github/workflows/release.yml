@@ -124,21 +124,25 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         echo "from zx import main; main()" > _entry.py
+        SO=$(python -c "import zx._spectrumbase as m; print(m.__file__)")
         pyinstaller --onedir --name zx \
-          --collect-all zx \
+          --collect-data zx \
           --collect-all sdl2 \
           --hidden-import zx._spectrumbase \
+          --add-binary "$SO:zx" \
           _entry.py
 
     - name: Build standalone executable (Windows)
       if: matrix.os == 'windows-latest'
       run: |
         echo "from zx import main; main()" > _entry.py
+        $SO = python -c "import zx._spectrumbase as m; print(m.__file__)"
         pyinstaller --onedir --name zx `
-          --collect-all zx `
+          --collect-data zx `
           --collect-all sdl2 `
           --collect-all sdl2dll `
           --hidden-import zx._spectrumbase `
+          "--add-binary=${SO}:zx" `
           _entry.py
 
     - name: Smoke-test executable (Linux)
