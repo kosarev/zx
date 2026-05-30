@@ -122,6 +122,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         echo "from zx import main; main()" > _entry.py
+        echo "import os, sys; os.environ.setdefault('PYSDL2_DLL_PATH', sys._MEIPASS)" > _hook_sdl2.py
         SO=$(python -c "
         import sysconfig, glob, os
         sp = sysconfig.get_path('platlib')
@@ -138,6 +139,7 @@ jobs:
           --add-binary "$SDL2:." \
           --add-binary "$SDL2_TTF:." \
           --add-binary "$SDL2_GFX:." \
+          --runtime-hook _hook_sdl2.py \
           _entry.py
 
     - name: Build standalone executable (Windows)
