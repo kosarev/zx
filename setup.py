@@ -11,6 +11,7 @@
 
 import inspect
 import os
+import sys
 from setuptools import Extension, setup
 
 
@@ -31,12 +32,15 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 
+if sys.platform == 'win32':
+    _compile_args = ['/std:c++14', '/W4', '/EHs-c-', '/GR-', '/O2']
+else:
+    _compile_args = ['-std=c++11', '-Wall', '-fno-exceptions', '-fno-rtti',
+                     '-O3', '-UNDEBUG']  # TODO: -UNDEBUG
+
 zx_emulatorbase_module = Extension(
     name='zx._spectrumbase',
-    extra_compile_args=['-std=c++11', '-Wall', '-fno-exceptions', '-fno-rtti',
-                        '-O3',
-                        '-UNDEBUG',  # TODO
-                        ],
+    extra_compile_args=_compile_args,
     sources=['zx/_spectrumbase.cpp'],
     language='c++')
 
