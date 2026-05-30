@@ -340,7 +340,11 @@ class _Theme:
 
         import sdl2
         key_surface = self.draw_key_button(hotkey)
-        gap = font.em * 0.5
+
+        # Must be integer so that surface.width - label_width reliably gives
+        # the hotkey side width.
+        gap = round(font.em * 0.5)
+
         hotkey_width = key_surface.width
         content_h = max(key_surface.height, label_surface.height)
         total_w = hotkey_width + gap + label_width
