@@ -1585,6 +1585,8 @@ class ScreenWindow(Device):
         sdl2.SDL_GetWindowSize(self.__window, ctypes.byref(lw),
                                ctypes.byref(lh))
         window_size = window_width, window_height = w.value, h.value
+        if (window_width == 0 or window_height == 0) and lw.value and lh.value:
+            window_size = window_width, window_height = lw.value, lh.value
         display_scale = w.value / lw.value if lw.value != 0 else 1.0
         if self._theme.update(window_size, display_scale):
             self.__panel.invalidate()
