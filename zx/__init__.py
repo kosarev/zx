@@ -14,6 +14,6 @@ from ._except import EmulatorException
 from ._main import main
 from ._spectrum import Spectrum
 
-__version__ = '0.13.12'
+__version__ = '0.13.13'
 
 __all__ = ['Spectrum', 'main']

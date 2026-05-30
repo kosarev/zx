@@ -4,7 +4,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'zx'
-version = '0.13.12'
+version = '0.13.13'
 description = 'ZX Spectrum emulation framework'
 readme = 'README.md'
 license = {text = 'MIT'}
