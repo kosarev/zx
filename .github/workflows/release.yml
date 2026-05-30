@@ -124,7 +124,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         echo "from zx import main; main()" > _entry.py
-        SO=$(python -c "import zx._spectrumbase as m; print(m.__file__)")
+        SO=$(cd /tmp && python -c "import zx._spectrumbase as m; print(m.__file__)")
         pyinstaller --onedir --name zx \
           --collect-data zx \
           --collect-all sdl2 \
@@ -136,7 +136,7 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         echo "from zx import main; main()" > _entry.py
-        $SO = python -c "import zx._spectrumbase as m; print(m.__file__)"
+        $SO = (cd $env:TEMP && python -c "import zx._spectrumbase as m; print(m.__file__)")
         pyinstaller --onedir --name zx `
           --collect-data zx `
           --collect-all sdl2 `
