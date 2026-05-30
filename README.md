@@ -62,25 +62,7 @@ Running:
 $ zx
 ```
 
-
-### Controls
-
-`F1` displays help.
-
-`F2` is to save snapshot.
-
-`F3` is to load snapshot or tape file.
-
-`F6` pauses/resumes tape.
-
-`F10` quits the emulator.
-
-`F11` and double click switch between fullscreen and windowed mode.
-
-`PAUSE` and mouse click pause/resume emulation or RZX playback.
-
-Any Spectrum key stroke resumes emulation and leaves the RZX
-playback mode back to the regular emulation mode.
+Press `ESC` or `F1` to open the main menu.
 
 
 ### Running snapshots, recordings and tapes
