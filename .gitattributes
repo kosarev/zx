@@ -1,0 +1,2 @@
+test/screen_timing/*.inc linguist-language=Assembly
+z80/ linguist-vendored
