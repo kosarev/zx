@@ -71,25 +71,25 @@ jobs:
       with:
         files: dist/*
 
-  # Publishes to TestPyPI using OIDC Trusted Publishing (no stored tokens).
+  # Publishes to PyPI using OIDC Trusted Publishing (no stored tokens).
   #
-  # One-time setup required in TestPyPI:
-  #   1. Log in at https://test.pypi.org and go to your account's
+  # One-time setup required in PyPI:
+  #   1. Log in at https://pypi.org and go to your account's
   #      "Publishing" page (or the project page once it exists).
   #   2. Add a new Trusted Publisher with these values:
   #        PyPI project name:  zx
   #        Owner:              kosarev
   #        Repository:         zx
   #        Workflow filename:  release.yml
-  #        Environment name:   testpypi
+  #        Environment name:   pypi
   #
   # One-time setup required in GitHub:
-  #   Go to Settings → Environments → New environment, name it "testpypi".
-  publish-testpypi:
+  #   Go to Settings → Environments → New environment, name it "pypi".
+  publish-pypi:
     needs: release
     runs-on: ubuntu-latest
 
-    environment: testpypi
+    environment: pypi
 
     permissions:
       id-token: write
@@ -101,7 +101,5 @@ jobs:
         name: dist
         path: dist/
 
-    - name: Publish to TestPyPI
+    - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        repository-url: https://test.pypi.org/legacy/
