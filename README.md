@@ -3,7 +3,7 @@ ZX Spectrum emulation framework in Python and C++
 
 [![CI](https://github.com/kosarev/zx/actions/workflows/python-package.yml/badge.svg)](https://github.com/kosarev/zx/actions/workflows/python-package.yml)
 [![PyPI](https://img.shields.io/pypi/v/zx)](https://pypi.org/project/zx/)
-[![Python](https://img.shields.io/pypi/pyversions/zx)](https://pypi.org/project/zx/)
+[![Python](https://img.shields.io/pypi/pyversions/zx?v=2)](https://pypi.org/project/zx/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/kosarev/zx/blob/master/LICENSE)
 
 ![Elven](https://raw.githubusercontent.com/kosarev/zx/master/screenshots/elven.png "Elven Warrior")
