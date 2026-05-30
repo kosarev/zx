@@ -62,7 +62,6 @@ setup(name='zx',
           'pysdl2',
           'pysdl2-dll',
           'numpy',
-          'evdev; platform_system=="Linux"',
       ],
       package_data={'zx': ['roms/*', 'fonts/*', 'py.typed']},
       entry_points={
