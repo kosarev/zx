@@ -13,6 +13,7 @@
 import typing
 import collections
 import os
+import platformdirs
 import sys
 
 from ._binary import Bytes
@@ -32,6 +33,12 @@ from ._rzx import make_rzx
 from ._rzx import RZXFile
 from ._spectrum import Profile
 from ._spectrum import Spectrum
+
+
+def get_config_dir() -> str:
+    path = platformdirs.user_config_dir('zx')
+    os.makedirs(path, exist_ok=True)
+    return path
 
 
 def pop_argument(args: list[str], error: str) -> str:

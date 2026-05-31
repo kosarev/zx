@@ -12,6 +12,7 @@ authors = [
   {name = 'Ivan Kosarev', email = 'mail@ivankosarev.com'}
 ]
 dependencies = [
+  'platformdirs',
   'pysdl2',
   'pysdl2-dll',
   'numpy',
