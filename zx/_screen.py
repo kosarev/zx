@@ -867,6 +867,10 @@ class _ConfirmReset(DeviceEvent):
     pass
 
 
+class _UIEmulatorReset(EmulatorReset):
+    pass
+
+
 class _ExceptionEvent(DeviceEvent):
     def __init__(self, exception: Exception) -> None:
         self.exception = exception
@@ -1014,8 +1018,10 @@ class _MainMenuPanel(_Panel):
             self._dialog = _MessageDialog(
                 self._theme, 'Reset machine?', (80, 60, 20, 255),
                 'Reset the emulated machine?',
-                [('Yes', None, EmulatorReset),
+                [('Yes', None, _UIEmulatorReset),
                  ('No', 'ESC', _DismissError)])
+        elif isinstance(event, _UIEmulatorReset):
+            dispatcher.notify(_TogglePanel())
         elif isinstance(event, (PauseStateUpdated, TapeStateUpdated)):
             self.invalidate()
         elif isinstance(event, _MouseMoveEvent):
