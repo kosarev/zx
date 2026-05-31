@@ -37,7 +37,7 @@ from ._z80snapshot import Z80Snapshot
 
 
 def get_config_dir() -> str:
-    path = platformdirs.user_config_dir('zx')
+    path = str(platformdirs.user_config_dir('zx'))
     os.makedirs(path, exist_ok=True)
     return path
 
