@@ -526,6 +526,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         self.__paused = False
 
+    def reset(self) -> None:
+        self.devices.notify(EmulatorReset())
+
     def __install_rom(self) -> None:
         PAGE_SIZE = 0x4000
         rom = load_rom_image(self.model._ROM_FILE_NAME)
