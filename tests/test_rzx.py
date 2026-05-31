@@ -8,7 +8,6 @@
 #
 #   Published under the MIT license.
 
-#!/usr/bin/env python3
 
 import zx
 import pytest

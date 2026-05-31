@@ -75,28 +75,11 @@ class DataRecord(object):
         raise NotImplementedError
 
     def dumps(self) -> str:
-        # TODO: Replace with strict to_json() once all DataRecord types have
-        # migrated their bytes/dict fields to proper DataRecord subtypes.
-        def convert(v: typing.Any) -> typing.Any:
-            if isinstance(v, (int, str)):
-                return v
-            if isinstance(v, (bytes, memoryview)):
-                s = bytes(v).decode('latin-1')
-                a = [s[i:i + 0x10] for i in range(0, len(v), 0x10)]
-                return a[0] if len(a) == 1 else a
-            if isinstance(v, (tuple, list)):
-                return [convert(e) for e in v]
-            if isinstance(v, dict):
-                return {k: convert(w) for k, w in v.items()}
-            if isinstance(v, DataRecord):
-                return {id: convert(w) for id, w in v if w is not None}
-            raise TypeError(f'cannot serialize a {type(v)}')
-
         import json
-        metadata = {'creator_tool':
-                    f'https://pypi.org/project/zx/{zx.__version__}'}
-        d = dict(type=type(self).__name__, metadata=metadata)
-        d.update({id: convert(v) for id, v in self if v is not None})
+        d: dict[str, typing.Any] = {'type': type(self).__name__}
+        d['metadata'] = {
+            'creator_tool': f'https://pypi.org/project/zx/{zx.__version__}'}
+        d.update(self.to_json())
         return json.dumps(d, indent=2)
 
 
@@ -179,7 +162,9 @@ class ByteData(DataRecord, format_name=None, json_type=True):
     def to_json(self) -> str | list[str]:
         chunks = [self.data[i:i + self.__CHUNK_SIZE].hex()
                   for i in range(0, len(self.data), self.__CHUNK_SIZE)]
-        return chunks[0] if len(chunks) <= 1 else chunks
+        if not chunks:
+            return ''
+        return chunks[0] if len(chunks) == 1 else chunks
 
 
 class MemoryBlock(DataRecord, format_name=None, json_type=True):
