@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2019 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -11,6 +11,7 @@
 
 import typing
 from ._binary import Bytes, BinaryParser
+from ._data import ByteData
 from ._data import SoundFile
 from ._tape import get_block_pulses, tag_last_pulse, get_end_pulse
 
@@ -18,10 +19,11 @@ from ._tape import get_block_pulses, tag_last_pulse, get_end_pulse
 class TAPFile(SoundFile, format_name='TAP'):
     _TICKS_FREQ = 3500000
 
-    blocks: typing.Sequence[Bytes]
+    blocks: typing.Sequence[ByteData]
 
-    def __init__(self, *, blocks: typing.Sequence[Bytes]) -> None:
-        SoundFile.__init__(self, blocks=blocks)
+    def __init__(self, *, blocks: typing.Sequence[ByteData.Source]) -> None:
+        SoundFile.__init__(self,
+                           blocks=[ByteData.make_from(b) for b in blocks])
 
     # TODO: Produce a typing.Sequence instead of using generators,
     #       once we can represent pulses in a more compact manner.
@@ -31,7 +33,7 @@ class TAPFile(SoundFile, format_name='TAP'):
         last_block = len(self.blocks) - 1
         for i, data in enumerate(self.blocks):
             # The block itself.
-            for pulse, id in get_block_pulses(data):
+            for pulse, id in get_block_pulses(data.data):
                 yield level, pulse, id
                 level = not level
 
@@ -51,10 +53,10 @@ class TAPFile(SoundFile, format_name='TAP'):
         return pulses
 
     @classmethod
-    def _parse_block(cls, parser: BinaryParser) -> Bytes:
+    def _parse_block(cls, parser: BinaryParser) -> ByteData:
         size = parser.parse_field('<H')
         assert isinstance(size, int)
-        return parser.read_bytes(size)
+        return ByteData(parser.read_bytes(size))
 
     @classmethod
     def parse(cls, filename: str, image: Bytes) -> 'TAPFile':
