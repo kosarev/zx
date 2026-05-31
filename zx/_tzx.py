@@ -106,10 +106,10 @@ class TZXArchiveInfo(TZXBlock, format_name=None):
 class TZXFile(SoundFile, format_name='TZX'):
     _TICKS_FREQ = 3500000
 
-    blocks: list[dict[str, typing.Any]]
+    blocks: list[TZXBlock]
 
     def __init__(self, *, major_revision: int, minor_revision: int,
-                 blocks: list[dict[str, typing.Any]]) -> None:
+                 blocks: list[TZXBlock]) -> None:
         SoundFile.__init__(self,
                            major_revision=major_revision,
                            minor_revision=minor_revision,
@@ -119,39 +119,34 @@ class TZXFile(SoundFile, format_name='TZX'):
             typing.Iterable[tuple[bool, int, tuple[str, ...]]]):
         level = False
         for block in self.blocks:
-            id = block['id']
-            if id in ['0x10 (Standard Speed Data Block)',
-                      '0x11 (Turbo Speed Data Block)',
-                      '0x14 (Pure Data Block)']:
-                # The block itself.
-                data = block['data']
-                if id == '0x10 (Standard Speed Data Block)':
-                    pulses = get_block_pulses(data)
-                elif id == '0x11 (Turbo Speed Data Block)':
+            if isinstance(block, (TZXStandardSpeedDataBlock,
+                                  TZXTurboSpeedDataBlock,
+                                  TZXPureDataBlock)):
+                if isinstance(block, TZXStandardSpeedDataBlock):
+                    pulses = get_block_pulses(block.data.data)
+                elif isinstance(block, TZXTurboSpeedDataBlock):
                     pulses = get_block_pulses(
-                        data=data,
-                        pilot_pulse_len=block['pilot_pulse_len'],
-                        first_sync_pulse_len=block['first_sync_pulse_len'],
-                        second_sync_pulse_len=block['second_sync_pulse_len'],
-                        zero_bit_pulse_len=block['zero_bit_pulse_len'],
-                        one_bit_pulse_len=block['one_bit_pulse_len'],
-                        pilot_tone_len=block['pilot_tone_len'])
+                        data=block.data.data,
+                        pilot_pulse_len=block.pilot_pulse_len,
+                        first_sync_pulse_len=block.first_sync_pulse_len,
+                        second_sync_pulse_len=block.second_sync_pulse_len,
+                        zero_bit_pulse_len=block.zero_bit_pulse_len,
+                        one_bit_pulse_len=block.one_bit_pulse_len,
+                        pilot_tone_len=block.pilot_tone_len)
                     # TODO: Should we generate the end pulse here?
                     #       end_pulse_len=...
-                elif id == '0x14 (Pure Data Block)':
-                    pulses = get_data_pulses(
-                        data=data,
-                        zero_bit_pulse_len=block['zero_bit_pulse_len'],
-                        one_bit_pulse_len=block['one_bit_pulse_len'])
                 else:
-                    assert 0, id
+                    pulses = get_data_pulses(
+                        data=block.data.data,
+                        zero_bit_pulse_len=block.zero_bit_pulse_len,
+                        one_bit_pulse_len=block.one_bit_pulse_len)
 
                 for pulse, ids in pulses:
                     yield level, pulse, ids
                     level = not level
 
                 # Pause.
-                pause_duration = block['pause_after_block_in_ms']
+                pause_duration = block.pause_after_block_in_ms
 
                 # Pause blocks of zero duration shall be ignored,
                 # and then the output level remains the same.
@@ -174,10 +169,10 @@ class TZXFile(SoundFile, format_name='TZX'):
                 if pause_duration:
                     yield (level, pause_duration * self._TICKS_FREQ // 1000,
                            ('PAUSE',))
-            elif id == '0x30 (Text Description)':
-                print(block['text'])
-            elif id in ['0x32 (Archive Info)', '0x21 (Group Start)',
-                        '0x22 (Group End)']:
+            elif isinstance(block, TZXTextDescription):
+                print(block.text.data)
+            elif isinstance(block, (TZXArchiveInfo, TZXGroupStart,
+                                    TZXGroupEnd)):
                 pass
             else:
                 assert 0, block  # TODO
@@ -197,77 +192,71 @@ class TZXFile(SoundFile, format_name='TZX'):
 
     @classmethod
     def _parse_standard_speed_data_block(
-            cls, parser: BinaryParser) -> dict[str, typing.Any]:
-        block = parser.parse([('pause_after_block_in_ms', '<H'),
-                              ('data_size', '<H')])
-        block.update({'id': '0x10 (Standard Speed Data Block)',
-                      'data': parser.read_bytes(block['data_size'])})
-        del block['data_size']
-        return block
+            cls, parser: BinaryParser) -> TZXStandardSpeedDataBlock:
+        pause_after_block_in_ms = parser.parse_field('<H')
+        assert isinstance(pause_after_block_in_ms, int)
+        data_size = parser.parse_field('<H')
+        assert isinstance(data_size, int)
+        return TZXStandardSpeedDataBlock(
+            pause_after_block_in_ms=pause_after_block_in_ms,
+            data=parser.read_bytes(data_size))
 
     @classmethod
     def _parse_turbo_speed_data_block(
-            cls, parser: BinaryParser) -> dict[str, typing.Any]:
-        block = parser.parse([('pilot_pulse_len', '<H'),
-                              ('first_sync_pulse_len', '<H'),
-                              ('second_sync_pulse_len', '<H'),
-                              ('zero_bit_pulse_len', '<H'),
-                              ('one_bit_pulse_len', '<H'),
-                              ('pilot_tone_len', '<H'),
-                              ('used_bits_in_last_byte', '<B'),
-                              ('pause_after_block_in_ms', '<H'),
-                              ('data_size_lo', '<H'),
-                              ('data_size_hi', '<B')])
-        data_size = (block.pop('data_size_hi') * 0x10000 +
-                     block.pop('data_size_lo'))
-        data_size_in_bits = data_size * 8 + block.pop('used_bits_in_last_byte')
-        block.update({'id': '0x11 (Turbo Speed Data Block)',
-                      'data_size_in_bits': data_size_in_bits,
-                      'data': parser.read_bytes(data_size)})
-        return block
+            cls, parser: BinaryParser) -> TZXTurboSpeedDataBlock:
+        fields = parser.parse([('pilot_pulse_len', '<H'),
+                               ('first_sync_pulse_len', '<H'),
+                               ('second_sync_pulse_len', '<H'),
+                               ('zero_bit_pulse_len', '<H'),
+                               ('one_bit_pulse_len', '<H'),
+                               ('pilot_tone_len', '<H'),
+                               ('used_bits_in_last_byte', '<B'),
+                               ('pause_after_block_in_ms', '<H'),
+                               ('data_size_lo', '<H'),
+                               ('data_size_hi', '<B')])
+        data_size = (fields.pop('data_size_hi') * 0x10000 +
+                     fields.pop('data_size_lo'))
+        data_size_in_bits = (data_size * 8 +
+                             fields.pop('used_bits_in_last_byte'))
+        return TZXTurboSpeedDataBlock(
+            **fields,
+            data_size_in_bits=data_size_in_bits,
+            data=parser.read_bytes(data_size))
 
     @classmethod
     def _parse_pure_data_block(
-            cls, parser: BinaryParser) -> dict[str, typing.Any]:
-        block = parser.parse([('zero_bit_pulse_len', '<H'),
-                              ('one_bit_pulse_len', '<H'),
-                              ('used_bits_in_last_byte', '<B'),
-                              ('pause_after_block_in_ms', '<H'),
-                              ('data_size_lo', '<H'),
-                              ('data_size_hi', '<B')])
-        data_size = (block.pop('data_size_hi') * 0x10000 +
-                     block.pop('data_size_lo'))
-        data_size_in_bits = data_size * 8 + block.pop('used_bits_in_last_byte')
-        block.update({'id': '0x14 (Pure Data Block)',
-                      'data_size_in_bits': data_size_in_bits,
-                      'data': parser.read_bytes(data_size)})
-        return block
+            cls, parser: BinaryParser) -> TZXPureDataBlock:
+        fields = parser.parse([('zero_bit_pulse_len', '<H'),
+                               ('one_bit_pulse_len', '<H'),
+                               ('used_bits_in_last_byte', '<B'),
+                               ('pause_after_block_in_ms', '<H'),
+                               ('data_size_lo', '<H'),
+                               ('data_size_hi', '<B')])
+        data_size = (fields.pop('data_size_hi') * 0x10000 +
+                     fields.pop('data_size_lo'))
+        data_size_in_bits = (data_size * 8 +
+                             fields.pop('used_bits_in_last_byte'))
+        return TZXPureDataBlock(
+            **fields,
+            data_size_in_bits=data_size_in_bits,
+            data=parser.read_bytes(data_size))
 
     @classmethod
-    def _parse_group_start(
-            cls, parser: BinaryParser) -> dict[str, typing.Any]:
+    def _parse_group_start(cls, parser: BinaryParser) -> TZXGroupStart:
         length = parser.parse_field('B')
         assert isinstance(length, int)
-        name = parser.read_bytes(length)
-        # print('Group start: %r.' % name)
-        return {'id': '0x21 (Group Start)',
-                'name': name}
+        return TZXGroupStart(name=parser.read_bytes(length))
 
     @classmethod
-    def _parse_group_end(
-            cls, parser: BinaryParser) -> dict[str, typing.Any]:
-        # TODO: Check for a matching group start?
-        # print('Group end.')
-        return {'id': '0x22 (Group End)'}
+    def _parse_group_end(cls, parser: BinaryParser) -> TZXGroupEnd:
+        return TZXGroupEnd()
 
     @classmethod
     def _parse_text_description(
-            cls, parser: BinaryParser) -> dict[str, typing.Any]:
+            cls, parser: BinaryParser) -> TZXTextDescription:
         size = parser.parse_field('B')
         assert isinstance(size, int)
-        text = parser.read_bytes(size)
-        return {'id': '0x30 (Text Description)',
-                'text': text}
+        return TZXTextDescription(text=parser.read_bytes(size))
 
     _ARCHIVE_INFO_STRING_IDS = {
         0x00: 'Full title',
@@ -283,9 +272,8 @@ class TZXFile(SoundFile, format_name='TZX'):
     }
 
     @classmethod
-    def _parse_archive_info(
-            cls, parser: BinaryParser) -> dict[str, typing.Any]:
-        block_size = parser.parse_field('<H')
+    def _parse_archive_info(cls, parser: BinaryParser) -> TZXArchiveInfo:
+        parser.parse_field('<H')  # block_size
         num_of_strings = parser.parse_field('B')
         assert isinstance(num_of_strings, int)
         for _ in range(num_of_strings):
@@ -293,14 +281,13 @@ class TZXFile(SoundFile, format_name='TZX'):
             assert isinstance(id, int)
             length = parser.parse_field('B')
             assert isinstance(length, int)
-            body = parser.read_bytes(length)
+            parser.read_bytes(length)
 
             if id not in cls._ARCHIVE_INFO_STRING_IDS:
                 raise Error('Unknown TZX archive info string id 0x%02x.' % id)
 
-            # print('%s: %s' % (cls._ARCHIVE_INFO_STRING_IDS[id], body))
         # TODO: Encode all the details.
-        return {'id': '0x32 (Archive Info)'}
+        return TZXArchiveInfo()
 
     _BLOCK_PARSERS = {
         0x10: _parse_standard_speed_data_block,
@@ -313,15 +300,15 @@ class TZXFile(SoundFile, format_name='TZX'):
     }
 
     @classmethod
-    def _parse_block(cls, parser: BinaryParser) -> dict[str, typing.Any]:
+    def _parse_block(cls, parser: BinaryParser) -> TZXBlock:
         block_id = parser.parse_field('B')
         assert isinstance(block_id, int)
         if block_id not in cls._BLOCK_PARSERS:
             raise Error('Unsupported TZX block id 0x%x.' % block_id)
 
-        res = cls._BLOCK_PARSERS[block_id].__get__(None, cls)(parser)
-        assert isinstance(res, dict)
-        return res
+        result = cls._BLOCK_PARSERS[block_id].__get__(None, cls)(parser)
+        assert isinstance(result, TZXBlock)
+        return result
 
     @classmethod
     def parse(cls, filename: str, image: Bytes) -> 'TZXFile':
