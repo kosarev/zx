@@ -75,6 +75,8 @@ def run(args: list[str]) -> None:
     with Spectrum(model=model) as app:
         if filename:
             app._load_file(filename)
+        elif os.path.exists(session_snapshot):
+            app._load_file(session_snapshot)
         try:
             app.run()
         except EmulationExit:
