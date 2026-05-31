@@ -3,14 +3,16 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2025 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
 
 import typing
 from ._data import MachineSnapshot
+from ._rzx import RZXCreatorInfo
 from ._rzx import RZXFile
+from ._rzx import RZXInputRecording
 
 if typing.TYPE_CHECKING:  # TODO
     from ._spectrum import SpectrumState
@@ -26,20 +28,20 @@ class PlaybackPlayer(object):
 
         self.samples = self.__get_playback_samples()
 
-    def find_recording_info_chunk(self) -> dict[str, typing.Any]:
+    def find_recording_info_chunk(self) -> RZXCreatorInfo:
         for chunk in self._recording.chunks:
-            if chunk['id'] == 'info':
+            if isinstance(chunk, RZXCreatorInfo):
                 return chunk
         assert 0  # TODO
 
-    def get_chunks(self) -> list[dict[str, typing.Any]]:
+    def get_chunks(self) -> list[typing.Any]:
         return self._recording.chunks
 
-    def __get_playback_samples(self) -> typing.Iterable[str]:
+    def __get_playback_samples(self) -> typing.Iterable[str | int]:
         # TODO: Have a class describing playback state.
         self.playback_frame_count = 0
-        self.playback_chunk: None | dict[str, typing.Any] = None
-        self.playback_sample_values = []
+        self.playback_chunk: None | RZXInputRecording = None
+        self.playback_sample_values: bytes = b''
         self.playback_sample_i = 0
 
         frame_count = 0
@@ -48,39 +50,23 @@ class PlaybackPlayer(object):
                 self.__machine.install_snapshot(chunk)
                 continue
 
-            if chunk['id'] != 'port_samples':
+            if not isinstance(chunk, RZXInputRecording):
                 continue
 
-            first_tick = chunk['first_tick']
-            assert isinstance(first_tick, int)
-            self.__machine.ticks_since_int = first_tick
+            self.__machine.ticks_since_int = chunk.first_tick
 
-            frames = chunk['frames']
-            assert isinstance(frames, list)
-            for frame_i, frame in enumerate(frames):
-                num_of_fetches, samples = frame
-                # print(num_of_fetches, samples)
+            for frame_i, frame in enumerate(chunk.frames):
+                samples = frame.samples.data
+                self.__machine.fetches_limit = frame.num_of_fetches
 
-                self.__machine.fetches_limit = num_of_fetches
-                # print(num_of_fetches, samples, flush=True)
-
-                # print('START_OF_FRAME', flush=True)
                 yield 'START_OF_FRAME'
 
                 for sample_i, sample in enumerate(samples):
-                    # print(self.fetches_limit)
-                    # fetch = num_of_fetches - self.fetches_limit
-                    # print('Input at fetch', fetch, 'of', num_of_fetches)
-                    # TODO: print('read_port 0x%04x 0x%02x' % (addr, n),
-                    #             flush=True)
-
                     # TODO: Have a class describing playback state.
                     self.playback_frame_count = frame_count
                     self.playback_chunk = chunk
                     self.playback_sample_values = samples
                     self.playback_sample_i = sample_i
-                    # print(frame_count, chunk_i, frame_i, sample_i, sample,
-                    #       flush=True)
 
                     yield sample
 

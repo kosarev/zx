@@ -56,6 +56,7 @@ from ._keyboard import KEYS
 from ._playback import PlaybackPlayer
 from ._rom import load_rom_image
 from ._rzx import make_rzx
+from ._rzx import RZXCreatorInfo
 from ._rzx import RZXFile
 from ._screen import ScreenWindow
 from ._scr import _SCRSnapshot
@@ -467,10 +468,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
     FRAME_SIZE = 48 + 256 + 48, 48 + 192 + 40
 
-    _SPIN_V0P5_INFO = {'id': 'info',
-                       'creator': b'SPIN 0.5            ',
-                       'creator_major_version': 0,
-                       'creator_minor_version': 5}
+    _SPIN_V0P5_INFO = RZXCreatorInfo(creator=b'SPIN 0.5            ',
+                                     creator_major_version=0,
+                                     creator_minor_version=5)
 
     devices: Dispatcher
     __profile: None | Profile

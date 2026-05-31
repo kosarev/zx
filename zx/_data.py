@@ -34,6 +34,12 @@ class DataRecord(object):
         for id, value in fields.items():
             setattr(self, id, value)
 
+    def __eq__(self, other: object) -> bool:
+        if type(self) is not type(other):
+            return False
+        assert isinstance(other, DataRecord)
+        return list(self) == list(other)
+
     def __contains__(self, id: str) -> bool:
         return id in self.__fields
 

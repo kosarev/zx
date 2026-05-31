@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+
+#   ZX Spectrum Emulator.
+#   https://github.com/kosarev/zx
+#
+#   Copyright (C) 2017-2026 Ivan Kosarev.
+#   mail@ivankosarev.com
+#
+#   Published under the MIT license.
+
 #!/usr/bin/env python3
 
 import zx
@@ -8,23 +18,18 @@ def test_basic() -> None:
     # Create a simple RZX.
     mach = zx.Spectrum(headless=True)
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
-    snapshot = (zx._z80snapshot.Z80Snapshot.
-                from_snapshot(mach.to_snapshot()).encode())
+    snapshot = zx._z80snapshot.Z80Snapshot.from_snapshot(mach.to_snapshot())
 
-    rzx_image = zx._rzx.make_rzx({
-        'id': 'input_recording',
-        'chunks': [
-            {'id': 'info',
-             'creator': b'<creator>',
-             'creator_major_version': 1,
-             'creator_minor_version': 0},
-            {'id': 'snapshot',
-             'image': snapshot},
-            {'id': 'port_samples',
-             'first_tick': 0,
-             'frames': [(1, b''), (1, b'')]},
-        ],
-    })
+    rzx_image = zx._rzx.make_rzx([
+        zx._rzx.RZXCreatorInfo(creator=b'<creator>',
+                               creator_major_version=1,
+                               creator_minor_version=0),
+        snapshot,
+        zx._rzx.RZXInputRecording(
+            first_tick=0,
+            frames=[zx._rzx.RZXFrame(num_of_fetches=1, samples=b''),
+                    zx._rzx.RZXFrame(num_of_fetches=1, samples=b'')]),
+    ])
 
     # Parse it back.
     format = zx._rzx.RZXFile
@@ -36,7 +41,8 @@ def test_basic() -> None:
 
     # Test finding the info block.
     player = zx._playback.PlaybackPlayer(mach, rzx)
-    assert player.find_recording_info_chunk()['id'] == 'info'
+    assert isinstance(player.find_recording_info_chunk(),
+                      zx._rzx.RZXCreatorInfo)
 
     # Generate playback samples.
     assert 'END_OF_FRAME' in player.samples
