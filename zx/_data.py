@@ -20,9 +20,16 @@ from ._binary import Bytes
 class DataRecord(object):
     FORMAT_NAME: None | str
 
+    _JSON_TYPES: typing.ClassVar[dict[str, type['DataRecord']]] = {}
+
     def __init_subclass__(cls, *, format_name: None | str):
         assert format_name is None or format_name.isupper()
         cls.FORMAT_NAME = format_name
+
+    @classmethod
+    def _register_json_type(cls) -> type['DataRecord']:
+        DataRecord._JSON_TYPES[cls.__name__] = cls
+        return cls
 
     def __init__(self, **fields: typing.Any):
         self.__fields = tuple(fields)
