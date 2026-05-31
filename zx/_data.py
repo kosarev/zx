@@ -52,14 +52,8 @@ class DataRecord(object):
         def convert(v: typing.Any) -> typing.Any:
             if isinstance(v, (int, str)):
                 return v
-            if isinstance(v, (bytes, memoryview)):
-                s = bytes(v).decode('latin-1')
-                a = [s[i:i+0x10] for i in range(0, len(v), 0x10)]
-                return a[0] if len(a) == 1 else a
-            if isinstance(v, (tuple, list)):
+            if isinstance(v, (list, tuple)):
                 return [convert(e) for e in v]
-            if isinstance(v, dict):
-                return {id: convert(v) for id, v in v.items()}
             if isinstance(v, DataRecord):
                 return v.to_json()
             raise TypeError(f'cannot serialize a {type(v)}')
@@ -71,13 +65,38 @@ class DataRecord(object):
                   metadata: dict[str, typing.Any]) -> 'DataRecord':
         return cls(**d)
 
-    def dumps(self) -> str:
-        metadata = dict(
-            creator_tool=f'https://pypi.org/project/zx/{zx.__version__}')
-        d = dict(type=type(self).__qualname__,
-                 metadata=metadata)
-        d.update(self.to_json())
+    def encode(self) -> bytes:
         import json
+        d: dict[str, typing.Any] = {'type': type(self).__name__}
+        d['metadata'] = {
+            'creator_tool': f'https://pypi.org/project/zx/{zx.__version__}'}
+        d.update(self.to_json())
+        return json.dumps(d, indent=2).encode('utf-8')
+
+    def dumps(self) -> str:
+        # TODO: Replace with encode().decode('utf-8') once all DataRecord
+        # types have migrated their bytes/dict fields to proper DataRecord
+        # subtypes (ByteData, etc.).
+        def convert(v: typing.Any) -> typing.Any:
+            if isinstance(v, (int, str)):
+                return v
+            if isinstance(v, (bytes, memoryview)):
+                s = bytes(v).decode('latin-1')
+                a = [s[i:i + 0x10] for i in range(0, len(v), 0x10)]
+                return a[0] if len(a) == 1 else a
+            if isinstance(v, (tuple, list)):
+                return [convert(e) for e in v]
+            if isinstance(v, dict):
+                return {k: convert(w) for k, w in v.items()}
+            if isinstance(v, DataRecord):
+                return {id: convert(w) for id, w in v if w is not None}
+            raise TypeError(f'cannot serialize a {type(v)}')
+
+        import json
+        metadata = {'creator_tool':
+                    f'https://pypi.org/project/zx/{zx.__version__}'}
+        d = dict(type=type(self).__name__, metadata=metadata)
+        d.update({id: convert(v) for id, v in self if v is not None})
         return json.dumps(d, indent=2)
 
 
@@ -190,9 +209,6 @@ class MachineSnapshot(DataRecord, format_name=None):
         raise NotImplementedError
 
     def to_unified_snapshot(self) -> UnifiedSnapshot:
-        raise NotImplementedError
-
-    def encode(self) -> bytes:
         raise NotImplementedError
 
 
