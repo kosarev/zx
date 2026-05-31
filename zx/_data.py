@@ -66,17 +66,11 @@ class DataRecord(object):
         return cls(**d)
 
     def encode(self) -> bytes:
-        import json
-        d: dict[str, typing.Any] = {'type': type(self).__name__}
-        d['metadata'] = {
-            'creator_tool': f'https://pypi.org/project/zx/{zx.__version__}'}
-        d.update(self.to_json())
-        return json.dumps(d, indent=2).encode('utf-8')
+        raise NotImplementedError
 
     def dumps(self) -> str:
-        # TODO: Replace with encode().decode('utf-8') once all DataRecord
-        # types have migrated their bytes/dict fields to proper DataRecord
-        # subtypes (ByteData, etc.).
+        # TODO: Replace with strict to_json() once all DataRecord types have
+        # migrated their bytes/dict fields to proper DataRecord subtypes.
         def convert(v: typing.Any) -> typing.Any:
             if isinstance(v, (int, str)):
                 return v
