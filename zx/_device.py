@@ -41,8 +41,10 @@ class Destroy(DeviceEvent):
     pass
 
 
-# Dispatched when the emulator state is replaced (e.g. snapshot load).
-# Devices should discard any accumulated transient state.
+# Resets the emulated machine to its power-on state and notifies all
+# devices to discard any accumulated transient state. Dispatched both
+# on explicit user request and before loading a file, so that the
+# loaded state is applied on top of a clean reset state.
 class EmulatorReset(DeviceEvent):
     pass
 

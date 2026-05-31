@@ -835,6 +835,8 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
     def _load_file(self, filename: str) -> None:
         file = parse_file(filename)
 
+        self.devices.notify(EmulatorReset())
+
         if isinstance(file, MachineSnapshot):
             self.install_snapshot(file)
         elif isinstance(file, RZXFile):
@@ -846,8 +848,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             self.__load_zx_basic_compiler_program(file)
         else:
             raise Error("Don't know how to load file %r." % filename)
-
-        self.devices.notify(EmulatorReset())
 
     # TODO: Double-underscore or make public.
     def _run_file(self, filename: str, *, fast_forward: bool = False) -> None:
@@ -916,10 +916,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self.paused = False
                 self._quit_playback_mode()
         elif isinstance(event, EmulatorReset):
-            # Force start_new_frame() on the next _run() call, which
-            # clears the port write buffer to avoid stale writes from
-            # before the reset mixing with new ones.
-            self.ticks_since_int = self.model._TICKS_PER_FRAME
+            self.on_reset()
         elif isinstance(event, LoadFile):
             self._load_file(event.filename)
         elif isinstance(event, SaveSnapshot):

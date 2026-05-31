@@ -31,3 +31,6 @@ class _SpectrumBase:
 
     def on_handle_active_int(self) -> None:
         ...
+
+    def on_reset(self) -> None:
+        ...

@@ -2,7 +2,7 @@
 /*  ZX Spectrum Emulation Module for Python.
     https://github.com/kosarev/zx
 
-    Copyright (C) 2017-2025 Ivan Kosarev.
+    Copyright (C) 2017-2026 Ivan Kosarev.
     mail@ivankosarev.com
 
     Published under the MIT license.
@@ -374,6 +374,11 @@ PyObject *on_handle_active_int(PyObject *self, PyObject *args) {
     return PyBool_FromLong(int_initiated);
 }
 
+PyObject *on_reset(PyObject *self, PyObject *args) {
+    cast_emulator(self).on_reset();
+    Py_RETURN_NONE;
+}
+
 PyMethodDef methods[] = {
     {"_get_state_view", get_state_view, METH_NOARGS,
      "Return a MemoryView object that exposes the internal state of the "
@@ -398,6 +403,8 @@ PyMethodDef methods[] = {
      "Run emulator until one or several events are signalled."},
     {"on_handle_active_int", on_handle_active_int, METH_NOARGS,
      "Attempts to initiate a masked interrupt."},
+    {"on_reset", on_reset, METH_NOARGS,
+     "Perform a hard reset of the emulated machine."},
     { nullptr }  // Sentinel.
 };
 
