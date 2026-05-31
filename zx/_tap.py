@@ -59,7 +59,7 @@ class TAPFile(SoundFile, format_name='TAP'):
         return ByteData(parser.read_bytes(size))
 
     @classmethod
-    def parse(cls, filename: str, image: Bytes) -> 'TAPFile':
+    def decode(cls, filename: str, image: Bytes) -> 'TAPFile':
         parser = BinaryParser(image)
 
         # Parse blocks.

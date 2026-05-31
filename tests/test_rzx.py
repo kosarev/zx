@@ -33,7 +33,7 @@ def test_basic() -> None:
     # Parse it back.
     format = zx._rzx.RZXFile
     assert format.FORMAT_NAME == 'RZX'
-    rzx = format.parse('x.rzx', rzx_image)
+    rzx = format.decode('x.rzx', rzx_image)
 
     # Dump.
     assert 'RZXFile' in rzx.dumps()

@@ -87,8 +87,7 @@ def parse_snapshot_block(image: Bytes) -> Z80Snapshot:
         raise Error('Unknown RZX snapshot format %r.' % filename_extension,
                     id='unknown_rzx_snapshot_format')
 
-    format = Z80Snapshot
-    return format.parse(filename_extension.decode(), snapshot_image)
+    return Z80Snapshot.decode(filename_extension.decode(), snapshot_image)
 
 
 def parse_input_recording_block(image: Bytes) -> RZXInputRecording:
@@ -260,5 +259,5 @@ class RZXFile(DataRecord, format_name='RZX'):
         super().__init__(chunks=chunks)
 
     @classmethod
-    def parse(cls, filename: str, image: Bytes) -> 'RZXFile':
+    def decode(cls, filename: str, image: Bytes) -> 'RZXFile':
         return RZXFile(chunks=_parse_rzx(image))

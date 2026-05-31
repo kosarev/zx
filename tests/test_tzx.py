@@ -1,3 +1,14 @@
+# -*- coding: utf-8 -*-
+
+#   ZX Spectrum Emulator.
+#   https://github.com/kosarev/zx
+#
+#   Copyright (C) 2017-2026 Ivan Kosarev.
+#   mail@ivankosarev.com
+#
+#   Published under the MIT license.
+
+
 #!/usr/bin/env python3
 
 import zx
@@ -11,7 +22,7 @@ def test_basic() -> None:
              b'\x01\x02\x03\xff')
     format = zx._tzx.TZXFile
     assert format.FORMAT_NAME == 'TZX'
-    tzx = format.parse('123.tzx', image)
+    tzx = format.decode('123.tzx', image)
 
     # Generate pulses.
     tuple(tzx.get_pulses())

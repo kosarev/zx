@@ -49,11 +49,6 @@ class DataRecord(object):
             if value is not None:
                 yield id, value
 
-    @classmethod
-    def parse(cls, filename: str, image: Bytes) -> 'DataRecord':
-        # TODO: Support parsing dumps.
-        raise NotImplementedError
-
     def to_json(self) -> typing.Any:
         def convert(v: typing.Any) -> typing.Any:
             if isinstance(v, (int, str)):
@@ -71,7 +66,13 @@ class DataRecord(object):
                   metadata: dict[str, typing.Any]) -> 'DataRecord':
         return cls(**d)
 
+    # Encode to a format-specific binary image.
     def encode(self) -> bytes:
+        raise NotImplementedError
+
+    # Decode a format-specific binary image. Counterpart of encode().
+    @classmethod
+    def decode(cls, filename: str, image: Bytes) -> 'DataRecord':
         raise NotImplementedError
 
     def dumps(self) -> str:

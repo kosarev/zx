@@ -1,3 +1,14 @@
+# -*- coding: utf-8 -*-
+
+#   ZX Spectrum Emulator.
+#   https://github.com/kosarev/zx
+#
+#   Copyright (C) 2017-2026 Ivan Kosarev.
+#   mail@ivankosarev.com
+#
+#   Published under the MIT license.
+
+
 #!/usr/bin/env python3
 
 import zx
@@ -13,7 +24,7 @@ def test_basic() -> None:
     block = len(data).to_bytes(2, 'little') + data
     format = zx._tap.TAPFile
     assert format.FORMAT_NAME == 'TAP'
-    tap = format.parse('file.tap', block)
+    tap = format.decode('file.tap', block)
 
     # Generate pulses.
     tuple(tap.get_pulses())

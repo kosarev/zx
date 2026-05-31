@@ -1,3 +1,14 @@
+# -*- coding: utf-8 -*-
+
+#   ZX Spectrum Emulator.
+#   https://github.com/kosarev/zx
+#
+#   Copyright (C) 2017-2026 Ivan Kosarev.
+#   mail@ivankosarev.com
+#
+#   Published under the MIT license.
+
+
 #!/usr/bin/env python3
 
 import zx
@@ -17,7 +28,7 @@ def test_basic() -> None:
     assert image[4:6] == HL.to_bytes(2, 'little')
 
     # Parse it back and check.
-    snap = format.parse('x.z80', image)
+    snap = format.decode('x.z80', image)
     assert snap.hl == HL
 
     # Dump the parsed snapshot.

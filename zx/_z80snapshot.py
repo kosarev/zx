@@ -529,7 +529,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                               data=image)
 
     @classmethod
-    def parse(cls, filename: str, image: Bytes) -> 'Z80Snapshot':
+    def decode(cls, filename: str, image: Bytes) -> 'Z80Snapshot':
         # Parse headers.
         parser = BinaryParser(image)
         v1_fields = parser.parse(cls.__V1_HEADER)

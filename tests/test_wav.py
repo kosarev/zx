@@ -1,3 +1,14 @@
+# -*- coding: utf-8 -*-
+
+#   ZX Spectrum Emulator.
+#   https://github.com/kosarev/zx
+#
+#   Copyright (C) 2017-2026 Ivan Kosarev.
+#   mail@ivankosarev.com
+#
+#   Published under the MIT license.
+
+
 #!/usr/bin/env python3
 
 import io
@@ -18,7 +29,7 @@ def test_basic() -> None:
 
     format = zx._wav.WAVFile
     assert format.FORMAT_NAME == 'WAV'
-    wav = format.parse('x.wav', wav_image)
+    wav = format.decode('x.wav', wav_image)
 
     # Dump.
     assert 'WAVFile' in wav.dumps()

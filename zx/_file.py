@@ -115,7 +115,7 @@ def parse_file_image(filename: str, image: Bytes) -> DataRecord:
 
         filename, format, image = candidates[0]
 
-    return format.parse(filename, image)
+    return format.decode(filename, image)
 
 
 def parse_file(filename: str) -> DataRecord:
