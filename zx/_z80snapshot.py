@@ -28,7 +28,7 @@ from ._utils import get_low8
 from ._utils import make16
 
 
-class Z80MemoryBlock(DataRecord, format_name=None, json_type=True):
+class Z80MemoryBlock(DataRecord, format_name=None):
     Source: typing.ClassVar[typing.TypeAlias] = (
         'Z80MemoryBlock | dict[str, typing.Any]')
 
@@ -49,7 +49,7 @@ class Z80MemoryBlock(DataRecord, format_name=None, json_type=True):
         return cls(**v)
 
 
-class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None, json_type=True):
+class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None):
     Source: typing.ClassVar[typing.TypeAlias] = (
         'Z80SnapshotV3ExtraHeader | dict[str, typing.Any]')
 
@@ -76,7 +76,7 @@ class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None, json_type=True):
         writer.write(self.__V3_EXTRA_HEADER, **dict(self))
 
 
-class Z80SnapshotV3Header(DataRecord, format_name=None, json_type=True):
+class Z80SnapshotV3Header(DataRecord, format_name=None):
     Source: typing.ClassVar[typing.TypeAlias] = (
         'Z80SnapshotV3Header | dict[str, typing.Any]')
 
@@ -161,7 +161,7 @@ class Z80SnapshotV3Header(DataRecord, format_name=None, json_type=True):
             self.v3_extra_header.write(writer)
 
 
-class Z80SnapshotV2Header(DataRecord, format_name=None, json_type=True):
+class Z80SnapshotV2Header(DataRecord, format_name=None):
     Source: typing.ClassVar[typing.TypeAlias] = (
         'Z80SnapshotV2Header | dict[str, typing.Any]')
 

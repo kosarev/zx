@@ -21,11 +21,11 @@ from ._tape import (get_block_pulses, get_data_pulses, tag_last_pulse,
                     get_end_pulse)
 
 
-class TZXBlock(DataRecord, format_name=None, json_type=True):
+class TZXBlock(DataRecord, format_name=None):
     pass
 
 
-class TZXStandardSpeedDataBlock(TZXBlock, format_name=None, json_type=True):
+class TZXStandardSpeedDataBlock(TZXBlock, format_name=None):
     pause_after_block_in_ms: int
     data: ByteData
 
@@ -35,7 +35,7 @@ class TZXStandardSpeedDataBlock(TZXBlock, format_name=None, json_type=True):
                          data=ByteData.make_from(data))
 
 
-class TZXTurboSpeedDataBlock(TZXBlock, format_name=None, json_type=True):
+class TZXTurboSpeedDataBlock(TZXBlock, format_name=None):
     pilot_pulse_len: int
     first_sync_pulse_len: int
     second_sync_pulse_len: int
@@ -63,7 +63,7 @@ class TZXTurboSpeedDataBlock(TZXBlock, format_name=None, json_type=True):
             data=ByteData.make_from(data))
 
 
-class TZXPureDataBlock(TZXBlock, format_name=None, json_type=True):
+class TZXPureDataBlock(TZXBlock, format_name=None):
     zero_bit_pulse_len: int
     one_bit_pulse_len: int
     data_size_in_bits: int
@@ -81,25 +81,25 @@ class TZXPureDataBlock(TZXBlock, format_name=None, json_type=True):
             data=ByteData.make_from(data))
 
 
-class TZXGroupStart(TZXBlock, format_name=None, json_type=True):
+class TZXGroupStart(TZXBlock, format_name=None):
     name: ByteData
 
     def __init__(self, *, name: ByteData.Source) -> None:
         super().__init__(name=ByteData.make_from(name))
 
 
-class TZXGroupEnd(TZXBlock, format_name=None, json_type=True):
+class TZXGroupEnd(TZXBlock, format_name=None):
     pass
 
 
-class TZXTextDescription(TZXBlock, format_name=None, json_type=True):
+class TZXTextDescription(TZXBlock, format_name=None):
     text: ByteData
 
     def __init__(self, *, text: ByteData.Source) -> None:
         super().__init__(text=ByteData.make_from(text))
 
 
-class TZXArchiveInfo(TZXBlock, format_name=None, json_type=True):
+class TZXArchiveInfo(TZXBlock, format_name=None):
     pass
 
 

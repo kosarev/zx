@@ -152,7 +152,7 @@ class SoundFile(DataRecord, format_name=None):
         raise NotImplementedError
 
 
-class ByteData(DataRecord, format_name=None, json_type=True):
+class ByteData(DataRecord, format_name=None):
     __CHUNK_SIZE = 32
 
     Source: typing.ClassVar[typing.TypeAlias] = (
@@ -180,7 +180,7 @@ class ByteData(DataRecord, format_name=None, json_type=True):
         return chunks[0] if len(chunks) == 1 else chunks
 
 
-class MemoryBlock(DataRecord, format_name=None, json_type=True):
+class MemoryBlock(DataRecord, format_name=None):
     Source: typing.ClassVar[typing.TypeAlias] = (
         'MemoryBlock | dict[str, typing.Any]')
 

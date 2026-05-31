@@ -19,7 +19,7 @@ from ._error import Error
 from ._z80snapshot import Z80Snapshot
 
 
-class RZXFrame(DataRecord, format_name=None, json_type=True):
+class RZXFrame(DataRecord, format_name=None):
     num_of_fetches: int
     samples: ByteData
 
@@ -29,7 +29,7 @@ class RZXFrame(DataRecord, format_name=None, json_type=True):
                          samples=ByteData.make_from(samples))
 
 
-class RZXCreatorInfo(DataRecord, format_name=None, json_type=True):
+class RZXCreatorInfo(DataRecord, format_name=None):
     creator: ByteData
     creator_major_version: int
     creator_minor_version: int
@@ -42,7 +42,7 @@ class RZXCreatorInfo(DataRecord, format_name=None, json_type=True):
                          creator_minor_version=creator_minor_version)
 
 
-class RZXInputRecording(DataRecord, format_name=None, json_type=True):
+class RZXInputRecording(DataRecord, format_name=None):
     first_tick: int
     frames: list[RZXFrame]
 
