@@ -1153,13 +1153,14 @@ class _FileBrowserPanel(_Panel):
         self.__menu.draw(surface)
 
         if self.__save_mode:
-            self.__text_input.x = 0.0
-            self.__text_input.y = menu_y + self.__menu.height
-            self.__text_input.draw(surface)
-
             self.__save_button.x = 0.0
             self.__save_button.y = height - self.__save_button.height
             self.__save_button.draw(surface)
+
+            self.__text_input.x = 0.0
+            self.__text_input.y = (self.__save_button.y -
+                                   self.__text_input.height)
+            self.__text_input.draw(surface)
 
         self.__menu_button.x = width / 2 if self.__save_mode else 0.0
         self.__menu_button.y = height - self.__menu_button.height
