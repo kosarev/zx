@@ -3,17 +3,52 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2019 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
 
 
+from __future__ import annotations
+
 import typing
 from ._binary import Bytes, BinaryParser, BinaryWriter
+from ._data import ByteData
 from ._data import DataRecord
 from ._error import Error
 from ._z80snapshot import Z80Snapshot
+
+
+class RZXFrame(DataRecord, format_name=None):
+    num_of_fetches: int
+    samples: ByteData
+
+    def __init__(self, *, num_of_fetches: int,
+                 samples: ByteData.Source) -> None:
+        super().__init__(num_of_fetches=num_of_fetches,
+                         samples=ByteData.make_from(samples))
+
+
+class RZXCreatorInfo(DataRecord, format_name=None):
+    creator: ByteData
+    creator_major_version: int
+    creator_minor_version: int
+
+    def __init__(self, *, creator: ByteData.Source,
+                 creator_major_version: int,
+                 creator_minor_version: int) -> None:
+        super().__init__(creator=ByteData.make_from(creator),
+                         creator_major_version=creator_major_version,
+                         creator_minor_version=creator_minor_version)
+
+
+class RZXInputRecording(DataRecord, format_name=None):
+    first_tick: int
+    frames: list[RZXFrame]
+
+    def __init__(self, *, first_tick: int,
+                 frames: list[RZXFrame]) -> None:
+        super().__init__(first_tick=first_tick, frames=frames)
 
 
 def parse_creator_info_block(image: Bytes) -> dict[str, typing.Any]:
