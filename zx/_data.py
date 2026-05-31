@@ -127,6 +127,20 @@ class SoundFile(DataRecord, format_name=None):
         raise NotImplementedError
 
 
+class ByteData(DataRecord, format_name=None):
+    __CHUNK_SIZE = 32
+
+    data: bytes
+
+    def __init__(self, data: bytes):
+        super().__init__(data=bytes(data))
+
+    def to_json(self) -> str | list[str]:
+        chunks = [self.data[i:i + self.__CHUNK_SIZE].hex()
+                  for i in range(0, len(self.data), self.__CHUNK_SIZE)]
+        return chunks[0] if len(chunks) <= 1 else chunks
+
+
 class MachineSnapshot(DataRecord, format_name=None):
     @classmethod
     def from_snapshot(cls, snapshot: MachineSnapshot) -> MachineSnapshot:
