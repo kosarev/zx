@@ -20,6 +20,7 @@ import typing
 from ._beeper import Beeper
 from ._data import ByteData
 from ._data import MachineSnapshot
+from ._data import MemoryBlock
 from ._data import SoundFile
 from ._data import Spectrum48
 from ._data import SpectrumModel
@@ -431,17 +432,18 @@ class SpectrumState(Z80State):
             # TODO: wz=self.wz,
             iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
             iregp_kind=self.iregp_kind,
-            memory_blocks=[(0x4000, 0, 0, ByteData(self.__memory[0x4000:]))],
+            memory_blocks=[MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
+                                       data=self.__memory[0x4000:])],
             ticks_since_int=self.ticks_since_int,
             border_colour=self.border_colour)
 
     def install_snapshot(self, snapshot: MachineSnapshot) -> None:
         for field, value in snapshot.to_unified_snapshot():
             if field == 'memory_blocks':
-                for addr, rom_page, ram_page, block in value:
-                    self.write(addr, block.data,
-                               rom_page=rom_page,
-                               ram_page=ram_page)
+                for block in value:
+                    self.write(block.addr, block.data.data,
+                               rom_page=block.rom_page,
+                               ram_page=block.ram_page)
             else:
                 setattr(self, field, value)
 

@@ -22,14 +22,12 @@ class DataRecord(object):
 
     _JSON_TYPES: typing.ClassVar[dict[str, type['DataRecord']]] = {}
 
-    def __init_subclass__(cls, *, format_name: None | str):
+    def __init_subclass__(cls, *, format_name: None | str,
+                          json_type: bool = False):
         assert format_name is None or format_name.isupper()
         cls.FORMAT_NAME = format_name
-
-    @classmethod
-    def _register_json_type(cls) -> type['DataRecord']:
-        DataRecord._JSON_TYPES[cls.__name__] = cls
-        return cls
+        if json_type:
+            DataRecord._JSON_TYPES[cls.__name__] = cls
 
     def __init__(self, **fields: typing.Any):
         self.__fields = tuple(fields)
@@ -67,6 +65,11 @@ class DataRecord(object):
             raise TypeError(f'cannot serialize a {type(v)}')
 
         return {id: convert(v) for id, v in self if v is not None}
+
+    @classmethod
+    def from_json(cls, d: dict[str, typing.Any],
+                  metadata: dict[str, typing.Any]) -> 'DataRecord':
+        return cls(**d)
 
     def dumps(self) -> str:
         metadata = dict(
@@ -134,18 +137,51 @@ class SoundFile(DataRecord, format_name=None):
         raise NotImplementedError
 
 
-class ByteData(DataRecord, format_name=None):
+class ByteData(DataRecord, format_name=None, json_type=True):
     __CHUNK_SIZE = 32
+
+    Source: typing.ClassVar[typing.TypeAlias] = (
+        'ByteData | Bytes | str | list[str]')
 
     data: bytes
 
     def __init__(self, data: Bytes):
         super().__init__(data=bytes(data))
 
+    @classmethod
+    def make_from(cls, data: Source) -> 'ByteData':
+        if isinstance(data, cls):
+            return data
+        if isinstance(data, (str, list)):
+            hex_str = ''.join(data) if isinstance(data, list) else data
+            return cls(bytes.fromhex(hex_str))
+        return cls(data)
+
     def to_json(self) -> str | list[str]:
         chunks = [self.data[i:i + self.__CHUNK_SIZE].hex()
                   for i in range(0, len(self.data), self.__CHUNK_SIZE)]
         return chunks[0] if len(chunks) <= 1 else chunks
+
+
+class MemoryBlock(DataRecord, format_name=None, json_type=True):
+    Source: typing.ClassVar[typing.TypeAlias] = (
+        'MemoryBlock | dict[str, typing.Any]')
+
+    addr: int
+    rom_page: int
+    ram_page: int
+    data: ByteData
+
+    def __init__(self, *, addr: int, rom_page: int, ram_page: int,
+                 data: ByteData.Source):
+        super().__init__(addr=addr, rom_page=rom_page,
+                         ram_page=ram_page, data=ByteData.make_from(data))
+
+    @classmethod
+    def make_from(cls, block: Source) -> 'MemoryBlock':
+        if isinstance(block, cls):
+            return block
+        return cls(**block)
 
 
 class MachineSnapshot(DataRecord, format_name=None):
@@ -160,7 +196,7 @@ class MachineSnapshot(DataRecord, format_name=None):
         raise NotImplementedError
 
 
-class UnifiedSnapshot(MachineSnapshot, format_name=None):
+class UnifiedSnapshot(MachineSnapshot, format_name=None, json_type=True):
     af: int | None
     bc: int | None
     de: int | None
@@ -181,7 +217,7 @@ class UnifiedSnapshot(MachineSnapshot, format_name=None):
     int_mode: int | None
     ticks_since_int: int | None
     border_colour: int | None
-    memory_blocks: list[tuple[int, int, int, ByteData]] | None
+    memory_blocks: list[MemoryBlock] | None
 
     def __init__(
             self,
@@ -206,11 +242,12 @@ class UnifiedSnapshot(MachineSnapshot, format_name=None):
             ticks_since_int: int | None = None,
             border_colour: int | None = None,
             memory_blocks: typing.Sequence[
-                tuple[int, int, int, ByteData]] | None = None):
+                    MemoryBlock.Source] | None = None):
         if memory_blocks is None:
             blocks = None
         else:
-            blocks = sorted(memory_blocks, key=lambda b: b[:3])
+            blocks = sorted((MemoryBlock.make_from(b) for b in memory_blocks),
+                            key=lambda b: b.addr)
 
         super().__init__(
             af=af, bc=bc, de=de, hl=hl, ix=ix, iy=iy,

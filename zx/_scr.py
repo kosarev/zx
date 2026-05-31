@@ -13,8 +13,8 @@ import collections
 import typing
 
 from ._binary import Bytes, BinaryParser, BinaryWriter
-from ._data import ByteData
 from ._data import MachineSnapshot
+from ._data import MemoryBlock
 from ._data import UnifiedSnapshot
 
 
@@ -27,14 +27,16 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
         memory_blocks = []
         ROM_PAGE, RAM_PAGE = 0, 0
         memory_blocks.extend([
-            (0x4000, ROM_PAGE, RAM_PAGE, ByteData(self.dot_patterns)),
-            (0x4000 + 6144, ROM_PAGE, RAM_PAGE, ByteData(self.colour_attrs))])
+            MemoryBlock(addr=0x4000, rom_page=ROM_PAGE, ram_page=RAM_PAGE,
+                        data=self.dot_patterns),
+            MemoryBlock(addr=0x4000 + 6144, rom_page=ROM_PAGE,
+                        ram_page=RAM_PAGE, data=self.colour_attrs)])
 
         # LOOP_ADDR: jp LOOP_ADDR
         LOOP_ADDR = 0x8000
-        loop_instr = b'\xc3' + LOOP_ADDR.to_bytes(2, 'little')
-        memory_blocks.append((LOOP_ADDR, ROM_PAGE, RAM_PAGE,
-                              ByteData(loop_instr)))
+        memory_blocks.append(MemoryBlock(
+            addr=LOOP_ADDR, rom_page=ROM_PAGE, ram_page=RAM_PAGE,
+            data=b'\xc3' + LOOP_ADDR.to_bytes(2, 'little')))
 
         return UnifiedSnapshot(
             pc=LOOP_ADDR,
