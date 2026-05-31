@@ -18,6 +18,7 @@ import typing
 from ._device import Destroy
 from ._device import Device
 from ._device import DeviceEvent
+from ._device import EmulatorReset
 from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
 from ._device import GetMainMenuItems
@@ -858,6 +859,14 @@ class _ConfirmOverwrite(DeviceEvent):
     pass
 
 
+class _RequestResetMachine(DeviceEvent):
+    pass
+
+
+class _ConfirmReset(DeviceEvent):
+    pass
+
+
 class _ExceptionEvent(DeviceEvent):
     def __init__(self, exception: Exception) -> None:
         self.exception = exception
@@ -1001,7 +1010,13 @@ class _MainMenuPanel(_Panel):
         if dialog is not None:
             return
 
-        if isinstance(event, (PauseStateUpdated, TapeStateUpdated)):
+        if isinstance(event, _ConfirmReset):
+            self._dialog = _MessageDialog(
+                self._theme, 'Reset machine?', (80, 60, 20, 255),
+                'Reset the emulated machine?',
+                [('Yes', None, EmulatorReset),
+                 ('No', 'ESC', _DismissError)])
+        elif isinstance(event, (PauseStateUpdated, TapeStateUpdated)):
             self.invalidate()
         elif isinstance(event, _MouseMoveEvent):
             self.__on_mouse_move(event)
@@ -1535,6 +1550,7 @@ class ScreenWindow(Device):
             QuantumRun: self._on_quantum_run,
             OutputFrame: self._on_output_frame,
             TapeStateUpdated: self._on_updated_tape_state,
+            _RequestResetMachine: self.__on_request_reset_machine,
             RequestLoadFile: self.__on_request_load_file,
             RequestSaveSnapshot: self.__on_request_save_snapshot,
             ToggleFullscreen: self.__on_toggle_fullscreen,
@@ -1553,6 +1569,7 @@ class ScreenWindow(Device):
             _PrimaryMainMenuItem('Save snapshot', RequestSaveSnapshot, 'F2'),
             self.__emulation_item,
             self.__tape_item,
+            _PrimaryMainMenuItem('Reset machine', _RequestResetMachine, 'F5'),
             _PrimaryMainMenuItem('Toggle fullscreen', ToggleFullscreen, 'F11'),
             _PrimaryMainMenuItem('Quit', _Exit, 'F10'),
         ]
@@ -1654,6 +1671,13 @@ class ScreenWindow(Device):
         #         tkinter.messagebox.showerror(
         #             'File error', verbalize_error(e))
 
+        return result
+
+    def __on_request_reset_machine(self, event: DeviceEvent,
+                                   devices: Dispatcher,
+                                   result: typing.Any) -> typing.Any:
+        self.__activate_panel(self.__main_menu_panel)
+        devices.notify(_ConfirmReset())
         return result
 
     def __activate_panel(self, panel: _Panel) -> None:

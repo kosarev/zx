@@ -487,14 +487,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         self.model = model if model is not None else Spectrum48
 
-        # Install ROM.
-        PAGE_SIZE = 0x4000
-        rom = load_rom_image(self.model._ROM_FILE_NAME)
-        assert len(rom) >= PAGE_SIZE
-        self.write(0x0000, rom[:PAGE_SIZE], rom_page=0)
-        if len(rom) > PAGE_SIZE:
-            assert len(rom) == 2 * PAGE_SIZE
-            self.write(0x0000, rom[PAGE_SIZE:], rom_page=1)
+        self.__install_rom()
 
         self.frame_count = 0
         # TODO: Double-underscore or make public.
@@ -532,6 +525,15 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             self.set_breakpoints(0, 0x10000)
 
         self.__paused = False
+
+    def __install_rom(self) -> None:
+        PAGE_SIZE = 0x4000
+        rom = load_rom_image(self.model._ROM_FILE_NAME)
+        assert len(rom) >= PAGE_SIZE
+        self.write(0x0000, rom[:PAGE_SIZE], rom_page=0)
+        if len(rom) > PAGE_SIZE:
+            assert len(rom) == 2 * PAGE_SIZE
+            self.write(0x0000, rom[PAGE_SIZE:], rom_page=1)
 
     # TODO: Double-underscore or make public.
     def _save_snapshot_file(self, format: type[MachineSnapshot],
@@ -917,6 +919,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self._quit_playback_mode()
         elif isinstance(event, EmulatorReset):
             self.on_reset()
+            self.__install_rom()
         elif isinstance(event, LoadFile):
             self._load_file(event.filename)
         elif isinstance(event, SaveSnapshot):
