@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2025 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -47,8 +47,8 @@ class DataRecord(object):
         def convert(v: typing.Any) -> typing.Any:
             if isinstance(v, (int, str)):
                 return v
-            if isinstance(v, bytes):
-                s = v.decode('latin-1')
+            if isinstance(v, (bytes, memoryview)):
+                s = bytes(v).decode('latin-1')
                 a = [s[i:i+0x10] for i in range(0, len(v), 0x10)]
                 return a[0] if len(a) == 1 else a
             if isinstance(v, (tuple, list)):
