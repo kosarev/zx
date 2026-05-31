@@ -3,18 +3,104 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2019 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
 
 
+from __future__ import annotations
+
 import typing
 from ._binary import Bytes, BinaryParser
+from ._data import ByteData
+from ._data import DataRecord
 from ._data import SoundFile
 from ._error import Error
 from ._tape import (get_block_pulses, get_data_pulses, tag_last_pulse,
                     get_end_pulse)
+
+
+class TZXBlock(DataRecord, format_name=None):
+    pass
+
+
+class TZXStandardSpeedDataBlock(TZXBlock, format_name=None):
+    pause_after_block_in_ms: int
+    data: ByteData
+
+    def __init__(self, *, pause_after_block_in_ms: int,
+                 data: ByteData.Source) -> None:
+        super().__init__(pause_after_block_in_ms=pause_after_block_in_ms,
+                         data=ByteData.make_from(data))
+
+
+class TZXTurboSpeedDataBlock(TZXBlock, format_name=None):
+    pilot_pulse_len: int
+    first_sync_pulse_len: int
+    second_sync_pulse_len: int
+    zero_bit_pulse_len: int
+    one_bit_pulse_len: int
+    pilot_tone_len: int
+    data_size_in_bits: int
+    pause_after_block_in_ms: int
+    data: ByteData
+
+    def __init__(self, *, pilot_pulse_len: int, first_sync_pulse_len: int,
+                 second_sync_pulse_len: int, zero_bit_pulse_len: int,
+                 one_bit_pulse_len: int, pilot_tone_len: int,
+                 data_size_in_bits: int, pause_after_block_in_ms: int,
+                 data: ByteData.Source) -> None:
+        super().__init__(
+            pilot_pulse_len=pilot_pulse_len,
+            first_sync_pulse_len=first_sync_pulse_len,
+            second_sync_pulse_len=second_sync_pulse_len,
+            zero_bit_pulse_len=zero_bit_pulse_len,
+            one_bit_pulse_len=one_bit_pulse_len,
+            pilot_tone_len=pilot_tone_len,
+            data_size_in_bits=data_size_in_bits,
+            pause_after_block_in_ms=pause_after_block_in_ms,
+            data=ByteData.make_from(data))
+
+
+class TZXPureDataBlock(TZXBlock, format_name=None):
+    zero_bit_pulse_len: int
+    one_bit_pulse_len: int
+    data_size_in_bits: int
+    pause_after_block_in_ms: int
+    data: ByteData
+
+    def __init__(self, *, zero_bit_pulse_len: int, one_bit_pulse_len: int,
+                 data_size_in_bits: int, pause_after_block_in_ms: int,
+                 data: ByteData.Source) -> None:
+        super().__init__(
+            zero_bit_pulse_len=zero_bit_pulse_len,
+            one_bit_pulse_len=one_bit_pulse_len,
+            data_size_in_bits=data_size_in_bits,
+            pause_after_block_in_ms=pause_after_block_in_ms,
+            data=ByteData.make_from(data))
+
+
+class TZXGroupStart(TZXBlock, format_name=None):
+    name: ByteData
+
+    def __init__(self, *, name: ByteData.Source) -> None:
+        super().__init__(name=ByteData.make_from(name))
+
+
+class TZXGroupEnd(TZXBlock, format_name=None):
+    pass
+
+
+class TZXTextDescription(TZXBlock, format_name=None):
+    text: ByteData
+
+    def __init__(self, *, text: ByteData.Source) -> None:
+        super().__init__(text=ByteData.make_from(text))
+
+
+class TZXArchiveInfo(TZXBlock, format_name=None):
+    pass
 
 
 class TZXFile(SoundFile, format_name='TZX'):
