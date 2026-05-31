@@ -9,6 +9,8 @@
 #   Published under the MIT license.
 
 
+from __future__ import annotations
+
 import numpy
 import typing
 
@@ -24,6 +26,17 @@ from ._error import Error
 from ._utils import get_high8
 from ._utils import get_low8
 from ._utils import make16
+
+
+class Z80MemoryBlock(DataRecord, format_name=None):
+    page_no: int
+    compressed_size: int
+    data: ByteData
+
+    def __init__(self, *, page_no: int, compressed_size: int,
+                 data: ByteData.Source):
+        super().__init__(page_no=page_no, compressed_size=compressed_size,
+                         data=ByteData.make_from(data))
 
 
 class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None):
@@ -195,8 +208,8 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
 
     v2_header: Z80SnapshotV2Header | None
 
-    memory_image: Bytes
-    memory_blocks: typing.Sequence[tuple[int, int, bytes]]
+    memory_image: ByteData
+    memory_blocks: typing.Sequence[Z80MemoryBlock]
 
     def __init__(
             self, *,
@@ -210,11 +223,12 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             iff1: int = 0, iff2: int = 0,
             flags2: int = 0,
             v2_header: Z80SnapshotV2Header | None = None,
-            memory_image: Bytes | None = None,
+            memory_image: ByteData.Source | None = None,
             memory_blocks: (
-                typing.Sequence[tuple[int, int, Bytes]] | None) = None):
+                typing.Sequence[Z80MemoryBlock] | None) = None):
         if memory_image is not None:
             assert memory_blocks is None
+            memory_image = ByteData.make_from(memory_image)
         if memory_blocks is not None:
             assert memory_image is None
         super().__init__(
@@ -273,7 +287,9 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                 page = image[addr:addr+PAGE_SIZE]
                 if page != EMPTY_PAGE:
                     page_image = bytes(0 if b is None else b for b in page)
-                    memory_blocks.append((page_no, 0xffff, page_image))
+                    memory_blocks.append(Z80MemoryBlock(
+                        page_no=page_no, compressed_size=0xffff,
+                        data=page_image))
 
         # https://worldofspectrum.org/faq/reference/z80format.htm
         # The hi T state counter counts up modulo 4. Just after the ULA
@@ -360,7 +376,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         if self.memory_image is not None:
             assert self.memory_blocks is None
 
-            memory_image = self.memory_image
+            memory_image = self.memory_image.data
             compressed = bool(self.flags1 & 0x20)
             if not compressed:
                 if len(memory_image) != 48 * 1024:
@@ -383,13 +399,14 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             assert machine_kind == 'ZX Spectrum 48K', machine_kind  # TODO
 
             BLOCK_SIZE = 16 * 1024
-            for page_no, compressed_size, image in self.memory_blocks:
-                if compressed_size != 0xffff:
-                    assert len(image) == compressed_size
+            for block in self.memory_blocks:
+                image = block.data.data
+                if block.compressed_size != 0xffff:
+                    assert len(image) == block.compressed_size
                     image = self.__uncompress(image, BLOCK_SIZE)
 
                 memory_blocks.append(MemoryBlock(
-                    addr=self.__MEMORY_PAGE_ADDRS[page_no],
+                    addr=self.__MEMORY_PAGE_ADDRS[block.page_no],
                     rom_page=0, ram_page=0, data=image))
 
         return UnifiedSnapshot(
@@ -497,7 +514,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
 
     @classmethod
     def __parse_memory_block(
-            cls, parser: BinaryParser) -> tuple[int, int, Bytes]:
+            cls, parser: BinaryParser) -> Z80MemoryBlock:
         compressed_size = parser.parse_field('<H')
         assert isinstance(compressed_size, int)
         page_no = parser.parse_field('B')
@@ -507,7 +524,9 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         size = BLOCK_SIZE if compressed_size == 0xffff else compressed_size
         image = parser.read_bytes(size)
 
-        return page_no, compressed_size, image
+        return Z80MemoryBlock(page_no=page_no,
+                              compressed_size=compressed_size,
+                              data=image)
 
     @classmethod
     def parse(cls, filename: str, image: Bytes) -> 'Z80Snapshot':
@@ -528,10 +547,10 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                             id='z80_snapshot_extra_header_too_large')
 
         # Parse memory snapshot.
-        memory_image: Bytes | None = None
-        memory_blocks: typing.Sequence[tuple[int, int, Bytes]] | None = None
+        memory_image: ByteData | None = None
+        memory_blocks: list[Z80MemoryBlock] | None = None
         if v2_header is None:
-            memory_image = parser.read_remaining_bytes()
+            memory_image = ByteData(parser.read_remaining_bytes())
         else:
             memory_blocks = []
             while parser:
@@ -547,7 +566,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         writer.write(self.__V1_HEADER, **dict(self))
 
         if self.v2_header is None:
-            writer.write_bytes(self.memory_image)
+            writer.write_bytes(self.memory_image.data)
         else:
             extra_writer = BinaryWriter()
             self.v2_header.write(extra_writer)
@@ -557,9 +576,9 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             writer.write_bytes(extra_header)
 
             if self.memory_blocks is not None:
-                for page_no, compressed_size, block in self.memory_blocks:
-                    writer.write_field('<H', compressed_size)
-                    writer.write_field('B', page_no)
-                    writer.write_bytes(block)
+                for block in self.memory_blocks:
+                    writer.write_field('<H', block.compressed_size)
+                    writer.write_field('B', block.page_no)
+                    writer.write_bytes(block.data.data)
 
         return writer.get_image()
