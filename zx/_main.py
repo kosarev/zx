@@ -29,6 +29,7 @@ from ._except import EmulationExit
 from ._file import detect_file_format
 from ._file import parse_file
 from ._file import parse_file_image
+from ._zx import ZXFile
 from ._rzx import make_rzx
 from ._rzx import RZXFile
 from ._spectrum import Profile
@@ -265,6 +266,16 @@ def _convert_tape_to_tape(src: DataRecord, src_filename: str,
     dest_format.save_from_pulses(dest_filename, src.get_pulses())
 
 
+def _convert_any_to_zx(src: DataRecord,
+                       src_filename: str,
+                       src_format: type[DataRecord],
+                       dest_filename: str,
+                       dest_format: type[DataRecord]) -> None:
+    with open(dest_filename, 'wb') as f:
+        # Use Unix line endings regardless of platform for consistency.
+        f.write((src.dumps() + '\n').encode('utf-8'))
+
+
 def _convert_snapshot_to_snapshot(src: DataRecord,
                                   src_filename: str,
                                   src_format: type[DataRecord],
@@ -299,6 +310,7 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
          _convert_tape_to_snapshot),
         (MachineSnapshot, MachineSnapshot,
          _convert_snapshot_to_snapshot),
+        (DataRecord, ZXFile, _convert_any_to_zx),
     ]
 
     for sf, df, conv in CONVERTERS:

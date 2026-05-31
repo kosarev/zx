@@ -20,6 +20,7 @@ from ._tzx import TZXFile
 from ._wav import WAVFile
 from ._z80snapshot import Z80Snapshot
 from ._zip import ZIPFile
+from ._zx import ZXFile
 from ._zxb import ZXBasicCompilerProgram
 
 
@@ -45,6 +46,7 @@ def _open_file_or_url(path: str) -> typing.Any:
 def detect_file_format(image: None | Bytes,
                        filename_extension: str) -> None | type[DataRecord]:
     KNOWN_FORMATS = [
+        ('.zx', None, ZXFile),
         ('.zxb', None, ZXBasicCompilerProgram),
         ('.rzx', b'RZX!', RZXFile),
         ('.scr', None, _SCRSnapshot),
