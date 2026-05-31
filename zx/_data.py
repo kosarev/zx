@@ -15,6 +15,7 @@ import typing
 import zx
 
 from ._binary import Bytes
+from ._error import Error
 
 
 class DataRecord(object):
@@ -61,10 +62,21 @@ class DataRecord(object):
 
         return {id: convert(v) for id, v in self if v is not None}
 
+    # Construct a DataRecord from a full .zx JSON document dict.
+    # Reads 'type' to find the registered class, extracts 'metadata',
+    # and passes remaining fields to __init__(). Never override this —
+    # __init__() and make_from() handle all type conversion.
     @classmethod
-    def from_json(cls, d: dict[str, typing.Any],
-                  metadata: dict[str, typing.Any]) -> 'DataRecord':
-        return cls(**d)
+    def from_json(cls, d: dict[str, typing.Any]) -> 'DataRecord':
+        type_name = d.get('type', '')
+        record_cls = cls._JSON_TYPES.get(type_name)
+        if record_cls is None:
+            raise Error(f"Unknown type {type_name!r}.")
+        metadata = d.get('metadata', {})
+        fields = {k: v for k, v in d.items()
+                  if k not in ('type', 'metadata')}
+        # TODO: Pass metadata to the ctor so it can adapt to producer context.
+        return record_cls(**fields)
 
     # Encode to a format-specific binary image.
     def encode(self) -> bytes:

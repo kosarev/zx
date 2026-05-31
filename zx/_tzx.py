@@ -21,11 +21,11 @@ from ._tape import (get_block_pulses, get_data_pulses, tag_last_pulse,
                     get_end_pulse)
 
 
-class TZXBlock(DataRecord, format_name=None):
+class TZXBlock(DataRecord, format_name=None, json_type=True):
     pass
 
 
-class TZXStandardSpeedDataBlock(TZXBlock, format_name=None):
+class TZXStandardSpeedDataBlock(TZXBlock, format_name=None, json_type=True):
     pause_after_block_in_ms: int
     data: ByteData
 
@@ -35,7 +35,7 @@ class TZXStandardSpeedDataBlock(TZXBlock, format_name=None):
                          data=ByteData.make_from(data))
 
 
-class TZXTurboSpeedDataBlock(TZXBlock, format_name=None):
+class TZXTurboSpeedDataBlock(TZXBlock, format_name=None, json_type=True):
     pilot_pulse_len: int
     first_sync_pulse_len: int
     second_sync_pulse_len: int
@@ -63,7 +63,7 @@ class TZXTurboSpeedDataBlock(TZXBlock, format_name=None):
             data=ByteData.make_from(data))
 
 
-class TZXPureDataBlock(TZXBlock, format_name=None):
+class TZXPureDataBlock(TZXBlock, format_name=None, json_type=True):
     zero_bit_pulse_len: int
     one_bit_pulse_len: int
     data_size_in_bits: int
@@ -81,29 +81,29 @@ class TZXPureDataBlock(TZXBlock, format_name=None):
             data=ByteData.make_from(data))
 
 
-class TZXGroupStart(TZXBlock, format_name=None):
+class TZXGroupStart(TZXBlock, format_name=None, json_type=True):
     name: ByteData
 
     def __init__(self, *, name: ByteData.Source) -> None:
         super().__init__(name=ByteData.make_from(name))
 
 
-class TZXGroupEnd(TZXBlock, format_name=None):
+class TZXGroupEnd(TZXBlock, format_name=None, json_type=True):
     pass
 
 
-class TZXTextDescription(TZXBlock, format_name=None):
+class TZXTextDescription(TZXBlock, format_name=None, json_type=True):
     text: ByteData
 
     def __init__(self, *, text: ByteData.Source) -> None:
         super().__init__(text=ByteData.make_from(text))
 
 
-class TZXArchiveInfo(TZXBlock, format_name=None):
+class TZXArchiveInfo(TZXBlock, format_name=None, json_type=True):
     pass
 
 
-class TZXFile(SoundFile, format_name='TZX'):
+class TZXFile(SoundFile, format_name='TZX', json_type=True):
     _TICKS_FREQ = 3500000
 
     blocks: list[TZXBlock]

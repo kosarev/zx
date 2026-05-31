@@ -16,7 +16,7 @@ from ._data import SoundFile
 from ._tape import get_block_pulses, tag_last_pulse, get_end_pulse
 
 
-class TAPFile(SoundFile, format_name='TAP'):
+class TAPFile(SoundFile, format_name='TAP', json_type=True):
     _TICKS_FREQ = 3500000
 
     blocks: typing.Sequence[ByteData]

@@ -28,7 +28,7 @@ from ._utils import get_low8
 from ._utils import make16
 
 
-class Z80MemoryBlock(DataRecord, format_name=None):
+class Z80MemoryBlock(DataRecord, format_name=None, json_type=True):
     page_no: int
     compressed_size: int
     data: ByteData
@@ -39,7 +39,7 @@ class Z80MemoryBlock(DataRecord, format_name=None):
                          data=ByteData.make_from(data))
 
 
-class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None):
+class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None, json_type=True):
     last_write_to_port_1ffd: int
 
     def __init__(self, *, last_write_to_port_1ffd: int = 0):
@@ -56,7 +56,7 @@ class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None):
         writer.write(self.__V3_EXTRA_HEADER, **dict(self))
 
 
-class Z80SnapshotV3Header(DataRecord, format_name=None):
+class Z80SnapshotV3Header(DataRecord, format_name=None, json_type=True):
     ticks_count_low: int
     ticks_count_high: int
     spectator_flag: int
@@ -129,7 +129,7 @@ class Z80SnapshotV3Header(DataRecord, format_name=None):
             self.v3_extra_header.write(writer)
 
 
-class Z80SnapshotV2Header(DataRecord, format_name=None):
+class Z80SnapshotV2Header(DataRecord, format_name=None, json_type=True):
     extra_header_size: int
     pc: int
     hardware_mode: int
@@ -181,7 +181,7 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
             self.v3_header.write(writer)
 
 
-class Z80Snapshot(MachineSnapshot, format_name='Z80'):
+class Z80Snapshot(MachineSnapshot, format_name='Z80', json_type=True):
     # Some snapshots contain zero pages as well.
     __MEMORY_PAGE_ADDRS = {0: 0x0000, 4: 0x8000, 5: 0xc000, 8: 0x4000}
 

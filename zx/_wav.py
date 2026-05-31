@@ -19,7 +19,7 @@ from ._error import Error
 from ._tape import tag_last_pulse
 
 
-class WAVFile(SoundFile, format_name='WAV'):
+class WAVFile(SoundFile, format_name='WAV', json_type=True):
     __TICKS_FREQ = 3500000  # TODO
 
     sample_size: int
