@@ -29,6 +29,9 @@ from ._utils import make16
 
 
 class Z80MemoryBlock(DataRecord, format_name=None, json_type=True):
+    Source: typing.ClassVar[typing.TypeAlias] = (
+        'Z80MemoryBlock | dict[str, typing.Any]')
+
     page_no: int
     compressed_size: int
     data: ByteData
@@ -38,14 +41,31 @@ class Z80MemoryBlock(DataRecord, format_name=None, json_type=True):
         super().__init__(page_no=page_no, compressed_size=compressed_size,
                          data=ByteData.make_from(data))
 
+    @classmethod
+    def make_from(cls, v: Source) -> 'Z80MemoryBlock':
+        if isinstance(v, cls):
+            return v
+        assert isinstance(v, dict)
+        return cls(**v)
+
 
 class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None, json_type=True):
+    Source: typing.ClassVar[typing.TypeAlias] = (
+        'Z80SnapshotV3ExtraHeader | dict[str, typing.Any]')
+
     last_write_to_port_1ffd: int
 
     def __init__(self, *, last_write_to_port_1ffd: int = 0):
         super().__init__(last_write_to_port_1ffd=last_write_to_port_1ffd)
 
     __V3_EXTRA_HEADER = ['B:last_write_to_port_1ffd']
+
+    @classmethod
+    def make_from(cls, v: Source) -> 'Z80SnapshotV3ExtraHeader':
+        if isinstance(v, cls):
+            return v
+        assert isinstance(v, dict)
+        return cls(**v)
 
     @classmethod
     def parse_header(cls, parser: BinaryParser) -> 'Z80SnapshotV3ExtraHeader':
@@ -57,6 +77,9 @@ class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None, json_type=True):
 
 
 class Z80SnapshotV3Header(DataRecord, format_name=None, json_type=True):
+    Source: typing.ClassVar[typing.TypeAlias] = (
+        'Z80SnapshotV3Header | dict[str, typing.Any]')
+
     ticks_count_low: int
     ticks_count_high: int
     spectator_flag: int
@@ -94,7 +117,7 @@ class Z80SnapshotV3Header(DataRecord, format_name=None, json_type=True):
             mgt_type: int = 0,
             disciple_inhibit_button_status: int = 0,
             disciple_inhibit_flag: int = 0,
-            v3_extra_header: Z80SnapshotV3ExtraHeader | None = None):
+            v3_extra_header: Z80SnapshotV3ExtraHeader.Source | None = None):
         super().__init__(
             ticks_count_low=ticks_count_low,
             ticks_count_high=ticks_count_high,
@@ -103,12 +126,21 @@ class Z80SnapshotV3Header(DataRecord, format_name=None, json_type=True):
             multiface_rom_paged=multiface_rom_paged,
             memory_at_0000_1fff_is_rom=memory_at_0000_1fff_is_rom,
             memory_at_2000_3fff_is_rom=memory_at_2000_3fff_is_rom,
-            keyboard_mappings=keyboard_mappings,
-            keyboard_mapping_keys=keyboard_mapping_keys,
+            keyboard_mappings=tuple(keyboard_mappings),
+            keyboard_mapping_keys=tuple(keyboard_mapping_keys),
             mgt_type=mgt_type,
             disciple_inhibit_button_status=disciple_inhibit_button_status,
             disciple_inhibit_flag=disciple_inhibit_flag,
-            v3_extra_header=v3_extra_header)
+            v3_extra_header=(None if v3_extra_header is None
+                             else Z80SnapshotV3ExtraHeader.make_from(
+                                 v3_extra_header)))
+
+    @classmethod
+    def make_from(cls, v: Source) -> 'Z80SnapshotV3Header':
+        if isinstance(v, cls):
+            return v
+        assert isinstance(v, dict)
+        return cls(**v)
 
     @classmethod
     def parse_header(cls, parser: BinaryParser) -> 'Z80SnapshotV3Header':
@@ -130,6 +162,9 @@ class Z80SnapshotV3Header(DataRecord, format_name=None, json_type=True):
 
 
 class Z80SnapshotV2Header(DataRecord, format_name=None, json_type=True):
+    Source: typing.ClassVar[typing.TypeAlias] = (
+        'Z80SnapshotV2Header | dict[str, typing.Any]')
+
     extra_header_size: int
     pc: int
     hardware_mode: int
@@ -154,13 +189,21 @@ class Z80SnapshotV2Header(DataRecord, format_name=None, json_type=True):
             flags3: int = 0,
             port_fffd_value: int = 0,
             sound_chip_regs: tuple[int, ...] = (0,) * 16,
-            v3_header: Z80SnapshotV3Header | None = None):
+            v3_header: Z80SnapshotV3Header.Source | None = None):
         super().__init__(
             pc=pc, hardware_mode=hardware_mode,
             misc1=misc1, misc2=misc2, flags3=flags3,
             port_fffd_value=port_fffd_value,
-            sound_chip_regs=sound_chip_regs,
-            v3_header=v3_header)
+            sound_chip_regs=tuple(sound_chip_regs),
+            v3_header=(None if v3_header is None
+                       else Z80SnapshotV3Header.make_from(v3_header)))
+
+    @classmethod
+    def make_from(cls, v: Source) -> 'Z80SnapshotV2Header':
+        if isinstance(v, cls):
+            return v
+        assert isinstance(v, dict)
+        return cls(**v)
 
     @classmethod
     def parse_header(cls, parser: BinaryParser) -> 'Z80SnapshotV2Header':
@@ -222,22 +265,25 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80', json_type=True):
             iy: int = 0, ix: int = 0,
             iff1: int = 0, iff2: int = 0,
             flags2: int = 0,
-            v2_header: Z80SnapshotV2Header | None = None,
+            v2_header: Z80SnapshotV2Header.Source | None = None,
             memory_image: ByteData.Source | None = None,
             memory_blocks: (
-                typing.Sequence[Z80MemoryBlock] | None) = None):
+                typing.Sequence[Z80MemoryBlock.Source] | None) = None):
         if memory_image is not None:
             assert memory_blocks is None
             memory_image = ByteData.make_from(memory_image)
         if memory_blocks is not None:
             assert memory_image is None
+            memory_blocks = [Z80MemoryBlock.make_from(b)
+                             for b in memory_blocks]
         super().__init__(
             a=a, f=f, bc=bc, hl=hl, pc=pc, sp=sp,
             i=i, r=r, flags1=flags1, de=de,
             alt_bc=alt_bc, alt_de=alt_de, alt_hl=alt_hl,
             alt_a=alt_a, alt_f=alt_f,
             iy=iy, ix=ix, iff1=iff1, iff2=iff2, flags2=flags2,
-            v2_header=v2_header,
+            v2_header=(None if v2_header is None
+                       else Z80SnapshotV2Header.make_from(v2_header)),
             memory_image=memory_image,
             memory_blocks=memory_blocks)
 
