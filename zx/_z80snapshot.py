@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2025 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -15,6 +15,7 @@ import typing
 from ._binary import Bytes
 from ._binary import BinaryParser
 from ._binary import BinaryWriter
+from ._data import ByteData
 from ._data import DataRecord
 from ._data import MachineSnapshot
 from ._data import UnifiedSnapshot
@@ -262,7 +263,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             for addr, rom_page, ram_page, block in unified.memory_blocks:
                 assert rom_page == 0  # TODO
                 assert ram_page == 0  # TODO
-                image[addr:addr+len(block)] = list(block)
+                image[addr:addr+len(block.data)] = list(block.data)
 
             PAGE_SIZE = 0x4000
             EMPTY_PAGE = [None] * PAGE_SIZE
@@ -370,9 +371,9 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                                 id='z80_snapshot_no_end_marker')
                 memory_image = self.__uncompress(memory_image[:-4], 48 * 1024)
             memory_blocks.extend([
-                (0x4000, 0, 0, memory_image[0x0000:0x4000]),
-                (0x8000, 0, 0, memory_image[0x4000:0x8000]),
-                (0xc000, 0, 0, memory_image[0x8000:0xc000])])
+                (0x4000, 0, 0, ByteData(memory_image[0x0000:0x4000])),
+                (0x8000, 0, 0, ByteData(memory_image[0x4000:0x8000])),
+                (0xc000, 0, 0, ByteData(memory_image[0x8000:0xc000]))])
         else:
             assert machine_kind == 'ZX Spectrum 48K', machine_kind  # TODO
 
@@ -383,7 +384,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                     image = self.__uncompress(image, BLOCK_SIZE)
 
                 memory_blocks.append((self.__MEMORY_PAGE_ADDRS[page_no],
-                                      0, 0, image))
+                                      0, 0, ByteData(image)))
 
         return UnifiedSnapshot(
             af=make16(self.a, self.f),

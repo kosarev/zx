@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2025 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -13,6 +13,7 @@ import collections
 import typing
 
 from ._binary import Bytes, BinaryParser, BinaryWriter
+from ._data import ByteData
 from ._data import MachineSnapshot
 from ._data import UnifiedSnapshot
 
@@ -26,13 +27,14 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
         memory_blocks = []
         ROM_PAGE, RAM_PAGE = 0, 0
         memory_blocks.extend([
-            (0x4000, ROM_PAGE, RAM_PAGE, self.dot_patterns),
-            (0x4000 + 6144, ROM_PAGE, RAM_PAGE, self.colour_attrs)])
+            (0x4000, ROM_PAGE, RAM_PAGE, ByteData(self.dot_patterns)),
+            (0x4000 + 6144, ROM_PAGE, RAM_PAGE, ByteData(self.colour_attrs))])
 
         # LOOP_ADDR: jp LOOP_ADDR
         LOOP_ADDR = 0x8000
+        loop_instr = b'\xc3' + LOOP_ADDR.to_bytes(2, 'little')
         memory_blocks.append((LOOP_ADDR, ROM_PAGE, RAM_PAGE,
-                              b'\xc3' + LOOP_ADDR.to_bytes(2, 'little')))
+                              ByteData(loop_instr)))
 
         return UnifiedSnapshot(
             pc=LOOP_ADDR,

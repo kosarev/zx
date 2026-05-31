@@ -132,7 +132,7 @@ class ByteData(DataRecord, format_name=None):
 
     data: bytes
 
-    def __init__(self, data: bytes):
+    def __init__(self, data: Bytes):
         super().__init__(data=bytes(data))
 
     def to_json(self) -> str | list[str]:
@@ -174,7 +174,7 @@ class UnifiedSnapshot(MachineSnapshot, format_name=None):
     int_mode: int | None
     ticks_since_int: int | None
     border_colour: int | None
-    memory_blocks: list[tuple[int, int, int, Bytes]] | None
+    memory_blocks: list[tuple[int, int, int, ByteData]] | None
 
     def __init__(
             self,
@@ -199,11 +199,11 @@ class UnifiedSnapshot(MachineSnapshot, format_name=None):
             ticks_since_int: int | None = None,
             border_colour: int | None = None,
             memory_blocks: typing.Sequence[
-                tuple[int, int, int, Bytes]] | None = None):
+                tuple[int, int, int, ByteData]] | None = None):
         if memory_blocks is None:
             blocks = None
         else:
-            blocks = sorted(memory_blocks)
+            blocks = sorted(memory_blocks, key=lambda b: b[:3])
 
         super().__init__(
             af=af, bc=bc, de=de, hl=hl, ix=ix, iy=iy,
