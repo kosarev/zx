@@ -1236,7 +1236,15 @@ class _FileBrowserPanel(_Panel):
             if self._selected_control is self.__menu_button:
                 dispatcher.notify(_ShowMainMenu())
             elif self.__save_mode:
-                self.__save(dispatcher)
+                item = self.__menu.selected_item
+                if (self._selected_control is self.__menu
+                        and item is not None
+                        and isinstance(item.descriptor,
+                                       _FileEntryDescriptor)
+                        and item.descriptor.is_dir):
+                    self.__activate_selected(dispatcher)
+                else:
+                    self.__save(dispatcher)
             else:
                 self.__activate_selected(dispatcher)
         elif key_id in ('ESCAPE', 'F1'):
