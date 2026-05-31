@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2019 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -13,6 +13,7 @@ import typing
 import io
 import wave
 from ._binary import Bytes
+from ._data import ByteData
 from ._data import SoundFile
 from ._error import Error
 from ._tape import tag_last_pulse
@@ -25,13 +26,14 @@ class WAVFile(SoundFile, format_name='WAV'):
     num_channels: int
     frame_rate: int
     num_frames: int
-    frames: Bytes
+    frames: ByteData
 
     def __init__(self, *, sample_size: int, num_channels: int, frame_rate: int,
-                 num_frames: int, frames: Bytes) -> None:
+                 num_frames: int, frames: ByteData.Source) -> None:
         SoundFile.__init__(self, sample_size=sample_size,
                            num_channels=num_channels, frame_rate=frame_rate,
-                           num_frames=num_frames, frames=frames)
+                           num_frames=num_frames,
+                           frames=ByteData.make_from(frames))
 
     def _generate_pulses(self) -> (
             typing.Iterable[tuple[bool, int, tuple[str, ...]]]):
@@ -41,7 +43,7 @@ class WAVFile(SoundFile, format_name='WAV'):
         import numpy
         sample_size = self.sample_size
         num_frames = self.num_frames
-        frames = self.frames
+        frames = self.frames.data
         # 8-bit samples are unsigned and 16-bit ones are signed.
         dtype = {1: numpy.uint8, 2: numpy.int16}[sample_size]
         samples = numpy.frombuffer(frames, dtype, num_frames)
