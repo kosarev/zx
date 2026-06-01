@@ -22,6 +22,10 @@ class _InlineJSONDict(dict[str, typing.Any]):
     pass
 
 
+class _InlineJSONList(list[typing.Any]):
+    pass
+
+
 def _write_json(obj: typing.Any, depth: int = 0) -> typing.Iterator[str]:
     import json
     pad = '  ' * depth
@@ -45,7 +49,7 @@ def _write_json(obj: typing.Any, depth: int = 0) -> typing.Iterator[str]:
         if prev is not None:
             yield from prev
 
-    if isinstance(obj, _InlineJSONDict):
+    if isinstance(obj, (_InlineJSONDict, _InlineJSONList)):
         yield json.dumps(obj)
     elif isinstance(obj, dict):
         yield '{\n'
@@ -95,7 +99,9 @@ class DataRecord(object):
         def convert(v: typing.Any) -> typing.Any:
             if isinstance(v, (int, str)):
                 return v
-            if isinstance(v, (list, tuple)):
+            if isinstance(v, tuple):
+                return _InlineJSONList(convert(e) for e in v)
+            if isinstance(v, list):
                 return [convert(e) for e in v]
             if isinstance(v, DataRecord):
                 fields = v.to_json()
