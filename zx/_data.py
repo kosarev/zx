@@ -57,7 +57,9 @@ class DataRecord(object):
             if isinstance(v, (list, tuple)):
                 return [convert(e) for e in v]
             if isinstance(v, DataRecord):
-                return v.to_json()
+                d = {'type': type(v).__name__}
+                d.update(v.to_json())
+                return d
             raise TypeError(f'cannot serialize a {type(v)}')
 
         return {id: convert(v) for id, v in self if v is not None}
@@ -152,7 +154,7 @@ class SoundFile(DataRecord, format_name=None):
         raise NotImplementedError
 
 
-class ByteData(DataRecord, format_name=None):
+class ByteData(DataRecord, format_name=None, json_type=True):
     __CHUNK_SIZE = 32
 
     Source: typing.ClassVar[typing.TypeAlias] = (
@@ -172,12 +174,18 @@ class ByteData(DataRecord, format_name=None):
             return cls(bytes.fromhex(hex_str))
         return cls(data)
 
-    def to_json(self) -> str | list[str]:
+    @classmethod
+    def from_json(cls, d: dict[str, typing.Any]) -> 'ByteData':
+        raw = d.get('data', '')
+        hex_str = ''.join(raw) if isinstance(raw, list) else raw
+        return cls(bytes.fromhex(hex_str))
+
+    def to_json(self) -> dict[str, str | list[str]]:
         chunks = [self.data[i:i + self.__CHUNK_SIZE].hex()
                   for i in range(0, len(self.data), self.__CHUNK_SIZE)]
         if not chunks:
-            return ''
-        return chunks[0] if len(chunks) == 1 else chunks
+            return {'data': ''}
+        return {'data': chunks[0] if len(chunks) == 1 else chunks}
 
 
 class MemoryBlock(DataRecord, format_name=None):
