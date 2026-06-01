@@ -163,10 +163,14 @@ class DataRecord(object):
 
 class Metadata(DataRecord, format_name=None):
     creator_tool: str
+    created_at: str
 
     def __init__(self) -> None:
+        import datetime
         super().__init__(
-            creator_tool=f'https://pypi.org/project/zx/{zx.__version__}')
+            creator_tool=f'https://pypi.org/project/zx/{zx.__version__}',
+            created_at=datetime.datetime.now(datetime.timezone.utc).strftime(
+                '%Y-%m-%dT%H:%M:%SZ'))
 
 
 class SpectrumModel(type):
