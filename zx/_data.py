@@ -167,22 +167,24 @@ class SoundFile(DataRecord, format_name=None):
 
 
 class ByteData(DataRecord, format_name=None, json_type=True):
-    __CHUNK_SIZE = 32
-
-    Source: typing.ClassVar[typing.TypeAlias] = (
-        'ByteData | Bytes | str | list[str]')
-
     data: bytes
+
+    def __init__(self, data: Bytes):
+        super().__init__(data=bytes(data))
+
+
+class HexData(ByteData, format_name=None):
+    __CHUNK_SIZE = 32
 
     def __init__(self, data: 'Bytes | str | list[str]'):
         if isinstance(data, (str, list)):
             hex_str = ''.join(data) if isinstance(data, list) else data
             data = bytes.fromhex(hex_str)
-        super().__init__(data=bytes(data))
+        super().__init__(bytes(data))
 
     @classmethod
-    def make_from(cls, data: Source) -> 'ByteData':
-        return data if isinstance(data, cls) else cls(data)
+    def from_bytes(cls, data: Bytes) -> 'HexData':
+        return cls(data)
 
     def to_json(self) -> dict[str, str | list[str]]:
         chunks = [self.data[i:i + self.__CHUNK_SIZE].hex()
@@ -205,24 +207,17 @@ class Latin1Data(ByteData, format_name=None):
 
 
 class MemoryBlock(DataRecord, format_name=None):
-    Source: typing.ClassVar[typing.TypeAlias] = (
-        'MemoryBlock | dict[str, typing.Any]')
-
     addr: int
     rom_page: int
     ram_page: int
     data: ByteData
 
     def __init__(self, *, addr: int, rom_page: int, ram_page: int,
-                 data: ByteData.Source):
+                 data: 'Bytes | ByteData'):
+        if not isinstance(data, ByteData):
+            data = HexData.from_bytes(data)
         super().__init__(addr=addr, rom_page=rom_page,
-                         ram_page=ram_page, data=ByteData.make_from(data))
-
-    @classmethod
-    def make_from(cls, block: Source) -> 'MemoryBlock':
-        if isinstance(block, cls):
-            return block
-        return cls(**block)
+                         ram_page=ram_page, data=data)
 
 
 class MachineSnapshot(DataRecord, format_name=None):
@@ -279,13 +274,11 @@ class UnifiedSnapshot(MachineSnapshot, format_name=None, json_type=True):
             int_mode: int | None = None,
             ticks_since_int: int | None = None,
             border_colour: int | None = None,
-            memory_blocks: typing.Sequence[
-                    MemoryBlock.Source] | None = None):
+            memory_blocks: typing.Sequence[MemoryBlock] | None = None):
         if memory_blocks is None:
             blocks = None
         else:
-            blocks = sorted((MemoryBlock.make_from(b) for b in memory_blocks),
-                            key=lambda b: b.addr)
+            blocks = sorted(memory_blocks, key=lambda b: b.addr)
 
         super().__init__(
             af=af, bc=bc, de=de, hl=hl, ix=ix, iy=iy,

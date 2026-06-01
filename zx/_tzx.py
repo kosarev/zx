@@ -14,6 +14,7 @@ from __future__ import annotations
 import typing
 from ._binary import Bytes, BinaryParser
 from ._data import ByteData
+from ._data import HexData
 from ._data import DataRecord
 from ._data import SoundFile
 from ._error import Error
@@ -30,9 +31,11 @@ class TZXStandardSpeedDataBlock(TZXBlock, format_name=None):
     data: ByteData
 
     def __init__(self, *, pause_after_block_in_ms: int,
-                 data: ByteData.Source) -> None:
+                 data: Bytes | ByteData) -> None:
+        if not isinstance(data, ByteData):
+            data = HexData.from_bytes(data)
         super().__init__(pause_after_block_in_ms=pause_after_block_in_ms,
-                         data=ByteData.make_from(data))
+                         data=data)
 
 
 class TZXTurboSpeedDataBlock(TZXBlock, format_name=None):
@@ -50,7 +53,7 @@ class TZXTurboSpeedDataBlock(TZXBlock, format_name=None):
                  second_sync_pulse_len: int, zero_bit_pulse_len: int,
                  one_bit_pulse_len: int, pilot_tone_len: int,
                  data_size_in_bits: int, pause_after_block_in_ms: int,
-                 data: ByteData.Source) -> None:
+                 data: Bytes | ByteData) -> None:
         super().__init__(
             pilot_pulse_len=pilot_pulse_len,
             first_sync_pulse_len=first_sync_pulse_len,
@@ -60,7 +63,8 @@ class TZXTurboSpeedDataBlock(TZXBlock, format_name=None):
             pilot_tone_len=pilot_tone_len,
             data_size_in_bits=data_size_in_bits,
             pause_after_block_in_ms=pause_after_block_in_ms,
-            data=ByteData.make_from(data))
+            data=(data if isinstance(data, ByteData)
+                  else HexData.from_bytes(data)))
 
 
 class TZXPureDataBlock(TZXBlock, format_name=None):
@@ -72,20 +76,23 @@ class TZXPureDataBlock(TZXBlock, format_name=None):
 
     def __init__(self, *, zero_bit_pulse_len: int, one_bit_pulse_len: int,
                  data_size_in_bits: int, pause_after_block_in_ms: int,
-                 data: ByteData.Source) -> None:
+                 data: Bytes | ByteData) -> None:
         super().__init__(
             zero_bit_pulse_len=zero_bit_pulse_len,
             one_bit_pulse_len=one_bit_pulse_len,
             data_size_in_bits=data_size_in_bits,
             pause_after_block_in_ms=pause_after_block_in_ms,
-            data=ByteData.make_from(data))
+            data=(data if isinstance(data, ByteData)
+                  else HexData.from_bytes(data)))
 
 
 class TZXGroupStart(TZXBlock, format_name=None):
     name: ByteData
 
-    def __init__(self, *, name: ByteData.Source) -> None:
-        super().__init__(name=ByteData.make_from(name))
+    def __init__(self, *, name: Bytes | ByteData) -> None:
+        if not isinstance(name, ByteData):
+            name = HexData.from_bytes(name)
+        super().__init__(name=name)
 
 
 class TZXGroupEnd(TZXBlock, format_name=None):
@@ -95,8 +102,10 @@ class TZXGroupEnd(TZXBlock, format_name=None):
 class TZXTextDescription(TZXBlock, format_name=None):
     text: ByteData
 
-    def __init__(self, *, text: ByteData.Source) -> None:
-        super().__init__(text=ByteData.make_from(text))
+    def __init__(self, *, text: Bytes | ByteData) -> None:
+        if not isinstance(text, ByteData):
+            text = HexData.from_bytes(text)
+        super().__init__(text=text)
 
 
 class TZXArchiveInfo(TZXBlock, format_name=None):

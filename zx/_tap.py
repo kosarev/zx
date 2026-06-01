@@ -12,6 +12,7 @@
 import typing
 from ._binary import Bytes, BinaryParser
 from ._data import ByteData
+from ._data import HexData
 from ._data import SoundFile
 from ._tape import get_block_pulses, tag_last_pulse, get_end_pulse
 
@@ -21,9 +22,11 @@ class TAPFile(SoundFile, format_name='TAP', json_type=True):
 
     blocks: typing.Sequence[ByteData]
 
-    def __init__(self, *, blocks: typing.Sequence[ByteData.Source]) -> None:
+    def __init__(self, *, blocks: typing.Sequence[Bytes | ByteData]) -> None:
         SoundFile.__init__(self,
-                           blocks=[ByteData.make_from(b) for b in blocks])
+                           blocks=[b if isinstance(b, ByteData)
+                                   else HexData.from_bytes(b)
+                                   for b in blocks])
 
     # TODO: Produce a typing.Sequence instead of using generators,
     #       once we can represent pulses in a more compact manner.
@@ -53,10 +56,10 @@ class TAPFile(SoundFile, format_name='TAP', json_type=True):
         return pulses
 
     @classmethod
-    def _parse_block(cls, parser: BinaryParser) -> ByteData:
+    def _parse_block(cls, parser: BinaryParser) -> Bytes:
         size = parser.parse_field('<H')
         assert isinstance(size, int)
-        return ByteData(parser.read_bytes(size))
+        return parser.read_bytes(size)
 
     @classmethod
     def decode(cls, filename: str, image: Bytes) -> 'TAPFile':

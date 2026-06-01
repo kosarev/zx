@@ -14,6 +14,7 @@ import io
 import wave
 from ._binary import Bytes
 from ._data import ByteData
+from ._data import HexData
 from ._data import SoundFile
 from ._error import Error
 from ._tape import tag_last_pulse
@@ -29,11 +30,12 @@ class WAVFile(SoundFile, format_name='WAV', json_type=True):
     frames: ByteData
 
     def __init__(self, *, sample_size: int, num_channels: int, frame_rate: int,
-                 num_frames: int, frames: ByteData.Source) -> None:
+                 num_frames: int, frames: Bytes | ByteData) -> None:
+        if not isinstance(frames, ByteData):
+            frames = HexData.from_bytes(frames)
         SoundFile.__init__(self, sample_size=sample_size,
                            num_channels=num_channels, frame_rate=frame_rate,
-                           num_frames=num_frames,
-                           frames=ByteData.make_from(frames))
+                           num_frames=num_frames, frames=frames)
 
     def _generate_pulses(self) -> (
             typing.Iterable[tuple[bool, int, tuple[str, ...]]]):

@@ -15,6 +15,7 @@ import typing
 from ._binary import Bytes, BinaryParser, BinaryWriter
 from ._data import ByteData
 from ._data import DataRecord
+from ._data import HexData
 from ._data import Latin1Data
 from ._error import Error
 from ._z80snapshot import Z80Snapshot
@@ -25,9 +26,10 @@ class RZXFrame(DataRecord, format_name=None):
     samples: ByteData
 
     def __init__(self, *, num_of_fetches: int,
-                 samples: ByteData.Source) -> None:
-        super().__init__(num_of_fetches=num_of_fetches,
-                         samples=ByteData.make_from(samples))
+                 samples: Bytes | ByteData) -> None:
+        if not isinstance(samples, ByteData):
+            samples = HexData.from_bytes(samples)
+        super().__init__(num_of_fetches=num_of_fetches, samples=samples)
 
 
 class RZXCreatorInfo(DataRecord, format_name=None):
@@ -126,13 +128,14 @@ def parse_input_recording_block(image: Bytes) -> RZXInputRecording:
         num_of_fetches = recording_header['num_of_fetches']
         assert isinstance(num_of_fetches, int)
 
+        samples: Bytes | ByteData
         if num_of_samples == NUM_OF_SAMPLES_IN_REPEATED_FRAME:
             # Note that only the input samples are repeated; the
             # number of fetches is as specified in the new frame.
             assert frames  # TODO
             samples = frames[-1].samples
         else:
-            samples = ByteData(recording_parser.read_bytes(num_of_samples))
+            samples = recording_parser.read_bytes(num_of_samples)
 
         # Ignore empty frames.
         if num_of_fetches != 0:

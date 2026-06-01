@@ -34,9 +34,10 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
 
         # LOOP_ADDR: jp LOOP_ADDR
         LOOP_ADDR = 0x8000
+        loop_instr = b'\xc3' + LOOP_ADDR.to_bytes(2, 'little')
         memory_blocks.append(MemoryBlock(
             addr=LOOP_ADDR, rom_page=ROM_PAGE, ram_page=RAM_PAGE,
-            data=b'\xc3' + LOOP_ADDR.to_bytes(2, 'little')))
+            data=loop_instr))
 
         return UnifiedSnapshot(
             pc=LOOP_ADDR,
