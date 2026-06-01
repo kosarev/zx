@@ -38,7 +38,7 @@ class RZXFrame(DataRecord, format_name=None):
                    samples=frame.samples.data)
 
 
-class RZXHexFrame(RZXFrame, format_name=None):
+class RZXHexFrame(RZXFrame, format_name=None, inline_json=True):
     def __init__(self, *, num_of_fetches: int,
                  samples: Bytes | str) -> None:
         if isinstance(samples, str):

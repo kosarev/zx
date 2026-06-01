@@ -18,15 +18,60 @@ from ._binary import Bytes
 from ._error import Error
 
 
+class _InlineJSONDict(dict[str, typing.Any]):
+    pass
+
+
+def _write_json(obj: typing.Any, depth: int = 0) -> typing.Iterator[str]:
+    import json
+    pad = '  ' * depth
+
+    def dict_entry(k: str, v: typing.Any) -> typing.Iterator[str]:
+        yield '  ' * (depth + 1) + json.dumps(k) + ': '
+        yield from _write_json(v, depth + 1)
+
+    def list_item(e: typing.Any) -> typing.Iterator[str]:
+        yield '  ' * (depth + 1)
+        yield from _write_json(e, depth + 1)
+
+    def commas(groups: typing.Iterable[typing.Iterator[str]]) -> (
+            typing.Iterator[str]):
+        prev = None
+        for group in groups:
+            if prev is not None:
+                yield from prev
+                yield ',\n'
+            prev = group
+        if prev is not None:
+            yield from prev
+
+    if isinstance(obj, _InlineJSONDict):
+        yield json.dumps(obj)
+    elif isinstance(obj, dict):
+        yield '{\n'
+        yield from commas(dict_entry(k, v) for k, v in obj.items())
+        yield '\n' + pad + '}'
+    elif isinstance(obj, list):
+        yield '[\n'
+        yield from commas(list_item(e) for e in obj)
+        yield '\n' + pad + ']'
+    else:
+        yield json.dumps(obj)
+
+
 class DataRecord(object):
     FORMAT_NAME: None | str
 
     _JSON_TYPES: typing.ClassVar[dict[str, type['DataRecord']]] = {}
 
+    INLINE_JSON: typing.ClassVar[bool] = False
+
     def __init_subclass__(cls, *, format_name: None | str,
-                          json_type: bool = False):
+                          json_type: bool = False,
+                          inline_json: bool = False):
         assert format_name is None or format_name.isupper()
         cls.FORMAT_NAME = format_name
+        cls.INLINE_JSON = inline_json
         if json_type:
             DataRecord._JSON_TYPES[cls.__name__] = cls
 
@@ -57,7 +102,8 @@ class DataRecord(object):
             if isinstance(v, (list, tuple)):
                 return [convert(e) for e in v]
             if isinstance(v, DataRecord):
-                d = {'type': type(v).__name__}
+                d = _InlineJSONDict() if type(v).INLINE_JSON else {}
+                d['type'] = type(v).__name__
                 d.update(v.to_json())
                 return d
             raise TypeError(f'cannot serialize a {type(v)}')
@@ -102,12 +148,11 @@ class DataRecord(object):
         raise NotImplementedError
 
     def dumps(self) -> str:
-        import json
         d: dict[str, typing.Any] = {'type': type(self).__name__}
         d['metadata'] = {
             'creator_tool': f'https://pypi.org/project/zx/{zx.__version__}'}
         d.update(self.to_json())
-        return json.dumps(d, indent=2)
+        return ''.join(_write_json(d))
 
 
 class SpectrumModel(type):
