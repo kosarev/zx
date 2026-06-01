@@ -152,11 +152,21 @@ class DataRecord(object):
         raise NotImplementedError
 
     def dumps(self) -> str:
-        d: dict[str, typing.Any] = {'type': type(self).__name__}
-        d['metadata'] = {
-            'creator_tool': f'https://pypi.org/project/zx/{zx.__version__}'}
+        metadata = Metadata()
+        d: dict[str, typing.Any] = {
+            'type': type(self).__name__,
+            'metadata': {'type': type(metadata).__name__,
+                         **metadata.to_json()}}
         d.update(self.to_json())
         return ''.join(_write_json(d))
+
+
+class Metadata(DataRecord, format_name=None):
+    creator_tool: str
+
+    def __init__(self) -> None:
+        super().__init__(
+            creator_tool=f'https://pypi.org/project/zx/{zx.__version__}')
 
 
 class SpectrumModel(type):
