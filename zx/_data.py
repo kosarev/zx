@@ -98,8 +98,11 @@ class DataRecord(object):
             if isinstance(v, (list, tuple)):
                 return [convert(e) for e in v]
             if isinstance(v, DataRecord):
-                d = v.to_json()
-                d['type'] = type(v).__name__
+                fields = v.to_json()
+                # Build with 'type' first to ensure it leads in the output.
+                # Use type(fields) to preserve _InlineJSONDict if returned.
+                d = type(fields)(type=type(v).__name__)
+                d.update(fields)
                 return d
             raise TypeError(f'cannot serialize a {type(v)}')
 
