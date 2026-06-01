@@ -80,12 +80,14 @@ class RZXInputRecording(RZXChunk, format_name=None):
 
 
 class RZXSnapshot(RZXChunk, format_name=None):
+    flags: int
     format: ByteData
     snapshot: MachineSnapshot
 
-    def __init__(self, *, format: Bytes | ByteData,
+    def __init__(self, *, flags: int = 0, format: Bytes | ByteData,
                  snapshot: MachineSnapshot) -> None:
-        super().__init__(format=Latin1Data.wrap(format), snapshot=snapshot)
+        super().__init__(flags=flags, format=Latin1Data.wrap(format),
+                         snapshot=snapshot)
 
 
 def parse_creator_info_block(image: Bytes) -> RZXCreatorInfo:
@@ -125,7 +127,8 @@ def parse_snapshot_block(image: Bytes) -> RZXSnapshot:
                     id='unknown_rzx_snapshot_format')
 
     snapshot = Z80Snapshot.decode('snapshot.z80', snapshot_image)
-    return RZXSnapshot(format=filename_extension, snapshot=snapshot)
+    return RZXSnapshot(flags=flags, format=filename_extension,
+                       snapshot=snapshot)
 
 
 def parse_input_recording_block(image: Bytes) -> RZXInputRecording:
@@ -261,9 +264,10 @@ def make_rzx(chunks: list[RZXChunk]) -> Bytes:
         elif isinstance(chunk, RZXSnapshot):
             chunk_id = RZX_BLOCK_ID_SNAPSHOT
             image = chunk.snapshot.encode()
+            # TODO: Re-compress if chunk.flags & 0x2.
             chunk_writer.write(['<L:flags', '4s:filename_extension',
                                 '<L:uncompressed_length'],
-                               flags=0,  # Non-descriptor. Not compressed.
+                               flags=chunk.flags & ~0x2,
                                filename_extension=chunk.format.data,
                                uncompressed_length=len(image))
             chunk_writer.write_bytes(image)
