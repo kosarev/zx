@@ -30,6 +30,27 @@ class RZXFrame(DataRecord, format_name=None):
         super().__init__(num_of_fetches=num_of_fetches,
                          samples=HexData.wrap(samples))
 
+    @classmethod
+    def wrap(cls, frame: 'RZXFrame') -> 'RZXFrame':
+        if isinstance(frame, cls):
+            return frame
+        return cls(num_of_fetches=frame.num_of_fetches,
+                   samples=frame.samples.data)
+
+
+class RZXHexFrame(RZXFrame, format_name=None):
+    def __init__(self, *, num_of_fetches: int,
+                 samples: Bytes | str) -> None:
+        if isinstance(samples, str):
+            samples = bytes.fromhex(samples)
+        super().__init__(num_of_fetches=num_of_fetches, samples=samples)
+
+    def to_json(self) -> dict[str, typing.Any]:
+        return {
+            'num_of_fetches': self.num_of_fetches,
+            'samples': self.samples.data.hex(),
+        }
+
 
 class RZXCreatorInfo(DataRecord, format_name=None):
     creator: ByteData
@@ -50,7 +71,8 @@ class RZXInputRecording(DataRecord, format_name=None):
 
     def __init__(self, *, first_tick: int,
                  frames: list[RZXFrame]) -> None:
-        super().__init__(first_tick=first_tick, frames=frames)
+        super().__init__(first_tick=first_tick,
+                         frames=[RZXHexFrame.wrap(f) for f in frames])
 
 
 def parse_creator_info_block(image: Bytes) -> RZXCreatorInfo:
