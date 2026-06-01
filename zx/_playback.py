@@ -57,7 +57,7 @@ class PlaybackPlayer(object):
 
             for frame_i, frame in enumerate(chunk.frames):
                 samples = frame.samples.data
-                self.__machine.fetches_limit = frame.num_of_fetches
+                self.__machine.fetches_limit = frame.num_fetches
 
                 yield 'START_OF_FRAME'
 

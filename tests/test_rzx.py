@@ -27,8 +27,8 @@ def test_basic() -> None:
         snapshot,
         zx._rzx.RZXInputRecording(
             first_tick=0,
-            frames=[zx._rzx.RZXFrame(num_of_fetches=1, samples=b''),
-                    zx._rzx.RZXFrame(num_of_fetches=1, samples=b'')]),
+            frames=[zx._rzx.RZXFrame(num_fetches=1, samples=b''),
+                    zx._rzx.RZXFrame(num_fetches=1, samples=b'')]),
     ])
 
     # Parse it back.

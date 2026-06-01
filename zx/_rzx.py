@@ -23,31 +23,31 @@ from ._z80snapshot import Z80Snapshot
 
 
 class RZXFrame(DataRecord, format_name=None):
-    num_of_fetches: int
+    num_fetches: int
     samples: ByteData
 
-    def __init__(self, *, num_of_fetches: int,
+    def __init__(self, *, num_fetches: int,
                  samples: Bytes | ByteData) -> None:
-        super().__init__(num_of_fetches=num_of_fetches,
+        super().__init__(num_fetches=num_fetches,
                          samples=HexData.wrap(samples))
 
     @classmethod
     def wrap(cls, frame: 'RZXFrame') -> 'RZXFrame':
         if isinstance(frame, cls):
             return frame
-        return cls(num_of_fetches=frame.num_of_fetches,
+        return cls(num_fetches=frame.num_fetches,
                    samples=frame.samples.data)
 
 
 class RZXHexFrame(RZXFrame, format_name=None):
-    def __init__(self, *, num_of_fetches: int,
+    def __init__(self, *, num_fetches: int,
                  samples: Bytes | str) -> None:
         if isinstance(samples, str):
             samples = bytes.fromhex(samples)
-        super().__init__(num_of_fetches=num_of_fetches, samples=samples)
+        super().__init__(num_fetches=num_fetches, samples=samples)
 
     def to_json(self) -> _InlineJSONDict:
-        return _InlineJSONDict(num_of_fetches=self.num_of_fetches,
+        return _InlineJSONDict(num_fetches=self.num_fetches,
                                samples=self.samples.data.hex())
 
 
@@ -115,7 +115,7 @@ def parse_snapshot_block(image: Bytes) -> Z80Snapshot:
 
 def parse_input_recording_block(image: Bytes) -> RZXInputRecording:
     parser = BinaryParser(image)
-    header = parser.parse([('num_of_frames', '<L'),
+    header = parser.parse([('num_frames', '<L'),
                            ('reserved', 'B'),
                            ('first_tick', '<L'),
                            ('flags', '<L')])
@@ -134,30 +134,30 @@ def parse_input_recording_block(image: Bytes) -> RZXInputRecording:
 
     recording_parser = BinaryParser(recording_image)
 
-    NUM_OF_SAMPLES_IN_REPEATED_FRAME = 0xffff
+    NUM_SAMPLES_IN_REPEATED_FRAME = 0xffff
     frames: list[RZXFrame] = []
     while not recording_parser.is_eof():
         recording_header = recording_parser.parse([
-            ('num_of_fetches', '<H'),
-            ('num_of_port_samples', '<H')])
+            ('num_fetches', '<H'),
+            ('num_port_samples', '<H')])
 
-        num_of_samples = recording_header['num_of_port_samples']
-        assert isinstance(num_of_samples, int)
-        num_of_fetches = recording_header['num_of_fetches']
-        assert isinstance(num_of_fetches, int)
+        num_samples = recording_header['num_port_samples']
+        assert isinstance(num_samples, int)
+        num_fetches = recording_header['num_fetches']
+        assert isinstance(num_fetches, int)
 
         samples: Bytes | ByteData
-        if num_of_samples == NUM_OF_SAMPLES_IN_REPEATED_FRAME:
+        if num_samples == NUM_SAMPLES_IN_REPEATED_FRAME:
             # Note that only the input samples are repeated; the
             # number of fetches is as specified in the new frame.
             assert frames  # TODO
             samples = frames[-1].samples
         else:
-            samples = recording_parser.read_bytes(num_of_samples)
+            samples = recording_parser.read_bytes(num_samples)
 
         # Ignore empty frames.
-        if num_of_fetches != 0:
-            frames.append(RZXFrame(num_of_fetches=num_of_fetches,
+        if num_fetches != 0:
+            frames.append(RZXFrame(num_fetches=num_fetches,
                                    samples=samples))
 
     first_tick = header['first_tick']
@@ -254,17 +254,17 @@ def make_rzx(chunks: list[DataRecord]) -> Bytes:
             chunk_writer.write_bytes(image)
         elif isinstance(chunk, RZXInputRecording):
             chunk_id = RZX_BLOCK_ID_INPUT_RECORDING
-            chunk_writer.write(['<L:num_of_frames', 'B:reserved',
+            chunk_writer.write(['<L:num_frames', 'B:reserved',
                                 '<L:first_tick', '<L:flags'],
-                               num_of_frames=len(chunk.frames),
+                               num_frames=len(chunk.frames),
                                reserved=0,
                                first_tick=chunk.first_tick,
                                flags=0)
             for frame in chunk.frames:
-                chunk_writer.write(['<H:num_of_fetches',
-                                    '<H:num_of_port_samples'],
-                                   num_of_fetches=frame.num_of_fetches,
-                                   num_of_port_samples=len(frame.samples.data))
+                chunk_writer.write(['<H:num_fetches',
+                                    '<H:num_port_samples'],
+                                   num_fetches=frame.num_fetches,
+                                   num_port_samples=len(frame.samples.data))
                 chunk_writer.write_bytes(frame.samples.data)
         else:
             assert 0, chunk  # TODO

@@ -275,9 +275,9 @@ class TZXFile(SoundFile, format_name='TZX', json_type=True):
     @classmethod
     def _parse_archive_info(cls, parser: BinaryParser) -> TZXArchiveInfo:
         parser.parse_field('<H')  # block_size
-        num_of_strings = parser.parse_field('B')
-        assert isinstance(num_of_strings, int)
-        for _ in range(num_of_strings):
+        num_strings = parser.parse_field('B')
+        assert isinstance(num_strings, int)
+        for _ in range(num_strings):
             id = parser.parse_field('B')
             assert isinstance(id, int)
             length = parser.parse_field('B')
