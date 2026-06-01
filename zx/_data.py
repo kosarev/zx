@@ -192,6 +192,18 @@ class ByteData(DataRecord, format_name=None, json_type=True):
         return {'data': chunks[0] if len(chunks) == 1 else chunks}
 
 
+class Latin1Data(ByteData, format_name=None):
+    def __init__(self, data: str):
+        super().__init__(data.encode('latin-1'))
+
+    @classmethod
+    def from_bytes(cls, data: Bytes) -> 'Latin1Data':
+        return cls(bytes(data).decode('latin-1'))
+
+    def to_json(self) -> dict[str, str | list[str]]:
+        return {'data': self.data.decode('latin-1')}
+
+
 class MemoryBlock(DataRecord, format_name=None):
     Source: typing.ClassVar[typing.TypeAlias] = (
         'MemoryBlock | dict[str, typing.Any]')

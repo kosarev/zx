@@ -468,9 +468,10 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
     FRAME_SIZE = 48 + 256 + 48, 48 + 192 + 40
 
-    _SPIN_V0P5_INFO = RZXCreatorInfo(creator=b'SPIN 0.5            ',
-                                     creator_major_version=0,
-                                     creator_minor_version=5)
+    _SPIN_V0P5_INFO = RZXCreatorInfo(
+        creator=ByteData(b'SPIN 0.5            '),
+        creator_major_version=0,
+        creator_minor_version=5)
 
     devices: Dispatcher
     __profile: None | Profile

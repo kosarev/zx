@@ -15,6 +15,7 @@ import typing
 from ._binary import Bytes, BinaryParser, BinaryWriter
 from ._data import ByteData
 from ._data import DataRecord
+from ._data import Latin1Data
 from ._error import Error
 from ._z80snapshot import Z80Snapshot
 
@@ -34,10 +35,10 @@ class RZXCreatorInfo(DataRecord, format_name=None):
     creator_major_version: int
     creator_minor_version: int
 
-    def __init__(self, *, creator: ByteData.Source,
+    def __init__(self, *, creator: ByteData,
                  creator_major_version: int,
                  creator_minor_version: int) -> None:
-        super().__init__(creator=ByteData.make_from(creator),
+        super().__init__(creator=Latin1Data.from_bytes(creator.data),
                          creator_major_version=creator_major_version,
                          creator_minor_version=creator_minor_version)
 
@@ -56,7 +57,9 @@ def parse_creator_info_block(image: Bytes) -> RZXCreatorInfo:
     fields = parser.parse([('creator', '20s'),
                            ('creator_major_version', '<H'),
                            ('creator_minor_version', '<H')])
-    return RZXCreatorInfo(**fields)
+    creator = fields.pop('creator')
+    assert isinstance(creator, bytes)
+    return RZXCreatorInfo(creator=ByteData(creator), **fields)
 
 
 def parse_snapshot_block(image: Bytes) -> Z80Snapshot:

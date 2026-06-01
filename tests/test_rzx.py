@@ -20,9 +20,10 @@ def test_basic() -> None:
     snapshot = zx._z80snapshot.Z80Snapshot.from_snapshot(mach.to_snapshot())
 
     rzx_image = zx._rzx.make_rzx([
-        zx._rzx.RZXCreatorInfo(creator=b'<creator>',
-                               creator_major_version=1,
-                               creator_minor_version=0),
+        zx._rzx.RZXCreatorInfo(
+            creator=zx._data.ByteData(b'<creator>'),
+            creator_major_version=1,
+            creator_minor_version=0),
         snapshot,
         zx._rzx.RZXInputRecording(
             first_tick=0,
