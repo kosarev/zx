@@ -10,6 +10,7 @@
 
 import typing
 from ._data import MachineSnapshot
+from ._rzx import RZXSnapshot
 from ._rzx import RZXCreatorInfo
 from ._rzx import RZXFile
 from ._rzx import RZXInputRecording
@@ -46,8 +47,8 @@ class PlaybackPlayer(object):
 
         frame_count = 0
         for chunk_i, chunk in enumerate(self.get_chunks()):
-            if isinstance(chunk, MachineSnapshot):
-                self.__machine.install_snapshot(chunk)
+            if isinstance(chunk, RZXSnapshot):
+                self.__machine.install_snapshot(chunk.snapshot)
                 continue
 
             if not isinstance(chunk, RZXInputRecording):

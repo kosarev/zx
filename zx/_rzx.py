@@ -18,11 +18,16 @@ from ._data import ByteData
 from ._data import DataRecord
 from ._data import HexData
 from ._data import Latin1Data
+from ._data import MachineSnapshot
 from ._error import Error
 from ._z80snapshot import Z80Snapshot
 
 
-class RZXFrame(DataRecord, format_name=None):
+class RZXChunk(DataRecord, format_name=None):
+    pass
+
+
+class RZXFrame(RZXChunk, format_name=None):
     num_fetches: int
     samples: ByteData
 
@@ -51,7 +56,7 @@ class RZXHexFrame(RZXFrame, format_name=None):
                                samples=self.samples.data.hex())
 
 
-class RZXCreatorInfo(DataRecord, format_name=None):
+class RZXCreatorInfo(RZXChunk, format_name=None):
     creator: ByteData
     creator_major_version: int
     creator_minor_version: int
@@ -64,7 +69,7 @@ class RZXCreatorInfo(DataRecord, format_name=None):
                          creator_minor_version=creator_minor_version)
 
 
-class RZXInputRecording(DataRecord, format_name=None):
+class RZXInputRecording(RZXChunk, format_name=None):
     first_tick: int
     frames: list[RZXFrame]
 
@@ -72,6 +77,15 @@ class RZXInputRecording(DataRecord, format_name=None):
                  frames: list[RZXFrame]) -> None:
         super().__init__(first_tick=first_tick,
                          frames=[RZXHexFrame.wrap(f) for f in frames])
+
+
+class RZXSnapshot(RZXChunk, format_name=None):
+    format: ByteData
+    snapshot: MachineSnapshot
+
+    def __init__(self, *, format: Bytes | ByteData,
+                 snapshot: MachineSnapshot) -> None:
+        super().__init__(format=Latin1Data.wrap(format), snapshot=snapshot)
 
 
 def parse_creator_info_block(image: Bytes) -> RZXCreatorInfo:
@@ -82,7 +96,7 @@ def parse_creator_info_block(image: Bytes) -> RZXCreatorInfo:
     return RZXCreatorInfo(**fields)
 
 
-def parse_snapshot_block(image: Bytes) -> Z80Snapshot:
+def parse_snapshot_block(image: Bytes) -> RZXSnapshot:
     parser = BinaryParser(image)
     header = parser.parse([('flags', '<L'),
                            ('filename_extension', '4s'),
@@ -110,7 +124,8 @@ def parse_snapshot_block(image: Bytes) -> Z80Snapshot:
         raise Error('Unknown RZX snapshot format %r.' % filename_extension,
                     id='unknown_rzx_snapshot_format')
 
-    return Z80Snapshot.decode(filename_extension.decode(), snapshot_image)
+    snapshot = Z80Snapshot.decode('snapshot.z80', snapshot_image)
+    return RZXSnapshot(format=filename_extension, snapshot=snapshot)
 
 
 def parse_input_recording_block(image: Bytes) -> RZXInputRecording:
@@ -202,7 +217,7 @@ def parse_block(parser: BinaryParser) -> typing.Any:
     return RZX_BLOCK_PARSERS[block_id](payload_image)
 
 
-def _parse_rzx(image: Bytes) -> list[DataRecord]:
+def _parse_rzx(image: Bytes) -> list[RZXChunk]:
     parser = BinaryParser(image)
 
     # Unpack header.
@@ -216,14 +231,14 @@ def _parse_rzx(image: Bytes) -> list[DataRecord]:
                         header['signature'], rzx_signature))
 
     # Unpack blocks.
-    chunks: list[DataRecord] = []
+    chunks: list[RZXChunk] = []
     while not parser.is_eof():
         chunks.append(parse_block(parser))
 
     return chunks
 
 
-def make_rzx(chunks: list[DataRecord]) -> Bytes:
+def make_rzx(chunks: list[RZXChunk]) -> Bytes:
     writer = BinaryWriter()
     signature = b'RZX!'
     major_revision = b'\x00'
@@ -243,13 +258,13 @@ def make_rzx(chunks: list[DataRecord]) -> Bytes:
                                    chunk.creator_major_version),
                                creator_minor_version=(
                                    chunk.creator_minor_version))
-        elif isinstance(chunk, Z80Snapshot):
+        elif isinstance(chunk, RZXSnapshot):
             chunk_id = RZX_BLOCK_ID_SNAPSHOT
-            image = chunk.encode()
+            image = chunk.snapshot.encode()
             chunk_writer.write(['<L:flags', '4s:filename_extension',
                                 '<L:uncompressed_length'],
                                flags=0,  # Non-descriptor. Not compressed.
-                               filename_extension=b'Z80\x00',
+                               filename_extension=chunk.format.data,
                                uncompressed_length=len(image))
             chunk_writer.write_bytes(image)
         elif isinstance(chunk, RZXInputRecording):
@@ -277,9 +292,9 @@ def make_rzx(chunks: list[DataRecord]) -> Bytes:
 
 
 class RZXFile(DataRecord, format_name='RZX'):
-    chunks: list[DataRecord]
+    chunks: list[RZXChunk]
 
-    def __init__(self, *, chunks: list[DataRecord]) -> None:
+    def __init__(self, *, chunks: list[RZXChunk]) -> None:
         super().__init__(chunks=chunks)
 
     @classmethod

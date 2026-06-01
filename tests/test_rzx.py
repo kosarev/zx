@@ -18,13 +18,15 @@ def test_basic() -> None:
     mach = zx.Spectrum(headless=True)
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
     snapshot = zx._z80snapshot.Z80Snapshot.from_snapshot(mach.to_snapshot())
+    snapshot_chunk = zx._rzx.RZXSnapshot(format=b'Z80\x00',
+                                         snapshot=snapshot)
 
     rzx_image = zx._rzx.make_rzx([
         zx._rzx.RZXCreatorInfo(
             creator=zx._data.ByteData(b'<creator>'),
             creator_major_version=1,
             creator_minor_version=0),
-        snapshot,
+        snapshot_chunk,
         zx._rzx.RZXInputRecording(
             first_tick=0,
             frames=[zx._rzx.RZXFrame(num_fetches=1, samples=b''),
