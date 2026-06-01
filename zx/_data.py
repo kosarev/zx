@@ -64,20 +64,32 @@ class DataRecord(object):
 
         return {id: convert(v) for id, v in self if v is not None}
 
-    # Construct a DataRecord from a full .zx JSON document dict.
-    # Reads 'type' to find the registered class, extracts 'metadata',
-    # and passes remaining fields to __init__(). Never override this —
-    # __init__() and make_from() handle all type conversion.
+    # Construct a DataRecord from a .zx JSON dict. Looks up the class
+    # by 'type' via recursive __subclasses__() search, then recursively
+    # converts all nested dicts and lists before calling cls(**fields).
     @classmethod
     def from_json(cls, d: dict[str, typing.Any]) -> 'DataRecord':
+        def find(base: type) -> type | None:
+            for sub in base.__subclasses__():
+                if sub.__name__ == type_name:
+                    return sub
+                found = find(sub)
+                if found:
+                    return found
+            return None
+
+        def from_value(v: typing.Any) -> typing.Any:
+            if isinstance(v, dict) and 'type' in v:
+                return DataRecord.from_json(v)
+            if isinstance(v, list):
+                return [from_value(e) for e in v]
+            return v
+
         type_name = d.get('type', '')
-        record_cls = cls._JSON_TYPES.get(type_name)
-        if record_cls is None:
-            raise Error(f"Unknown type {type_name!r}.")
-        metadata = d.get('metadata', {})
-        fields = {k: v for k, v in d.items()
-                  if k not in ('type', 'metadata')}
         # TODO: Pass metadata to the ctor so it can adapt to producer context.
+        record_cls: type[DataRecord] = find(DataRecord) or DataRecord
+        fields = {k: from_value(v) for k, v in d.items()
+                  if k not in ('type', 'metadata')}
         return record_cls(**fields)
 
     # Encode to a format-specific binary image.
@@ -162,23 +174,15 @@ class ByteData(DataRecord, format_name=None, json_type=True):
 
     data: bytes
 
-    def __init__(self, data: Bytes):
+    def __init__(self, data: 'Bytes | str | list[str]'):
+        if isinstance(data, (str, list)):
+            hex_str = ''.join(data) if isinstance(data, list) else data
+            data = bytes.fromhex(hex_str)
         super().__init__(data=bytes(data))
 
     @classmethod
     def make_from(cls, data: Source) -> 'ByteData':
-        if isinstance(data, cls):
-            return data
-        if isinstance(data, (str, list)):
-            hex_str = ''.join(data) if isinstance(data, list) else data
-            return cls(bytes.fromhex(hex_str))
-        return cls(data)
-
-    @classmethod
-    def from_json(cls, d: dict[str, typing.Any]) -> 'ByteData':
-        raw = d.get('data', '')
-        hex_str = ''.join(raw) if isinstance(raw, list) else raw
-        return cls(bytes.fromhex(hex_str))
+        return data if isinstance(data, cls) else cls(data)
 
     def to_json(self) -> dict[str, str | list[str]]:
         chunks = [self.data[i:i + self.__CHUNK_SIZE].hex()
