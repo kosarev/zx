@@ -104,7 +104,7 @@ class TZXArchiveInfo(TZXBlock, format_name=None):
     pass
 
 
-class TZXFile(SoundFile, format_name='TZX', json_type=True):
+class TZXFile(SoundFile, format_name='TZX'):
     _TICKS_FREQ = 3500000
 
     blocks: list[TZXBlock]

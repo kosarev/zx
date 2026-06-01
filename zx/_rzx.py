@@ -276,7 +276,7 @@ def make_rzx(chunks: list[DataRecord]) -> Bytes:
     return writer.get_image()
 
 
-class RZXFile(DataRecord, format_name='RZX', json_type=True):
+class RZXFile(DataRecord, format_name='RZX'):
     chunks: list[DataRecord]
 
     def __init__(self, *, chunks: list[DataRecord]) -> None:

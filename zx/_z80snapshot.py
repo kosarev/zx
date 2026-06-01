@@ -182,7 +182,7 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
             self.v3_header.write(writer)
 
 
-class Z80Snapshot(MachineSnapshot, format_name='Z80', json_type=True):
+class Z80Snapshot(MachineSnapshot, format_name='Z80'):
     # Some snapshots contain zero pages as well.
     __MEMORY_PAGE_ADDRS = {0: 0x0000, 4: 0x8000, 5: 0xc000, 8: 0x4000}
 

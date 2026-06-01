@@ -66,14 +66,9 @@ def _write_json(obj: typing.Any, depth: int = 0) -> typing.Iterator[str]:
 class DataRecord(object):
     FORMAT_NAME: None | str
 
-    _JSON_TYPES: typing.ClassVar[dict[str, type['DataRecord']]] = {}
-
-    def __init_subclass__(cls, *, format_name: None | str,
-                          json_type: bool = False):
+    def __init_subclass__(cls, *, format_name: None | str):
         assert format_name is None or format_name.isupper()
         cls.FORMAT_NAME = format_name
-        if json_type:
-            DataRecord._JSON_TYPES[cls.__name__] = cls
 
     def __init__(self, **fields: typing.Any):
         self.__fields = tuple(fields)
@@ -229,7 +224,7 @@ class SoundFile(DataRecord, format_name=None):
         raise NotImplementedError
 
 
-class ByteData(DataRecord, format_name=None, json_type=True):
+class ByteData(DataRecord, format_name=None):
     data: bytes
 
     def __init__(self, data: Bytes):
@@ -294,7 +289,7 @@ class MachineSnapshot(DataRecord, format_name=None):
         raise NotImplementedError
 
 
-class UnifiedSnapshot(MachineSnapshot, format_name=None, json_type=True):
+class UnifiedSnapshot(MachineSnapshot, format_name=None):
     af: int | None
     bc: int | None
     de: int | None
