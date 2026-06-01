@@ -64,14 +64,10 @@ class DataRecord(object):
 
     _JSON_TYPES: typing.ClassVar[dict[str, type['DataRecord']]] = {}
 
-    INLINE_JSON: typing.ClassVar[bool] = False
-
     def __init_subclass__(cls, *, format_name: None | str,
-                          json_type: bool = False,
-                          inline_json: bool = False):
+                          json_type: bool = False):
         assert format_name is None or format_name.isupper()
         cls.FORMAT_NAME = format_name
-        cls.INLINE_JSON = inline_json
         if json_type:
             DataRecord._JSON_TYPES[cls.__name__] = cls
 
@@ -102,9 +98,8 @@ class DataRecord(object):
             if isinstance(v, (list, tuple)):
                 return [convert(e) for e in v]
             if isinstance(v, DataRecord):
-                d = _InlineJSONDict() if type(v).INLINE_JSON else {}
+                d = v.to_json()
                 d['type'] = type(v).__name__
-                d.update(v.to_json())
                 return d
             raise TypeError(f'cannot serialize a {type(v)}')
 

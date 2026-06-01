@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import typing
 from ._binary import Bytes, BinaryParser, BinaryWriter
+from ._data import _InlineJSONDict
 from ._data import ByteData
 from ._data import DataRecord
 from ._data import HexData
@@ -38,18 +39,16 @@ class RZXFrame(DataRecord, format_name=None):
                    samples=frame.samples.data)
 
 
-class RZXHexFrame(RZXFrame, format_name=None, inline_json=True):
+class RZXHexFrame(RZXFrame, format_name=None):
     def __init__(self, *, num_of_fetches: int,
                  samples: Bytes | str) -> None:
         if isinstance(samples, str):
             samples = bytes.fromhex(samples)
         super().__init__(num_of_fetches=num_of_fetches, samples=samples)
 
-    def to_json(self) -> dict[str, typing.Any]:
-        return {
-            'num_of_fetches': self.num_of_fetches,
-            'samples': self.samples.data.hex(),
-        }
+    def to_json(self) -> _InlineJSONDict:
+        return _InlineJSONDict(num_of_fetches=self.num_of_fetches,
+                               samples=self.samples.data.hex())
 
 
 class RZXCreatorInfo(DataRecord, format_name=None):
