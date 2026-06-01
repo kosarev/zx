@@ -36,10 +36,10 @@ class RZXCreatorInfo(DataRecord, format_name=None):
     creator_major_version: int
     creator_minor_version: int
 
-    def __init__(self, *, creator: ByteData,
+    def __init__(self, *, creator: Bytes | ByteData,
                  creator_major_version: int,
                  creator_minor_version: int) -> None:
-        super().__init__(creator=Latin1Data.from_bytes(creator.data),
+        super().__init__(creator=Latin1Data.wrap(creator),
                          creator_major_version=creator_major_version,
                          creator_minor_version=creator_minor_version)
 
@@ -58,9 +58,7 @@ def parse_creator_info_block(image: Bytes) -> RZXCreatorInfo:
     fields = parser.parse([('creator', '20s'),
                            ('creator_major_version', '<H'),
                            ('creator_minor_version', '<H')])
-    creator = fields.pop('creator')
-    assert isinstance(creator, bytes)
-    return RZXCreatorInfo(creator=ByteData(creator), **fields)
+    return RZXCreatorInfo(**fields)
 
 
 def parse_snapshot_block(image: Bytes) -> Z80Snapshot:

@@ -172,6 +172,14 @@ class ByteData(DataRecord, format_name=None, json_type=True):
     def __init__(self, data: Bytes):
         super().__init__(data=bytes(data))
 
+    @classmethod
+    def from_bytes(cls, data: Bytes) -> 'ByteData':
+        return cls(data)
+
+    @classmethod
+    def wrap(cls, data: 'Bytes | ByteData') -> 'ByteData':
+        return data if isinstance(data, ByteData) else cls.from_bytes(data)
+
 
 class HexData(ByteData, format_name=None):
     __CHUNK_SIZE = 32
@@ -181,14 +189,6 @@ class HexData(ByteData, format_name=None):
             hex_str = ''.join(data) if isinstance(data, list) else data
             data = bytes.fromhex(hex_str)
         super().__init__(bytes(data))
-
-    @classmethod
-    def from_bytes(cls, data: Bytes) -> 'HexData':
-        return cls(data)
-
-    @classmethod
-    def wrap(cls, data: 'Bytes | ByteData') -> ByteData:
-        return data if isinstance(data, ByteData) else cls.from_bytes(data)
 
     def to_json(self) -> dict[str, str | list[str]]:
         chunks = [self.data[i:i + self.__CHUNK_SIZE].hex()
