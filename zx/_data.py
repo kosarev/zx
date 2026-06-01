@@ -341,5 +341,12 @@ class UnifiedSnapshot(MachineSnapshot, format_name=None, json_type=True):
             border_colour=border_colour,
             memory_blocks=blocks)
 
+    @classmethod
+    def from_snapshot(cls, snapshot: MachineSnapshot) -> 'UnifiedSnapshot':
+        return snapshot.to_unified_snapshot()
+
+    def encode(self) -> bytes:
+        return (self.dumps() + '\n').encode('utf-8')
+
     def to_unified_snapshot(self) -> UnifiedSnapshot:
         return self

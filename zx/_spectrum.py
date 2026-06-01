@@ -424,6 +424,7 @@ class SpectrumState(Z80State):
 
     def to_snapshot(self) -> UnifiedSnapshot:
         # TODO: Store all fields.
+        assert self.model is Spectrum48  # TODO: Support 128K.
         return UnifiedSnapshot(
             af=self.af, bc=self.bc, de=self.de, hl=self.hl,
             ix=self.ix, iy=self.iy,
@@ -434,7 +435,7 @@ class SpectrumState(Z80State):
             iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
             iregp_kind=self.iregp_kind,
             memory_blocks=[MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
-                                       data=self.__memory[0x4000:])],
+                                       data=self.__memory[0x4000:0x10000])],
             ticks_since_int=self.ticks_since_int,
             border_colour=self.border_colour)
 

@@ -34,7 +34,7 @@ from ._rzx import make_rzx
 from ._rzx import RZXFile
 from ._spectrum import Profile
 from ._spectrum import Spectrum
-from ._z80snapshot import Z80Snapshot
+from ._data import UnifiedSnapshot
 
 
 def get_config_dir() -> str:
@@ -71,7 +71,7 @@ def run(args: list[str]) -> None:
         filename = args.pop(0)
         handle_extra_arguments(args)
 
-    session_snapshot = os.path.join(get_config_dir(), 'session.z80')
+    session_snapshot = os.path.join(get_config_dir(), 'session.zx')
 
     with Spectrum(model=model) as app:
         if filename:
@@ -82,7 +82,7 @@ def run(args: list[str]) -> None:
             app.run()
         except EmulationExit:
             pass
-        app._save_snapshot_file(Z80Snapshot, session_snapshot)
+        app._save_snapshot_file(UnifiedSnapshot, session_snapshot)
 
 
 def profile(args: list[str]) -> None:

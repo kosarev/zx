@@ -10,3 +10,4 @@ test/__pycache__
 tests/__pycache__
 /*.z80
 /*.rzx
+/*.zx
