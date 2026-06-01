@@ -851,7 +851,7 @@ class _ShowError(DeviceEvent):
         self.message = message
 
 
-class _DismissError(DeviceEvent):
+class _DismissDialog(DeviceEvent):
     pass
 
 
@@ -901,10 +901,10 @@ class _Panel(abc.ABC):
         if isinstance(event, _ShowError):
             self._dialog = _MessageDialog(
                 self._theme, 'Error', (80, 20, 20, 255), event.message,
-                [('Close', 'ESC', _DismissError)])
+                [('Close', 'ESC', _DismissDialog)])
             return
 
-        if isinstance(event, _DismissError):
+        if isinstance(event, _DismissDialog):
             self._dialog = None
             return
 
@@ -1019,7 +1019,7 @@ class _MainMenuPanel(_Panel):
                 self._theme, 'Reset machine?', (80, 60, 20, 255),
                 'Reset the emulated machine?',
                 [('Yes', None, _UIEmulatorReset),
-                 ('No', 'ESC', _DismissError)])
+                 ('No', 'ESC', _DismissDialog)])
         elif isinstance(event, _UIEmulatorReset):
             dispatcher.notify(_TogglePanel())
         elif isinstance(event, (PauseStateUpdated, TapeStateUpdated)):
@@ -1212,7 +1212,7 @@ class _FileBrowserPanel(_Panel):
                 self._theme, 'Overwrite?', (80, 60, 20, 255),
                 f'{filename!r} already exists. Overwrite?',
                 [('Yes', None, _ConfirmOverwrite),
-                 ('No', 'ESC', _DismissError)])
+                 ('No', 'ESC', _DismissDialog)])
             return
         dispatcher.notify(_ConfirmOverwrite())
 
@@ -1423,9 +1423,9 @@ class _MessageDialog(_Panel):
 
     def __activate(self, button: _Button,
                    dispatcher: Dispatcher) -> None:
-        dispatcher.notify(_DismissError())
+        dispatcher.notify(_DismissDialog())
         event_type = self.__buttons[button]
-        if event_type is not _DismissError:
+        if event_type is not _DismissDialog:
             dispatcher.notify(event_type())
 
     def on_event(self, event: DeviceEvent,
@@ -1456,7 +1456,7 @@ class _MessageDialog(_Panel):
                 self._selected_control = buttons[(idx + delta) % len(buttons)]
                 self.invalidate()
             elif event.id in ('ESCAPE', 'BACKSPACE'):
-                dispatcher.notify(_DismissError())
+                dispatcher.notify(_DismissDialog())
 
     def draw(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         if self.__texture is None:
