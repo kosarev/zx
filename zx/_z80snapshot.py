@@ -36,10 +36,8 @@ class Z80MemoryBlock(DataRecord, format_name=None):
 
     def __init__(self, *, page_no: int, compressed_size: int,
                  data: Bytes | ByteData):
-        if not isinstance(data, ByteData):
-            data = HexData.from_bytes(data)
         super().__init__(page_no=page_no, compressed_size=compressed_size,
-                         data=data)
+                         data=HexData.wrap(data))
 
 
 class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None):
@@ -230,8 +228,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80', json_type=True):
             memory_blocks: typing.Sequence[Z80MemoryBlock] | None = None):
         if memory_image is not None:
             assert memory_blocks is None
-            if not isinstance(memory_image, ByteData):
-                memory_image = HexData.from_bytes(memory_image)
+            memory_image = HexData.wrap(memory_image)
         if memory_blocks is not None:
             assert memory_image is None
         super().__init__(

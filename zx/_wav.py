@@ -31,11 +31,9 @@ class WAVFile(SoundFile, format_name='WAV', json_type=True):
 
     def __init__(self, *, sample_size: int, num_channels: int, frame_rate: int,
                  num_frames: int, frames: Bytes | ByteData) -> None:
-        if not isinstance(frames, ByteData):
-            frames = HexData.from_bytes(frames)
         SoundFile.__init__(self, sample_size=sample_size,
                            num_channels=num_channels, frame_rate=frame_rate,
-                           num_frames=num_frames, frames=frames)
+                           num_frames=num_frames, frames=HexData.wrap(frames))
 
     def _generate_pulses(self) -> (
             typing.Iterable[tuple[bool, int, tuple[str, ...]]]):

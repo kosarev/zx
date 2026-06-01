@@ -32,10 +32,8 @@ class TZXStandardSpeedDataBlock(TZXBlock, format_name=None):
 
     def __init__(self, *, pause_after_block_in_ms: int,
                  data: Bytes | ByteData) -> None:
-        if not isinstance(data, ByteData):
-            data = HexData.from_bytes(data)
         super().__init__(pause_after_block_in_ms=pause_after_block_in_ms,
-                         data=data)
+                         data=HexData.wrap(data))
 
 
 class TZXTurboSpeedDataBlock(TZXBlock, format_name=None):
@@ -63,8 +61,7 @@ class TZXTurboSpeedDataBlock(TZXBlock, format_name=None):
             pilot_tone_len=pilot_tone_len,
             data_size_in_bits=data_size_in_bits,
             pause_after_block_in_ms=pause_after_block_in_ms,
-            data=(data if isinstance(data, ByteData)
-                  else HexData.from_bytes(data)))
+            data=HexData.wrap(data))
 
 
 class TZXPureDataBlock(TZXBlock, format_name=None):
@@ -82,17 +79,14 @@ class TZXPureDataBlock(TZXBlock, format_name=None):
             one_bit_pulse_len=one_bit_pulse_len,
             data_size_in_bits=data_size_in_bits,
             pause_after_block_in_ms=pause_after_block_in_ms,
-            data=(data if isinstance(data, ByteData)
-                  else HexData.from_bytes(data)))
+            data=HexData.wrap(data))
 
 
 class TZXGroupStart(TZXBlock, format_name=None):
     name: ByteData
 
     def __init__(self, *, name: Bytes | ByteData) -> None:
-        if not isinstance(name, ByteData):
-            name = HexData.from_bytes(name)
-        super().__init__(name=name)
+        super().__init__(name=HexData.wrap(name))
 
 
 class TZXGroupEnd(TZXBlock, format_name=None):
@@ -103,9 +97,7 @@ class TZXTextDescription(TZXBlock, format_name=None):
     text: ByteData
 
     def __init__(self, *, text: Bytes | ByteData) -> None:
-        if not isinstance(text, ByteData):
-            text = HexData.from_bytes(text)
-        super().__init__(text=text)
+        super().__init__(text=HexData.wrap(text))
 
 
 class TZXArchiveInfo(TZXBlock, format_name=None):

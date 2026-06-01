@@ -24,9 +24,7 @@ class TAPFile(SoundFile, format_name='TAP', json_type=True):
 
     def __init__(self, *, blocks: typing.Sequence[Bytes | ByteData]) -> None:
         SoundFile.__init__(self,
-                           blocks=[b if isinstance(b, ByteData)
-                                   else HexData.from_bytes(b)
-                                   for b in blocks])
+                           blocks=[HexData.wrap(b) for b in blocks])
 
     # TODO: Produce a typing.Sequence instead of using generators,
     #       once we can represent pulses in a more compact manner.

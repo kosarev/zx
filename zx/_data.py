@@ -186,6 +186,10 @@ class HexData(ByteData, format_name=None):
     def from_bytes(cls, data: Bytes) -> 'HexData':
         return cls(data)
 
+    @classmethod
+    def wrap(cls, data: 'Bytes | ByteData') -> ByteData:
+        return data if isinstance(data, ByteData) else cls.from_bytes(data)
+
     def to_json(self) -> dict[str, str | list[str]]:
         chunks = [self.data[i:i + self.__CHUNK_SIZE].hex()
                   for i in range(0, len(self.data), self.__CHUNK_SIZE)]
@@ -214,10 +218,8 @@ class MemoryBlock(DataRecord, format_name=None):
 
     def __init__(self, *, addr: int, rom_page: int, ram_page: int,
                  data: 'Bytes | ByteData'):
-        if not isinstance(data, ByteData):
-            data = HexData.from_bytes(data)
         super().__init__(addr=addr, rom_page=rom_page,
-                         ram_page=ram_page, data=data)
+                         ram_page=ram_page, data=HexData.wrap(data))
 
 
 class MachineSnapshot(DataRecord, format_name=None):

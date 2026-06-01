@@ -27,9 +27,8 @@ class RZXFrame(DataRecord, format_name=None):
 
     def __init__(self, *, num_of_fetches: int,
                  samples: Bytes | ByteData) -> None:
-        if not isinstance(samples, ByteData):
-            samples = HexData.from_bytes(samples)
-        super().__init__(num_of_fetches=num_of_fetches, samples=samples)
+        super().__init__(num_of_fetches=num_of_fetches,
+                         samples=HexData.wrap(samples))
 
 
 class RZXCreatorInfo(DataRecord, format_name=None):
