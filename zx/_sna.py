@@ -118,6 +118,9 @@ class SNASnapshot(MachineSnapshot, format_name='SNA'):
     def decode(cls, filename: str, image: Bytes) -> 'SNASnapshot':
         parser = BinaryParser(image)
         fields = parser.parse(cls._HEADER)
+        if parser.get_remaining_size() == 131076:
+            raise Error(f"'{filename}': 128K .sna files are not supported.",
+                        id='sna_128k_not_supported')
         memory = parser.read_bytes(0xC000)
         if not parser.is_eof():
             raise Error(f"'{filename}': .sna file is too long.",
