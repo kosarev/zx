@@ -57,6 +57,9 @@ class SNASnapshot(MachineSnapshot, format_name='SNA'):
 
         # PC was pushed onto the stack when the snapshot was taken; retrieve
         # and pop it. SP points to the pushed PC in the 48K RAM area.
+        if sp < 0x4000 or sp > 0xFFFE:
+            raise Error(f'SP={sp:#06x} out of range to recover PC from stack.',
+                        id='sna_invalid_sp')
         pc_offset = sp - 0x4000
         pc = (self.memory.data[pc_offset] |
               (self.memory.data[pc_offset + 1] << 8))
