@@ -12,6 +12,7 @@
 from ._binary import Bytes, BinaryParser, BinaryWriter
 from ._data import ByteData, HexData, MachineSnapshot, MemoryBlock
 from ._data import UnifiedSnapshot
+from ._error import Error
 
 
 class SNASnapshot(MachineSnapshot, format_name='SNA'):
@@ -117,7 +118,10 @@ class SNASnapshot(MachineSnapshot, format_name='SNA'):
     def decode(cls, filename: str, image: Bytes) -> 'SNASnapshot':
         parser = BinaryParser(image)
         fields = parser.parse(cls._HEADER)
-        memory = parser.read_remaining_bytes()
+        memory = parser.read_bytes(0xC000)
+        if not parser.is_eof():
+            raise Error(f"'{filename}': .sna file is too long.",
+                        id='sna_file_too_long')
         return SNASnapshot(**fields, memory=memory)
 
     def encode(self) -> bytes:
