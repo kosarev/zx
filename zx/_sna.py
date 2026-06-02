@@ -1,0 +1,127 @@
+# -*- coding: utf-8 -*-
+
+#   ZX Spectrum Emulator.
+#   https://github.com/kosarev/zx
+#
+#   Copyright (C) 2017-2026 Ivan Kosarev.
+#   mail@ivankosarev.com
+#
+#   Published under the MIT license.
+
+
+from ._binary import Bytes, BinaryParser, BinaryWriter
+from ._data import ByteData, HexData, MachineSnapshot, MemoryBlock
+from ._data import UnifiedSnapshot
+
+
+class SNASnapshot(MachineSnapshot, format_name='SNA'):
+    _HEADER = [
+        'B:i', '<H:alt_hl', '<H:alt_de', '<H:alt_bc', '<H:alt_af',
+        '<H:hl', '<H:de', '<H:bc', '<H:iy', '<H:ix',
+        'B:iff', 'B:r', '<H:af', '<H:sp',
+        'B:int_mode', 'B:border_colour']
+
+    i: int
+    alt_hl: int
+    alt_de: int
+    alt_bc: int
+    alt_af: int
+    hl: int
+    de: int
+    bc: int
+    iy: int
+    ix: int
+    iff: int
+    r: int
+    af: int
+    sp: int
+    int_mode: int
+    border_colour: int
+    memory: ByteData
+
+    def __init__(self, *, i: int = 0, alt_hl: int = 0, alt_de: int = 0,
+                 alt_bc: int = 0, alt_af: int = 0, hl: int = 0, de: int = 0,
+                 bc: int = 0, iy: int = 0, ix: int = 0, iff: int = 0,
+                 r: int = 0, af: int = 0, sp: int = 0, int_mode: int = 0,
+                 border_colour: int = 0,
+                 memory: Bytes | ByteData = b'\x00' * 0xC000) -> None:
+        super().__init__(i=i, alt_hl=alt_hl, alt_de=alt_de, alt_bc=alt_bc,
+                         alt_af=alt_af, hl=hl, de=de, bc=bc, iy=iy, ix=ix,
+                         iff=iff, r=r, af=af, sp=sp, int_mode=int_mode,
+                         border_colour=border_colour,
+                         memory=HexData.wrap(memory))
+
+    def to_unified_snapshot(self) -> UnifiedSnapshot:
+        sp = self.sp
+
+        # PC was pushed onto the stack when the snapshot was taken; retrieve
+        # and pop it. SP points to the pushed PC in the 48K RAM area.
+        pc_offset = sp - 0x4000
+        pc = (self.memory.data[pc_offset] |
+              (self.memory.data[pc_offset + 1] << 8))
+        sp = (sp + 2) & 0xFFFF
+
+        iff = int(bool(self.iff & 0x04))
+
+        return UnifiedSnapshot(
+            af=self.af, bc=self.bc, de=self.de, hl=self.hl,
+            ix=self.ix, iy=self.iy,
+            alt_af=self.alt_af, alt_bc=self.alt_bc,
+            alt_de=self.alt_de, alt_hl=self.alt_hl,
+            pc=pc, sp=sp,
+            ir=(self.i << 8) | (self.r & 0x7f),
+            iff1=iff, iff2=iff,
+            int_mode=self.int_mode,
+            border_colour=self.border_colour,
+            memory_blocks=[MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
+                                       data=self.memory.data)])
+
+    @classmethod
+    def from_snapshot(cls, snapshot: MachineSnapshot) -> 'SNASnapshot':
+        unified = snapshot.to_unified_snapshot()
+
+        memory = bytearray(0x10000)
+        for block in (unified.memory_blocks or []):
+            memory[block.addr:block.end_addr] = block.data.data
+
+        sp = unified.sp or 0
+        pc = unified.pc or 0
+
+        # Push PC onto the stack to match the SNA format convention.
+        sp = (sp - 2) & 0xFFFF
+        memory[sp] = pc & 0xFF
+        memory[sp + 1] = (pc >> 8) & 0xFF
+
+        ir = unified.ir or 0
+
+        return SNASnapshot(
+            i=(ir >> 8) & 0xFF,
+            alt_hl=unified.alt_hl or 0,
+            alt_de=unified.alt_de or 0,
+            alt_bc=unified.alt_bc or 0,
+            alt_af=unified.alt_af or 0,
+            hl=unified.hl or 0,
+            de=unified.de or 0,
+            bc=unified.bc or 0,
+            iy=unified.iy or 0,
+            ix=unified.ix or 0,
+            iff=(unified.iff1 or 0) << 2,
+            r=ir & 0xFF,
+            af=unified.af or 0,
+            sp=sp,
+            int_mode=unified.int_mode or 0,
+            border_colour=unified.border_colour or 0,
+            memory=memory[0x4000:0x10000])
+
+    @classmethod
+    def decode(cls, filename: str, image: Bytes) -> 'SNASnapshot':
+        parser = BinaryParser(image)
+        fields = parser.parse(cls._HEADER)
+        memory = parser.read_remaining_bytes()
+        return SNASnapshot(**fields, memory=memory)
+
+    def encode(self) -> bytes:
+        writer = BinaryWriter()
+        writer.write(self._HEADER, **dict(self))
+        writer.write_bytes(self.memory.data)
+        return writer.get_image()

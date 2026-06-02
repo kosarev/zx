@@ -15,6 +15,7 @@ from ._data import ArchiveFile, DataRecord
 from ._error import Error
 from ._rzx import RZXFile
 from ._scr import _SCRSnapshot
+from ._sna import SNASnapshot
 from ._tap import TAPFile
 from ._tzx import TZXFile
 from ._wav import WAVFile
@@ -53,6 +54,7 @@ def detect_file_format(image: None | Bytes,
         ('.tap', None, TAPFile),
         ('.tzx', b'ZXTape!', TZXFile),
         ('.wav', b'RIFF', WAVFile),
+        ('.sna', None, SNASnapshot),
         ('.z80', None, Z80Snapshot),
         ('.zip', b'PK\x03\x04', ZIPFile),
     ]

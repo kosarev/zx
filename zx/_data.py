@@ -273,11 +273,18 @@ class Latin1Data(ByteData, format_name=None):
         return {'data': self.data.decode('latin-1')}
 
 
+# addr is the Z80 address where the block lives. rom_page and ram_page
+# select which physical page is mapped there: rom_page applies to
+# 0x0000-0x3FFF, ram_page to 0xC000-0xFFFF; 0x4000-0xBFFF maps directly.
 class MemoryBlock(DataRecord, format_name=None):
     addr: int
     rom_page: int
     ram_page: int
     data: ByteData
+
+    @property
+    def end_addr(self) -> int:
+        return self.addr + len(self.data.data)
 
     def __init__(self, *, addr: int, rom_page: int, ram_page: int,
                  data: 'Bytes | ByteData'):

@@ -17,7 +17,7 @@ ZX Spectrum emulation framework in Python and C++
   analysis, etc.
 * Meant to be easy to customize and re-use via Python interfaces.
 * Fast and accurate emulation.
-* Supported formats: snapshots (`.z80`), tapes (`.tap`, `.tzx`, `.wav`),
+* Supported formats: snapshots (`.z80`, `.sna`), tapes (`.tap`, `.tzx`, `.wav`),
   playbacks (`.rzx`), screenshots (`.scr`),
   [ZX Basic](https://github.com/boriel/zxbasic) sources (`.zxb`),
   archives (`.zip`).
