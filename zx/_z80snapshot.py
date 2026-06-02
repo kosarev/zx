@@ -550,7 +550,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         memory_image: ByteData | None = None
         memory_blocks: list[Z80MemoryBlock] | None = None
         if v2_header is None:
-            memory_image = ByteData(parser.read_remaining_bytes())
+            memory_image = HexData(parser.read_remaining_bytes())
         else:
             memory_blocks = []
             while parser:

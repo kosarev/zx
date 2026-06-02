@@ -230,6 +230,11 @@ class ByteData(DataRecord, format_name=None):
     def __init__(self, data: Bytes):
         super().__init__(data=bytes(data))
 
+    def to_json(self) -> typing.Any:
+        # Serialisation is handled by encoding-specific subclasses only.
+        raise NotImplementedError(
+            f'{type(self).__name__} has no JSON serialisation')
+
     @classmethod
     def from_bytes(cls, data: Bytes) -> 'ByteData':
         return cls(data)
