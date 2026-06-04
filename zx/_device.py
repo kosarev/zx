@@ -71,18 +71,15 @@ class StopPlayback(DeviceEvent):
 
 
 class EndOfFrame(DeviceEvent):
-    def __init__(self, fast_forward: bool = False) -> None:
-        self.fast_forward = fast_forward
+    pass
 
 
 class OutputFrame(DeviceEvent):
     def __init__(self, *,
                  pixels: Bytes,
-                 port_writes: numpy.typing.NDArray[numpy.uint64],
-                 fast_forward: bool = False) -> None:
+                 port_writes: numpy.typing.NDArray[numpy.uint64]) -> None:
         self.pixels = pixels
         self.port_writes = port_writes
-        self.fast_forward = fast_forward
 
 
 class GetEmulationPauseState(DeviceEvent):
@@ -143,6 +140,11 @@ class ReadPort(DeviceEvent):
 
 class RequestLoadFile(DeviceEvent):
     pass
+
+
+class SetFastForward(DeviceEvent):
+    def __init__(self, active: bool) -> None:
+        self.active = active
 
 
 class RequestSaveSnapshot(DeviceEvent):

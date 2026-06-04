@@ -48,6 +48,7 @@ from ._device import PauseUnpauseTape
 from ._device import QuantumRun
 from ._device import ReadPort
 from ._device import SaveSnapshot
+from ._device import SetFastForward
 from ._device import ToggleEmulationPause
 from ._device import ToggleTapePause
 from ._error import Error
@@ -495,7 +496,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.frame_count = 0
         # TODO: Double-underscore or make public.
         self._emulation_time = Time()
-        self.__headless = headless
 
         self.__events_to_signal = RunEvents.NO_EVENTS
 
@@ -635,8 +635,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         with open('__crash.rzx', 'wb') as f:
             f.write(make_rzx(crash_recording))
 
-    def __on_end_of_frame(self, devices: Dispatcher,
-                          fast_forward: bool) -> None:
+    def __on_end_of_frame(self, devices: Dispatcher) -> None:
         # TODO: Can we translate the screen chunks into pixels
         # on the Python side using numpy?
         self.render_screen()
@@ -647,8 +646,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         devices.notify(OutputFrame(
             pixels=self.get_frame_pixels(),
             port_writes=numpy.frombuffer(self.get_port_writes(),
-                                         dtype=numpy.uint64),
-            fast_forward=fast_forward))
+                                         dtype=numpy.uint64)))
 
         self.frame_count += 1
         self._emulation_time.advance(1 / 50)
@@ -665,9 +663,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.suppress_interrupts = False
         self.allow_int_after_ei = False
 
-    def __run_quantum(self, fast_forward: bool = False) -> None:
-        fast_forward = fast_forward or self.__headless
-
+    def __run_quantum(self) -> None:
         if True:  # TODO
             self.devices.notify(QuantumRun())
 
@@ -684,9 +680,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             '''
 
             if self.paused:
-                # Headless runs should never be paused.
-                assert not self.__headless
-
                 # Give the CPU some spare time if emulation is paused.
                 time.sleep(1 / 50)
                 return
@@ -735,7 +728,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 end_of_frame = RunEvents.END_OF_FRAME in events
 
             if end_of_frame:
-                self.devices.notify(EndOfFrame(fast_forward=fast_forward))
+                self.devices.notify(EndOfFrame())
 
     def run(self, duration: None | float = None,
             fast_forward: bool = False) -> None:
@@ -743,9 +736,15 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         if duration is not None:
             end_time = self._emulation_time.get() + duration
 
-        while (end_time is None or
-               self._emulation_time.get() < end_time):
-            self.__run_quantum(fast_forward=fast_forward)
+        if fast_forward:
+            self.devices.notify(SetFastForward(True))
+        try:
+            while (end_time is None or
+                   self._emulation_time.get() < end_time):
+                self.__run_quantum()
+        finally:
+            if fast_forward:
+                self.devices.notify(SetFastForward(False))
 
     def __load_input_recording(self, file: RZXFile) -> None:
         playback = file.to_unified_playback()
@@ -820,8 +819,12 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         # Wait till the end of the tape.
         self.__events_to_signal |= RunEvents.END_OF_TAPE
-        while not self.__is_end_of_tape():
-            self.__run_quantum(fast_forward=True)
+        self.devices.notify(SetFastForward(True))
+        try:
+            while not self.__is_end_of_tape():
+                self.__run_quantum()
+        finally:
+            self.devices.notify(SetFastForward(False))
 
     def __enter__(self) -> 'Spectrum':
         return self
@@ -865,7 +868,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self.paused = False
                 self.devices.notify(StopPlayback())
         elif isinstance(event, EndOfFrame):
-            self.__on_end_of_frame(devices, event.fast_forward)
+            self.__on_end_of_frame(devices)
         elif isinstance(event, InstallSnapshot):
             self.install_snapshot(event.snapshot)
         elif isinstance(event, SetFetchesLimit):

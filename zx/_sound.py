@@ -21,6 +21,7 @@ from ._device import Dispatcher
 from ._device import EmulatorReset
 from ._device import NewSoundFrame
 from ._device import OutputFrame
+from ._device import SetFastForward
 
 
 class PulseStream(object):
@@ -75,6 +76,7 @@ class SoundDevice(Device):
 
     def __init__(self) -> None:
         self.__frame_events: list[NewSoundFrame] = []
+        self.__fast_forward = False
 
         # TODO: Don't use SDL until we know we are actually
         # outputting sound via it. (The user may want to do something
@@ -148,6 +150,10 @@ class SoundDevice(Device):
         return mixed
 
     def __output_frame(self) -> None:
+        if self.__fast_forward:
+            self.__frame_events.clear()
+            return
+
         samples = [self.__generate_samples(e) for e in self.__frame_events]
         self.__frame_events.clear()
 
@@ -170,9 +176,12 @@ class SoundDevice(Device):
             self.__frame_events.clear()
         elif isinstance(event, NewSoundFrame):
             self.__new_sound_frame(event)
+        elif isinstance(event, SetFastForward):
+            if event.active:
+                assert not self.__fast_forward
+            self.__fast_forward = event.active
         elif isinstance(event, OutputFrame):
-            if not event.fast_forward:
-                self.__output_frame()
+            self.__output_frame()
         elif isinstance(event, Destroy):
             self.__destroy()
 
