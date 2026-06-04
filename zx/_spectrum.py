@@ -714,29 +714,29 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                     self.sp = sp + 2
                     self.pc = ret_addr
 
-            playback_end_of_frame = (self.__playback_player.is_active and
-                                     RunEvents.FETCHES_LIMIT_HIT in events)
+            if self.__playback_player.is_active:
+                end_of_frame = RunEvents.FETCHES_LIMIT_HIT in events
+                if end_of_frame:
+                    # Some emulators, e.g., SPIN, may store an interrupt
+                    # point in the middle of a IX- or IY-prefixed
+                    # instruction, so we continue until such
+                    # instruction, if any, is completed.
+                    if self.iregp_kind != 'hl':
+                        self.fetches_limit = 1
+                        return
 
-            if playback_end_of_frame:
-                assert self.__playback_player is not None
-                # Some emulators, e.g., SPIN, may store an interrupt
-                # point in the middle of a IX- or IY-prefixed
-                # instruction, so we continue until such
-                # instruction, if any, is completed.
-                if self.iregp_kind != 'hl':
-                    self.fetches_limit = 1
-                    return
+                    # SPIN doesn't update the fetch counter if the last
+                    # instruction in frame is IN.
+                    p = self.__playback_player
+                    if (p.samples and p.is_spin_v05 and
+                            p.playback_sample_i + 1 <
+                            len(p.playback_sample_values)):
+                        self.fetches_limit = 1
+                        return
+            else:
+                end_of_frame = RunEvents.END_OF_FRAME in events
 
-                # SPIN doesn't update the fetch counter if the last
-                # instruction in frame is IN.
-                if (self.__playback_player.samples and
-                        self.__playback_player.is_spin_v05 and
-                        self.__playback_player.playback_sample_i + 1 <
-                        len(self.__playback_player.playback_sample_values)):
-                    self.fetches_limit = 1
-                    return
-
-            if RunEvents.END_OF_FRAME in events or playback_end_of_frame:
+            if end_of_frame:
                 # TODO: Can we translate the screen chunks into pixels
                 # on the Python side using numpy?
                 self.render_screen()
@@ -748,26 +748,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                     fast_forward=fast_forward))
                 self.frame_count += 1
                 self._emulation_time.advance(1 / 50)
-
-            if playback_end_of_frame:
-                assert self.__playback_player.samples is not None
-                sample = None
-                for sample in self.__playback_player.samples:
-                    break
-                if sample != 'END_OF_FRAME':
-                    # TODO: raise Error('Too many input samples.',
-                    #                   id='too_many_input_samples')
-                    assert 0
-
-                sample = None
-                for sample in self.__playback_player.samples:
-                    break
-                if sample is None:
-                    self.stop()
-                    return
-
-                assert sample == 'START_OF_FRAME'
-                self.on_handle_active_int()
 
     def run(self, duration: None | float = None,
             fast_forward: bool = False) -> None:

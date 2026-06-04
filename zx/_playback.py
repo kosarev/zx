@@ -105,6 +105,10 @@ from ._data import UnifiedPlayback
 from ._data import UnifiedPlaybackFrame
 from ._data import UnifiedPlaybackSegment
 from ._device import Device
+from ._device import DeviceEvent
+from ._device import Dispatcher
+from ._device import EndOfFrame
+from ._except import EmulationExit
 
 if typing.TYPE_CHECKING:  # TODO
     from ._spectrum import SpectrumState
@@ -173,3 +177,30 @@ class PlaybackPlayer(Device):
                 yield sample
 
             yield 'END_OF_FRAME'
+
+    def on_event(self, event: DeviceEvent, devices: Dispatcher,
+                 result: typing.Any) -> typing.Any:
+        if not self.is_active:
+            return result
+
+        if isinstance(event, EndOfFrame):
+            assert self.samples is not None
+            sample = None
+            for sample in self.samples:
+                break
+            if sample != 'END_OF_FRAME':
+                # TODO: raise Error('Too many input samples.',
+                #                   id='too_many_input_samples')
+                assert 0
+
+            sample = None
+            for sample in self.samples:
+                break
+            if sample is None:
+                self.unload()
+                raise EmulationExit()
+
+            assert sample == 'START_OF_FRAME'
+            self.__machine.on_handle_active_int()  # type: ignore[attr-defined]
+
+        return result
