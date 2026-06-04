@@ -152,7 +152,7 @@ class TapePlayer(Device):
     def load_tape(self, file: SoundFile) -> None:
         self.load_parsed_file(file)
 
-    def get_level_at_frame_tick(self, tick: int) -> bool:
+    def __get_level_at_frame_tick(self, tick: int) -> bool:
         assert tick >= self._tick, (self._tick, tick)
 
         # Get through the series of levels until we get the one at the
@@ -202,7 +202,7 @@ class TapePlayer(Device):
 
     def __complete_frame(self, dispatcher: Dispatcher) -> None:
         if self._tick < self._ticks_per_frame:
-            self.get_level_at_frame_tick(self._ticks_per_frame - 1)
+            self.__get_level_at_frame_tick(self._ticks_per_frame - 1)
 
         assert self._tick >= self._ticks_per_frame
         self._tick -= self._ticks_per_frame
@@ -228,7 +228,7 @@ class TapePlayer(Device):
             return self.get_time()
         elif isinstance(event, ReadPort):
             if self._pulses is not None:
-                if not self.get_level_at_frame_tick(event.ticks_since_int):
+                if not self.__get_level_at_frame_tick(event.ticks_since_int):
                     result &= 0xbf  # EAR bit low when no tape signal
         elif isinstance(event, IsTapePlayerPaused):
             return self.is_paused()
