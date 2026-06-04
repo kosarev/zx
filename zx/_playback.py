@@ -121,8 +121,6 @@ class PlaybackPlayer(object):
         assert isinstance(file, RZXFile)
         self._recording = file
 
-        self.playback_frame_count = 0
-        self.playback_chunk: RZXInputRecording | None = None
         self.playback_sample_values: bytes = b''
         self.playback_sample_i = 0
 
@@ -143,7 +141,6 @@ class PlaybackPlayer(object):
                 self.__machine.install_snapshot(chunk.snapshot)
             elif isinstance(chunk, RZXInputRecording):
                 self.__machine.ticks_since_int = chunk.first_tick
-                self.playback_chunk = chunk
                 yield chunk
 
     def __gen_frames(self,
@@ -158,25 +155,17 @@ class PlaybackPlayer(object):
         yield from frame.samples.data
 
     def __get_playback_samples(self) -> typing.Iterable[str | int]:
-        # TODO: Have a class describing playback state.
-        self.playback_frame_count = 0
-        self.playback_chunk = None
         self.playback_sample_values = b''
         self.playback_sample_i = 0
 
-        frame_count = 0
         for frame in self.__gen_frames(self.__gen_chunks()):
             samples = frame.samples.data
 
             yield 'START_OF_FRAME'
 
             for sample_i, sample in enumerate(self.__gen_samples(frame)):
-                # TODO: Have a class describing playback state.
-                self.playback_frame_count = frame_count
                 self.playback_sample_values = samples
                 self.playback_sample_i = sample_i
                 yield sample
 
             yield 'END_OF_FRAME'
-
-            frame_count += 1

@@ -602,20 +602,10 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 break
 
             if sample == 'END_OF_FRAME':
-                sample_i = 0  # TODO
+                # TODO: raise Error('Too few input samples.',
+                #                   id='too_few_input_samples')
                 assert 0
-                '''
-                raise Error(
-                    'Too few input samples at frame %d of %d. '
-                    'Given %d, used %d.' % (
-                        self.__playback_player.playback_frame_count,
-                        len(self.__playback_player.playback_chunk['frames']),
-                        len(self.__playback_player.samples), sample_i),
-                    id='too_few_input_samples')
-                '''
 
-            # assert 0  # TODO
-            # print('__on_input() returns %d' % sample)
             assert isinstance(sample, int)
             return sample
 
@@ -769,18 +759,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 for sample in self.__playback_player.samples:
                     break
                 if sample != 'END_OF_FRAME':
-                    assert 0  # TODO
-                    '''
-                    raise Error(
-                        'Too many input samples at frame %d of %d. '
-                        'Given %d, used %d.' % (
-                            self.__playback_player.playback_frame_count,
-                            len(self.__playback_player.
-                                playback_chunk['frames']),
-                            len(self.__playback_player.samples),
-                            self.__playback_player.playback_sample_i + 1),
-                        id='too_many_input_samples')
-                    '''
+                    # TODO: raise Error('Too many input samples.',
+                    #                   id='too_many_input_samples')
+                    assert 0
 
                 sample = None
                 for sample in self.__playback_player.samples:
