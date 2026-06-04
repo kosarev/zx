@@ -713,21 +713,11 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                     self.sp = sp + 2
                     self.pc = ret_addr
 
-            if RunEvents.END_OF_FRAME in events:
-                # TODO: Can we translate the screen chunks into pixels
-                # on the Python side using numpy?
-                self.render_screen()
-                self.devices.notify(EndOfFrame(
-                    port_writes=numpy.frombuffer(self.get_port_writes(),
-                                                 dtype=numpy.uint64)))
-                self.devices.notify(OutputFrame(
-                    pixels=self.get_frame_pixels(),
-                    fast_forward=fast_forward))
-                self.frame_count += 1
-                self._emulation_time.advance(1 / 50)
+            playback_end_of_frame = (self.__playback_player and
+                                     RunEvents.FETCHES_LIMIT_HIT in events)
 
-            if (self.__playback_player and
-                    RunEvents.FETCHES_LIMIT_HIT in events):
+            if playback_end_of_frame:
+                assert self.__playback_player is not None
                 # Some emulators, e.g., SPIN, may store an interrupt
                 # point in the middle of a IX- or IY-prefixed
                 # instruction, so we continue until such
@@ -745,6 +735,21 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                     self.fetches_limit = 1
                     return
 
+            if RunEvents.END_OF_FRAME in events or playback_end_of_frame:
+                # TODO: Can we translate the screen chunks into pixels
+                # on the Python side using numpy?
+                self.render_screen()
+                self.devices.notify(EndOfFrame(
+                    port_writes=numpy.frombuffer(self.get_port_writes(),
+                                                 dtype=numpy.uint64)))
+                self.devices.notify(OutputFrame(
+                    pixels=self.get_frame_pixels(),
+                    fast_forward=fast_forward))
+                self.frame_count += 1
+                self._emulation_time.advance(1 / 50)
+
+            if playback_end_of_frame:
+                assert self.__playback_player is not None
                 sample = None
                 for sample in self.__playback_player.samples:
                     break
