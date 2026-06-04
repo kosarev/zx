@@ -16,8 +16,8 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EmulatorReset
-from ._device import FramePortWrites
 from ._device import NewSoundFrame
+from ._device import OutputFrame
 from ._sound import PulseStream
 
 
@@ -43,7 +43,7 @@ class Beeper(Device):
                  result: typing.Any) -> typing.Any:
         if isinstance(event, EmulatorReset):
             self.__stream.reset()
-        elif isinstance(event, FramePortWrites):
+        elif isinstance(event, OutputFrame):
             self.__handle_port_writes(event.port_writes, dispatcher)
 
         return result

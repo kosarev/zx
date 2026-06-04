@@ -31,7 +31,6 @@ from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EmulatorReset
 from ._device import EndOfFrame
-from ._device import FramePortWrites
 from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
 from ._device import InstallSnapshot
@@ -641,15 +640,14 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         # TODO: Can we translate the screen chunks into pixels
         # on the Python side using numpy?
         self.render_screen()
-        devices.notify(FramePortWrites(
-            port_writes=numpy.frombuffer(self.get_port_writes(),
-                                         dtype=numpy.uint64)))
 
         if self.__playback is not None:
             self.on_handle_active_int()
 
         devices.notify(OutputFrame(
             pixels=self.get_frame_pixels(),
+            port_writes=numpy.frombuffer(self.get_port_writes(),
+                                         dtype=numpy.uint64),
             fast_forward=fast_forward))
 
         self.frame_count += 1

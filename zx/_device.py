@@ -75,17 +75,13 @@ class EndOfFrame(DeviceEvent):
         self.fast_forward = fast_forward
 
 
-class FramePortWrites(DeviceEvent):
-    def __init__(self, *,
-                 port_writes: numpy.typing.NDArray[numpy.uint64]) -> None:
-        self.port_writes = port_writes
-
-
 class OutputFrame(DeviceEvent):
     def __init__(self, *,
                  pixels: Bytes,
-                 fast_forward: bool = False):
+                 port_writes: numpy.typing.NDArray[numpy.uint64],
+                 fast_forward: bool = False) -> None:
         self.pixels = pixels
+        self.port_writes = port_writes
         self.fast_forward = fast_forward
 
 
