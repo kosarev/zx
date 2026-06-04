@@ -690,10 +690,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             if RunEvents.BREAKPOINT_HIT in events:
                 self.on_breakpoint()
 
-                if self.__profile:
-                    pc = self.pc
-                    self.__profile.add_instr_addr(pc)
-
             if self.__playback is not None:
                 if RunEvents.FETCHES_LIMIT_HIT in events:
                     self.devices.notify(FetchesLimitHit())
@@ -821,6 +817,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.set_breakpoints(addr, 1)
 
     def on_breakpoint(self) -> None:
+        if self.__profile:
+            self.__profile.add_instr_addr(self.pc)
+
         self.devices.notify(BreakpointHit())
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
