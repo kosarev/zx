@@ -23,6 +23,7 @@ from ._data import MemoryBlock
 from ._data import SoundFile
 from ._data import Spectrum48
 from ._data import SpectrumModel
+from ._data import UnifiedPlayback
 from ._data import UnifiedSnapshot
 from ._device import Destroy
 from ._device import Device
@@ -472,6 +473,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
     devices: Dispatcher
     __profile: None | Profile
+    __playback: UnifiedPlayback | None
     __playback_player: PlaybackPlayer
 
     def __init__(self, *,
@@ -521,6 +523,8 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.devices = dispatcher  # TODO: Rename the field?
 
         self.set_on_input_callback(self.__on_input)
+
+        self.__playback: UnifiedPlayback | None = None
 
         self.__profile = profile
         if self.__profile:
@@ -631,13 +635,15 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         with open('__crash.rzx', 'wb') as f:
             f.write(make_rzx(crash_recording))
 
-    def __enter_playback_mode(self) -> None:
+    def __enter_playback_mode(self, playback: UnifiedPlayback) -> None:
+        self.__playback = playback
         # Interrupts are supposed to be controlled by the recording.
         self.suppress_interrupts = True
         self.allow_int_after_ei = True
 
     # TODO: Double-underscore or make public.
     def _quit_playback_mode(self) -> None:
+        self.__playback = None
         self.suppress_interrupts = False
         self.allow_int_after_ei = False
 
@@ -680,15 +686,15 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 # SPIN v0.5 skips executing instructions
                 # of the bytes-saving ROM procedure in
                 # fast save mode.
-                if (self.__playback_player.is_active and
-                        self.__playback_player.is_spin_v05 and
+                if (self.__playback is not None and
+                        self.__playback.is_spin_v05 and
                         self.pc == 0x04d4):
                     sp = self.sp
                     ret_addr = self.read16(sp)
                     self.sp = sp + 2
                     self.pc = ret_addr
 
-            if self.__playback_player.is_active:
+            if self.__playback is not None:
                 end_of_frame = RunEvents.FETCHES_LIMIT_HIT in events
                 if end_of_frame:
                     # Some emulators, e.g., SPIN, may store an interrupt
@@ -718,7 +724,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                     port_writes=numpy.frombuffer(self.get_port_writes(),
                                                  dtype=numpy.uint64)))
 
-                if self.__playback_player.is_active:
+                if self.__playback is not None:
                     self.on_handle_active_int()
 
                 self.devices.notify(OutputFrame(
@@ -859,7 +865,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         elif isinstance(event, SetFrameDuration):
             self.fetches_limit = event.num_fetches
         elif isinstance(event, StartPlayback):
-            self.__enter_playback_mode()
+            self.__enter_playback_mode(event.playback)
         elif isinstance(event, StopPlayback):
             self._quit_playback_mode()
         elif isinstance(event, EmulatorReset):
