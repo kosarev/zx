@@ -108,6 +108,7 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EndOfFrame
+from ._device import ReadPort
 from ._except import EmulationExit
 
 if typing.TYPE_CHECKING:  # TODO
@@ -124,7 +125,7 @@ class PlaybackPlayer(Device):
         self.playback_sample_values: bytes = b''
         self.playback_sample_i = 0
 
-        self.samples: typing.Iterable[str | int] | None = None
+        self.samples: typing.Iterator[str | int] | None = None
 
     @property
     def is_active(self) -> bool:
@@ -139,10 +140,7 @@ class PlaybackPlayer(Device):
         self.playback_sample_values = b''
         self.playback_sample_i = 0
         self.samples = self.__get_playback_samples()
-        sample = None
-        for sample in self.samples:
-            break
-        assert sample == 'START_OF_FRAME'
+        assert next(self.samples, None) == 'START_OF_FRAME'
 
     def unload(self) -> None:
         self._playback = None
@@ -166,7 +164,7 @@ class PlaybackPlayer(Device):
                       ) -> typing.Iterator[int]:
         yield from frame.port_samples.data
 
-    def __get_playback_samples(self) -> typing.Iterable[str | int]:
+    def __get_playback_samples(self) -> typing.Iterator[str | int]:
         self.playback_sample_values = b''
         self.playback_sample_i = 0
 
@@ -187,24 +185,27 @@ class PlaybackPlayer(Device):
         if not self.is_active:
             return result
 
+        if isinstance(event, ReadPort):
+            assert self.samples is not None
+            sample = next(self.samples, None)
+            if sample == 'END_OF_FRAME':
+                # TODO: raise Error('Too few input samples.',
+                #                   id='too_few_input_samples')
+                assert 0
+            assert isinstance(sample, int)
+            return result & sample
+
         if isinstance(event, EndOfFrame):
             assert self.samples is not None
-            sample = None
-            for sample in self.samples:
-                break
-            if sample != 'END_OF_FRAME':
+            if next(self.samples, None) != 'END_OF_FRAME':
                 # TODO: raise Error('Too many input samples.',
                 #                   id='too_many_input_samples')
                 assert 0
 
-            sample = None
-            for sample in self.samples:
-                break
-            if sample is None:
+            if next(self.samples, None) is None:
                 self.unload()
                 raise EmulationExit()
 
-            assert sample == 'START_OF_FRAME'
             self.__machine.on_handle_active_int()  # type: ignore[attr-defined]
 
         return result

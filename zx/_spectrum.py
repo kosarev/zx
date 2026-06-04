@@ -589,20 +589,10 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self.run(duration=0.1, fast_forward=True)
 
     def __on_input(self, addr: int) -> int:
-        # Handle playbacks.
         if self.__playback_player.is_active:
-            assert self.__playback_player.samples is not None
-            sample = None
-            for sample in self.__playback_player.samples:
-                break
-
-            if sample == 'END_OF_FRAME':
-                # TODO: raise Error('Too few input samples.',
-                #                   id='too_few_input_samples')
-                assert 0
-
-            assert isinstance(sample, int)
-            return sample
+            v = self.devices.notify(ReadPort(addr), result=0xff)
+            assert isinstance(v, int)
+            return v
 
         # Scan keyboard.
         n = 0xbf
