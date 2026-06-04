@@ -71,11 +71,6 @@ class GetEmulationTime(DeviceEvent):
     pass
 
 
-class GetTapeLevel(DeviceEvent):
-    def __init__(self, frame_tick: int) -> None:
-        self.frame_tick = frame_tick
-
-
 # TODO: Combine these into Get/SetState kind of events.
 class GetTapePlayerTime(DeviceEvent):
     pass
