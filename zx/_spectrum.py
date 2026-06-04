@@ -478,7 +478,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
     devices: Dispatcher
     __profile: None | Profile
     __playback: UnifiedPlayback | None
-    __playback_player: PlaybackPlayer
 
     def __init__(self, *,
                  model: type[SpectrumModel] | None = None,
@@ -502,8 +501,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         self.__events_to_signal = RunEvents.NO_EVENTS
 
-        self.__playback_player = PlaybackPlayer()
-
         if devices is None:
             if keyboard is None:
                 keyboard = Keyboard()
@@ -511,7 +508,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 beeper = Beeper(self.model)
 
             devices = [self, TapePlayer(self.model), keyboard, beeper,
-                       self.__playback_player]
+                       PlaybackPlayer()]
 
             if not headless:
                 if screen is None:
