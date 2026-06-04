@@ -110,7 +110,7 @@ from ._device import Dispatcher
 from ._device import EndOfFrame
 from ._device import InstallSnapshot
 from ._device import ReadPort
-from ._device import SetFrameDuration
+from ._device import SetFetchesLimit
 from ._device import StartPlayback
 from ._device import StopPlayback
 from ._except import EmulationExit
@@ -153,7 +153,7 @@ class PlaybackPlayer(Device):
                 break
             self.__get_next_segment(devices)
 
-        devices.notify(SetFrameDuration(frame.num_fetches))
+        devices.notify(SetFetchesLimit(frame.num_fetches))
         self.playback_sample_values = frame.port_samples.data
         self.__samples = iter(frame.port_samples.data)
         self.__sample_count = 0

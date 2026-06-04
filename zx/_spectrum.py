@@ -35,7 +35,7 @@ from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
 from ._device import InstallSnapshot
 from ._device import IsTapePlayerPaused
-from ._device import SetFrameDuration
+from ._device import SetFetchesLimit
 from ._device import StartPlayback
 from ._device import StopPlayback
 from ._device import IsTapePlayerStopped
@@ -862,7 +862,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self.devices.notify(StopPlayback())
         elif isinstance(event, InstallSnapshot):
             self.install_snapshot(event.snapshot)
-        elif isinstance(event, SetFrameDuration):
+        elif isinstance(event, SetFetchesLimit):
             self.fetches_limit = event.num_fetches
         elif isinstance(event, StartPlayback):
             self.__enter_playback_mode(event.playback)

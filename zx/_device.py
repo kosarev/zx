@@ -51,7 +51,7 @@ class EmulatorReset(DeviceEvent):
     pass
 
 
-class SetFrameDuration(DeviceEvent):
+class SetFetchesLimit(DeviceEvent):
     def __init__(self, num_fetches: int) -> None:
         self.num_fetches = num_fetches
 
