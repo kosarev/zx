@@ -1893,6 +1893,13 @@ class ScreenWindow(Device):
                         result: typing.Any) -> typing.Any:
         assert isinstance(event, QuantumRun)
         import sdl2
+
+        # Give the OS some CPU time while paused; wake immediately on
+        # any SDL event. Pass NULL so the event stays in the queue for
+        # the normal polling loop to handle.
+        if dispatcher.notify(GetEmulationPauseState()):
+            sdl2.SDL_WaitEventTimeout(None, 20)
+
         while sdl2.SDL_PollEvent(ctypes.byref(self.__sdl_event)) != 0:
             if self.__sdl_event.type == sdl2.SDL_QUIT:
                 self.__on_exit(dispatcher)

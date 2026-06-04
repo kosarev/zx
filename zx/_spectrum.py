@@ -12,8 +12,6 @@
 # TODO: Remove unused imports.
 import enum
 import numpy
-import os
-import time
 import types
 import typing
 
@@ -679,8 +677,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         '''
 
         if self.paused:
-            # Give the CPU some spare time if emulation is paused.
-            time.sleep(1 / 50)
             return
 
         events = RunEvents(self._run())
