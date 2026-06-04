@@ -103,11 +103,10 @@ frame. Key frame spacing is a critical design parameter.
 import typing
 from ._data import MachineSnapshot
 from ._data import UnifiedPlayback
-from ._rzx import RZXFrame
-from ._rzx import RZXSnapshot
+from ._data import UnifiedPlaybackFrame
+from ._data import UnifiedPlaybackSegment
 from ._rzx import RZXCreatorInfo
 from ._rzx import RZXFile
-from ._rzx import RZXInputRecording
 
 if typing.TYPE_CHECKING:  # TODO
     from ._spectrum import SpectrumState
@@ -120,6 +119,7 @@ class PlaybackPlayer(object):
 
         assert isinstance(file, RZXFile)
         self._recording = file
+        self._playback = file.to_unified_playback()
 
         self.playback_sample_values: bytes = b''
         self.playback_sample_i = 0
@@ -135,31 +135,29 @@ class PlaybackPlayer(object):
     def get_chunks(self) -> list[typing.Any]:
         return self._recording.chunks
 
-    def __gen_chunks(self) -> typing.Iterator[RZXInputRecording]:
-        for chunk in self.get_chunks():
-            if isinstance(chunk, RZXSnapshot):
-                self.__machine.install_snapshot(chunk.snapshot)
-            elif isinstance(chunk, RZXInputRecording):
-                self.__machine.ticks_since_int = chunk.first_tick
-                yield chunk
+    def __gen_segments(self) -> typing.Iterator[UnifiedPlaybackSegment]:
+        for seg in self._playback.segments:
+            self.__machine.install_snapshot(seg.snapshot)
+            yield seg
 
     def __gen_frames(self,
-                     chunks: typing.Iterator[RZXInputRecording],
-                     ) -> typing.Iterator[RZXFrame]:
-        for chunk in chunks:
-            for frame in chunk.frames:
+                     segments: typing.Iterator[UnifiedPlaybackSegment],
+                     ) -> typing.Iterator[UnifiedPlaybackFrame]:
+        for seg in segments:
+            for frame in seg.frames:
                 self.__machine.fetches_limit = frame.num_fetches
                 yield frame
 
-    def __gen_samples(self, frame: RZXFrame) -> typing.Iterator[int]:
-        yield from frame.samples.data
+    def __gen_samples(self, frame: UnifiedPlaybackFrame
+                      ) -> typing.Iterator[int]:
+        yield from frame.port_samples.data
 
     def __get_playback_samples(self) -> typing.Iterable[str | int]:
         self.playback_sample_values = b''
         self.playback_sample_i = 0
 
-        for frame in self.__gen_frames(self.__gen_chunks()):
-            samples = frame.samples.data
+        for frame in self.__gen_frames(self.__gen_segments()):
+            samples = frame.port_samples.data
 
             yield 'START_OF_FRAME'
 
