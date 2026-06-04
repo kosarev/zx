@@ -9,9 +9,7 @@
 #   Published under the MIT license.
 
 """
-This module implements the playback player and defines UnifiedPlayback,
-the semantic representation of input recordings, analogous to how
-UnifiedSnapshot generalises all snapshot formats.
+This module implements the playback player for input recordings.
 
 All recording formats (.rzx, etc.) will eventually translate into
 UnifiedPlayback for internal use. The player will be reworked
@@ -103,8 +101,8 @@ frame. Key frame spacing is a critical design parameter.
 """
 
 import typing
-from ._data import DataRecord
 from ._data import MachineSnapshot
+from ._data import UnifiedPlayback
 from ._rzx import RZXSnapshot
 from ._rzx import RZXCreatorInfo
 from ._rzx import RZXFile
@@ -112,10 +110,6 @@ from ._rzx import RZXInputRecording
 
 if typing.TYPE_CHECKING:  # TODO
     from ._spectrum import SpectrumState
-
-
-class UnifiedPlayback(DataRecord, format_name=None):
-    pass
 
 
 # TODO: Rework to a time machine interface.

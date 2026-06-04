@@ -18,6 +18,7 @@ from ._data import ByteData
 from ._data import DataRecord
 from ._data import HexData
 from ._data import Latin1Data
+from ._data import MachinePlayback
 from ._data import MachineSnapshot
 from ._error import Error
 from ._z80snapshot import Z80Snapshot
@@ -295,7 +296,7 @@ def make_rzx(chunks: list[RZXChunk]) -> Bytes:
     return writer.get_image()
 
 
-class RZXFile(DataRecord, format_name='RZX'):
+class RZXFile(MachinePlayback, format_name='RZX'):
     chunks: list[RZXChunk]
 
     def __init__(self, *, chunks: list[RZXChunk]) -> None:

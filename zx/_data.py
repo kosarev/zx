@@ -371,3 +371,38 @@ class UnifiedSnapshot(MachineSnapshot, format_name=None):
 
     def to_unified_snapshot(self) -> UnifiedSnapshot:
         return self
+
+
+class MachinePlayback(DataRecord, format_name=None):
+    def to_unified_playback(self) -> 'UnifiedPlayback':
+        raise NotImplementedError
+
+
+class UnifiedPlaybackFrame(DataRecord, format_name=None):
+    num_fetches: int
+    port_samples: ByteData
+
+    def __init__(self, *, num_fetches: int,
+                 port_samples: 'Bytes | ByteData') -> None:
+        super().__init__(num_fetches=num_fetches,
+                         port_samples=HexData.wrap(port_samples))
+
+
+class UnifiedPlaybackSegment(DataRecord, format_name=None):
+    key_frame: UnifiedSnapshot
+    frames: list[UnifiedPlaybackFrame]
+
+    def __init__(self, *, key_frame: UnifiedSnapshot,
+                 frames: list[UnifiedPlaybackFrame]) -> None:
+        super().__init__(key_frame=key_frame, frames=frames)
+
+
+class UnifiedPlayback(MachinePlayback, format_name=None):
+    segments: list[UnifiedPlaybackSegment]
+
+    def __init__(self, *,
+                 segments: list[UnifiedPlaybackSegment]) -> None:
+        super().__init__(segments=segments)
+
+    def to_unified_playback(self) -> 'UnifiedPlayback':
+        return self
