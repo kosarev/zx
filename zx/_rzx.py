@@ -306,9 +306,20 @@ class RZXFile(MachinePlayback, format_name='RZX'):
         super().__init__(chunks=chunks)
 
     def to_unified_playback(self) -> UnifiedPlayback:
+        creator = None
         segments = []
         for chunk in self.chunks:
-            if isinstance(chunk, RZXSnapshot):
+            if isinstance(chunk, RZXCreatorInfo):
+                # The creator field is fixed-size; bytes after the first
+                # non-printable-ASCII character are undefined, so we
+                # truncate there and strip surrounding whitespace.
+                creator_bytes = chunk.creator.data
+                end = next(
+                    (i for i, b in enumerate(creator_bytes)
+                     if not (0x20 <= b <= 0x7e)),
+                    len(creator_bytes))
+                creator = creator_bytes[:end].decode('ascii').strip()
+            elif isinstance(chunk, RZXSnapshot):
                 segments.append(UnifiedPlaybackSegment(
                     snapshot=chunk.snapshot.to_unified_snapshot()))
             elif isinstance(chunk, RZXInputRecording):
@@ -320,7 +331,10 @@ class RZXFile(MachinePlayback, format_name='RZX'):
                     UnifiedPlaybackFrame(num_fetches=f.num_fetches,
                                          port_samples=f.samples.data)
                     for f in chunk.frames)
-        return UnifiedPlayback(segments=segments)
+            else:
+                raise Error('Unknown RZX chunk: %r.' % chunk,
+                            id='unknown_rzx_chunk')
+        return UnifiedPlayback(segments=segments, creator=creator)
 
     @classmethod
     def decode(cls, filename: str, image: Bytes) -> 'RZXFile':
