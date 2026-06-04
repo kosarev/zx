@@ -664,37 +664,35 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.allow_int_after_ei = False
 
     def __run_quantum(self) -> None:
-        if True:  # TODO
-            self.devices.notify(QuantumRun())
+        self.devices.notify(QuantumRun())
 
-            # TODO: For debug purposes.
-            '''
-            frame_count += 1
-            if frame_count == -12820:
-                frame_state = SpectrumState(bytes(self.image))
-                self.__save_crash_rzx(player, frame_state, chunk_i, frame_i)
-                assert 0
+        # TODO: For debug purposes.
+        '''
+        frame_count += 1
+        if frame_count == -12820:
+            frame_state = SpectrumState(bytes(self.image))
+            self.__save_crash_rzx(player, frame_state, chunk_i, frame_i)
+            assert 0
 
-            if frame_count == -65952 - 1000:
-                self.enable_trace()
-            '''
+        if frame_count == -65952 - 1000:
+            self.enable_trace()
+        '''
 
-            if self.paused:
-                # Give the CPU some spare time if emulation is paused.
-                time.sleep(1 / 50)
-                return
+        if self.paused:
+            # Give the CPU some spare time if emulation is paused.
+            time.sleep(1 / 50)
+            return
 
-            events = RunEvents(self._run())
-            # TODO: print(events)
+        events = RunEvents(self._run())
 
-            if RunEvents.BREAKPOINT_HIT in events:
-                self.on_breakpoint()
+        if RunEvents.BREAKPOINT_HIT in events:
+            self.on_breakpoint()
 
-            if self.__playback is not None:
-                if RunEvents.FETCHES_LIMIT_HIT in events:
-                    self.devices.notify(FetchesLimitHit())
-            elif RunEvents.END_OF_FRAME in events:
-                self.devices.notify(EndOfFrame())
+        if self.__playback is not None:
+            if RunEvents.FETCHES_LIMIT_HIT in events:
+                self.devices.notify(FetchesLimitHit())
+        elif RunEvents.END_OF_FRAME in events:
+            self.devices.notify(EndOfFrame())
 
     def run(self, duration: None | float = None,
             fast_forward: bool = False) -> None:
