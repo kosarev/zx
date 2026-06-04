@@ -21,6 +21,7 @@ from ._device import Dispatcher
 from ._device import EmulatorReset
 from ._device import EndOfFrame
 from ._device import GetTapeLevel
+from ._device import ReadPort
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
 from ._device import IsTapePlayerStopped
@@ -228,6 +229,10 @@ class TapePlayer(Device):
             return self.get_time()
         elif isinstance(event, GetTapeLevel):
             return self.get_level_at_frame_tick(event.frame_tick)
+        elif isinstance(event, ReadPort):
+            if self._pulses is not None:
+                if not self.get_level_at_frame_tick(event.ticks_since_int):
+                    result &= 0xbf  # EAR bit low when no tape signal
         elif isinstance(event, IsTapePlayerPaused):
             return self.is_paused()
         elif isinstance(event, IsTapePlayerStopped):

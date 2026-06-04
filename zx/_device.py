@@ -119,8 +119,9 @@ class QuantumRun(DeviceEvent):
 
 
 class ReadPort(DeviceEvent):
-    def __init__(self, addr: int):
+    def __init__(self, addr: int, ticks_since_int: int = 0) -> None:
         self.addr = addr
+        self.ticks_since_int = ticks_since_int
 
 
 class RequestLoadFile(DeviceEvent):

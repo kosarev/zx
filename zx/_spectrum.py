@@ -32,7 +32,6 @@ from ._device import EmulatorReset
 from ._device import EndOfFrame
 from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
-from ._device import GetTapeLevel
 from ._device import IsTapePlayerPaused
 from ._device import IsTapePlayerStopped
 from ._device import KeyStroke
@@ -589,31 +588,16 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self.run(duration=0.1, fast_forward=True)
 
     def __on_input(self, addr: int) -> int:
-        if self.__playback_player.is_active:
-            v = self.devices.notify(ReadPort(addr), result=0xff)
-            assert isinstance(v, int)
-            return v
-
-        # Scan keyboard.
-        n = 0xbf
-        v = self.devices.notify(ReadPort(addr), result=0xff)
+        v = self.devices.notify(
+            ReadPort(addr, self.ticks_since_int), result=0xff)
         assert isinstance(v, int)
-        n &= v
-
-        # TODO: Use the tick when the ear value is sampled
-        #       instead of the tick of the beginning of the input
-        #       cycle.
-        if self.devices.notify(GetTapeLevel(self.ticks_since_int)):
-            n |= 0x40
 
         END_OF_TAPE = RunEvents.END_OF_TAPE
         if END_OF_TAPE in self.__events_to_signal and self.__is_end_of_tape():
             self.raise_events(END_OF_TAPE)
             self.__events_to_signal &= ~END_OF_TAPE
 
-        # print('0x%04x 0x%02x' % (addr, n))
-
-        return n
+        return v
 
     def __save_crash_rzx(self, player: PlaybackPlayer, state: SpectrumState,
                          chunk_i: int, frame_i: int) -> None:
