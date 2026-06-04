@@ -121,7 +121,8 @@ class PlaybackPlayer(Device):
         super().__init__()
         self.__machine = machine
         self._playback: UnifiedPlayback | None = None
-        self.__frames: typing.Iterator[UnifiedPlaybackFrame] | None = None
+        self.__segments: typing.Iterator[UnifiedPlaybackSegment] = iter(())
+        self.__frames: typing.Iterator[UnifiedPlaybackFrame] = iter(())
         self.__samples: typing.Iterator[int] | None = None
         self.__sample_count = 0
 
@@ -130,30 +131,28 @@ class PlaybackPlayer(Device):
 
     @property
     def is_active(self) -> bool:
-        return self.__frames is not None
+        return self._playback is not None
 
     @property
     def is_spin_v05(self) -> bool:
         return self._playback is not None and self._playback.is_spin_v05
 
-    def __gen_segments(self) -> typing.Iterator[UnifiedPlaybackSegment]:
-        assert self._playback is not None
-        for seg in self._playback.segments:
-            self.__machine.install_snapshot(seg.snapshot)
-            yield seg
-
-    def __gen_frames(self,
-                     segments: typing.Iterator[UnifiedPlaybackSegment],
-                     ) -> typing.Iterator[UnifiedPlaybackFrame]:
-        for seg in segments:
-            yield from seg.frames
-
-    def __on_new_frame(self) -> None:
-        assert self.__frames is not None
-        frame = next(self.__frames, None)
-        if frame is None:
+    def __get_next_segment(self) -> None:
+        seg = next(self.__segments, None)
+        if seg is None:
             self.unload()
             raise EmulationExit()
+
+        self.__machine.install_snapshot(seg.snapshot)
+        self.__frames = iter(seg.frames)
+
+    def __get_next_frame(self) -> None:
+        while True:
+            frame = next(self.__frames, None)
+            if frame is not None:
+                break
+            self.__get_next_segment()
+
         self.__machine.fetches_limit = frame.num_fetches
         self.playback_sample_values = frame.port_samples.data
         self.__samples = iter(frame.port_samples.data)
@@ -162,12 +161,14 @@ class PlaybackPlayer(Device):
 
     def load(self, playback: UnifiedPlayback) -> None:
         self._playback = playback
-        self.__frames = self.__gen_frames(self.__gen_segments())
-        self.__on_new_frame()
+        self.__segments = iter(playback.segments)
+        self.__frames = iter(())
+        self.__get_next_frame()
 
     def unload(self) -> None:
         self._playback = None
-        self.__frames = None
+        self.__segments = iter(())
+        self.__frames = iter(())
         self.__samples = None
         self.__sample_count = 0
 
@@ -192,6 +193,6 @@ class PlaybackPlayer(Device):
                 # TODO: raise Error('Too many input samples.',
                 #                   id='too_many_input_samples')
                 assert 0
-            self.__on_new_frame()
+            self.__get_next_frame()
 
         return result
