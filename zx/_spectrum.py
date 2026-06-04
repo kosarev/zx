@@ -497,7 +497,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         self.__events_to_signal = RunEvents.NO_EVENTS
 
-        self.__playback_player = PlaybackPlayer(self)
+        self.__playback_player = PlaybackPlayer()
 
         if devices is None:
             if keyboard is None:

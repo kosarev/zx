@@ -115,15 +115,11 @@ from ._device import StartPlayback
 from ._device import StopPlayback
 from ._except import EmulationExit
 
-if typing.TYPE_CHECKING:  # TODO
-    from ._spectrum import SpectrumState
-
 
 # TODO: Rework to a time machine interface.
 class PlaybackPlayer(Device):
-    def __init__(self, machine: 'SpectrumState') -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.__machine = machine
         self._playback: UnifiedPlayback | None = None
         self.__segments: typing.Iterator[UnifiedPlaybackSegment] = iter(())
         self.__frames: typing.Iterator[UnifiedPlaybackFrame] = iter(())

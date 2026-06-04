@@ -47,7 +47,7 @@ def test_basic() -> None:
     assert not playback.is_spin_v05
 
     # Verify samples are consumed correctly from the first frame.
-    player = zx._playback.PlaybackPlayer(mach)
+    player = zx._playback.PlaybackPlayer()
     dispatcher = zx._device.Dispatcher()
     start = zx._device.StartPlayback(playback)
     player.on_event(start, dispatcher, None)
