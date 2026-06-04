@@ -108,6 +108,8 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EndOfFrame
+from ._device import FetchesLimitHit
+from ._device import GetMachineState
 from ._device import InstallSnapshot
 from ._device import ReadPort
 from ._device import SetFetchesLimit
@@ -196,11 +198,28 @@ class PlaybackPlayer(Device):
             self.playback_sample_i = self.__sample_count - 1
             return result & sample
 
-        if isinstance(event, EndOfFrame):
+        if isinstance(event, FetchesLimitHit):
+            # Some emulators, e.g., SPIN, may store an interrupt point in
+            # the middle of a IX- or IY-prefixed instruction, so we
+            # continue until such instruction, if any, is completed.
+            if devices.notify(GetMachineState()).iregp_kind != 'hl':
+                devices.notify(SetFetchesLimit(1))
+                return result
+
+            # SPIN v0.5 doesn't update the fetch counter if the last
+            # instruction in a frame is IN.
+            if (self._playback is not None and
+                    self._playback.is_spin_v05 and
+                    self.playback_sample_i + 1 <
+                    len(self.playback_sample_values)):
+                devices.notify(SetFetchesLimit(1))
+                return result
+
             if self.__sample_count < len(self.playback_sample_values):
                 # TODO: raise Error('Too many input samples.',
                 #                   id='too_many_input_samples')
                 assert 0
             self.__get_next_frame(devices)
+            devices.notify(EndOfFrame())
 
         return result

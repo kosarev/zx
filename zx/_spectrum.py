@@ -31,6 +31,8 @@ from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EmulatorReset
 from ._device import EndOfFrame
+from ._device import FetchesLimitHit
+from ._device import GetMachineState
 from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
 from ._device import InstallSnapshot
@@ -706,28 +708,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                     self.pc = ret_addr
 
             if self.__playback is not None:
-                end_of_frame = RunEvents.FETCHES_LIMIT_HIT in events
-                if end_of_frame:
-                    # Some emulators, e.g., SPIN, may store an interrupt
-                    # point in the middle of a IX- or IY-prefixed
-                    # instruction, so we continue until such
-                    # instruction, if any, is completed.
-                    if self.iregp_kind != 'hl':
-                        self.fetches_limit = 1
-                        return
-
-                    # SPIN doesn't update the fetch counter if the last
-                    # instruction in frame is IN.
-                    p = self.__playback_player
-                    if (p.is_spin_v05 and
-                            p.playback_sample_i + 1 <
-                            len(p.playback_sample_values)):
-                        self.fetches_limit = 1
-                        return
-            else:
-                end_of_frame = RunEvents.END_OF_FRAME in events
-
-            if end_of_frame:
+                if RunEvents.FETCHES_LIMIT_HIT in events:
+                    self.devices.notify(FetchesLimitHit())
+            elif RunEvents.END_OF_FRAME in events:
                 self.devices.notify(EndOfFrame())
 
     def run(self, duration: None | float = None,
@@ -869,6 +852,8 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self.devices.notify(StopPlayback())
         elif isinstance(event, EndOfFrame):
             self.__on_end_of_frame(devices)
+        elif isinstance(event, GetMachineState):
+            return self
         elif isinstance(event, InstallSnapshot):
             self.install_snapshot(event.snapshot)
         elif isinstance(event, SetFetchesLimit):
