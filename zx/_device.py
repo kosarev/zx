@@ -71,7 +71,8 @@ class StopPlayback(DeviceEvent):
 
 
 class EndOfFrame(DeviceEvent):
-    pass
+    def __init__(self, fast_forward: bool = False) -> None:
+        self.fast_forward = fast_forward
 
 
 class FramePortWrites(DeviceEvent):

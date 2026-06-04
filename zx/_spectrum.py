@@ -636,6 +636,25 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         with open('__crash.rzx', 'wb') as f:
             f.write(make_rzx(crash_recording))
 
+    def __on_end_of_frame(self, devices: Dispatcher,
+                          fast_forward: bool) -> None:
+        # TODO: Can we translate the screen chunks into pixels
+        # on the Python side using numpy?
+        self.render_screen()
+        devices.notify(FramePortWrites(
+            port_writes=numpy.frombuffer(self.get_port_writes(),
+                                         dtype=numpy.uint64)))
+
+        if self.__playback is not None:
+            self.on_handle_active_int()
+
+        devices.notify(OutputFrame(
+            pixels=self.get_frame_pixels(),
+            fast_forward=fast_forward))
+
+        self.frame_count += 1
+        self._emulation_time.advance(1 / 50)
+
     def __enter_playback_mode(self, playback: UnifiedPlayback) -> None:
         self.__playback = playback
         # Interrupts are supposed to be controlled by the recording.
@@ -718,22 +737,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 end_of_frame = RunEvents.END_OF_FRAME in events
 
             if end_of_frame:
-                # TODO: Can we translate the screen chunks into pixels
-                # on the Python side using numpy?
-                self.render_screen()
-                self.devices.notify(FramePortWrites(
-                    port_writes=numpy.frombuffer(self.get_port_writes(),
-                                                 dtype=numpy.uint64)))
-                self.devices.notify(EndOfFrame())
-
-                if self.__playback is not None:
-                    self.on_handle_active_int()
-
-                self.devices.notify(OutputFrame(
-                    pixels=self.get_frame_pixels(),
-                    fast_forward=fast_forward))
-                self.frame_count += 1
-                self._emulation_time.advance(1 / 50)
+                self.devices.notify(EndOfFrame(fast_forward=fast_forward))
 
     def run(self, duration: None | float = None,
             fast_forward: bool = False) -> None:
@@ -862,6 +866,8 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             if key:
                 self.paused = False
                 self.devices.notify(StopPlayback())
+        elif isinstance(event, EndOfFrame):
+            self.__on_end_of_frame(devices, event.fast_forward)
         elif isinstance(event, InstallSnapshot):
             self.install_snapshot(event.snapshot)
         elif isinstance(event, SetFetchesLimit):
