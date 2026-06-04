@@ -718,7 +718,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                     # SPIN doesn't update the fetch counter if the last
                     # instruction in frame is IN.
                     p = self.__playback_player
-                    if (p.samples and p.is_spin_v05 and
+                    if (p.is_spin_v05 and
                             p.playback_sample_i + 1 <
                             len(p.playback_sample_values)):
                         self.fetches_limit = 1

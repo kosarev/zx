@@ -29,7 +29,7 @@ def test_basic() -> None:
         snapshot_chunk,
         zx._rzx.RZXInputRecording(
             first_tick=0,
-            frames=[zx._rzx.RZXFrame(num_fetches=1, samples=b''),
+            frames=[zx._rzx.RZXFrame(num_fetches=3, samples=b'\x42\xff\x00'),
                     zx._rzx.RZXFrame(num_fetches=1, samples=b'')]),
     ])
 
@@ -46,8 +46,12 @@ def test_basic() -> None:
     assert playback.creator == '<creator>'
     assert not playback.is_spin_v05
 
-    # Generate playback samples.
+    # Verify samples are consumed correctly from the first frame.
     player = zx._playback.PlaybackPlayer(mach)
     player.load(playback)
-    assert player.samples is not None
-    assert 'END_OF_FRAME' in player.samples
+    assert player.is_active
+    dispatcher = zx._device.Dispatcher()
+    read_port = zx._device.ReadPort(0xfe)
+    assert player.on_event(read_port, dispatcher, 0xff) == 0x42
+    assert player.on_event(read_port, dispatcher, 0xff) == 0xff
+    assert player.on_event(read_port, dispatcher, 0xff) == 0x00

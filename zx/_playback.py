@@ -121,30 +121,20 @@ class PlaybackPlayer(Device):
         super().__init__()
         self.__machine = machine
         self._playback: UnifiedPlayback | None = None
+        self.__frames: typing.Iterator[UnifiedPlaybackFrame] | None = None
+        self.__samples: typing.Iterator[int] | None = None
+        self.__sample_count = 0
 
         self.playback_sample_values: bytes = b''
         self.playback_sample_i = 0
 
-        self.samples: typing.Iterator[str | int] | None = None
-
     @property
     def is_active(self) -> bool:
-        return self._playback is not None
+        return self.__frames is not None
 
     @property
     def is_spin_v05(self) -> bool:
         return self._playback is not None and self._playback.is_spin_v05
-
-    def load(self, playback: UnifiedPlayback) -> None:
-        self._playback = playback
-        self.playback_sample_values = b''
-        self.playback_sample_i = 0
-        self.samples = self.__get_playback_samples()
-        assert next(self.samples, None) == 'START_OF_FRAME'
-
-    def unload(self) -> None:
-        self._playback = None
-        self.samples = None
 
     def __gen_segments(self) -> typing.Iterator[UnifiedPlaybackSegment]:
         assert self._playback is not None
@@ -156,29 +146,30 @@ class PlaybackPlayer(Device):
                      segments: typing.Iterator[UnifiedPlaybackSegment],
                      ) -> typing.Iterator[UnifiedPlaybackFrame]:
         for seg in segments:
-            for frame in seg.frames:
-                self.__machine.fetches_limit = frame.num_fetches
-                yield frame
+            yield from seg.frames
 
-    def __gen_samples(self, frame: UnifiedPlaybackFrame
-                      ) -> typing.Iterator[int]:
-        yield from frame.port_samples.data
-
-    def __get_playback_samples(self) -> typing.Iterator[str | int]:
-        self.playback_sample_values = b''
+    def __on_new_frame(self) -> None:
+        assert self.__frames is not None
+        frame = next(self.__frames, None)
+        if frame is None:
+            self.unload()
+            raise EmulationExit()
+        self.__machine.fetches_limit = frame.num_fetches
+        self.playback_sample_values = frame.port_samples.data
+        self.__samples = iter(frame.port_samples.data)
+        self.__sample_count = 0
         self.playback_sample_i = 0
 
-        for frame in self.__gen_frames(self.__gen_segments()):
-            samples = frame.port_samples.data
+    def load(self, playback: UnifiedPlayback) -> None:
+        self._playback = playback
+        self.__frames = self.__gen_frames(self.__gen_segments())
+        self.__on_new_frame()
 
-            yield 'START_OF_FRAME'
-
-            for sample_i, sample in enumerate(self.__gen_samples(frame)):
-                self.playback_sample_values = samples
-                self.playback_sample_i = sample_i
-                yield sample
-
-            yield 'END_OF_FRAME'
+    def unload(self) -> None:
+        self._playback = None
+        self.__frames = None
+        self.__samples = None
+        self.__sample_count = 0
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
@@ -186,26 +177,22 @@ class PlaybackPlayer(Device):
             return result
 
         if isinstance(event, ReadPort):
-            assert self.samples is not None
-            sample = next(self.samples, None)
-            if sample == 'END_OF_FRAME':
+            assert self.__samples is not None
+            sample = next(self.__samples, None)
+            if sample is None:
                 # TODO: raise Error('Too few input samples.',
                 #                   id='too_few_input_samples')
                 assert 0
-            assert isinstance(sample, int)
+            self.__sample_count += 1
+            self.playback_sample_i = self.__sample_count - 1
             return result & sample
 
         if isinstance(event, EndOfFrame):
-            assert self.samples is not None
-            if next(self.samples, None) != 'END_OF_FRAME':
+            if self.__sample_count < len(self.playback_sample_values):
                 # TODO: raise Error('Too many input samples.',
                 #                   id='too_many_input_samples')
                 assert 0
-
-            if next(self.samples, None) is None:
-                self.unload()
-                raise EmulationExit()
-
+            self.__on_new_frame()
             self.__machine.on_handle_active_int()  # type: ignore[attr-defined]
 
         return result
