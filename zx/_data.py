@@ -402,15 +402,23 @@ class UnifiedPlaybackSegment(DataRecord, format_name=None):
 class UnifiedPlayback(MachinePlayback, format_name=None):
     segments: list[UnifiedPlaybackSegment]
     creator: str | None
+    creator_major_version: int | None
+    creator_minor_version: int | None
 
     def __init__(self, *,
                  segments: list[UnifiedPlaybackSegment],
-                 creator: str | None = None) -> None:
-        super().__init__(segments=segments, creator=creator)
+                 creator: str | None = None,
+                 creator_major_version: int | None = None,
+                 creator_minor_version: int | None = None) -> None:
+        super().__init__(segments=segments, creator=creator,
+                         creator_major_version=creator_major_version,
+                         creator_minor_version=creator_minor_version)
 
     @property
     def is_spin_v05(self) -> bool:
-        return self.creator == 'SPIN 0.5'
+        return (self.creator == 'SPIN 0.5' and
+                self.creator_major_version == 0 and
+                self.creator_minor_version == 5)
 
     def to_unified_playback(self) -> 'UnifiedPlayback':
         return self

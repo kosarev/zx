@@ -307,6 +307,8 @@ class RZXFile(MachinePlayback, format_name='RZX'):
 
     def to_unified_playback(self) -> UnifiedPlayback:
         creator = None
+        creator_major_version = None
+        creator_minor_version = None
         segments = []
         for chunk in self.chunks:
             if isinstance(chunk, RZXCreatorInfo):
@@ -319,6 +321,8 @@ class RZXFile(MachinePlayback, format_name='RZX'):
                      if not (0x20 <= b <= 0x7e)),
                     len(creator_bytes))
                 creator = creator_bytes[:end].decode('ascii').strip()
+                creator_major_version = chunk.creator_major_version
+                creator_minor_version = chunk.creator_minor_version
             elif isinstance(chunk, RZXSnapshot):
                 segments.append(UnifiedPlaybackSegment(
                     snapshot=chunk.snapshot.to_unified_snapshot()))
@@ -334,7 +338,9 @@ class RZXFile(MachinePlayback, format_name='RZX'):
             else:
                 raise Error('Unknown RZX chunk: %r.' % chunk,
                             id='unknown_rzx_chunk')
-        return UnifiedPlayback(segments=segments, creator=creator)
+        return UnifiedPlayback(segments=segments, creator=creator,
+                               creator_major_version=creator_major_version,
+                               creator_minor_version=creator_minor_version)
 
     @classmethod
     def decode(cls, filename: str, image: Bytes) -> 'RZXFile':

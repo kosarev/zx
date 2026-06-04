@@ -18,7 +18,6 @@ import types
 import typing
 
 from ._beeper import Beeper
-from ._data import ByteData
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import SoundFile
@@ -56,7 +55,6 @@ from ._keyboard import KEYS
 from ._playback import PlaybackPlayer
 from ._rom import load_rom_image
 from ._rzx import make_rzx
-from ._rzx import RZXCreatorInfo
 from ._rzx import RZXFile
 from ._screen import ScreenWindow
 from ._scr import _SCRSnapshot
@@ -469,11 +467,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
     FRAME_SIZE = 48 + 256 + 48, 48 + 192 + 40
 
-    _SPIN_V0P5_INFO = RZXCreatorInfo(
-        creator=ByteData(b'SPIN 0.5            '),
-        creator_major_version=0,
-        creator_minor_version=5)
-
     devices: Dispatcher
     __profile: None | Profile
     __playback_player: None | PlaybackPlayer
@@ -675,9 +668,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
     def __run_quantum(self, fast_forward: bool = False) -> None:
         fast_forward = fast_forward or self.__headless
 
-        if self.__playback_player:
-            creator_info = self.__playback_player.find_recording_info_chunk()
-
         if True:  # TODO
             self.devices.notify(QuantumRun())
 
@@ -716,7 +706,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 # fast save mode.
                 if (self.__playback_player and
                         self.__playback_player.samples and
-                        creator_info == self._SPIN_V0P5_INFO and
+                        self.__playback_player.is_spin_v05 and
                         self.pc == 0x04d4):
                     sp = self.sp
                     ret_addr = self.read16(sp)
@@ -749,7 +739,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 # SPIN doesn't update the fetch counter if the last
                 # instruction in frame is IN.
                 if (self.__playback_player.samples and
-                        creator_info == self._SPIN_V0P5_INFO and
+                        self.__playback_player.is_spin_v05 and
                         self.__playback_player.playback_sample_i + 1 <
                         len(self.__playback_player.playback_sample_values)):
                     self.fetches_limit = 1
@@ -784,12 +774,12 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             self.__run_quantum(fast_forward=fast_forward)
 
     def __load_input_recording(self, file: RZXFile) -> None:
-        self.__playback_player = PlaybackPlayer(self, file)
-        creator_info = self.__playback_player.find_recording_info_chunk()
+        self.__playback_player = PlaybackPlayer(
+            self, file.to_unified_playback())
 
         # SPIN v0.5 alters ROM to implement fast tape loading,
         # but that affects recorded RZX files.
-        if creator_info == self._SPIN_V0P5_INFO:
+        if self.__playback_player.is_spin_v05:
             self.write(0x1f47, b'\xf5')
 
         # The bytes-saving ROM procedure needs special processing.

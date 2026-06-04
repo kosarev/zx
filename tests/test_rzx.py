@@ -41,10 +41,11 @@ def test_basic() -> None:
     # Dump.
     assert 'RZXFile' in rzx.dumps()
 
-    # Test finding the info block.
-    player = zx._playback.PlaybackPlayer(mach, rzx)
-    assert isinstance(player.find_recording_info_chunk(),
-                      zx._rzx.RZXCreatorInfo)
+    # Verify creator info is carried into the unified playback.
+    playback = rzx.to_unified_playback()
+    assert playback.creator == '<creator>'
+    assert not playback.is_spin_v05
 
     # Generate playback samples.
+    player = zx._playback.PlaybackPlayer(mach, playback)
     assert 'END_OF_FRAME' in player.samples

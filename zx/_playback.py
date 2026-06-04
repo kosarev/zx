@@ -105,8 +105,6 @@ from ._data import MachineSnapshot
 from ._data import UnifiedPlayback
 from ._data import UnifiedPlaybackFrame
 from ._data import UnifiedPlaybackSegment
-from ._rzx import RZXCreatorInfo
-from ._rzx import RZXFile
 
 if typing.TYPE_CHECKING:  # TODO
     from ._spectrum import SpectrumState
@@ -114,26 +112,19 @@ if typing.TYPE_CHECKING:  # TODO
 
 # TODO: Rework to a time machine interface.
 class PlaybackPlayer(object):
-    def __init__(self, machine: 'SpectrumState', file: RZXFile) -> None:
+    def __init__(self, machine: 'SpectrumState',
+                 playback: UnifiedPlayback) -> None:
         self.__machine = machine
-
-        assert isinstance(file, RZXFile)
-        self._recording = file
-        self._playback = file.to_unified_playback()
+        self._playback = playback
 
         self.playback_sample_values: bytes = b''
         self.playback_sample_i = 0
 
         self.samples = self.__get_playback_samples()
 
-    def find_recording_info_chunk(self) -> RZXCreatorInfo:
-        for chunk in self._recording.chunks:
-            if isinstance(chunk, RZXCreatorInfo):
-                return chunk
-        assert 0  # TODO
-
-    def get_chunks(self) -> list[typing.Any]:
-        return self._recording.chunks
+    @property
+    def is_spin_v05(self) -> bool:
+        return self._playback.is_spin_v05
 
     def __gen_segments(self) -> typing.Iterator[UnifiedPlaybackSegment]:
         for seg in self._playback.segments:
