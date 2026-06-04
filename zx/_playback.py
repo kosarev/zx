@@ -101,19 +101,20 @@ frame. Key frame spacing is a critical design parameter.
 """
 
 import typing
-from ._data import MachineSnapshot
 from ._data import UnifiedPlayback
 from ._data import UnifiedPlaybackFrame
 from ._data import UnifiedPlaybackSegment
+from ._device import Device
 
 if typing.TYPE_CHECKING:  # TODO
     from ._spectrum import SpectrumState
 
 
 # TODO: Rework to a time machine interface.
-class PlaybackPlayer(object):
+class PlaybackPlayer(Device):
     def __init__(self, machine: 'SpectrumState',
                  playback: UnifiedPlayback) -> None:
+        super().__init__()
         self.__machine = machine
         self._playback = playback
 
