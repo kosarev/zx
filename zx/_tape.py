@@ -126,31 +126,31 @@ class TapePlayer(Device):
         self.__audible_output = PulseStream(model)
         self.__audible_pulses: list[tuple[int, int]] = []
 
-    def is_paused(self) -> bool:
+    def __is_paused(self) -> bool:
         return self._is_paused
 
-    def pause(self, is_paused: bool = True) -> None:
+    def __pause(self, is_paused: bool = True) -> None:
         self._is_paused = is_paused
 
-    def unpause(self) -> None:
-        self.pause(is_paused=False)
+    def __unpause(self) -> None:
+        self.__pause(is_paused=False)
 
-    def toggle_pause(self) -> None:
-        self.pause(not self.is_paused())
+    def __toggle_pause(self) -> None:
+        self.__pause(not self.__is_paused())
 
-    def is_end(self) -> bool:
+    def __is_end(self) -> bool:
         return self._pulses is None
 
-    def get_time(self) -> Time:
+    def __get_time(self) -> Time:
         return self._time
 
-    def load_parsed_file(self, file: SoundFile) -> None:
+    def __load_parsed_file(self, file: SoundFile) -> None:
         self._pulses = file.get_pulses()
         self._level = False
-        self.pause()
+        self.__pause()
 
-    def load_tape(self, file: SoundFile) -> None:
-        self.load_parsed_file(file)
+    def __load_tape(self, file: SoundFile) -> None:
+        self.__load_parsed_file(file)
 
     def __get_level_at_frame_tick(self, tick: int) -> bool:
         assert tick >= self._tick, (self._tick, tick)
@@ -225,19 +225,19 @@ class TapePlayer(Device):
         elif isinstance(event, EndOfFrame):
             self.__complete_frame(dispatcher)
         elif isinstance(event, GetTapePlayerTime):
-            return self.get_time()
+            return self.__get_time()
         elif isinstance(event, ReadPort):
             if self._pulses is not None:
                 if not self.__get_level_at_frame_tick(event.ticks_since_int):
                     result &= 0xbf  # EAR bit low when no tape signal
         elif isinstance(event, IsTapePlayerPaused):
-            return self.is_paused()
+            return self.__is_paused()
         elif isinstance(event, IsTapePlayerStopped):
-            return self.is_end()
+            return self.__is_end()
         elif isinstance(event, LoadTape):
-            self.load_tape(event.file)
+            self.__load_tape(event.file)
         elif isinstance(event, PauseUnpauseTape):
-            self.pause(event.pause)
+            self.__pause(event.pause)
 
             # TODO: Only notify if the state is actually changed.
             dispatcher.notify(TapeStateUpdated())
