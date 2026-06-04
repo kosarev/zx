@@ -31,8 +31,10 @@ from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EmulatorReset
 from ._device import EndOfFrame
+from ._device import BreakpointHit
 from ._device import FetchesLimitHit
 from ._device import GetMachineState
+from ._device import SetBreakpoint
 from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
 from ._device import InstallSnapshot
@@ -55,7 +57,6 @@ from ._device import ToggleEmulationPause
 from ._device import ToggleTapePause
 from ._error import Error
 from ._except import EmulationExit
-from ._except import EmulatorException
 from ._file import parse_file
 from ._keyboard import Keyboard
 from ._keyboard import KEYS
@@ -696,17 +697,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                     pc = self.pc
                     self.__profile.add_instr_addr(pc)
 
-                # SPIN v0.5 skips executing instructions
-                # of the bytes-saving ROM procedure in
-                # fast save mode.
-                if (self.__playback is not None and
-                        self.__playback.is_spin_v05 and
-                        self.pc == 0x04d4):
-                    sp = self.sp
-                    ret_addr = self.read16(sp)
-                    self.sp = sp + 2
-                    self.pc = ret_addr
-
             if self.__playback is not None:
                 if RunEvents.FETCHES_LIMIT_HIT in events:
                     self.devices.notify(FetchesLimitHit())
@@ -736,9 +726,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         # but that affects recorded RZX files.
         if playback.is_spin_v05:
             self.write(0x1f47, b'\xf5')
-
-        # The bytes-saving ROM procedure needs special processing.
-        self.set_breakpoint(0x04d4)
 
         self.devices.notify(StartPlayback(playback))
 
@@ -837,7 +824,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.set_breakpoints(addr, 1)
 
     def on_breakpoint(self) -> None:
-        raise EmulatorException('Breakpoint triggered.')
+        self.devices.notify(BreakpointHit())
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
@@ -854,6 +841,8 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             self.__on_end_of_frame(devices)
         elif isinstance(event, GetMachineState):
             return self
+        elif isinstance(event, SetBreakpoint):
+            self.set_breakpoint(event.addr)
         elif isinstance(event, InstallSnapshot):
             self.install_snapshot(event.snapshot)
         elif isinstance(event, SetFetchesLimit):

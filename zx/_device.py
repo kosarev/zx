@@ -51,6 +51,10 @@ class EmulatorReset(DeviceEvent):
     pass
 
 
+class BreakpointHit(DeviceEvent):
+    pass
+
+
 class FetchesLimitHit(DeviceEvent):
     pass
 
@@ -148,6 +152,11 @@ class ReadPort(DeviceEvent):
 
 class RequestLoadFile(DeviceEvent):
     pass
+
+
+class SetBreakpoint(DeviceEvent):
+    def __init__(self, addr: int) -> None:
+        self.addr = addr
 
 
 class SetFastForward(DeviceEvent):

@@ -108,8 +108,10 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EndOfFrame
+from ._device import BreakpointHit
 from ._device import FetchesLimitHit
 from ._device import GetMachineState
+from ._device import SetBreakpoint
 from ._device import InstallSnapshot
 from ._device import ReadPort
 from ._device import SetFetchesLimit
@@ -167,6 +169,10 @@ class PlaybackPlayer(Device):
         self.__frames = iter(())
         self.__get_next_frame(devices)
 
+        if playback.is_spin_v05:
+            # The bytes-saving ROM procedure needs special processing.
+            devices.notify(SetBreakpoint(0x04d4))
+
     def __unload(self) -> None:
         self._playback = None
         self.__segments = iter(())
@@ -186,6 +192,17 @@ class PlaybackPlayer(Device):
 
         if not self.is_active:
             return result
+
+        if isinstance(event, BreakpointHit):
+            # SPIN v0.5 skips the bytes-saving ROM procedure in fast save mode.
+            if self._playback is not None and self._playback.is_spin_v05:
+                state = devices.notify(GetMachineState())
+                # TODO: assert isinstance(state, Z80State)
+                if state.pc == 0x04d4:
+                    sp = state.sp
+                    state.pc = state.read16(sp)
+                    state.sp = sp + 2
+                    return True
 
         if isinstance(event, ReadPort):
             assert self.__samples is not None
