@@ -20,6 +20,9 @@ from ._data import HexData
 from ._data import Latin1Data
 from ._data import MachinePlayback
 from ._data import MachineSnapshot
+from ._data import UnifiedPlayback
+from ._data import UnifiedPlaybackFrame
+from ._data import UnifiedPlaybackSegment
 from ._error import Error
 from ._z80snapshot import Z80Snapshot
 
@@ -301,6 +304,21 @@ class RZXFile(MachinePlayback, format_name='RZX'):
 
     def __init__(self, *, chunks: list[RZXChunk]) -> None:
         super().__init__(chunks=chunks)
+
+    def to_unified_playback(self) -> UnifiedPlayback:
+        segments = []
+        for chunk in self.chunks:
+            if isinstance(chunk, RZXSnapshot):
+                segments.append(UnifiedPlaybackSegment(
+                    snapshot=chunk.snapshot.to_unified_snapshot()))
+            elif isinstance(chunk, RZXInputRecording):
+                if not segments:
+                    segments.append(UnifiedPlaybackSegment())
+                segments[-1].frames.extend(
+                    UnifiedPlaybackFrame(num_fetches=f.num_fetches,
+                                         port_samples=f.samples.data)
+                    for f in chunk.frames)
+        return UnifiedPlayback(segments=segments)
 
     @classmethod
     def decode(cls, filename: str, image: Bytes) -> 'RZXFile':

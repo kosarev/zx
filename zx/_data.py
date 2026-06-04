@@ -389,12 +389,14 @@ class UnifiedPlaybackFrame(DataRecord, format_name=None):
 
 
 class UnifiedPlaybackSegment(DataRecord, format_name=None):
-    key_frame: UnifiedSnapshot
+    snapshot: UnifiedSnapshot
     frames: list[UnifiedPlaybackFrame]
 
-    def __init__(self, *, key_frame: UnifiedSnapshot,
-                 frames: list[UnifiedPlaybackFrame]) -> None:
-        super().__init__(key_frame=key_frame, frames=frames)
+    def __init__(self, *, snapshot: UnifiedSnapshot | None = None,
+                 frames: list[UnifiedPlaybackFrame] | None = None) -> None:
+        super().__init__(
+            snapshot=snapshot if snapshot is not None else UnifiedSnapshot(),
+            frames=frames if frames is not None else [])
 
 
 class UnifiedPlayback(MachinePlayback, format_name=None):
