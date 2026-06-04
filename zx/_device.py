@@ -15,6 +15,7 @@ import numpy
 from ._binary import Bytes
 from ._data import SoundFile
 from ._data import SoundPulses
+from ._data import UnifiedPlayback
 from ._data import UnifiedSnapshot
 
 
@@ -53,6 +54,15 @@ class EmulatorReset(DeviceEvent):
 class InstallSnapshot(DeviceEvent):
     def __init__(self, snapshot: UnifiedSnapshot) -> None:
         self.snapshot = snapshot
+
+
+class StartPlayback(DeviceEvent):
+    def __init__(self, playback: UnifiedPlayback) -> None:
+        self.playback = playback
+
+
+class StopPlayback(DeviceEvent):
+    pass
 
 
 class EndOfFrame(DeviceEvent):

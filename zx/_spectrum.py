@@ -34,6 +34,8 @@ from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
 from ._device import InstallSnapshot
 from ._device import IsTapePlayerPaused
+from ._device import StartPlayback
+from ._device import StopPlayback
 from ._device import IsTapePlayerStopped
 from ._device import KeyStroke
 from ._device import LoadFile
@@ -629,16 +631,12 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             f.write(make_rzx(crash_recording))
 
     def __enter_playback_mode(self) -> None:
-        # Interrupts are supposed to be controlled by the
-        # recording.
+        # Interrupts are supposed to be controlled by the recording.
         self.suppress_interrupts = True
         self.allow_int_after_ei = True
-        # self.enable_trace()
 
     # TODO: Double-underscore or make public.
     def _quit_playback_mode(self) -> None:
-        self.__playback_player.unload()
-
         self.suppress_interrupts = False
         self.allow_int_after_ei = False
 
@@ -739,15 +737,17 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             self.__run_quantum(fast_forward=fast_forward)
 
     def __load_input_recording(self, file: RZXFile) -> None:
-        self.__playback_player.load(file.to_unified_playback())
+        playback = file.to_unified_playback()
 
         # SPIN v0.5 alters ROM to implement fast tape loading,
         # but that affects recorded RZX files.
-        if self.__playback_player.is_spin_v05:
+        if playback.is_spin_v05:
             self.write(0x1f47, b'\xf5')
 
         # The bytes-saving ROM procedure needs special processing.
         self.set_breakpoint(0x04d4)
+
+        self.devices.notify(StartPlayback(playback))
 
     def reset_and_wait(self) -> None:
         self.pc = 0x0000
@@ -780,7 +780,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             self.install_snapshot(file)
         elif isinstance(file, RZXFile):
             self.__load_input_recording(file)
-            self.__enter_playback_mode()
         elif isinstance(file, SoundFile):
             self.__load_tape_to_player(file)
         elif isinstance(file, ZXBasicCompilerProgram):
@@ -853,9 +852,13 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             key = KEYS.get(event.id, None)
             if key:
                 self.paused = False
-                self._quit_playback_mode()
+                self.devices.notify(StopPlayback())
         elif isinstance(event, InstallSnapshot):
             self.install_snapshot(event.snapshot)
+        elif isinstance(event, StartPlayback):
+            self.__enter_playback_mode()
+        elif isinstance(event, StopPlayback):
+            self._quit_playback_mode()
         elif isinstance(event, EmulatorReset):
             self.on_reset()
             self.__install_rom()

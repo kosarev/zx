@@ -48,9 +48,10 @@ def test_basic() -> None:
 
     # Verify samples are consumed correctly from the first frame.
     player = zx._playback.PlaybackPlayer(mach)
-    player.load(playback)
-    assert player.is_active
     dispatcher = zx._device.Dispatcher()
+    start = zx._device.StartPlayback(playback)
+    player.on_event(start, dispatcher, None)
+    assert player.is_active
     read_port = zx._device.ReadPort(0xfe)
     assert player.on_event(read_port, dispatcher, 0xff) == 0x42
     assert player.on_event(read_port, dispatcher, 0xff) == 0xff

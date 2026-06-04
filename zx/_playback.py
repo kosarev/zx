@@ -108,7 +108,10 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EndOfFrame
+from ._device import InstallSnapshot
 from ._device import ReadPort
+from ._device import StartPlayback
+from ._device import StopPlayback
 from ._except import EmulationExit
 
 if typing.TYPE_CHECKING:  # TODO
@@ -137,21 +140,21 @@ class PlaybackPlayer(Device):
     def is_spin_v05(self) -> bool:
         return self._playback is not None and self._playback.is_spin_v05
 
-    def __get_next_segment(self) -> None:
+    def __get_next_segment(self, devices: Dispatcher) -> None:
         seg = next(self.__segments, None)
         if seg is None:
-            self.unload()
+            devices.notify(StopPlayback())
             raise EmulationExit()
 
-        self.__machine.install_snapshot(seg.snapshot)
+        devices.notify(InstallSnapshot(seg.snapshot))
         self.__frames = iter(seg.frames)
 
-    def __get_next_frame(self) -> None:
+    def __get_next_frame(self, devices: Dispatcher) -> None:
         while True:
             frame = next(self.__frames, None)
             if frame is not None:
                 break
-            self.__get_next_segment()
+            self.__get_next_segment(devices)
 
         self.__machine.fetches_limit = frame.num_fetches
         self.playback_sample_values = frame.port_samples.data
@@ -159,13 +162,13 @@ class PlaybackPlayer(Device):
         self.__sample_count = 0
         self.playback_sample_i = 0
 
-    def load(self, playback: UnifiedPlayback) -> None:
+    def __load(self, playback: UnifiedPlayback, devices: Dispatcher) -> None:
         self._playback = playback
         self.__segments = iter(playback.segments)
         self.__frames = iter(())
-        self.__get_next_frame()
+        self.__get_next_frame(devices)
 
-    def unload(self) -> None:
+    def __unload(self) -> None:
         self._playback = None
         self.__segments = iter(())
         self.__frames = iter(())
@@ -174,6 +177,14 @@ class PlaybackPlayer(Device):
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
+        if isinstance(event, StartPlayback):
+            self.__load(event.playback, devices)
+            return result
+
+        if isinstance(event, StopPlayback):
+            self.__unload()
+            return result
+
         if not self.is_active:
             return result
 
@@ -193,6 +204,6 @@ class PlaybackPlayer(Device):
                 # TODO: raise Error('Too many input samples.',
                 #                   id='too_many_input_samples')
                 assert 0
-            self.__get_next_frame()
+            self.__get_next_frame(devices)
 
         return result
