@@ -717,6 +717,10 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self.devices.notify(EndOfFrame(
                     port_writes=numpy.frombuffer(self.get_port_writes(),
                                                  dtype=numpy.uint64)))
+
+                if self.__playback_player.is_active:
+                    self.on_handle_active_int()
+
                 self.devices.notify(OutputFrame(
                     pixels=self.get_frame_pixels(),
                     fast_forward=fast_forward))

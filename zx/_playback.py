@@ -193,6 +193,5 @@ class PlaybackPlayer(Device):
                 #                   id='too_many_input_samples')
                 assert 0
             self.__on_new_frame()
-            self.__machine.on_handle_active_int()  # type: ignore[attr-defined]
 
         return result
