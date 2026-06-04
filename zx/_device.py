@@ -71,8 +71,12 @@ class StopPlayback(DeviceEvent):
 
 
 class EndOfFrame(DeviceEvent):
+    pass
+
+
+class FramePortWrites(DeviceEvent):
     def __init__(self, *,
-                 port_writes: numpy.typing.NDArray[numpy.uint64]):
+                 port_writes: numpy.typing.NDArray[numpy.uint64]) -> None:
         self.port_writes = port_writes
 
 
