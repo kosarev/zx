@@ -103,6 +103,7 @@ frame. Key frame spacing is a critical design parameter.
 import typing
 from ._data import MachineSnapshot
 from ._data import UnifiedPlayback
+from ._rzx import RZXFrame
 from ._rzx import RZXSnapshot
 from ._rzx import RZXCreatorInfo
 from ._rzx import RZXFile
@@ -120,6 +121,11 @@ class PlaybackPlayer(object):
         assert isinstance(file, RZXFile)
         self._recording = file
 
+        self.playback_frame_count = 0
+        self.playback_chunk: RZXInputRecording | None = None
+        self.playback_sample_values: bytes = b''
+        self.playback_sample_i = 0
+
         self.samples = self.__get_playback_samples()
 
     def find_recording_info_chunk(self) -> RZXCreatorInfo:
@@ -131,40 +137,46 @@ class PlaybackPlayer(object):
     def get_chunks(self) -> list[typing.Any]:
         return self._recording.chunks
 
+    def __gen_chunks(self) -> typing.Iterator[RZXInputRecording]:
+        for chunk in self.get_chunks():
+            if isinstance(chunk, RZXSnapshot):
+                self.__machine.install_snapshot(chunk.snapshot)
+            elif isinstance(chunk, RZXInputRecording):
+                self.__machine.ticks_since_int = chunk.first_tick
+                self.playback_chunk = chunk
+                yield chunk
+
+    def __gen_frames(self,
+                     chunks: typing.Iterator[RZXInputRecording],
+                     ) -> typing.Iterator[RZXFrame]:
+        for chunk in chunks:
+            for frame in chunk.frames:
+                self.__machine.fetches_limit = frame.num_fetches
+                yield frame
+
+    def __gen_samples(self, frame: RZXFrame) -> typing.Iterator[int]:
+        yield from frame.samples.data
+
     def __get_playback_samples(self) -> typing.Iterable[str | int]:
         # TODO: Have a class describing playback state.
         self.playback_frame_count = 0
-        self.playback_chunk: None | RZXInputRecording = None
-        self.playback_sample_values: bytes = b''
+        self.playback_chunk = None
+        self.playback_sample_values = b''
         self.playback_sample_i = 0
 
         frame_count = 0
-        for chunk_i, chunk in enumerate(self.get_chunks()):
-            if isinstance(chunk, RZXSnapshot):
-                self.__machine.install_snapshot(chunk.snapshot)
-                continue
+        for frame in self.__gen_frames(self.__gen_chunks()):
+            samples = frame.samples.data
 
-            if not isinstance(chunk, RZXInputRecording):
-                continue
+            yield 'START_OF_FRAME'
 
-            self.__machine.ticks_since_int = chunk.first_tick
+            for sample_i, sample in enumerate(self.__gen_samples(frame)):
+                # TODO: Have a class describing playback state.
+                self.playback_frame_count = frame_count
+                self.playback_sample_values = samples
+                self.playback_sample_i = sample_i
+                yield sample
 
-            for frame_i, frame in enumerate(chunk.frames):
-                samples = frame.samples.data
-                self.__machine.fetches_limit = frame.num_fetches
+            yield 'END_OF_FRAME'
 
-                yield 'START_OF_FRAME'
-
-                for sample_i, sample in enumerate(samples):
-                    # TODO: Have a class describing playback state.
-                    self.playback_frame_count = frame_count
-                    self.playback_chunk = chunk
-                    self.playback_sample_values = samples
-                    self.playback_sample_i = sample_i
-
-                    yield sample
-
-                # print('END_OF_FRAME', flush=True)
-                yield 'END_OF_FRAME'
-
-                frame_count += 1
+            frame_count += 1
