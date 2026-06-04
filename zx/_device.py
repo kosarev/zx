@@ -15,6 +15,7 @@ import numpy
 from ._binary import Bytes
 from ._data import SoundFile
 from ._data import SoundPulses
+from ._data import UnifiedSnapshot
 
 
 class DeviceEvent(object):
@@ -47,6 +48,11 @@ class Destroy(DeviceEvent):
 # loaded state is applied on top of a clean reset state.
 class EmulatorReset(DeviceEvent):
     pass
+
+
+class InstallSnapshot(DeviceEvent):
+    def __init__(self, snapshot: UnifiedSnapshot) -> None:
+        self.snapshot = snapshot
 
 
 class EndOfFrame(DeviceEvent):

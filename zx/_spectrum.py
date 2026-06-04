@@ -32,6 +32,7 @@ from ._device import EmulatorReset
 from ._device import EndOfFrame
 from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
+from ._device import InstallSnapshot
 from ._device import IsTapePlayerPaused
 from ._device import IsTapePlayerStopped
 from ._device import KeyStroke
@@ -853,6 +854,8 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             if key:
                 self.paused = False
                 self._quit_playback_mode()
+        elif isinstance(event, InstallSnapshot):
+            self.install_snapshot(event.snapshot)
         elif isinstance(event, EmulatorReset):
             self.on_reset()
             self.__install_rom()
