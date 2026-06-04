@@ -469,7 +469,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
     devices: Dispatcher
     __profile: None | Profile
-    __playback_player: None | PlaybackPlayer
+    __playback_player: PlaybackPlayer
 
     def __init__(self, *,
                  model: type[SpectrumModel] | None = None,
@@ -494,13 +494,16 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         self.__events_to_signal = RunEvents.NO_EVENTS
 
+        self.__playback_player = PlaybackPlayer(self)
+
         if devices is None:
             if keyboard is None:
                 keyboard = Keyboard()
             if beeper is None:
                 beeper = Beeper(self.model)
 
-            devices = [self, TapePlayer(self.model), keyboard, beeper]
+            devices = [self, TapePlayer(self.model), keyboard, beeper,
+                       self.__playback_player]
 
             if not headless:
                 if screen is None:
@@ -515,8 +518,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.devices = dispatcher  # TODO: Rename the field?
 
         self.set_on_input_callback(self.__on_input)
-
-        self.__playback_player = None
 
         self.__profile = profile
         if self.__profile:
@@ -589,7 +590,8 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
     def __on_input(self, addr: int) -> int:
         # Handle playbacks.
-        if self.__playback_player:
+        if self.__playback_player.is_active:
+            assert self.__playback_player.samples is not None
             sample = None
             for sample in self.__playback_player.samples:
                 break
@@ -660,7 +662,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
     # TODO: Double-underscore or make public.
     def _quit_playback_mode(self) -> None:
-        self.__playback_player = None
+        self.__playback_player.unload()
 
         self.suppress_interrupts = False
         self.allow_int_after_ei = False
@@ -704,8 +706,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 # SPIN v0.5 skips executing instructions
                 # of the bytes-saving ROM procedure in
                 # fast save mode.
-                if (self.__playback_player and
-                        self.__playback_player.samples and
+                if (self.__playback_player.is_active and
                         self.__playback_player.is_spin_v05 and
                         self.pc == 0x04d4):
                     sp = self.sp
@@ -713,7 +714,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                     self.sp = sp + 2
                     self.pc = ret_addr
 
-            playback_end_of_frame = (self.__playback_player and
+            playback_end_of_frame = (self.__playback_player.is_active and
                                      RunEvents.FETCHES_LIMIT_HIT in events)
 
             if playback_end_of_frame:
@@ -749,7 +750,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self._emulation_time.advance(1 / 50)
 
             if playback_end_of_frame:
-                assert self.__playback_player is not None
+                assert self.__playback_player.samples is not None
                 sample = None
                 for sample in self.__playback_player.samples:
                     break
@@ -779,8 +780,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             self.__run_quantum(fast_forward=fast_forward)
 
     def __load_input_recording(self, file: RZXFile) -> None:
-        self.__playback_player = PlaybackPlayer(
-            self, file.to_unified_playback())
+        self.__playback_player.load(file.to_unified_playback())
 
         # SPIN v0.5 alters ROM to implement fast tape loading,
         # but that affects recorded RZX files.
@@ -791,6 +791,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.set_breakpoint(0x04d4)
 
         # Process frames in order.
+        assert self.__playback_player.samples is not None
         sample = None
         for sample in self.__playback_player.samples:
             break

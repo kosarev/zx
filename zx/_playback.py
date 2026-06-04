@@ -112,22 +112,36 @@ if typing.TYPE_CHECKING:  # TODO
 
 # TODO: Rework to a time machine interface.
 class PlaybackPlayer(Device):
-    def __init__(self, machine: 'SpectrumState',
-                 playback: UnifiedPlayback) -> None:
+    def __init__(self, machine: 'SpectrumState') -> None:
         super().__init__()
         self.__machine = machine
-        self._playback = playback
+        self._playback: UnifiedPlayback | None = None
 
         self.playback_sample_values: bytes = b''
         self.playback_sample_i = 0
 
-        self.samples = self.__get_playback_samples()
+        self.samples: typing.Iterable[str | int] | None = None
+
+    @property
+    def is_active(self) -> bool:
+        return self._playback is not None
 
     @property
     def is_spin_v05(self) -> bool:
-        return self._playback.is_spin_v05
+        return self._playback is not None and self._playback.is_spin_v05
+
+    def load(self, playback: UnifiedPlayback) -> None:
+        self._playback = playback
+        self.playback_sample_values = b''
+        self.playback_sample_i = 0
+        self.samples = self.__get_playback_samples()
+
+    def unload(self) -> None:
+        self._playback = None
+        self.samples = None
 
     def __gen_segments(self) -> typing.Iterator[UnifiedPlaybackSegment]:
+        assert self._playback is not None
         for seg in self._playback.segments:
             self.__machine.install_snapshot(seg.snapshot)
             yield seg

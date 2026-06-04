@@ -47,5 +47,7 @@ def test_basic() -> None:
     assert not playback.is_spin_v05
 
     # Generate playback samples.
-    player = zx._playback.PlaybackPlayer(mach, playback)
+    player = zx._playback.PlaybackPlayer(mach)
+    player.load(playback)
+    assert player.samples is not None
     assert 'END_OF_FRAME' in player.samples

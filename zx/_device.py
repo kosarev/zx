@@ -160,7 +160,7 @@ class NewSoundFrame(DeviceEvent):
 class Device(object):
     def on_event(self, event: DeviceEvent, devices: 'Dispatcher',
                  result: typing.Any) -> typing.Any:
-        pass
+        return result
 
 
 class Dispatcher(object):
