@@ -314,7 +314,9 @@ class RZXFile(MachinePlayback, format_name='RZX'):
             elif isinstance(chunk, RZXInputRecording):
                 if not segments:
                     segments.append(UnifiedPlaybackSegment())
-                segments[-1].frames.extend(
+                s = segments[-1]
+                s.snapshot.ticks_since_int = chunk.first_tick
+                s.frames.extend(
                     UnifiedPlaybackFrame(num_fetches=f.num_fetches,
                                          port_samples=f.samples.data)
                     for f in chunk.frames)
