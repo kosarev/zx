@@ -139,6 +139,10 @@ class PlaybackPlayer(Device):
         self.playback_sample_values = b''
         self.playback_sample_i = 0
         self.samples = self.__get_playback_samples()
+        sample = None
+        for sample in self.samples:
+            break
+        assert sample == 'START_OF_FRAME'
 
     def unload(self) -> None:
         self._playback = None

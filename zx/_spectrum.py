@@ -770,13 +770,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         # The bytes-saving ROM procedure needs special processing.
         self.set_breakpoint(0x04d4)
 
-        # Process frames in order.
-        assert self.__playback_player.samples is not None
-        sample = None
-        for sample in self.__playback_player.samples:
-            break
-        assert sample == 'START_OF_FRAME'
-
     def reset_and_wait(self) -> None:
         self.pc = 0x0000
         self.run(duration=1.8, fast_forward=True)
