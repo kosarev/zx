@@ -11,10 +11,29 @@
 """
 This module implements the playback player for input recordings.
 
-All recording formats (.rzx, etc.) will eventually translate into
-UnifiedPlayback for internal use. The player will be reworked
-accordingly. Format-specific types (RZXFile, etc.) remain as literal
+All recording formats (.rzx, etc.) translate into UnifiedPlayback for
+internal use. Format-specific types (RZXFile, etc.) remain as literal
 representations for binary-exact roundtripping.
+
+
+Contracts
+==========
+
+PlaybackPlayer's responsibility is to issue the correct events needed
+for a correct emulator to reproduce a recorded execution. It must not
+reach into live machine state to compensate for quirks of particular
+recording tools.
+
+UnifiedPlayback is the canonical, correct execution-reproduction
+material. Conversion from a format-specific type (e.g. RZXFile) must
+produce a correct UnifiedPlayback. If the source recording does not
+fully conform to the format (e.g. some recordings produced by SPIN
+v0.5), any deviation must be corrected during conversion or as a
+separate recovery operation — not patched at playback time. The
+proper recovery procedure is: detect the non-conforming recording,
+run it through a private headless Spectrum to determine the correct
+frames, and emit a corrected UnifiedPlayback. The player then
+receives correct input and needs no format-specific knowledge.
 
 
 Design: layered correction streams
