@@ -298,9 +298,7 @@ class _SPINPlaybackPlayer(PlaybackPlayer):
                  result: typing.Any) -> typing.Any:
         # Yield to _SPINPlaybackRecoverer when the trailing IN correction
         # is pending; otherwise PlaybackPlayer raises too_many_input_samples.
-        if (isinstance(event, FetchesLimitHit) and
-                self.playback_sample_i + 1 <
-                len(self.playback_sample_values)):
+        if isinstance(event, FetchesLimitHit) and self.has_remaining_samples:
             return result
         return super().on_event(event, devices, result)
 
@@ -325,8 +323,7 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
         if isinstance(event, FetchesLimitHit):
             # SPIN v0.5 doesn't update the fetch counter if the last
             # instruction in a frame is IN.
-            if (self._player.playback_sample_i + 1 <
-                    len(self._player.playback_sample_values)):
+            if self._player.has_remaining_samples:
                 self.fetches_limit = 1
 
         return super().on_event(event, devices, result)

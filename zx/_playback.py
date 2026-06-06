@@ -145,10 +145,8 @@ class PlaybackPlayer(Device):
         self.__segments: typing.Iterator[UnifiedPlaybackSegment] = iter(())
         self.__frames: typing.Iterator[UnifiedPlaybackFrame] = iter(())
         self.__samples: typing.Iterator[int] | None = None
+        self.__sample_values: bytes = b''
         self.__sample_count = 0
-
-        self.playback_sample_values: bytes = b''
-        self.playback_sample_i = 0
 
     @property
     def is_active(self) -> bool:
@@ -157,6 +155,10 @@ class PlaybackPlayer(Device):
     @property
     def is_spin_v05(self) -> bool:
         return self._playback is not None and self._playback.is_spin_v05
+
+    @property
+    def has_remaining_samples(self) -> bool:
+        return self.__sample_count < len(self.__sample_values)
 
     def __get_next_segment(self, devices: Dispatcher) -> None:
         seg = next(self.__segments, None)
@@ -175,10 +177,9 @@ class PlaybackPlayer(Device):
             self.__get_next_segment(devices)
 
         devices.notify(SetFetchesLimit(frame.num_fetches))
-        self.playback_sample_values = frame.port_samples.data
+        self.__sample_values = frame.port_samples.data
         self.__samples = iter(frame.port_samples.data)
         self.__sample_count = 0
-        self.playback_sample_i = 0
 
     def __load(self, playback: UnifiedPlayback, devices: Dispatcher) -> None:
         self._playback = playback
@@ -191,6 +192,7 @@ class PlaybackPlayer(Device):
         self.__segments = iter(())
         self.__frames = iter(())
         self.__samples = None
+        self.__sample_values = b''
         self.__sample_count = 0
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
@@ -213,11 +215,10 @@ class PlaybackPlayer(Device):
                 raise Error('Too few input samples.',
                             id='too_few_input_samples')
             self.__sample_count += 1
-            self.playback_sample_i = self.__sample_count - 1
             return result & sample
 
         if isinstance(event, FetchesLimitHit):
-            if self.__sample_count < len(self.playback_sample_values):
+            if self.has_remaining_samples:
                 raise Error('Too many input samples.',
                             id='too_many_input_samples')
             self.__get_next_frame(devices)
