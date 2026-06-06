@@ -31,6 +31,7 @@ from ._error import verbalize_error
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import FetchesLimitHit
+from ._playback import PlaybackPlayer
 from ._except import EmulationExit
 from ._file import detect_file_format
 from ._file import parse_file

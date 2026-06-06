@@ -485,6 +485,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                  sound_device: Device | None = None,
                  headless: bool = False,
                  devices: list[Device] | None = None,
+                 playback_player: PlaybackPlayer | None = None,
                  profile: Profile | None = None):
         SpectrumState.__init__(self, self._get_state_view())
         Device.__init__(self)
@@ -506,7 +507,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 beeper = Beeper(self.model)
 
             devices = [self, TapePlayer(self.model), keyboard, beeper,
-                       PlaybackPlayer()]
+                       playback_player or PlaybackPlayer()]
 
             if not headless:
                 if screen is None:
