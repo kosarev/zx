@@ -141,7 +141,7 @@ from ._except import EmulationExit
 class PlaybackPlayer(Device):
     def __init__(self) -> None:
         super().__init__()
-        self._playback: UnifiedPlayback | None = None
+        self.__playback: UnifiedPlayback | None = None
         self.__segments: typing.Iterator[UnifiedPlaybackSegment] = iter(())
         self.__frames: typing.Iterator[UnifiedPlaybackFrame] = iter(())
         self.__sample_values: bytes = b''
@@ -149,11 +149,11 @@ class PlaybackPlayer(Device):
 
     @property
     def is_active(self) -> bool:
-        return self._playback is not None
+        return self.__playback is not None
 
     @property
     def is_spin_v05(self) -> bool:
-        return self._playback is not None and self._playback.is_spin_v05
+        return self.__playback is not None and self.__playback.is_spin_v05
 
     @property
     def has_remaining_samples(self) -> bool:
@@ -180,13 +180,13 @@ class PlaybackPlayer(Device):
         self.__sample_count = 0
 
     def __load(self, playback: UnifiedPlayback, devices: Dispatcher) -> None:
-        self._playback = playback
+        self.__playback = playback
         self.__segments = iter(playback.segments)
         self.__frames = iter(())
         self.__get_next_frame(devices)
 
     def __unload(self) -> None:
-        self._playback = None
+        self.__playback = None
         self.__segments = iter(())
         self.__frames = iter(())
         self.__sample_values = b''
