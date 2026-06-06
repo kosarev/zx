@@ -217,3 +217,24 @@ class PlaybackPlayer(Device):
             devices.notify(EndOfFrame())
 
         return result
+
+
+class PlaybackRecorder(Device):
+    def __init__(self) -> None:
+        super().__init__()
+        self.__segments: list[UnifiedPlaybackSegment] = []
+
+    @property
+    def playback(self) -> UnifiedPlayback:
+        return UnifiedPlayback(segments=self.__segments)
+
+    def on_event(self, event: DeviceEvent, devices: Dispatcher,
+                 result: typing.Any) -> typing.Any:
+        if isinstance(event, InstallSnapshot):
+            self.__segments.append(
+                UnifiedPlaybackSegment(snapshot=event.snapshot))
+
+        # TODO: Collect frames from OutputFrame events once the C core
+        # exposes port_reads and num_fetches.
+
+        return result
