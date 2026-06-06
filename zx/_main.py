@@ -21,6 +21,7 @@ import sys
 from ._binary import Bytes
 from ._data import ArchiveFile
 from ._data import DataRecord
+from ._data import MachinePlayback
 from ._data import MachineSnapshot
 from ._data import SoundFile
 from ._data import Spectrum128
@@ -259,13 +260,27 @@ def test(args: list[str]) -> None:
             pass
 
 
+class _PlaybackRecoverer(Spectrum):
+    pass
+
+
+def recover_file(filename: str) -> None:
+    file = parse_file(filename)
+    if not isinstance(file, MachinePlayback):
+        raise Error(f"Don't know how to recover {file.FORMAT_NAME}; "
+                    f'a playback is expected.',
+                    id='not_recoverable')
+
+    with _PlaybackRecoverer(headless=True) as machine:
+        try:
+            machine._run_file(filename)
+        except EmulationExit:
+            pass
+
+
 def recover(args: list[str]) -> None:
     for filename in args:
-        with Spectrum(headless=True) as machine:
-            try:
-                machine._run_file(filename)
-            except EmulationExit:
-                pass
+        recover_file(filename)
 
 
 def fast_forward(args: list[str]) -> None:
@@ -394,10 +409,11 @@ def handle_command_line(args: list[str]) -> None:
         'profile': profile,
         'run': run,
 
+        'recover': recover,
+
         # TODO: Hidden commands for internal use.
         '__test': test,
         '__ff': fast_forward,
-        '__recover': recover,
     }
 
     if command not in COMMANDS:
