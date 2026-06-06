@@ -707,15 +707,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self.devices.notify(SetFastForward(False))
 
     def _load_input_recording(self, file: MachinePlayback) -> None:
-        playback = file.to_unified_playback()
-
-        # SPIN v0.5 alters ROM to implement fast tape loading,
-        # but that affects recorded RZX files.
-        if playback.is_spin_v05:
-            assert self.model is Spectrum48  # TODO: Support 128K.
-            self.write(0x1f47, b'\xf5', rom_page=0)
-
-        self.devices.notify(StartPlayback(playback))
+        self.devices.notify(StartPlayback(file.to_unified_playback()))
 
     def reset_and_wait(self) -> None:
         self.pc = 0x0000

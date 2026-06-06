@@ -311,6 +311,17 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
         # The bytes-saving ROM procedure needs special processing.
         self.set_breakpoint(0x04d4)
 
+        # TODO: SPIN v0.5 alters ROM to implement fast tape loading
+        # (writes 0xf5 at 0x1f47), which affects recorded RZX files.
+        # No known recording relies on the patch so far, so it is not
+        # applied; we'll get back to it when investigating non-working
+        # RZX files. When a reproducer is found, apply the patch here
+        # and, once the recorder exists, capture the ROM difference as
+        # a MemoryBlock(addr=0x1f47, rom_page=0, ...) in the key-frame
+        # snapshots, so that the recovered playback carries its own
+        # ROM difference and plays on a strictly conforming emulator
+        # with no quirk knowledge.
+
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
         if isinstance(event, BreakpointHit):
