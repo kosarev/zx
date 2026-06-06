@@ -266,8 +266,8 @@ def test(args: list[str]) -> None:
 
 class _PlaybackRecoverer(Spectrum):
     def __init__(self) -> None:
-        self.__player = PlaybackPlayer()
-        super().__init__(headless=True, playback_player=self.__player)
+        self._player = PlaybackPlayer()
+        super().__init__(headless=True, playback_player=self._player)
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
@@ -278,11 +278,17 @@ class _PlaybackRecoverer(Spectrum):
             if self.iregp_kind != 'hl':
                 self.fetches_limit = 1
 
+        return super().on_event(event, devices, result)
+
+
+class _SPINPlaybackRecoverer(_PlaybackRecoverer):
+    def on_event(self, event: DeviceEvent, devices: Dispatcher,
+                 result: typing.Any) -> typing.Any:
+        if isinstance(event, FetchesLimitHit):
             # SPIN v0.5 doesn't update the fetch counter if the last
             # instruction in a frame is IN.
-            elif (self.__player.is_spin_v05 and
-                    self.__player.playback_sample_i + 1 <
-                    len(self.__player.playback_sample_values)):
+            if (self._player.playback_sample_i + 1 <
+                    len(self._player.playback_sample_values)):
                 raise Error('SPIN v0.5 trailing IN sample.',
                             id='spin_v05_trailing_in_sample')
                 self.fetches_limit = 1
@@ -291,7 +297,11 @@ class _PlaybackRecoverer(Spectrum):
 
 
 def recover_playback(playback: MachinePlayback) -> None:
-    with _PlaybackRecoverer() as machine:
+    unified = playback.to_unified_playback()
+    recoverer: _PlaybackRecoverer = (
+        _SPINPlaybackRecoverer() if unified.is_spin_v05
+        else _PlaybackRecoverer())
+    with recoverer as machine:
         try:
             machine._load_input_recording(playback)
             machine.run()
