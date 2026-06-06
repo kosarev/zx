@@ -31,8 +31,6 @@ from ._error import verbalize_error
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import FetchesLimitHit
-from ._device import GetMachineState
-from ._device import SetFetchesLimit
 from ._except import EmulationExit
 from ._file import detect_file_format
 from ._file import parse_file
@@ -272,8 +270,8 @@ class _PlaybackRecoverer(Spectrum):
             # Some emulators, e.g., SPIN, may store an interrupt point in
             # the middle of a IX- or IY-prefixed instruction, so we
             # continue until such instruction, if any, is completed.
-            if devices.notify(GetMachineState()).iregp_kind != 'hl':
-                devices.notify(SetFetchesLimit(1))
+            if self.iregp_kind != 'hl':
+                self.fetches_limit = 1
 
         return super().on_event(event, devices, result)
 
