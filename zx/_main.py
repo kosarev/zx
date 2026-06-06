@@ -273,8 +273,6 @@ class _PlaybackRecoverer(Spectrum):
             # the middle of a IX- or IY-prefixed instruction, so we
             # continue until such instruction, if any, is completed.
             if devices.notify(GetMachineState()).iregp_kind != 'hl':
-                raise Error('IX/IY mid-instruction interrupt point.',
-                            id='iregp_mid_instruction')
                 devices.notify(SetFetchesLimit(1))
 
         return super().on_event(event, devices, result)

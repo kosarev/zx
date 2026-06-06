@@ -34,6 +34,4 @@ def test_iregp_mid_instruction() -> None:
     ])
     rzx = zx._rzx.RZXFile.decode('test.rzx', rzx_image)
 
-    with pytest.raises(Error) as exc_info:
-        recover_playback(rzx)
-    assert exc_info.value.id == 'iregp_mid_instruction'
+    recover_playback(rzx)
