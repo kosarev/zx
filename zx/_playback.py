@@ -237,17 +237,6 @@ class PlaybackPlayer(Device):
             return result & sample
 
         if isinstance(event, FetchesLimitHit):
-            # SPIN v0.5 doesn't update the fetch counter if the last
-            # instruction in a frame is IN.
-            if (self._playback is not None and
-                    self._playback.is_spin_v05 and
-                    self.playback_sample_i + 1 <
-                    len(self.playback_sample_values)):
-                raise Error('SPIN v0.5 trailing IN sample.',
-                            id='spin_v05_trailing_in_sample')
-                devices.notify(SetFetchesLimit(1))
-                return result
-
             if self.__sample_count < len(self.playback_sample_values):
                 raise Error('Too many input samples.',
                             id='too_many_input_samples')
