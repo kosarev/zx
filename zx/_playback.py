@@ -144,7 +144,6 @@ class PlaybackPlayer(Device):
         self._playback: UnifiedPlayback | None = None
         self.__segments: typing.Iterator[UnifiedPlaybackSegment] = iter(())
         self.__frames: typing.Iterator[UnifiedPlaybackFrame] = iter(())
-        self.__samples: typing.Iterator[int] | None = None
         self.__sample_values: bytes = b''
         self.__sample_count = 0
 
@@ -178,7 +177,6 @@ class PlaybackPlayer(Device):
 
         devices.notify(SetFetchesLimit(frame.num_fetches))
         self.__sample_values = frame.port_samples.data
-        self.__samples = iter(frame.port_samples.data)
         self.__sample_count = 0
 
     def __load(self, playback: UnifiedPlayback, devices: Dispatcher) -> None:
@@ -191,7 +189,6 @@ class PlaybackPlayer(Device):
         self._playback = None
         self.__segments = iter(())
         self.__frames = iter(())
-        self.__samples = None
         self.__sample_values = b''
         self.__sample_count = 0
 
@@ -209,11 +206,10 @@ class PlaybackPlayer(Device):
             return result
 
         if isinstance(event, ReadPort):
-            assert self.__samples is not None
-            sample = next(self.__samples, None)
-            if sample is None:
+            if not self.has_remaining_samples:
                 raise Error('Too few input samples.',
                             id='too_few_input_samples')
+            sample = self.__sample_values[self.__sample_count]
             self.__sample_count += 1
             return result & sample
 
