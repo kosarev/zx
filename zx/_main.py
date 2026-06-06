@@ -28,9 +28,11 @@ from ._data import Spectrum128
 from ._error import Error
 from ._error import USER_ERRORS
 from ._error import verbalize_error
+from ._device import BreakpointHit
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import FetchesLimitHit
+from ._device import GetMachineState
 from ._playback import PlaybackPlayer
 from ._except import EmulationExit
 from ._file import detect_file_format
@@ -301,6 +303,17 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
+        if isinstance(event, BreakpointHit):
+            # SPIN v0.5 skips the bytes-saving ROM procedure in fast save mode.
+            state = devices.notify(GetMachineState())
+            # TODO: assert isinstance(state, Z80State)
+            if state.pc == 0x04d4:
+                raise Error('SPIN v0.5 bytes-saving trap.',
+                            id='spin_v05_bytes_saving_trap')
+                sp = state.sp
+                state.pc = state.read16(sp)
+                state.sp = sp + 2
+
         if isinstance(event, FetchesLimitHit):
             # SPIN v0.5 doesn't update the fetch counter if the last
             # instruction in a frame is IN.
