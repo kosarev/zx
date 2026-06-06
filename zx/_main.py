@@ -259,6 +259,15 @@ def test(args: list[str]) -> None:
             pass
 
 
+def recover(args: list[str]) -> None:
+    for filename in args:
+        with Spectrum(headless=True) as machine:
+            try:
+                machine._run_file(filename)
+            except EmulationExit:
+                pass
+
+
 def fast_forward(args: list[str]) -> None:
     for filename in args:
         with Spectrum() as app:
@@ -388,6 +397,7 @@ def handle_command_line(args: list[str]) -> None:
         # TODO: Hidden commands for internal use.
         '__test': test,
         '__ff': fast_forward,
+        '__recover': recover,
     }
 
     if command not in COMMANDS:
