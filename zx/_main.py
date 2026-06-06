@@ -266,6 +266,11 @@ def test(args: list[str]) -> None:
             pass
 
 
+# TODO: Extract playback recovery into _playback_recovery.py and
+# eventually promote it to a public playback_recovery submodule.
+# TODO: Wire on-the-fly recovery into _load_input_recording() so
+# non-conforming recordings (e.g., SPIN v0.5 ones) are corrected
+# before they reach the player.
 class _PlaybackRecoverer(Spectrum):
     def __init__(self, *, playback: MachinePlayback,
                  playback_player: PlaybackPlayer | None = None) -> None:
