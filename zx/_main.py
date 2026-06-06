@@ -280,6 +280,15 @@ class _PlaybackRecoverer(Spectrum):
         return super().on_event(event, devices, result)
 
 
+def recover_playback(playback: MachinePlayback) -> None:
+    with _PlaybackRecoverer(headless=True) as machine:
+        try:
+            machine._load_input_recording(playback)
+            machine.run()
+        except EmulationExit:
+            pass
+
+
 def recover_file(filename: str) -> None:
     file = parse_file(filename)
     if not isinstance(file, MachinePlayback):
@@ -287,12 +296,7 @@ def recover_file(filename: str) -> None:
                     f'a playback is expected.',
                     id='not_recoverable')
 
-    with _PlaybackRecoverer(headless=True) as machine:
-        try:
-            machine._load_input_recording(file)
-            machine.run()
-        except EmulationExit:
-            pass
+    recover_playback(file)
 
 
 def recover(args: list[str]) -> None:
