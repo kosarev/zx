@@ -16,6 +16,7 @@ import types
 import typing
 
 from ._beeper import Beeper
+from ._data import MachinePlayback
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import SoundFile
@@ -61,7 +62,6 @@ from ._keyboard import KEYS
 from ._playback import PlaybackPlayer
 from ._rom import load_rom_image
 from ._rzx import make_rzx
-from ._rzx import RZXFile
 from ._screen import ScreenWindow
 from ._scr import _SCRSnapshot
 from ._sound import SoundDevice
@@ -706,7 +706,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             if fast_forward:
                 self.devices.notify(SetFastForward(False))
 
-    def __load_input_recording(self, file: RZXFile) -> None:
+    def _load_input_recording(self, file: MachinePlayback) -> None:
         playback = file.to_unified_playback()
 
         # SPIN v0.5 alters ROM to implement fast tape loading,
@@ -746,8 +746,8 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         if isinstance(file, MachineSnapshot):
             self.install_snapshot(file)
-        elif isinstance(file, RZXFile):
-            self.__load_input_recording(file)
+        elif isinstance(file, MachinePlayback):
+            self._load_input_recording(file)
         elif isinstance(file, SoundFile):
             self.__load_tape_to_player(file)
         elif isinstance(file, ZXBasicCompilerProgram):

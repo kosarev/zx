@@ -289,7 +289,8 @@ def recover_file(filename: str) -> None:
 
     with _PlaybackRecoverer(headless=True) as machine:
         try:
-            machine._run_file(filename)
+            machine._load_input_recording(file)
+            machine.run()
         except EmulationExit:
             pass
 
