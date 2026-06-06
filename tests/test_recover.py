@@ -77,3 +77,28 @@ def test_spin_v05_trailing_in_sample() -> None:
     assert_play_fails(playback, 'too_many_input_samples')
 
     assert_plays_ok(recover_playback(playback))
+
+
+def test_spin_v05_bytes_saving_trap() -> None:
+    # SPIN v0.5 in fast save mode jumps into the bytes-saving ROM procedure
+    # at 0x04d4 but expects it to be skipped.
+    snapshot = UnifiedSnapshot(
+        pc=0x8000,
+        memory_blocks=[MemoryBlock(
+            addr=0x8000,
+            data=b'\xc3\xd4\x04')])  # JP 0x04d4
+
+    playback = UnifiedPlayback(
+        segments=[UnifiedPlaybackSegment(
+            snapshot=snapshot,
+            frames=[UnifiedPlaybackFrame(
+                num_fetches=1, port_samples=b'')])],
+        creator='SPIN 0.5',
+        creator_major_version=0,
+        creator_minor_version=5)
+
+    # TODO: Replace with assert_plays_ok(recover_playback(playback)) once
+    # recovery is implemented.
+    with pytest.raises(Error) as exc_info:
+        recover_playback(playback)
+    assert exc_info.value.id == 'spin_v05_bytes_saving_trap'
