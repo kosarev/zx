@@ -321,8 +321,6 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
             state = devices.notify(GetMachineState())
             # TODO: assert isinstance(state, Z80State)
             if state.pc == 0x04d4:
-                raise Error('SPIN v0.5 bytes-saving trap.',
-                            id='spin_v05_bytes_saving_trap')
                 sp = state.sp
                 state.pc = state.read16(sp)
                 state.sp = sp + 2
