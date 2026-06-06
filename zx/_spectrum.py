@@ -32,7 +32,6 @@ from ._device import EmulatorReset
 from ._device import EndOfFrame
 from ._device import BreakpointHit
 from ._device import FetchesLimitHit
-from ._device import GetMachineState
 from ._device import SetBreakpoint
 from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
@@ -831,8 +830,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self.devices.notify(StopPlayback())
         elif isinstance(event, EndOfFrame):
             self.__on_end_of_frame(devices)
-        elif isinstance(event, GetMachineState):
-            return self
         elif isinstance(event, SetBreakpoint):
             self.set_breakpoint(event.addr)
         elif isinstance(event, InstallSnapshot):

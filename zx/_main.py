@@ -32,7 +32,6 @@ from ._device import BreakpointHit
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import FetchesLimitHit
-from ._device import GetMachineState
 from ._playback import PlaybackPlayer
 from ._except import EmulationExit
 from ._file import detect_file_format
@@ -318,12 +317,10 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
                  result: typing.Any) -> typing.Any:
         if isinstance(event, BreakpointHit):
             # SPIN v0.5 skips the bytes-saving ROM procedure in fast save mode.
-            state = devices.notify(GetMachineState())
-            # TODO: assert isinstance(state, Z80State)
-            if state.pc == 0x04d4:
-                sp = state.sp
-                state.pc = state.read16(sp)
-                state.sp = sp + 2
+            if self.pc == 0x04d4:
+                sp = self.sp
+                self.pc = self.read16(sp)
+                self.sp = sp + 2
 
         if isinstance(event, FetchesLimitHit):
             # SPIN v0.5 doesn't update the fetch counter if the last
