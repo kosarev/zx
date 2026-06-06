@@ -128,7 +128,6 @@ from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EndOfFrame
 from ._device import FetchesLimitHit
-from ._device import SetBreakpoint
 from ._device import InstallSnapshot
 from ._device import ReadPort
 from ._device import SetFetchesLimit
@@ -186,10 +185,6 @@ class PlaybackPlayer(Device):
         self.__segments = iter(playback.segments)
         self.__frames = iter(())
         self.__get_next_frame(devices)
-
-        if playback.is_spin_v05:
-            # The bytes-saving ROM procedure needs special processing.
-            devices.notify(SetBreakpoint(0x04d4))
 
     def __unload(self) -> None:
         self._playback = None

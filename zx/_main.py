@@ -268,10 +268,19 @@ def test(args: list[str]) -> None:
 
 
 class _PlaybackRecoverer(Spectrum):
-    def __init__(self,
+    def __init__(self, *, playback: MachinePlayback,
                  playback_player: PlaybackPlayer | None = None) -> None:
         self._player = playback_player or PlaybackPlayer()
         super().__init__(headless=True, playback_player=self._player)
+        self._load_input_recording(playback)
+
+    def recover(self) -> UnifiedPlayback:
+        try:
+            self.run()
+        except EmulationExit:
+            pass
+        # TODO: Return corrected playback once recorder is implemented.
+        return UnifiedPlayback()
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
@@ -298,8 +307,12 @@ class _SPINPlaybackPlayer(PlaybackPlayer):
 
 
 class _SPINPlaybackRecoverer(_PlaybackRecoverer):
-    def __init__(self) -> None:
-        super().__init__(playback_player=_SPINPlaybackPlayer())
+    def __init__(self, *, playback: MachinePlayback) -> None:
+        super().__init__(playback=playback,
+                         playback_player=_SPINPlaybackPlayer())
+
+        # The bytes-saving ROM procedure needs special processing.
+        self.set_breakpoint(0x04d4)
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
@@ -327,16 +340,10 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
 def recover_playback(playback: MachinePlayback) -> UnifiedPlayback:
     unified = playback.to_unified_playback()
     recoverer: _PlaybackRecoverer = (
-        _SPINPlaybackRecoverer() if unified.is_spin_v05
-        else _PlaybackRecoverer())
-    with recoverer as machine:
-        try:
-            machine._load_input_recording(playback)
-            machine.run()
-        except EmulationExit:
-            pass
-    # TODO: Return corrected playback once recorder is implemented.
-    return UnifiedPlayback()
+        _SPINPlaybackRecoverer(playback=playback) if unified.is_spin_v05
+        else _PlaybackRecoverer(playback=playback))
+    with recoverer:
+        return recoverer.recover()
 
 
 def recover_file(filename: str) -> None:
