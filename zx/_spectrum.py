@@ -59,6 +59,7 @@ from ._file import parse_file
 from ._keyboard import Keyboard
 from ._keyboard import KEYS
 from ._playback import PlaybackPlayer
+from ._playback import PlaybackRecorder
 from ._rom import load_rom_image
 from ._rzx import make_rzx
 from ._screen import ScreenWindow
@@ -485,6 +486,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                  headless: bool = False,
                  devices: list[Device] | None = None,
                  playback_player: PlaybackPlayer | None = None,
+                 playback_recorder: PlaybackRecorder | None = None,
                  profile: Profile | None = None):
         SpectrumState.__init__(self, self._get_state_view())
         Device.__init__(self)
@@ -506,7 +508,8 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 beeper = Beeper(self.model)
 
             devices = [self, TapePlayer(self.model), keyboard, beeper,
-                       playback_player or PlaybackPlayer()]
+                       playback_player or PlaybackPlayer(),
+                       playback_recorder or PlaybackRecorder()]
 
             if not headless:
                 if screen is None:

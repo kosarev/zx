@@ -33,6 +33,7 @@ from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import FetchesLimitHit
 from ._playback import PlaybackPlayer
+from ._playback import PlaybackRecorder
 from ._except import EmulationExit
 from ._file import detect_file_format
 from ._file import parse_file
@@ -275,7 +276,9 @@ class _PlaybackRecoverer(Spectrum):
     def __init__(self, *, playback: MachinePlayback,
                  playback_player: PlaybackPlayer | None = None) -> None:
         self._player = playback_player or PlaybackPlayer()
-        super().__init__(headless=True, playback_player=self._player)
+        self.__recorder = PlaybackRecorder(active=True)
+        super().__init__(headless=True, playback_player=self._player,
+                         playback_recorder=self.__recorder)
         self._load_input_recording(playback)
 
     def recover(self) -> UnifiedPlayback:
@@ -283,8 +286,7 @@ class _PlaybackRecoverer(Spectrum):
             self.run()
         except EmulationExit:
             pass
-        # TODO: Return corrected playback once recorder is implemented.
-        return UnifiedPlayback()
+        return self.__recorder.make_playback()
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:

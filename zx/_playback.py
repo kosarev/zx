@@ -220,16 +220,19 @@ class PlaybackPlayer(Device):
 
 
 class PlaybackRecorder(Device):
-    def __init__(self) -> None:
+    def __init__(self, *, active: bool = False) -> None:
         super().__init__()
+        self.__active = active
         self.__segments: list[UnifiedPlaybackSegment] = []
 
-    @property
-    def playback(self) -> UnifiedPlayback:
+    def make_playback(self) -> UnifiedPlayback:
         return UnifiedPlayback(segments=self.__segments)
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
+        if not self.__active:
+            return result
+
         if isinstance(event, InstallSnapshot):
             self.__segments.append(
                 UnifiedPlaybackSegment(snapshot=event.snapshot))
