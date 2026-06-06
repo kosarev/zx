@@ -85,9 +85,11 @@ class EndOfFrame(DeviceEvent):
 class OutputFrame(DeviceEvent):
     def __init__(self, *,
                  pixels: Bytes,
-                 port_writes: numpy.typing.NDArray[numpy.uint64]) -> None:
+                 port_writes: numpy.typing.NDArray[numpy.uint64],
+                 port_reads: Bytes) -> None:
         self.pixels = pixels
         self.port_writes = port_writes
+        self.port_reads = port_reads
 
 
 class GetEmulationPauseState(DeviceEvent):

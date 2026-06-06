@@ -525,6 +525,8 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         self.set_on_input_callback(self.__on_input)
 
+        self.__port_reads = bytearray()
+
         self.__playback: UnifiedPlayback | None = None
 
         self.__profile = profile
@@ -600,6 +602,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         v = self.devices.notify(
             ReadPort(addr, self.ticks_since_int), result=0xff)
         assert isinstance(v, int)
+        self.__port_reads.append(v)
 
         END_OF_TAPE = RunEvents.END_OF_TAPE
         if END_OF_TAPE in self.__events_to_signal and self.__is_end_of_tape():
@@ -647,7 +650,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         devices.notify(OutputFrame(
             pixels=self.get_frame_pixels(),
             port_writes=numpy.frombuffer(self.get_port_writes(),
-                                         dtype=numpy.uint64)))
+                                         dtype=numpy.uint64),
+            port_reads=self.__port_reads))
+        self.__port_reads.clear()
 
         self.frame_count += 1
         self._emulation_time.advance(1 / 50)
