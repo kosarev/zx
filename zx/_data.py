@@ -278,15 +278,16 @@ class Latin1Data(ByteData, format_name=None):
 # 0x0000-0x3FFF, ram_page to 0xC000-0xFFFF; 0x4000-0xBFFF maps directly.
 class MemoryBlock(DataRecord, format_name=None):
     addr: int
-    rom_page: int
-    ram_page: int
+    rom_page: int | None
+    ram_page: int | None
     data: ByteData
 
     @property
     def end_addr(self) -> int:
         return self.addr + len(self.data.data)
 
-    def __init__(self, *, addr: int, rom_page: int, ram_page: int,
+    def __init__(self, *, addr: int, rom_page: int | None = None,
+                 ram_page: int | None = None,
                  data: 'Bytes | ByteData'):
         super().__init__(addr=addr, rom_page=rom_page,
                          ram_page=ram_page, data=HexData.wrap(data))
