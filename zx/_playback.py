@@ -148,10 +148,6 @@ class PlaybackPlayer(Device):
         self.__sample_count = 0
 
     @property
-    def is_active(self) -> bool:
-        return self.__playback is not None
-
-    @property
     def is_spin_v05(self) -> bool:
         return self.__playback is not None and self.__playback.is_spin_v05
 
@@ -202,7 +198,7 @@ class PlaybackPlayer(Device):
             self.__unload()
             return result
 
-        if not self.is_active:
+        if self.__playback is None:
             return result
 
         if isinstance(event, ReadPort):
