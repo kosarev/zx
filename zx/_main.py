@@ -28,6 +28,11 @@ from ._data import Spectrum128
 from ._error import Error
 from ._error import USER_ERRORS
 from ._error import verbalize_error
+from ._device import DeviceEvent
+from ._device import Dispatcher
+from ._device import FetchesLimitHit
+from ._device import GetMachineState
+from ._device import SetFetchesLimit
 from ._except import EmulationExit
 from ._file import detect_file_format
 from ._file import parse_file
@@ -261,7 +266,18 @@ def test(args: list[str]) -> None:
 
 
 class _PlaybackRecoverer(Spectrum):
-    pass
+    def on_event(self, event: DeviceEvent, devices: Dispatcher,
+                 result: typing.Any) -> typing.Any:
+        if isinstance(event, FetchesLimitHit):
+            # Some emulators, e.g., SPIN, may store an interrupt point in
+            # the middle of a IX- or IY-prefixed instruction, so we
+            # continue until such instruction, if any, is completed.
+            if devices.notify(GetMachineState()).iregp_kind != 'hl':
+                raise Error('IX/IY mid-instruction interrupt point.',
+                            id='iregp_mid_instruction')
+                devices.notify(SetFetchesLimit(1))
+
+        return super().on_event(event, devices, result)
 
 
 def recover_file(filename: str) -> None:

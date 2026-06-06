@@ -219,6 +219,8 @@ class PlaybackPlayer(Device):
                 state = devices.notify(GetMachineState())
                 # TODO: assert isinstance(state, Z80State)
                 if state.pc == 0x04d4:
+                    raise Error('SPIN v0.5 bytes-saving trap.',
+                                id='spin_v05_bytes_saving_trap')
                     sp = state.sp
                     state.pc = state.read16(sp)
                     state.sp = sp + 2
@@ -235,19 +237,14 @@ class PlaybackPlayer(Device):
             return result & sample
 
         if isinstance(event, FetchesLimitHit):
-            # Some emulators, e.g., SPIN, may store an interrupt point in
-            # the middle of a IX- or IY-prefixed instruction, so we
-            # continue until such instruction, if any, is completed.
-            if devices.notify(GetMachineState()).iregp_kind != 'hl':
-                devices.notify(SetFetchesLimit(1))
-                return result
-
             # SPIN v0.5 doesn't update the fetch counter if the last
             # instruction in a frame is IN.
             if (self._playback is not None and
                     self._playback.is_spin_v05 and
                     self.playback_sample_i + 1 <
                     len(self.playback_sample_values)):
+                raise Error('SPIN v0.5 trailing IN sample.',
+                            id='spin_v05_trailing_in_sample')
                 devices.notify(SetFetchesLimit(1))
                 return result
 
