@@ -407,11 +407,12 @@ class UnifiedPlayback(MachinePlayback, format_name=None):
     creator_minor_version: int | None
 
     def __init__(self, *,
-                 segments: list[UnifiedPlaybackSegment],
+                 segments: list[UnifiedPlaybackSegment] | None = None,
                  creator: str | None = None,
                  creator_major_version: int | None = None,
                  creator_minor_version: int | None = None) -> None:
-        super().__init__(segments=segments, creator=creator,
+        super().__init__(segments=segments if segments is not None else [],
+                         creator=creator,
                          creator_major_version=creator_major_version,
                          creator_minor_version=creator_minor_version)
 

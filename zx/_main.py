@@ -41,6 +41,7 @@ from ._rzx import make_rzx
 from ._rzx import RZXFile
 from ._spectrum import Profile
 from ._spectrum import Spectrum
+from ._data import UnifiedPlayback
 from ._data import UnifiedSnapshot
 
 
@@ -296,7 +297,7 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
         return super().on_event(event, devices, result)
 
 
-def recover_playback(playback: MachinePlayback) -> None:
+def recover_playback(playback: MachinePlayback) -> UnifiedPlayback:
     unified = playback.to_unified_playback()
     recoverer: _PlaybackRecoverer = (
         _SPINPlaybackRecoverer() if unified.is_spin_v05
@@ -307,6 +308,8 @@ def recover_playback(playback: MachinePlayback) -> None:
             machine.run()
         except EmulationExit:
             pass
+    # TODO: Return corrected playback once recorder is implemented.
+    return UnifiedPlayback()
 
 
 def recover_file(filename: str) -> None:

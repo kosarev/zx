@@ -17,7 +17,25 @@ from zx._data import UnifiedPlaybackFrame
 from zx._data import UnifiedPlaybackSegment
 from zx._data import UnifiedSnapshot
 from zx._error import Error
+from zx._except import EmulationExit
 from zx._main import recover_playback
+
+
+def assert_plays_ok(playback: UnifiedPlayback) -> None:
+    with zx.Spectrum(headless=True) as machine:
+        try:
+            machine._load_input_recording(playback)
+            machine.run()
+        except EmulationExit:
+            pass
+
+
+def assert_play_fails(playback: UnifiedPlayback, error_id: str) -> None:
+    with pytest.raises(Error) as exc_info:
+        with zx.Spectrum(headless=True) as machine:
+            machine._load_input_recording(playback)
+            machine.run()
+    assert exc_info.value.id == error_id
 
 
 def test_iregp_mid_instruction() -> None:
@@ -35,7 +53,7 @@ def test_iregp_mid_instruction() -> None:
             frames=[UnifiedPlaybackFrame(
                 num_fetches=1, port_samples=b'')])])
 
-    recover_playback(playback)
+    assert_plays_ok(recover_playback(playback))
 
 
 def test_spin_v05_trailing_in_sample() -> None:
@@ -56,6 +74,10 @@ def test_spin_v05_trailing_in_sample() -> None:
         creator_major_version=0,
         creator_minor_version=5)
 
+    assert_play_fails(playback, 'too_many_input_samples')
+
+    # TODO: Replace with assert_plays_ok(recover_playback(playback)) once
+    # recovery is implemented.
     with pytest.raises(Error) as exc_info:
         recover_playback(playback)
     assert exc_info.value.id == 'spin_v05_trailing_in_sample'
