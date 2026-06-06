@@ -136,6 +136,7 @@ from ._device import ReadPort
 from ._device import SetFetchesLimit
 from ._device import StartPlayback
 from ._device import StopPlayback
+from ._error import Error
 from ._except import EmulationExit
 
 
@@ -227,9 +228,8 @@ class PlaybackPlayer(Device):
             assert self.__samples is not None
             sample = next(self.__samples, None)
             if sample is None:
-                # TODO: raise Error('Too few input samples.',
-                #                   id='too_few_input_samples')
-                assert 0
+                raise Error('Too few input samples.',
+                            id='too_few_input_samples')
             self.__sample_count += 1
             self.playback_sample_i = self.__sample_count - 1
             return result & sample
@@ -252,9 +252,8 @@ class PlaybackPlayer(Device):
                 return result
 
             if self.__sample_count < len(self.playback_sample_values):
-                # TODO: raise Error('Too many input samples.',
-                #                   id='too_many_input_samples')
-                assert 0
+                raise Error('Too many input samples.',
+                            id='too_many_input_samples')
             self.__get_next_frame(devices)
             devices.notify(EndOfFrame())
 
