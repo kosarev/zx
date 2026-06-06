@@ -12,6 +12,8 @@
 
 import typing
 import collections
+import functools
+import multiprocessing
 import os
 import platformdirs
 import sys
@@ -128,7 +130,8 @@ def usage() -> None:
     sys.exit()
 
 
-def test_file(filename: str, batch_mode: bool) -> None:
+def test_file(filename: str, batch_mode: bool,
+              parallel_mode: bool = False) -> None:
     def move(dest_dir: str) -> None:
         os.makedirs(dest_dir, exist_ok=True)
 
@@ -194,7 +197,8 @@ def test_file(filename: str, batch_mode: bool) -> None:
             assert 0, type(a)
 
     try:
-        print(repr(filename))
+        if not parallel_mode:
+            print(repr(filename))
 
         with open(filename, 'rb') as f:
             image = f.read()
@@ -230,12 +234,29 @@ def test_file(filename: str, batch_mode: bool) -> None:
 
 def test(args: list[str]) -> None:
     batch_mode = False
+    parallel_mode = False
+    filenames = []
     for arg in args:
         if arg == '--batch':
             batch_mode = True
             continue
 
-        test_file(arg, batch_mode)
+        if arg == '--parallel':
+            parallel_mode = True
+            continue
+
+        filenames.append(arg)
+
+    if not parallel_mode:
+        for filename in filenames:
+            test_file(filename, batch_mode)
+        return
+
+    worker = functools.partial(test_file, batch_mode=batch_mode,
+                               parallel_mode=True)
+    with multiprocessing.Pool() as pool:
+        for _ in pool.imap_unordered(worker, filenames):
+            pass
 
 
 def fast_forward(args: list[str]) -> None:
