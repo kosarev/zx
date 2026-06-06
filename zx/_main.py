@@ -266,8 +266,9 @@ def test(args: list[str]) -> None:
 
 
 class _PlaybackRecoverer(Spectrum):
-    def __init__(self) -> None:
-        self._player = PlaybackPlayer()
+    def __init__(self,
+                 playback_player: PlaybackPlayer | None = None) -> None:
+        self._player = playback_player or PlaybackPlayer()
         super().__init__(headless=True, playback_player=self._player)
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
@@ -282,7 +283,22 @@ class _PlaybackRecoverer(Spectrum):
         return super().on_event(event, devices, result)
 
 
+class _SPINPlaybackPlayer(PlaybackPlayer):
+    def on_event(self, event: DeviceEvent, devices: Dispatcher,
+                 result: typing.Any) -> typing.Any:
+        # Yield to _SPINPlaybackRecoverer when the trailing IN correction
+        # is pending; otherwise PlaybackPlayer raises too_many_input_samples.
+        if (isinstance(event, FetchesLimitHit) and
+                self.playback_sample_i + 1 <
+                len(self.playback_sample_values)):
+            return result
+        return super().on_event(event, devices, result)
+
+
 class _SPINPlaybackRecoverer(_PlaybackRecoverer):
+    def __init__(self) -> None:
+        super().__init__(playback_player=_SPINPlaybackPlayer())
+
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
         if isinstance(event, FetchesLimitHit):
@@ -290,8 +306,6 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
             # instruction in a frame is IN.
             if (self._player.playback_sample_i + 1 <
                     len(self._player.playback_sample_values)):
-                raise Error('SPIN v0.5 trailing IN sample.',
-                            id='spin_v05_trailing_in_sample')
                 self.fetches_limit = 1
 
         return super().on_event(event, devices, result)

@@ -76,8 +76,4 @@ def test_spin_v05_trailing_in_sample() -> None:
 
     assert_play_fails(playback, 'too_many_input_samples')
 
-    # TODO: Replace with assert_plays_ok(recover_playback(playback)) once
-    # recovery is implemented.
-    with pytest.raises(Error) as exc_info:
-        recover_playback(playback)
-    assert exc_info.value.id == 'spin_v05_trailing_in_sample'
+    assert_plays_ok(recover_playback(playback))
