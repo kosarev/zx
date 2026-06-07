@@ -683,7 +683,13 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.allow_int_after_ei = False
 
     def __run_quantum(self) -> None:
-        self.devices.notify(QuantumRun())
+        # Evaluate the hold once per quantum and broadcast the
+        # result, so devices never re-query it.
+        hold = GetHoldState()
+        self.devices.notify(hold)
+
+        self.devices.notify(QuantumRun(held=hold.held,
+                                       wake_in=hold.wake_in))
 
         # TODO: For debug purposes.
         '''
@@ -697,7 +703,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             self.enable_trace()
         '''
 
-        if self.paused:
+        if hold.held:
             return
 
         events = RunEvents(self._run())

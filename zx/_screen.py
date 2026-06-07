@@ -1872,13 +1872,17 @@ class ScreenWindow(Device):
         assert isinstance(event, QuantumRun)
         import sdl2
 
-        # Give the OS some CPU time while paused; wake immediately on
-        # any SDL event. Pass NULL so the event stays in the queue for
-        # the normal polling loop to handle.
-        pause_state = GetEmulationPauseState()
-        dispatcher.notify(pause_state)
-        if pause_state.paused:
-            sdl2.SDL_WaitEventTimeout(None, 20)
+        # Give the OS some CPU time while the machine is held; wake
+        # immediately on any SDL event. Pass NULL so the event stays
+        # in the queue for the normal polling loop to handle. The
+        # holders' deadline cuts the wait short; the cap keeps the
+        # UI responsive when there is no deadline.
+        if event.held:
+            CAP_MS = 20
+            timeout_ms = CAP_MS
+            if event.wake_in is not None:
+                timeout_ms = min(CAP_MS, max(1, round(event.wake_in * 1000)))
+            sdl2.SDL_WaitEventTimeout(None, timeout_ms)
 
         while sdl2.SDL_PollEvent(ctypes.byref(self.__sdl_event)) != 0:
             if self.__sdl_event.type == sdl2.SDL_QUIT:

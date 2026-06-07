@@ -199,8 +199,15 @@ class PauseUnpauseTape(DeviceEvent):
         self.pause = pause
 
 
+# Notified at the start of every loop iteration. Carries the hold
+# state evaluated by the machine, so devices never re-query it: when
+# held, emulation does not advance this quantum, and the waiter may
+# sleep up to wake_in seconds (capped, and cut short by input).
 class QuantumRun(DeviceEvent):
-    pass
+    def __init__(self, *, held: bool = False,
+                 wake_in: None | float = None) -> None:
+        self.held = held
+        self.wake_in = wake_in
 
 
 class ReadPort(EmulationEvent):
