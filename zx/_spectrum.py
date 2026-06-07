@@ -45,6 +45,7 @@ from ._device import KeyStroke
 from ._device import LoadFile
 from ._device import LoadTape
 from ._device import OutputFrame
+from ._device import GetHoldState
 from ._device import NewPortWrites
 from ._device import PauseStateUpdated
 from ._device import PauseUnpauseTape
@@ -843,6 +844,11 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, GetEmulationPauseState):
             event.paused |= self.paused
+        elif isinstance(event, GetHoldState):
+            # User pause holds with no deadline: only input can
+            # change the answer.
+            if self.paused:
+                event.hold()
         elif isinstance(event, GetEmulationTime):
             event.time = self._emulation_time
         elif isinstance(event, KeyStroke):

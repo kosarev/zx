@@ -127,6 +127,27 @@ class NewPortWrites(EmulationEvent):
         self.writes = writes
 
 
+# Asks whether emulation must not advance this quantum, and for how
+# long the answer is expected to stand.
+class GetHoldState(DeviceEvent):
+    def __init__(self) -> None:
+        self.held = False
+
+        # In how many seconds the earliest holder would like control
+        # back, or None when only external input can change the
+        # answer. All answers are given within one dispatch, so the
+        # durations are directly comparable.
+        self.wake_in: None | float = None
+
+    # Any holder holds; the earliest wake deadline wins. A holder
+    # with no deadline relies on the waiter's cap.
+    def hold(self, wake_in: None | float = None) -> None:
+        self.held = True
+        if wake_in is not None:
+            if self.wake_in is None or wake_in < self.wake_in:
+                self.wake_in = wake_in
+
+
 class GetEmulationPauseState(DeviceEvent):
     def __init__(self) -> None:
         self.paused = False

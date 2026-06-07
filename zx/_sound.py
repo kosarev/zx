@@ -19,6 +19,7 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EmulatorReset
+from ._device import GetHoldState
 from ._device import NewSoundPulses
 from ._device import QuantumRun
 from ._device import SetFastForward
@@ -122,6 +123,12 @@ class _PulseResampler(object):
 class SoundDevice(Device):
     # TODO: Rename to output rate.
     __OUTPUT_FREQ = 44100
+
+    # The queue depth at which emulation should be held, in bytes.
+    # TODO: This is ~5ms of audio (4 bytes per sample), inherited
+    # from the blocking loop where the same expression has always
+    # been compared against bytes; revisit as the latency knob.
+    __TARGET_DEPTH = __OUTPUT_FREQ // 50
 
     def __init__(self) -> None:
         self.__chunks: list[SoundPulses] = []
@@ -229,13 +236,26 @@ class SoundDevice(Device):
         import sdl2.audio
         import ctypes
         while sdl2.audio.SDL_GetQueuedAudioSize(self.__device) > (
-                self.__OUTPUT_FREQ // 50):
+                self.__TARGET_DEPTH):
             sdl2.SDL_Delay(10)
 
         sdl2.audio.SDL_QueueAudio(
             self.__device,
             samples.ctypes.data_as(ctypes.c_void_p),
             len(samples) * 4)
+
+    # The gauge: emulation should be held while the device queue is
+    # at or above the target depth; the drain ETA is exact.
+    def __answer_hold(self, event: GetHoldState) -> None:
+        if self.__fast_forward:
+            return
+
+        import sdl2.audio
+        queued = sdl2.audio.SDL_GetQueuedAudioSize(self.__device)
+        if queued > self.__TARGET_DEPTH:
+            BYTES_PER_SAMPLE = 4
+            event.hold(wake_in=(queued - self.__TARGET_DEPTH) /
+                       (BYTES_PER_SAMPLE * self.__OUTPUT_FREQ))
 
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
@@ -256,5 +276,7 @@ class SoundDevice(Device):
             self.__feed()
         elif isinstance(event, TimeAdvanced):
             self.__heartbeat = event.tick_count
+        elif isinstance(event, GetHoldState):
+            self.__answer_hold(event)
         elif isinstance(event, Destroy):
             self.__destroy()
