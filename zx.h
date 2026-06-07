@@ -210,6 +210,7 @@ public:
 
     void on_tick(unsigned t) {
         ticks_since_int += t;
+        tick_count += t;
 
         // Handle stopping by hitting a specified number of ticks.
         if(ticks_to_stop) {
@@ -957,6 +958,14 @@ protected:
     events_mask events = no_events;
 
     ticks_type ticks_since_int = 0;
+
+    // The number of ticks since the machine creation, wrapping on
+    // overflow. Free-running, so per-quantum counts are wrap-aware
+    // deltas between readings; this keeps the counter independent
+    // of how quantum and frame boundaries are driven (ticks or
+    // fetch limits).
+    ticks_type tick_count = 0;
+
     ticks_type ticks_to_stop = 0;    // Null means no limit.
     ticks_type fetches_to_stop = 0;  // Null means no limit.
 

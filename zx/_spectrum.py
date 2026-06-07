@@ -313,6 +313,7 @@ class SpectrumState(Z80State):
         Z80State.__init__(self, self.z80_image)
 
         self.__ticks_since_int = p.parse32()
+        self.__tick_count = p.parse32()
         self.__fetches_to_stop = p.parse32()
         self.__events = p.parse32()
         self.__int_suppressed = p.parse8()
@@ -370,6 +371,13 @@ class SpectrumState(Z80State):
     @ticks_since_int.setter
     def ticks_since_int(self, ticks: int) -> None:
         self.__ticks_since_int[:] = ticks.to_bytes(4, 'little')
+
+    # The number of ticks since the machine creation, wrapping on
+    # overflow. Free-running, so per-quantum counts are wrap-aware
+    # deltas between readings.
+    @property
+    def tick_count(self) -> int:
+        return int.from_bytes(self.__tick_count, 'little')
 
     @property
     def border_colour(self) -> int:

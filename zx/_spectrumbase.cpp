@@ -82,6 +82,7 @@ struct __attribute__((packed)) machine_state {
     processor_state proc;
 
     least_u32 ticks_since_int = 0;
+    least_u32 tick_count = 0;
     least_u32 fetches_to_stop = 0;
     least_u32 events = 0;
     least_u8 int_suppressed = false;
@@ -115,6 +116,7 @@ public:
         state.proc = get_processor_state();
 
         state.ticks_since_int = ticks_since_int;
+        state.tick_count = tick_count;
         state.fetches_to_stop = fetches_to_stop;
         state.events = events;
         state.int_suppressed = int_suppressed;
@@ -127,6 +129,7 @@ public:
         set_processor_state(state.proc);
 
         ticks_since_int = state.ticks_since_int;
+        tick_count = state.tick_count;
         fetches_to_stop = state.fetches_to_stop;
         events = state.events;
         int_suppressed = state.int_suppressed;
