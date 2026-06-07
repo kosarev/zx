@@ -24,6 +24,16 @@ class DeviceEvent(object):
     pass
 
 
+# Emulation-related events are located in simulated time: facts
+# carry their location, and consumers hold cursors and take
+# wrap-aware deltas of the free-running tick counter. UI-originated
+# events are not located in simulated time and stay plain
+# DeviceEvents.
+class EmulationEvent(DeviceEvent):
+    def __init__(self, tick_count: int) -> None:
+        self.tick_count = tick_count
+
+
 class MenuItemDescriptor(object):
     def __init__(self, label: str,
                  hotkey: None | str = None) -> None:
@@ -154,9 +164,14 @@ class QuantumRun(DeviceEvent):
     pass
 
 
-class ReadPort(DeviceEvent):
-    def __init__(self, addr: int, ticks_since_int: int = 0) -> None:
+class ReadPort(EmulationEvent):
+    def __init__(self, addr: int, tick_count: int = 0,
+                 ticks_since_int: int = 0) -> None:
+        super().__init__(tick_count)
         self.addr = addr
+
+        # TODO: Retire in favour of the free-running tick_count once
+        # the tape player moves off the frame-relative timeline.
         self.ticks_since_int = ticks_since_int
 
         # All input lines are pulled high unless a device drives

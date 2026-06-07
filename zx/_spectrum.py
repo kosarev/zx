@@ -611,7 +611,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self.run(duration=0.1, fast_forward=True)
 
     def __on_input(self, addr: int) -> int:
-        read_port = ReadPort(addr, self.ticks_since_int)
+        read_port = ReadPort(addr, self.tick_count, self.ticks_since_int)
         self.devices.notify(read_port)
         v = read_port.value
         self.__port_reads.append(v)
