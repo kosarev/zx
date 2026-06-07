@@ -19,7 +19,7 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EmulatorReset
-from ._device import NewSoundFrame
+from ._device import NewSoundPulses
 from ._device import QuantumRun
 from ._device import SetFastForward
 from ._device import TimeAdvanced
@@ -228,7 +228,7 @@ class SoundDevice(Device):
             self.__heartbeat = None
             self.__cursor = None
             self.__resampler = _PulseResampler(self.__OUTPUT_FREQ)
-        elif isinstance(event, NewSoundFrame):
+        elif isinstance(event, NewSoundPulses):
             self.__chunks.append(event.pulses)
         elif isinstance(event, SetFastForward):
             if event.active:

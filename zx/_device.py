@@ -236,7 +236,9 @@ class ToggleTapePause(DeviceEvent):
     pass
 
 
-class NewSoundFrame(DeviceEvent):
+# A chunk of an emitter's continuous pulse stream, published for
+# the window being closed by the current heartbeat dispatch.
+class NewSoundPulses(DeviceEvent):
     def __init__(self, pulses: SoundPulses) -> None:
         self.pulses = pulses
 

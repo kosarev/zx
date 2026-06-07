@@ -17,7 +17,7 @@ from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EmulatorReset
 from ._device import NewPortWrites
-from ._device import NewSoundFrame
+from ._device import NewSoundPulses
 from ._device import TimeAdvanced
 from ._sound import PulseStream
 
@@ -75,7 +75,7 @@ class Beeper(Device):
             ticks = numpy.zeros(0, dtype=numpy.uint32)
 
         pulses = self.__stream.stream_chunk(levels, ticks, span)
-        dispatcher.notify(NewSoundFrame(pulses))
+        dispatcher.notify(NewSoundPulses(pulses))
 
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
         if isinstance(event, EmulatorReset):

@@ -26,7 +26,7 @@ from ._device import IsTapePlayerStopped
 from ._device import LoadTape
 from ._device import PauseUnpauseTape
 from ._device import TapeStateUpdated
-from ._device import NewSoundFrame
+from ._device import NewSoundPulses
 from ._device import TimeAdvanced
 from ._sound import PulseStream
 from ._time import Time
@@ -243,7 +243,7 @@ class TapePlayer(Device):
             numpy.array(levels, dtype=numpy.uint32),
             offsets.astype(numpy.uint32),
             span)
-        dispatcher.notify(NewSoundFrame(pulses))
+        dispatcher.notify(NewSoundPulses(pulses))
         self.__audible_pulses = []
 
     def on_event(self, event: DeviceEvent,
