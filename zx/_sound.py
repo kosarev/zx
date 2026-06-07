@@ -224,9 +224,12 @@ class SoundDevice(Device):
         if len(samples):
             self.__pending.append(samples)
 
-    # Output policy: push the pending samples to the device.
-    # TODO: The wait goes away once emulation is gated on the queue
-    # level (the 'held' state) and room is guaranteed by the gate.
+    # Push the pending samples to the device, unconditionally. The
+    # device queue is unbounded, so nothing needs to fit; the amount
+    # of queued audio stays bounded because emulation does not
+    # advance while it is above the threshold, so it never exceeds
+    # the threshold plus one quantum's worth of samples. The sound
+    # device never waits.
     def __feed(self) -> None:
         if not self.__pending:
             return
@@ -235,10 +238,6 @@ class SoundDevice(Device):
 
         import sdl2.audio
         import ctypes
-        while sdl2.audio.SDL_GetQueuedAudioSize(self.__device) > (
-                self.__TARGET_DEPTH):
-            sdl2.SDL_Delay(10)
-
         sdl2.audio.SDL_QueueAudio(
             self.__device,
             samples.ctypes.data_as(ctypes.c_void_p),
