@@ -466,7 +466,9 @@ public:
             uint_least64_t v = 0;
             v |= static_cast<uint_least64_t>(addr) << 0;
             v |= static_cast<uint_least64_t>(n) << 16;
-            v |= static_cast<uint_least64_t>(t) << 32;
+            // Stamp with the free-running counter, wrapping at 2^32;
+            // consumers rebase stamps against counter readings.
+            v |= static_cast<uint_least64_t>(tick_count & 0xffffffff) << 32;
             port_writes[num_port_writes++] = v;
         }
 

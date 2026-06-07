@@ -659,10 +659,20 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         if self.__playback is not None:
             self.on_handle_active_int()
 
+        # Port-write stamps are free-running tick counts; rebase them
+        # to frame-relative values for OutputFrame consumers.
+        # TODO: Goes away when sound moves to per-quantum delivery.
+        writes = numpy.frombuffer(self.get_port_writes(),
+                                  dtype=numpy.uint64)
+        frame_start = numpy.uint32(
+            (self.tick_count - self.ticks_since_int) & 0xffffffff)
+        stamps = (writes >> 32).astype(numpy.uint32) - frame_start
+        writes = ((writes & numpy.uint64(0xffffffff)) |
+                  (stamps.astype(numpy.uint64) << numpy.uint64(32)))
+
         devices.notify(OutputFrame(
             pixels=self.get_frame_pixels(),
-            port_writes=numpy.frombuffer(self.get_port_writes(),
-                                         dtype=numpy.uint64),
+            port_writes=writes,
             port_reads=self.__port_reads))
         self.__port_reads.clear()
 
