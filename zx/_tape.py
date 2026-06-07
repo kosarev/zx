@@ -231,9 +231,9 @@ class TapePlayer(Device):
                 if not self.__get_level_at_frame_tick(event.ticks_since_int):
                     event.supply(0xbf)  # EAR bit low when no tape signal
         elif isinstance(event, IsTapePlayerPaused):
-            return self.__is_paused()
+            event.paused |= self.__is_paused()
         elif isinstance(event, IsTapePlayerStopped):
-            return self.__is_end()
+            event.stopped |= self.__is_end()
         elif isinstance(event, LoadTape):
             self.__load_tape(event.file)
         elif isinstance(event, PauseUnpauseTape):

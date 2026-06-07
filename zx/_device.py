@@ -107,11 +107,13 @@ class GetTapePlayerTime(DeviceEvent):
 
 
 class IsTapePlayerPaused(DeviceEvent):
-    pass
+    def __init__(self) -> None:
+        self.paused = False
 
 
 class IsTapePlayerStopped(DeviceEvent):
-    pass
+    def __init__(self) -> None:
+        self.stopped = False
 
 
 class LoadTape(DeviceEvent):

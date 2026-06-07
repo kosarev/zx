@@ -555,7 +555,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
     # TODO: Double-underscore or make public.
     def _is_tape_paused(self) -> bool:
-        return bool(self.devices.notify(IsTapePlayerPaused()))
+        tape_state = IsTapePlayerPaused()
+        self.devices.notify(tape_state)
+        return tape_state.paused
 
     def __pause_tape(self, is_paused: bool = True) -> None:
         self.devices.notify(PauseUnpauseTape(is_paused))
@@ -573,7 +575,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
     # TODO: Do we still need?
     def __is_end_of_tape(self) -> bool:
-        return bool(self.devices.notify(IsTapePlayerStopped()))
+        tape_state = IsTapePlayerStopped()
+        self.devices.notify(tape_state)
+        return tape_state.stopped
 
     def __translate_key_strokes(self, keys: typing.Iterable[int | str]) -> (
             typing.Iterator[str]):

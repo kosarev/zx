@@ -1827,11 +1827,13 @@ class ScreenWindow(Device):
             result: list[MenuItemDescriptor]) -> list[MenuItemDescriptor]:
         pause_state = GetEmulationPauseState()
         devices.notify(pause_state)
-        tape_paused = devices.notify(IsTapePlayerPaused())
+        tape_state = IsTapePlayerPaused()
+        devices.notify(tape_state)
         self.__emulation_item.label = ('Resume emulation'
                                        if pause_state.paused
                                        else 'Pause emulation')
-        self.__tape_item.label = 'Resume tape' if tape_paused else 'Pause tape'
+        self.__tape_item.label = ('Resume tape' if tape_state.paused
+                                  else 'Pause tape')
         result.extend(self.__menu_descriptors)
         return result
 
@@ -1884,9 +1886,10 @@ class ScreenWindow(Device):
                                devices: Dispatcher,
                                result: typing.Any) -> typing.Any:
         assert isinstance(event, TapeStateUpdated)
-        tape_paused = devices.notify(IsTapePlayerPaused())
+        tape_state = IsTapePlayerPaused()
+        devices.notify(tape_state)
         tape_time = devices.notify(GetTapePlayerTime())
-        if tape_paused:
+        if tape_state.paused:
             self._notification = TapePauseNotification(tape_time)
         else:
             self._notification = TapeResumeNotification(tape_time)
