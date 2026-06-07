@@ -17,6 +17,7 @@ from ._data import SoundFile
 from ._data import SoundPulses
 from ._data import UnifiedPlayback
 from ._data import UnifiedSnapshot
+from ._time import Time
 
 
 class DeviceEvent(object):
@@ -98,12 +99,14 @@ class GetEmulationPauseState(DeviceEvent):
 
 
 class GetEmulationTime(DeviceEvent):
-    pass
+    def __init__(self) -> None:
+        self.time = Time()
 
 
 # TODO: Combine these into Get/SetState kind of events.
 class GetTapePlayerTime(DeviceEvent):
-    pass
+    def __init__(self) -> None:
+        self.time = Time()
 
 
 class IsTapePlayerPaused(DeviceEvent):

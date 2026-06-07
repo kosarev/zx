@@ -826,7 +826,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         if isinstance(event, GetEmulationPauseState):
             event.paused |= self.paused
         elif isinstance(event, GetEmulationTime):
-            return self._emulation_time
+            event.time = self._emulation_time
         elif isinstance(event, KeyStroke):
             key = KEYS.get(event.id, None)
             if key:

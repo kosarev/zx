@@ -1876,8 +1876,9 @@ class ScreenWindow(Device):
         pause_state = GetEmulationPauseState()
         devices.notify(pause_state)
         if pause_state.paused:
-            time = devices.notify(GetEmulationTime())
-            self._notification = PauseNotification(time)
+            emulation_time = GetEmulationTime()
+            devices.notify(emulation_time)
+            self._notification = PauseNotification(emulation_time.time)
         else:
             self._notification = None
         return result
@@ -1888,11 +1889,12 @@ class ScreenWindow(Device):
         assert isinstance(event, TapeStateUpdated)
         tape_state = IsTapePlayerPaused()
         devices.notify(tape_state)
-        tape_time = devices.notify(GetTapePlayerTime())
+        tape_time = GetTapePlayerTime()
+        devices.notify(tape_time)
         if tape_state.paused:
-            self._notification = TapePauseNotification(tape_time)
+            self._notification = TapePauseNotification(tape_time.time)
         else:
-            self._notification = TapeResumeNotification(tape_time)
+            self._notification = TapeResumeNotification(tape_time.time)
         return result
 
     def _on_quantum_run(self, event: DeviceEvent,

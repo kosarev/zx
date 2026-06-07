@@ -225,7 +225,7 @@ class TapePlayer(Device):
         elif isinstance(event, EndOfFrame):
             self.__complete_frame(dispatcher)
         elif isinstance(event, GetTapePlayerTime):
-            return self.__get_time()
+            event.time = self.__get_time()
         elif isinstance(event, ReadPort):
             if self._pulses is not None:
                 if not self.__get_level_at_frame_tick(event.ticks_since_int):
