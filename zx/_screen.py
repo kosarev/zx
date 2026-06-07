@@ -1825,9 +1825,11 @@ class ScreenWindow(Device):
     def __on_get_main_menu_items(
             self, event: DeviceEvent, devices: Dispatcher,
             result: list[MenuItemDescriptor]) -> list[MenuItemDescriptor]:
-        emulation_paused = devices.notify(GetEmulationPauseState())
+        pause_state = GetEmulationPauseState()
+        devices.notify(pause_state)
         tape_paused = devices.notify(IsTapePlayerPaused())
-        self.__emulation_item.label = ('Resume emulation' if emulation_paused
+        self.__emulation_item.label = ('Resume emulation'
+                                       if pause_state.paused
                                        else 'Pause emulation')
         self.__tape_item.label = 'Resume tape' if tape_paused else 'Pause tape'
         result.extend(self.__menu_descriptors)
@@ -1869,7 +1871,9 @@ class ScreenWindow(Device):
                                 devices: Dispatcher,
                                 result: typing.Any) -> typing.Any:
         assert isinstance(event, PauseStateUpdated)
-        if devices.notify(GetEmulationPauseState()):
+        pause_state = GetEmulationPauseState()
+        devices.notify(pause_state)
+        if pause_state.paused:
             time = devices.notify(GetEmulationTime())
             self._notification = PauseNotification(time)
         else:
@@ -1897,7 +1901,9 @@ class ScreenWindow(Device):
         # Give the OS some CPU time while paused; wake immediately on
         # any SDL event. Pass NULL so the event stays in the queue for
         # the normal polling loop to handle.
-        if dispatcher.notify(GetEmulationPauseState()):
+        pause_state = GetEmulationPauseState()
+        dispatcher.notify(pause_state)
+        if pause_state.paused:
             sdl2.SDL_WaitEventTimeout(None, 20)
 
         while sdl2.SDL_PollEvent(ctypes.byref(self.__sdl_event)) != 0:

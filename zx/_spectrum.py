@@ -820,7 +820,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
     def on_event(self, event: DeviceEvent, devices: Dispatcher,
                  result: typing.Any) -> typing.Any:
         if isinstance(event, GetEmulationPauseState):
-            return self.paused
+            event.paused |= self.paused
         elif isinstance(event, GetEmulationTime):
             return self._emulation_time
         elif isinstance(event, KeyStroke):

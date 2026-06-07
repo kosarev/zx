@@ -93,7 +93,8 @@ class OutputFrame(DeviceEvent):
 
 
 class GetEmulationPauseState(DeviceEvent):
-    pass
+    def __init__(self) -> None:
+        self.paused = False
 
 
 class GetEmulationTime(DeviceEvent):
