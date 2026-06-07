@@ -130,6 +130,9 @@ class SoundDevice(Device):
         self.__fast_forward = False
         self.__resampler = _PulseResampler(self.__OUTPUT_FREQ)
 
+        # Produced samples awaiting delivery to the device.
+        self.__pending: list[numpy.typing.NDArray[numpy.float32]] = []
+
         # TODO: Don't use SDL until we know we are actually
         # outputting sound via it. (The user may want to do something
         # else with the original or mixed samples, or may want some
@@ -185,6 +188,8 @@ class SoundDevice(Device):
     # Consume on the dispatch following the heartbeat, by which
     # point the heartbeat's dispatch has provably completed and all
     # chunks of its window are in — regardless of device order.
+    # Production only: the resampled samples go to the pending
+    # buffer; output policy lives in __feed().
     def __consume(self) -> None:
         if self.__heartbeat is None:
             return
@@ -209,6 +214,17 @@ class SoundDevice(Device):
         levels, ticks = self.__mix_pulses(chunks, span)
         samples = self.__resampler.feed(levels, ticks, span,
                                         chunks[0].rate)
+        if len(samples):
+            self.__pending.append(samples)
+
+    # Output policy: push the pending samples to the device.
+    # TODO: The wait goes away once emulation is gated on the queue
+    # level (the 'held' state) and room is guaranteed by the gate.
+    def __feed(self) -> None:
+        if not self.__pending:
+            return
+        samples = numpy.concatenate(self.__pending)
+        self.__pending.clear()
 
         import sdl2.audio
         import ctypes
@@ -225,6 +241,7 @@ class SoundDevice(Device):
                  dispatcher: Dispatcher) -> None:
         if isinstance(event, EmulatorReset):
             self.__chunks.clear()
+            self.__pending.clear()
             self.__heartbeat = None
             self.__cursor = None
             self.__resampler = _PulseResampler(self.__OUTPUT_FREQ)
@@ -236,6 +253,7 @@ class SoundDevice(Device):
             self.__fast_forward = event.active
         elif isinstance(event, QuantumRun):
             self.__consume()
+            self.__feed()
         elif isinstance(event, TimeAdvanced):
             self.__heartbeat = event.tick_count
         elif isinstance(event, Destroy):
