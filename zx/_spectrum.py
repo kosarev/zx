@@ -821,8 +821,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         self.devices.notify(BreakpointHit())
 
-    def on_event(self, event: DeviceEvent, devices: Dispatcher,
-                 result: typing.Any) -> typing.Any:
+    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, GetEmulationPauseState):
             event.paused |= self.paused
         elif isinstance(event, GetEmulationTime):
@@ -855,4 +854,3 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             self.paused ^= True
         elif isinstance(event, ToggleTapePause):
             self._toggle_tape_pause()
-        return result

@@ -88,12 +88,10 @@ class Keyboard(Device):
         else:
             self._state[addr_line - 8] |= mask
 
-    def on_event(self, event: DeviceEvent, devices: Dispatcher,
-                 result: typing.Any) -> typing.Any:
+    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, KeyStroke):
             key = KEYS.get(event.id, None)
             if key:
                 self.handle_key_stroke(key, event.pressed)
         elif isinstance(event, ReadPort):
             event.supply(self.read_port(event.addr))
-        return result

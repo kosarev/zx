@@ -1542,8 +1542,7 @@ class ScreenWindow(Device):
 
         self.__sdl_event = sdl2.SDL_Event()
 
-        _Handler = typing.Callable[[DeviceEvent, Dispatcher, typing.Any],
-                                   typing.Any]
+        _Handler = typing.Callable[[DeviceEvent, Dispatcher], None]
         self._EVENT_HANDLERS: dict[type[DeviceEvent], _Handler] = {
             GetMainMenuItems: self.__on_get_main_menu_items,
             MenuItemHit: self.__on_menu_item_hit,
@@ -1599,8 +1598,7 @@ class ScreenWindow(Device):
         self.__controllers: dict[int, ctypes.c_void_p] = {}
 
     def _on_output_frame(self, event: DeviceEvent,
-                         dispatcher: Dispatcher,
-                         result: typing.Any) -> typing.Any:
+                         dispatcher: Dispatcher) -> None:
         assert isinstance(event, OutputFrame)
         rect = None
         pitch = self.frame_width * 4
@@ -1610,7 +1608,6 @@ class ScreenWindow(Device):
         import sdl2
         sdl2.SDL_UpdateTexture(self.__pixel_texture.sdl_texture, rect,
                                pixels, pitch)
-        return result
 
     def __update_screen(self, dispatcher: Dispatcher) -> None:
         w, h = ctypes.c_int(), ctypes.c_int()
@@ -1658,8 +1655,7 @@ class ScreenWindow(Device):
         self.__renderer.present()
 
     def __on_request_save_snapshot(self, event: DeviceEvent,
-                                   devices: Dispatcher,
-                                   result: typing.Any) -> typing.Any:
+                                   devices: Dispatcher) -> None:
         self.__file_browser_panel.set_save_mode(True)
         self.__activate_panel(self.__file_browser_panel)
 
@@ -1677,14 +1673,10 @@ class ScreenWindow(Device):
         #         tkinter.messagebox.showerror(
         #             'File error', verbalize_error(e))
 
-        return result
-
     def __on_request_reset_machine(self, event: DeviceEvent,
-                                   devices: Dispatcher,
-                                   result: typing.Any) -> typing.Any:
+                                   devices: Dispatcher) -> None:
         self.__activate_panel(self.__main_menu_panel)
         devices.notify(_ConfirmReset())
-        return result
 
     def __activate_panel(self, panel: _Panel) -> None:
         panel.activate()
@@ -1692,8 +1684,7 @@ class ScreenWindow(Device):
         self.__panel_active = True
 
     def __on_request_load_file(self, event: DeviceEvent,
-                               devices: Dispatcher,
-                               result: typing.Any) -> typing.Any:
+                               devices: Dispatcher) -> None:
         self.__file_browser_panel.set_save_mode(False)
         self.__activate_panel(self.__file_browser_panel)
         # TODO: Remove once file browser panel supports all of this.
@@ -1706,17 +1697,14 @@ class ScreenWindow(Device):
         #         devices.notify(LoadFile(filename))
         #     except USER_ERRORS as e:
         #         self.__error_box('File error', verbalize_error(e))
-        return result
 
     def __on_toggle_fullscreen(self, event: DeviceEvent,
-                               devices: Dispatcher,
-                               result: typing.Any) -> typing.Any:
+                               devices: Dispatcher) -> None:
         import sdl2
         flags = sdl2.SDL_GetWindowFlags(self.__window)
         flags &= sdl2.SDL_WINDOW_FULLSCREEN_DESKTOP
         flags ^= sdl2.SDL_WINDOW_FULLSCREEN_DESKTOP
         sdl2.SDL_SetWindowFullscreen(self.__window, flags)
-        return result
 
     def __queue_event(self, event: DeviceEvent) -> None:
         self.__events.append(event)
@@ -1730,14 +1718,13 @@ class ScreenWindow(Device):
         pressed = event.type == sdl2.SDL_KEYDOWN
         self.__queue_event(_KeyEvent(key_id, pressed))
 
-    def __on_key(self, event: DeviceEvent, devices: Dispatcher,
-                 result: typing.Any) -> typing.Any:
+    def __on_key(self, event: DeviceEvent, devices: Dispatcher) -> None:
         assert isinstance(event, _KeyEvent)
         if event.pressed:
             if event.id in ('ESCAPE', 'F1'):
                 if not self.__panel_active:
                     devices.notify(_TogglePanel())
-                return result
+                return
 
             menu_items = GetMainMenuItems()
             devices.notify(menu_items)
@@ -1748,7 +1735,6 @@ class ScreenWindow(Device):
         if not self.__panel_active:
             zx_key_id = self.__SDL_KEYS_TO_ZX_KEYS.get(event.id, event.id)
             devices.notify(KeyStroke(zx_key_id, event.pressed))
-        return result
 
     def __on_sdl_click(self, event: typing.Any) -> bool:
         TYPES = {
@@ -1766,15 +1752,13 @@ class ScreenWindow(Device):
         return False
 
     def __on_click(self, event: DeviceEvent,
-                   devices: Dispatcher,
-                   result: typing.Any) -> typing.Any:
+                   devices: Dispatcher) -> None:
         assert isinstance(event, _ClickEvent)
         if not self.__panel_active:
             if event.type == _ClickType.Single:
                 devices.notify(ToggleEmulationPause())
             elif event.type == _ClickType.Double:
-                self.__on_toggle_fullscreen(event, devices, result)
-        return result
+                self.__on_toggle_fullscreen(event, devices)
 
     def __on_controller_event(self, event: typing.Any,
                               dispatcher: Dispatcher) -> None:
@@ -1814,8 +1798,7 @@ class ScreenWindow(Device):
                 dispatcher.notify(KeyStroke(button_key, pressed))
 
     def __on_exception(self, event: DeviceEvent,
-                       devices: Dispatcher,
-                       result: typing.Any) -> typing.Any:
+                       devices: Dispatcher) -> None:
         assert isinstance(event, _ExceptionEvent,)
         raise event.exception
 
@@ -1823,8 +1806,7 @@ class ScreenWindow(Device):
         self.__queue_event(_Exit())
 
     def __on_get_main_menu_items(
-            self, event: DeviceEvent, devices: Dispatcher,
-            result: typing.Any) -> typing.Any:
+            self, event: DeviceEvent, devices: Dispatcher) -> None:
         assert isinstance(event, GetMainMenuItems)
         pause_state = GetEmulationPauseState()
         devices.notify(pause_state)
@@ -1836,43 +1818,33 @@ class ScreenWindow(Device):
         self.__tape_item.label = ('Resume tape' if tape_state.paused
                                   else 'Pause tape')
         event.add_items(*self.__menu_descriptors)
-        return result
 
     def __on_toggle_panel(self, event: DeviceEvent,
-                          devices: Dispatcher,
-                          result: typing.Any) -> typing.Any:
+                          devices: Dispatcher) -> None:
         self.__panel_active ^= True
-        return result
 
     def __on_show_main_menu(self, event: DeviceEvent,
-                            devices: Dispatcher,
-                            result: typing.Any) -> typing.Any:
+                            devices: Dispatcher) -> None:
         self.__activate_panel(self.__main_menu_panel)
-        return result
 
     def __on_menu_item_hit(self, event: DeviceEvent,
-                           devices: Dispatcher,
-                           result: typing.Any) -> typing.Any:
+                           devices: Dispatcher) -> None:
         assert isinstance(event, MenuItemHit)
         item = event.item
         if isinstance(item, _PrimaryMainMenuItem):
             devices.notify(item.event_type())
-        return result
 
-    def on_event(self, event: DeviceEvent, devices: Dispatcher,
-                 result: typing.Any) -> typing.Any:
+    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         panel_active = self.__panel_active
         for event_type, handler in self._EVENT_HANDLERS.items():
             if isinstance(event, event_type):
-                result = handler(event, devices, result)
+                handler(event, devices)
 
         if panel_active:
             self.__panel.on_event(event, devices)
-        return result
 
     def _on_updated_pause_state(self, event: DeviceEvent,
-                                devices: Dispatcher,
-                                result: typing.Any) -> typing.Any:
+                                devices: Dispatcher) -> None:
         assert isinstance(event, PauseStateUpdated)
         pause_state = GetEmulationPauseState()
         devices.notify(pause_state)
@@ -1882,11 +1854,9 @@ class ScreenWindow(Device):
             self._notification = PauseNotification(emulation_time.time)
         else:
             self._notification = None
-        return result
 
     def _on_updated_tape_state(self, event: DeviceEvent,
-                               devices: Dispatcher,
-                               result: typing.Any) -> typing.Any:
+                               devices: Dispatcher) -> None:
         assert isinstance(event, TapeStateUpdated)
         tape_state = IsTapePlayerPaused()
         devices.notify(tape_state)
@@ -1896,11 +1866,9 @@ class ScreenWindow(Device):
             self._notification = TapePauseNotification(tape_time.time)
         else:
             self._notification = TapeResumeNotification(tape_time.time)
-        return result
 
     def _on_quantum_run(self, event: DeviceEvent,
-                        dispatcher: Dispatcher,
-                        result: typing.Any) -> typing.Any:
+                        dispatcher: Dispatcher) -> None:
         assert isinstance(event, QuantumRun)
         import sdl2
 
@@ -1937,13 +1905,11 @@ class ScreenWindow(Device):
                 self.__on_controller_event(self.__sdl_event, dispatcher)
 
         while self.__events:
-            self.on_event(self.__events.pop(0), dispatcher, None)
+            self.on_event(self.__events.pop(0), dispatcher)
 
         self.__update_screen(dispatcher)
-        return result
 
-    def __on_destroy(self, event: DeviceEvent, devices: Dispatcher,
-                     result: typing.Any) -> typing.Any:
+    def __on_destroy(self, event: DeviceEvent,
+                     devices: Dispatcher) -> None:
         import sdl2
         sdl2.SDL_DestroyWindow(self.__window)
-        return result

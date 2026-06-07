@@ -188,18 +188,17 @@ class PlaybackPlayer(Device):
         self.__sample_values = b''
         self.__sample_count = 0
 
-    def on_event(self, event: DeviceEvent, devices: Dispatcher,
-                 result: typing.Any) -> typing.Any:
+    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, StartPlayback):
             self.__load(event.playback, devices)
-            return result
+            return
 
         if isinstance(event, StopPlayback):
             self.__unload()
-            return result
+            return
 
         if self.__playback is None:
-            return result
+            return
 
         if isinstance(event, ReadPort):
             if not self.has_remaining_samples:
@@ -208,7 +207,7 @@ class PlaybackPlayer(Device):
             sample = self.__sample_values[self.__sample_count]
             self.__sample_count += 1
             event.supply(sample)
-            return result
+            return
 
         if isinstance(event, FetchesLimitHit):
             if self.has_remaining_samples:
@@ -216,8 +215,6 @@ class PlaybackPlayer(Device):
                             id='too_many_input_samples')
             self.__get_next_frame(devices)
             devices.notify(EndOfFrame())
-
-        return result
 
 
 class PlaybackRecorder(Device):
@@ -229,10 +226,9 @@ class PlaybackRecorder(Device):
     def make_playback(self) -> UnifiedPlayback:
         return UnifiedPlayback(segments=self.__segments)
 
-    def on_event(self, event: DeviceEvent, devices: Dispatcher,
-                 result: typing.Any) -> typing.Any:
+    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if not self.__active:
-            return result
+            return
 
         if isinstance(event, InstallSnapshot):
             self.__segments.append(
@@ -240,5 +236,3 @@ class PlaybackRecorder(Device):
 
         # TODO: Collect frames from OutputFrame events once the C core
         # exposes port_reads and num_fetches.
-
-        return result

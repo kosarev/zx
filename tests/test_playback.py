@@ -22,14 +22,14 @@ def test_playback_recorder() -> None:
 
     # Inactive by default: events are ignored.
     recorder = PlaybackRecorder()
-    recorder.on_event(InstallSnapshot(snapshot1), dispatcher, None)
+    recorder.on_event(InstallSnapshot(snapshot1), dispatcher)
     assert recorder.make_playback().segments == []
 
     # An active recorder starts a new segment per installed snapshot,
     # in order.
     recorder = PlaybackRecorder(active=True)
-    recorder.on_event(InstallSnapshot(snapshot1), dispatcher, None)
-    recorder.on_event(InstallSnapshot(snapshot2), dispatcher, None)
+    recorder.on_event(InstallSnapshot(snapshot1), dispatcher)
+    recorder.on_event(InstallSnapshot(snapshot2), dispatcher)
 
     playback = recorder.make_playback()
     assert [seg.snapshot for seg in playback.segments] == [

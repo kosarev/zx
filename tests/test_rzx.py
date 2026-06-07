@@ -50,8 +50,8 @@ def test_basic() -> None:
     player = zx._playback.PlaybackPlayer()
     dispatcher = zx._device.Dispatcher()
     start = zx._device.StartPlayback(playback)
-    player.on_event(start, dispatcher, None)
+    player.on_event(start, dispatcher)
     for expected in 0x42, 0xff, 0x00:
         read_port = zx._device.ReadPort(0xfe)
-        player.on_event(read_port, dispatcher, None)
+        player.on_event(read_port, dispatcher)
         assert read_port.value == expected

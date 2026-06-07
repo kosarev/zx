@@ -39,11 +39,9 @@ class Beeper(Device):
         pulses = self.__stream.stream_frame(levels, ticks)
         dispatcher.notify(NewSoundFrame(pulses))
 
-    def on_event(self, event: DeviceEvent, dispatcher: Dispatcher,
-                 result: typing.Any) -> typing.Any:
+    def on_event(self, event: DeviceEvent,
+                 dispatcher: Dispatcher) -> None:
         if isinstance(event, EmulatorReset):
             self.__stream.reset()
         elif isinstance(event, OutputFrame):
             self.__handle_port_writes(event.port_writes, dispatcher)
-
-        return result

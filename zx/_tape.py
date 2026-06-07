@@ -216,8 +216,8 @@ class TapePlayer(Device):
         dispatcher.notify(NewSoundFrame(pulses))
         self.__audible_pulses = []
 
-    def on_event(self, event: DeviceEvent, dispatcher: Dispatcher,
-                 result: typing.Any) -> typing.Any:
+    def on_event(self, event: DeviceEvent,
+                 dispatcher: Dispatcher) -> None:
         if isinstance(event, EmulatorReset):
             self._tick = 0
             self.__audible_pulses = []
@@ -241,5 +241,3 @@ class TapePlayer(Device):
 
             # TODO: Only notify if the state is actually changed.
             dispatcher.notify(TapeStateUpdated())
-
-        return result

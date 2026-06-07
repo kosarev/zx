@@ -214,9 +214,8 @@ class NewSoundFrame(DeviceEvent):
 
 
 class Device(object):
-    def on_event(self, event: DeviceEvent, devices: 'Dispatcher',
-                 result: typing.Any) -> typing.Any:
-        return result
+    def on_event(self, event: DeviceEvent, devices: 'Dispatcher') -> None:
+        pass
 
 
 class Dispatcher(object):
@@ -231,10 +230,6 @@ class Dispatcher(object):
     def __iter__(self) -> typing.Iterator[Device]:
         yield from self.__devices
 
-    # TODO: Since this now can return values, it needs a
-    # different name.
-    def notify(self, event: DeviceEvent, *,
-               result: typing.Any = None) -> typing.Any:
+    def notify(self, event: DeviceEvent) -> None:
         for device in self:
-            result = device.on_event(event, self, result)
-        return result
+            device.on_event(event, self)

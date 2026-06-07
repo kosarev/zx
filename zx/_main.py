@@ -288,8 +288,7 @@ class _PlaybackRecoverer(Spectrum):
             pass
         return self.__recorder.make_playback()
 
-    def on_event(self, event: DeviceEvent, devices: Dispatcher,
-                 result: typing.Any) -> typing.Any:
+    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, FetchesLimitHit):
             # Some emulators, e.g., SPIN, may store an interrupt point in
             # the middle of a IX- or IY-prefixed instruction, so we
@@ -297,17 +296,16 @@ class _PlaybackRecoverer(Spectrum):
             if self.iregp_kind != 'hl':
                 self.fetches_limit = 1
 
-        return super().on_event(event, devices, result)
+        super().on_event(event, devices)
 
 
 class _SPINPlaybackPlayer(PlaybackPlayer):
-    def on_event(self, event: DeviceEvent, devices: Dispatcher,
-                 result: typing.Any) -> typing.Any:
+    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         # Yield to _SPINPlaybackRecoverer when the trailing IN correction
         # is pending; otherwise PlaybackPlayer raises too_many_input_samples.
         if isinstance(event, FetchesLimitHit) and self.has_remaining_samples:
-            return result
-        return super().on_event(event, devices, result)
+            return
+        super().on_event(event, devices)
 
 
 class _SPINPlaybackRecoverer(_PlaybackRecoverer):
@@ -329,8 +327,7 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
         # ROM difference and plays on a strictly conforming emulator
         # with no quirk knowledge.
 
-    def on_event(self, event: DeviceEvent, devices: Dispatcher,
-                 result: typing.Any) -> typing.Any:
+    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, BreakpointHit):
             # SPIN v0.5 skips the bytes-saving ROM procedure in fast save mode.
             if self.pc == 0x04d4:
@@ -344,7 +341,7 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
             if self._player.has_remaining_samples:
                 self.fetches_limit = 1
 
-        return super().on_event(event, devices, result)
+        super().on_event(event, devices)
 
 
 def recover_playback(playback: MachinePlayback) -> UnifiedPlayback:

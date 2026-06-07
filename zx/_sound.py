@@ -170,8 +170,8 @@ class SoundDevice(Device):
             mixed_samples.ctypes.data_as(ctypes.c_void_p),
             len(mixed_samples) * 4)
 
-    def on_event(self, event: DeviceEvent, dispatcher: Dispatcher,
-                 result: typing.Any) -> typing.Any:
+    def on_event(self, event: DeviceEvent,
+                 dispatcher: Dispatcher) -> None:
         if isinstance(event, EmulatorReset):
             self.__frame_events.clear()
         elif isinstance(event, NewSoundFrame):
@@ -184,5 +184,3 @@ class SoundDevice(Device):
             self.__output_frame()
         elif isinstance(event, Destroy):
             self.__destroy()
-
-        return result
