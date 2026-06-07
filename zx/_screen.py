@@ -953,11 +953,11 @@ class _MainMenuPanel(_Panel):
     def __rebuild(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
         assert self.__texture is None
 
-        descriptors: list[MenuItemDescriptor] = dispatcher.notify(
-            GetMainMenuItems(), result=[])
+        menu_items = GetMainMenuItems()
+        dispatcher.notify(menu_items)
         existing = {item.descriptor: item for item in self.__menu.items}
         self.__menu.items = [existing.get(d) or _MenuItem(d)
-                             for d in descriptors]
+                             for d in menu_items.items]
 
         theme = self._theme
         assert theme.normal_font is not None
@@ -1739,9 +1739,9 @@ class ScreenWindow(Device):
                     devices.notify(_TogglePanel())
                 return result
 
-            items: list[MenuItemDescriptor] = devices.notify(
-                GetMainMenuItems(), result=[])
-            for item in items:
+            menu_items = GetMainMenuItems()
+            devices.notify(menu_items)
+            for item in menu_items.items:
                 if item.hotkey == event.id:
                     devices.notify(MenuItemHit(item))
 
@@ -1824,7 +1824,8 @@ class ScreenWindow(Device):
 
     def __on_get_main_menu_items(
             self, event: DeviceEvent, devices: Dispatcher,
-            result: list[MenuItemDescriptor]) -> list[MenuItemDescriptor]:
+            result: typing.Any) -> typing.Any:
+        assert isinstance(event, GetMainMenuItems)
         pause_state = GetEmulationPauseState()
         devices.notify(pause_state)
         tape_state = IsTapePlayerPaused()
@@ -1834,7 +1835,7 @@ class ScreenWindow(Device):
                                        else 'Pause emulation')
         self.__tape_item.label = ('Resume tape' if tape_state.paused
                                   else 'Pause tape')
-        result.extend(self.__menu_descriptors)
+        event.add_items(*self.__menu_descriptors)
         return result
 
     def __on_toggle_panel(self, event: DeviceEvent,

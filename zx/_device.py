@@ -32,7 +32,13 @@ class MenuItemDescriptor(object):
 
 
 class GetMainMenuItems(DeviceEvent):
-    pass
+    def __init__(self) -> None:
+        self.items: list[MenuItemDescriptor] = []
+
+    # Devices contribute their items by adding them, so several
+    # devices can populate the menu together.
+    def add_items(self, *items: MenuItemDescriptor) -> None:
+        self.items.extend(items)
 
 
 class MenuItemHit(DeviceEvent):
