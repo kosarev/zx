@@ -232,6 +232,7 @@ public:
     void on_reset(bool soft = false) {
         base::on_reset(soft);
         ticks_since_int = 0;
+        num_port_writes = 0;
         start_new_frame();
     }
 
@@ -594,6 +595,7 @@ public:
 
     unsigned get_num_port_writes() const { return num_port_writes; }
     const port_writes_type &get_port_writes() const { return port_writes; }
+    void clear_port_writes() { num_port_writes = 0; }
 
     // TODO: Name the constants.
     // TODO: private
@@ -605,7 +607,14 @@ public:
         if(frame_counter % 16 == 0)
             flash_mask ^= 0xffff;
 
-        num_port_writes = 0;
+        // The port-writes buffer is not frame-keyed: it accumulates
+        // until drained by the reader.
+        // TODO: Writes past max_num_port_writes are silently
+        // dropped. Also, draining destroys the data for any other
+        // reader. If multiple direct readers or overflow detection
+        // are ever needed, convert the buffer to a ring with a
+        // free-running write counter and per-reader cursors, the
+        // same observation idiom as tick_count.
     }
 
     // TODO: private

@@ -313,12 +313,14 @@ static PyObject *get_frame_pixels(PyObject *self, PyObject *args) {
                                    sizeof(pixels), PyBUF_READ);
 }
 
-static PyObject *get_port_writes(PyObject *self, PyObject *args) {
+static PyObject *drain_port_writes(PyObject *self, PyObject *args) {
     auto &emulator = cast_emulator(self);
     auto &writes = emulator.get_port_writes();
-    return PyMemoryView_FromMemory(
-        const_cast<char*>(reinterpret_cast<const char*>(writes)),
-        sizeof(*writes) * emulator.get_num_port_writes(), PyBUF_READ);
+    PyObject *result = PyBytes_FromStringAndSize(
+        reinterpret_cast<const char*>(writes),
+        sizeof(*writes) * emulator.get_num_port_writes());
+    emulator.clear_port_writes();
+    return result;
 }
 
 static PyObject *mark_addrs(PyObject *self, PyObject *args) {
@@ -394,9 +396,9 @@ PyMethodDef methods[] = {
     {"get_frame_pixels", get_frame_pixels, METH_NOARGS,
      "Convert rendered frame into an internally allocated array of RGB24 pixels "
      "and return a MemoryView object that exposes that array."},
-    {"get_port_writes", get_port_writes, METH_NOARGS,
-     "Return a MemoryView of an internal array storing current frame's "
-     "port writes."},
+    {"drain_port_writes", drain_port_writes, METH_NOARGS,
+     "Return the accumulated port writes as a bytes object and clear "
+     "the buffer."},
     {"mark_addrs", mark_addrs, METH_VARARGS,
      "Mark a range of memory bytes as ones that require custom "
      "processing on reading, writing or executing them."},

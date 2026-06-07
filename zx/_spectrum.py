@@ -662,7 +662,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         # Port-write stamps are free-running tick counts; rebase them
         # to frame-relative values for OutputFrame consumers.
         # TODO: Goes away when sound moves to per-quantum delivery.
-        writes = numpy.frombuffer(self.get_port_writes(),
+        writes = numpy.frombuffer(self.drain_port_writes(),
                                   dtype=numpy.uint64)
         frame_start = numpy.uint32(
             (self.tick_count - self.ticks_since_int) & 0xffffffff)

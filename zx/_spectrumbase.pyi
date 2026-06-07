@@ -11,7 +11,7 @@ class _SpectrumBase:
     def get_frame_pixels(self) -> memoryview:
         ...
 
-    def get_port_writes(self) -> memoryview:
+    def drain_port_writes(self) -> bytes:
         ...
 
     def mark_addrs(self, addr: int, size: int, marks: int) -> None:
