@@ -102,11 +102,29 @@ class EndOfFrame(DeviceEvent):
 class OutputFrame(DeviceEvent):
     def __init__(self, *,
                  pixels: Bytes,
-                 port_writes: numpy.typing.NDArray[numpy.uint64],
                  port_reads: Bytes) -> None:
         self.pixels = pixels
-        self.port_writes = port_writes
         self.port_reads = port_reads
+
+
+# The bare heartbeat: notified after every quantum that advanced
+# emulation, so that time passes even in silence. Dispatched last,
+# as the finality point: all facts for the window it closes are
+# published by the time its dispatch completes. Consumers may rely
+# on that completion at the next dispatch — never on device order.
+class TimeAdvanced(EmulationEvent):
+    pass
+
+
+# The tick_count stamp closes the collection window: these are the
+# writes collected by that moment. Per-write stamps locate the
+# writes within the window and are strictly ordered within one
+# event. Notified only when there are writes to report.
+class NewPortWrites(EmulationEvent):
+    def __init__(self, tick_count: int,
+                 writes: numpy.typing.NDArray[numpy.uint64]) -> None:
+        super().__init__(tick_count)
+        self.writes = writes
 
 
 class GetEmulationPauseState(DeviceEvent):
@@ -165,14 +183,9 @@ class QuantumRun(DeviceEvent):
 
 
 class ReadPort(EmulationEvent):
-    def __init__(self, addr: int, tick_count: int = 0,
-                 ticks_since_int: int = 0) -> None:
+    def __init__(self, addr: int, tick_count: int = 0) -> None:
         super().__init__(tick_count)
         self.addr = addr
-
-        # TODO: Retire in favour of the free-running tick_count once
-        # the tape player moves off the frame-relative timeline.
-        self.ticks_since_int = ticks_since_int
 
         # All input lines are pulled high unless a device drives
         # them low.

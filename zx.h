@@ -467,13 +467,10 @@ public:
             uint_least64_t v = 0;
             v |= static_cast<uint_least64_t>(addr) << 0;
             v |= static_cast<uint_least64_t>(n) << 16;
-            // TODO: Stamp with the free-running tick counter once
-            // sound consumes per-quantum windows (#36). A
-            // free-running stamp combined with the frame-keyed
-            // OutputFrame delivery breaks in playback mode, where
-            // machine frames roll over between fetch-driven playback
-            // frames.
-            v |= static_cast<uint_least64_t>(t) << 32;
+            // Stamp with the free-running counter, wrapping at 2^32;
+            // consumers locate writes within the windows closed by
+            // heartbeat readings.
+            v |= static_cast<uint_least64_t>(tick_count & 0xffffffff) << 32;
             port_writes[num_port_writes++] = v;
         }
 

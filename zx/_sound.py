@@ -20,55 +20,38 @@ from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EmulatorReset
 from ._device import NewSoundFrame
-from ._device import OutputFrame
+from ._device import QuantumRun
 from ._device import SetFastForward
+from ._device import TimeAdvanced
 
 
 class PulseStream(object):
     def __init__(self, model: type[SpectrumModel]) -> None:
-        self.__ticks_per_frame = model._TICKS_PER_FRAME
+        # TODO: This is really the clock rate of the tick timeline.
+        self.__rate = model._TICKS_PER_FRAME * 50
 
         # The last set sound level.
         self.__current_level = numpy.uint32(0)
 
-        # The last pulse may happen past the end of the previous
-        # frame. When this happens, we store the carried out pulse here.
-        self.__carry_pulse: None | tuple[numpy.uint32, numpy.uint32] = None
-
     def reset(self) -> None:
         self.__current_level = numpy.uint32(0)
-        self.__carry_pulse = None
 
-    def stream_frame(self, levels: numpy.typing.NDArray[numpy.uint32],
-                     ticks: numpy.typing.NDArray[numpy.uint32]) -> SoundPulses:
-        # Apply the carry pulse, if any.
-        if self.__carry_pulse is not None:
-            tick, level = self.__carry_pulse
-            assert len(ticks) == 0 or tick < ticks[0]
-            levels = numpy.insert(levels, 0, level)
-            ticks = numpy.insert(ticks, 0, tick)
-            self.__carry_pulse = None
+    def stream_chunk(self, levels: numpy.typing.NDArray[numpy.uint32],
+                     ticks: numpy.typing.NDArray[numpy.uint32],
+                     num_ticks: int) -> SoundPulses:
+        assert num_ticks > 0
 
-        # Extend the levels and ticks to cover the frame exactly.
-        if len(ticks) == 0 or ticks[0] > 0:
+        # Chunks define their level over their whole span: the
+        # running level carries forward to the chunk start.
+        if len(ticks) == 0 or ticks[0] != 0:
             levels = numpy.insert(levels, 0, self.__current_level)
             ticks = numpy.insert(ticks, 0, 0)
-        if ticks[-1] >= self.__ticks_per_frame:
-            assert self.__carry_pulse is None
-            self.__carry_pulse = ticks[-1] - self.__ticks_per_frame, levels[-1]
-            ticks = numpy.delete(ticks, -1)
-            levels = numpy.delete(levels, -1)
-        if ticks[-1] < self.__ticks_per_frame - 1:
-            levels = numpy.append(levels, levels[-1])
-            ticks = numpy.append(ticks, self.__ticks_per_frame - 1)
-        assert ticks[0] == 0 and ticks[-1] == self.__ticks_per_frame - 1
 
+        assert int(ticks[-1]) < num_ticks
         self.__current_level = levels[-1]
 
-        FRAMES_PER_SEC = 50  # TODO
-        rate = self.__ticks_per_frame * FRAMES_PER_SEC
-        return SoundPulses(rate, levels, ticks,
-                           num_ticks=self.__ticks_per_frame)
+        return SoundPulses(self.__rate, levels, ticks,
+                           num_ticks=num_ticks)
 
 
 class _PulseResampler(object):
@@ -141,7 +124,9 @@ class SoundDevice(Device):
     __OUTPUT_FREQ = 44100
 
     def __init__(self) -> None:
-        self.__frame_events: list[NewSoundFrame] = []
+        self.__chunks: list[SoundPulses] = []
+        self.__heartbeat: None | int = None
+        self.__cursor: None | int = None
         self.__fast_forward = False
         self.__resampler = _PulseResampler(self.__OUTPUT_FREQ)
 
@@ -169,26 +154,19 @@ class SoundDevice(Device):
         import sdl2.audio
         sdl2.audio.SDL_CloseAudioDevice(self.__device)
 
-    def __new_sound_frame(self, frame_event: NewSoundFrame) -> None:
-        self.__frame_events.append(frame_event)
-
-    # Mixing happens by time, in the pulse domain: the chunks of a
-    # finality window all cover that window, so the mixed level
-    # function changes at the union of their transition points.
-    # Sequential-vs-simultaneous is encoded in the spans; no channel
-    # identity is needed.
-    def __mix_pulses(self, chunks: list[SoundPulses]) -> (
+    # Mixing happens by time, in the pulse domain: a chunk is
+    # located by its publication context, so the chunks of a window
+    # all cover exactly that window, and the mixed level function
+    # changes at the union of their transition points. How emitters
+    # agree to coexist is their concern; no channel identity is
+    # needed.
+    def __mix_pulses(self, chunks: list[SoundPulses], span: int) -> (
             tuple[numpy.typing.NDArray[numpy.float64],
-                  numpy.typing.NDArray[numpy.uint32],
-                  int, int]):
-        assert len(chunks) > 0, 'TODO: Support having no sound channels!'
-
-        num_ticks = chunks[0].num_ticks
-        rate = chunks[0].rate
+                  numpy.typing.NDArray[numpy.uint32]]):
         for c in chunks:
-            assert c.num_ticks == num_ticks
-            assert c.rate == rate
-            # Chunks define their level over their whole span.
+            # A chunk covers exactly the window being closed and
+            # defines its level over the whole of it.
+            assert c.num_ticks == span
             assert len(c.ticks) > 0 and c.ticks[0] == 0
 
         ticks = numpy.unique(
@@ -202,18 +180,35 @@ class SoundDevice(Device):
             mixed += c.levels[segments]
         mixed /= len(chunks)
 
-        return mixed, ticks, num_ticks, rate
+        return mixed, ticks
 
-    def __output_frame(self) -> None:
-        if self.__fast_forward:
-            self.__frame_events.clear()
+    # Consume on the dispatch following the heartbeat, by which
+    # point the heartbeat's dispatch has provably completed and all
+    # chunks of its window are in — regardless of device order.
+    def __consume(self) -> None:
+        if self.__heartbeat is None:
+            return
+        stamp, self.__heartbeat = self.__heartbeat, None
+        chunks, self.__chunks = self.__chunks, []
+
+        # Resynchronise after construction or reset.
+        if self.__cursor is None:
+            self.__cursor = stamp
             return
 
-        chunks = [e.pulses for e in self.__frame_events]
-        self.__frame_events.clear()
+        span = (stamp - self.__cursor) % (1 << 32)
+        self.__cursor = stamp
 
-        levels, ticks, num_ticks, rate = self.__mix_pulses(chunks)
-        samples = self.__resampler.feed(levels, ticks, num_ticks, rate)
+        if self.__fast_forward or span == 0:
+            return
+
+        # With no emitters there is no stream.
+        if len(chunks) == 0:
+            return
+
+        levels, ticks = self.__mix_pulses(chunks, span)
+        samples = self.__resampler.feed(levels, ticks, span,
+                                        chunks[0].rate)
 
         import sdl2.audio
         import ctypes
@@ -229,15 +224,19 @@ class SoundDevice(Device):
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
         if isinstance(event, EmulatorReset):
-            self.__frame_events.clear()
+            self.__chunks.clear()
+            self.__heartbeat = None
+            self.__cursor = None
             self.__resampler = _PulseResampler(self.__OUTPUT_FREQ)
         elif isinstance(event, NewSoundFrame):
-            self.__new_sound_frame(event)
+            self.__chunks.append(event.pulses)
         elif isinstance(event, SetFastForward):
             if event.active:
                 assert not self.__fast_forward
             self.__fast_forward = event.active
-        elif isinstance(event, OutputFrame):
-            self.__output_frame()
+        elif isinstance(event, QuantumRun):
+            self.__consume()
+        elif isinstance(event, TimeAdvanced):
+            self.__heartbeat = event.tick_count
         elif isinstance(event, Destroy):
             self.__destroy()

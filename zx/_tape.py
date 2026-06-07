@@ -19,7 +19,6 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EmulatorReset
-from ._device import EndOfFrame
 from ._device import ReadPort
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
@@ -28,6 +27,7 @@ from ._device import LoadTape
 from ._device import PauseUnpauseTape
 from ._device import TapeStateUpdated
 from ._device import NewSoundFrame
+from ._device import TimeAdvanced
 from ._sound import PulseStream
 from ._time import Time
 
@@ -126,6 +126,23 @@ class TapePlayer(Device):
         self.__audible_output = PulseStream(model)
         self.__audible_pulses: list[tuple[int, int]] = []
 
+        # Unwrapping of 32-bit event stamps onto the tape's
+        # monotonic internal timeline.
+        self.__last_stamp: None | int = None
+        self.__unwrapped = 0
+
+        # The internal tick up to which sound has been published.
+        self.__published: None | int = None
+
+    def __unwrap(self, stamp: int) -> int:
+        if self.__last_stamp is None:
+            # Anchor the internal timeline at the first stamp seen.
+            self.__unwrapped = stamp
+        else:
+            self.__unwrapped += (stamp - self.__last_stamp) % (1 << 32)
+        self.__last_stamp = stamp
+        return self.__unwrapped
+
     def __is_paused(self) -> bool:
         return self._is_paused
 
@@ -152,7 +169,7 @@ class TapePlayer(Device):
     def __load_tape(self, file: SoundFile) -> None:
         self.__load_parsed_file(file)
 
-    def __get_level_at_frame_tick(self, tick: int) -> bool:
+    def __get_level_at_tick(self, tick: int) -> bool:
         assert tick >= self._tick, (self._tick, tick)
 
         # Get through the series of levels until we get the one at the
@@ -200,35 +217,52 @@ class TapePlayer(Device):
 
         return self._level
 
-    def __complete_frame(self, dispatcher: Dispatcher) -> None:
-        if self._tick < self._ticks_per_frame:
-            self.__get_level_at_frame_tick(self._ticks_per_frame - 1)
+    def __publish_chunk(self, tick: int, dispatcher: Dispatcher) -> None:
+        # Catch the tape model up to the heartbeat so its sound
+        # advances even without port reads.
+        if self._tick < tick:
+            self.__get_level_at_tick(tick - 1)
 
-        assert self._tick >= self._ticks_per_frame
-        self._tick -= self._ticks_per_frame
+        published = self.__published
+        self.__published = tick
+
+        # Resynchronise after construction or reset.
+        if published is None:
+            self.__audible_pulses = []
+            return
+
+        span = tick - published
+        if span == 0:
+            return
 
         # Play the tape sound for the user.
         levels, ticks = (zip(*self.__audible_pulses)
                          if len(self.__audible_pulses) != 0 else ([], []))
-        pulses = self.__audible_output.stream_frame(
+        offsets = numpy.array(ticks, dtype=numpy.int64) - published
+        pulses = self.__audible_output.stream_chunk(
             numpy.array(levels, dtype=numpy.uint32),
-            numpy.array(ticks, dtype=numpy.uint32))
+            offsets.astype(numpy.uint32),
+            span)
         dispatcher.notify(NewSoundFrame(pulses))
         self.__audible_pulses = []
 
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
         if isinstance(event, EmulatorReset):
-            self._tick = 0
+            # Note that the internal timeline keeps running across
+            # resets — only the transient sound state is discarded.
             self.__audible_pulses = []
             self.__audible_output.reset()
-        elif isinstance(event, EndOfFrame):
-            self.__complete_frame(dispatcher)
+            self.__published = None
+        elif isinstance(event, TimeAdvanced):
+            self.__publish_chunk(self.__unwrap(event.tick_count),
+                                 dispatcher)
         elif isinstance(event, GetTapePlayerTime):
             event.time = self.__get_time()
         elif isinstance(event, ReadPort):
             if self._pulses is not None:
-                if not self.__get_level_at_frame_tick(event.ticks_since_int):
+                tick = self.__unwrap(event.tick_count)
+                if not self.__get_level_at_tick(tick):
                     event.supply(0xbf)  # EAR bit low when no tape signal
         elif isinstance(event, IsTapePlayerPaused):
             event.paused |= self.__is_paused()

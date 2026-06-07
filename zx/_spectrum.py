@@ -45,10 +45,12 @@ from ._device import KeyStroke
 from ._device import LoadFile
 from ._device import LoadTape
 from ._device import OutputFrame
+from ._device import NewPortWrites
 from ._device import PauseStateUpdated
 from ._device import PauseUnpauseTape
 from ._device import QuantumRun
 from ._device import ReadPort
+from ._device import TimeAdvanced
 from ._device import SaveSnapshot
 from ._device import SetFastForward
 from ._device import ToggleEmulationPause
@@ -611,7 +613,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self.run(duration=0.1, fast_forward=True)
 
     def __on_input(self, addr: int) -> int:
-        read_port = ReadPort(addr, self.tick_count, self.ticks_since_int)
+        read_port = ReadPort(addr, self.tick_count)
         self.devices.notify(read_port)
         v = read_port.value
         self.__port_reads.append(v)
@@ -661,8 +663,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         devices.notify(OutputFrame(
             pixels=self.get_frame_pixels(),
-            port_writes=numpy.frombuffer(self.drain_port_writes(),
-                                         dtype=numpy.uint64),
             port_reads=self.__port_reads))
         self.__port_reads.clear()
 
@@ -701,6 +701,13 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         events = RunEvents(self._run())
 
+        now = self.tick_count
+
+        writes = numpy.frombuffer(self.drain_port_writes(),
+                                  dtype=numpy.uint64)
+        if len(writes):
+            self.devices.notify(NewPortWrites(now, writes))
+
         if RunEvents.BREAKPOINT_HIT in events:
             self.on_breakpoint()
 
@@ -709,6 +716,10 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self.devices.notify(FetchesLimitHit())
         elif RunEvents.END_OF_FRAME in events:
             self.devices.notify(EndOfFrame())
+
+        # The heartbeat goes last: it is the finality point by which
+        # all facts for the window it closes are published.
+        self.devices.notify(TimeAdvanced(now))
 
     def run(self, duration: None | float = None,
             fast_forward: bool = False) -> None:
