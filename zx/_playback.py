@@ -207,7 +207,8 @@ class PlaybackPlayer(Device):
                             id='too_few_input_samples')
             sample = self.__sample_values[self.__sample_count]
             self.__sample_count += 1
-            return result & sample
+            event.supply(sample)
+            return result
 
         if isinstance(event, FetchesLimitHit):
             if self.has_remaining_samples:

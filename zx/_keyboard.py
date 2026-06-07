@@ -3,7 +3,7 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2019 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
@@ -95,5 +95,5 @@ class Keyboard(Device):
             if key:
                 self.handle_key_stroke(key, event.pressed)
         elif isinstance(event, ReadPort):
-            result &= self.read_port(event.addr)
+            event.supply(self.read_port(event.addr))
         return result

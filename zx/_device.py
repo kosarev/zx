@@ -148,6 +148,15 @@ class ReadPort(DeviceEvent):
         self.addr = addr
         self.ticks_since_int = ticks_since_int
 
+        # All input lines are pulled high unless a device drives
+        # them low.
+        self.value = 0xff
+
+    # Devices contribute their samples by ANDing them in, so several
+    # devices can drive the same lines without overriding each other.
+    def supply(self, sample: int) -> None:
+        self.value &= sample
+
 
 class RequestLoadFile(DeviceEvent):
     pass

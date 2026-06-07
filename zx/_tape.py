@@ -229,7 +229,7 @@ class TapePlayer(Device):
         elif isinstance(event, ReadPort):
             if self._pulses is not None:
                 if not self.__get_level_at_frame_tick(event.ticks_since_int):
-                    result &= 0xbf  # EAR bit low when no tape signal
+                    event.supply(0xbf)  # EAR bit low when no tape signal
         elif isinstance(event, IsTapePlayerPaused):
             return self.__is_paused()
         elif isinstance(event, IsTapePlayerStopped):
