@@ -67,7 +67,8 @@ class PulseStream(object):
 
         FRAMES_PER_SEC = 50  # TODO
         rate = self.__ticks_per_frame * FRAMES_PER_SEC
-        return SoundPulses(rate, levels, ticks)
+        return SoundPulses(rate, levels, ticks,
+                           num_ticks=self.__ticks_per_frame)
 
 
 class SoundDevice(Device):
@@ -111,16 +112,13 @@ class SoundDevice(Device):
         levels, ticks = pulses.levels, pulses.ticks
         assert len(levels) == len(ticks)
 
-        FRAMES_PER_SEC = 50  # TODO
         source_rate = pulses.rate
-        source_num_samples_per_frame = int(source_rate / FRAMES_PER_SEC + 0.5)
 
-        # Make sure we have source samples for the whole frame.
+        # Make sure we have source samples for the whole chunk.
         assert ticks[0] == 0
-        assert ticks[-1] == source_num_samples_per_frame - 1
+        assert ticks[-1] == pulses.num_ticks - 1
 
         target_rate = self.__OUTPUT_FREQ
-        target_num_samples_per_frame = int(target_rate / FRAMES_PER_SEC + 0.5)
 
         # Convert CPU ticks into an upscaled number of sample indexes.
         N = 10

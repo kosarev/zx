@@ -205,11 +205,16 @@ class ArchiveFile(DataRecord, format_name=None):
 
 # TODO: Should derive from DataRecord?
 class SoundPulses(object):
+    # A chunk of a pulse stream covering num_ticks ticks, with level
+    # transitions at the given offsets within that span. A chunk with
+    # no transitions still represents that much sustained level.
     def __init__(self, rate: int,
                  levels: numpy.typing.NDArray[numpy.uint32],
-                 ticks: numpy.typing.NDArray[numpy.uint32]) -> None:
+                 ticks: numpy.typing.NDArray[numpy.uint32],
+                 num_ticks: int) -> None:
         assert len(levels) == len(ticks)
         self.rate, self.levels, self.ticks = rate, levels, ticks
+        self.num_ticks = num_ticks
 
 
 class SoundFile(DataRecord, format_name=None):
