@@ -26,10 +26,11 @@ class Beeper(Device):
     def __init__(self, model: type[SpectrumModel]) -> None:
         self.__stream = PulseStream(model)
 
-        # The window start: the previous heartbeat's stamp.
-        self.__cursor: None | int = None
+        # The tick position up to which the beeper's sound has been
+        # published.
+        self.__published_up_to_tick: None | int = None
 
-        # EAR transitions collected since the cursor, with their
+        # EAR transitions collected since then, with their
         # free-running tick stamps.
         self.__levels: list[numpy.typing.NDArray[numpy.uint32]] = []
         self.__ticks: list[numpy.typing.NDArray[numpy.uint32]] = []
@@ -49,16 +50,16 @@ class Beeper(Device):
             (writes >> numpy.uint64(32)).astype(numpy.uint32))
 
     def __publish(self, stamp: int, dispatcher: Dispatcher) -> None:
-        cursor = self.__cursor
-        self.__cursor = stamp
+        published_up_to = self.__published_up_to_tick
+        self.__published_up_to_tick = stamp
 
         # Resynchronise after construction or reset.
-        if cursor is None:
+        if published_up_to is None:
             self.__levels.clear()
             self.__ticks.clear()
             return
 
-        span = (stamp - cursor) % (1 << 32)
+        span = (stamp - published_up_to) % (1 << 32)
         if span == 0:
             return
 
@@ -68,8 +69,9 @@ class Beeper(Device):
             self.__levels.clear()
             self.__ticks.clear()
 
-            # Offsets within the window; uint32 arithmetic wraps.
-            ticks = ticks - numpy.uint32(cursor & 0xffffffff)
+            # Offsets within the published span; uint32 arithmetic
+            # wraps.
+            ticks = ticks - numpy.uint32(published_up_to & 0xffffffff)
         else:
             levels = numpy.zeros(0, dtype=numpy.uint32)
             ticks = numpy.zeros(0, dtype=numpy.uint32)
@@ -80,7 +82,7 @@ class Beeper(Device):
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
         if isinstance(event, EmulatorReset):
             self.__stream.reset()
-            self.__cursor = None
+            self.__published_up_to_tick = None
             self.__levels.clear()
             self.__ticks.clear()
         elif isinstance(event, NewPortWrites):

@@ -724,8 +724,8 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         elif RunEvents.END_OF_FRAME in events:
             self.devices.notify(EndOfFrame())
 
-        # The heartbeat goes last: it is the finality point by which
-        # all facts for the window it closes are published.
+        # TimeAdvanced goes last: all facts about the elapsed span
+        # of time are published by the time its dispatch completes.
         self.devices.notify(TimeAdvanced(now))
 
     def run(self, duration: None | float = None,

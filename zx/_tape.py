@@ -132,7 +132,7 @@ class TapePlayer(Device):
         self.__unwrapped = 0
 
         # The internal tick up to which sound has been published.
-        self.__published: None | int = None
+        self.__published_up_to_tick: None | int = None
 
     def __unwrap(self, stamp: int) -> int:
         if self.__last_stamp is None:
@@ -218,27 +218,27 @@ class TapePlayer(Device):
         return self._level
 
     def __publish_chunk(self, tick: int, dispatcher: Dispatcher) -> None:
-        # Catch the tape model up to the heartbeat so its sound
-        # advances even without port reads.
+        # Catch the tape model up to the time-advanced position so
+        # its sound advances even without port reads.
         if self._tick < tick:
             self.__get_level_at_tick(tick - 1)
 
-        published = self.__published
-        self.__published = tick
+        published_up_to = self.__published_up_to_tick
+        self.__published_up_to_tick = tick
 
         # Resynchronise after construction or reset.
-        if published is None:
+        if published_up_to is None:
             self.__audible_pulses = []
             return
 
-        span = tick - published
+        span = tick - published_up_to
         if span == 0:
             return
 
         # Play the tape sound for the user.
         levels, ticks = (zip(*self.__audible_pulses)
                          if len(self.__audible_pulses) != 0 else ([], []))
-        offsets = numpy.array(ticks, dtype=numpy.int64) - published
+        offsets = numpy.array(ticks, dtype=numpy.int64) - published_up_to
         pulses = self.__audible_output.stream_chunk(
             numpy.array(levels, dtype=numpy.uint32),
             offsets.astype(numpy.uint32),
@@ -253,7 +253,7 @@ class TapePlayer(Device):
             # resets — only the transient sound state is discarded.
             self.__audible_pulses = []
             self.__audible_output.reset()
-            self.__published = None
+            self.__published_up_to_tick = None
         elif isinstance(event, TimeAdvanced):
             self.__publish_chunk(self.__unwrap(event.tick_count),
                                  dispatcher)

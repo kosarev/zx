@@ -124,16 +124,25 @@ class SoundDevice(Device):
     # TODO: Rename to output rate.
     __OUTPUT_FREQ = 44100
 
-    # The queue depth at which emulation should be held, in bytes.
+    # The amount of queued-but-unplayed audio, in bytes, above which
+    # emulation should not advance. It also determines the output
+    # latency.
     # TODO: This is ~5ms of audio (4 bytes per sample), inherited
-    # from the blocking loop where the same expression has always
-    # been compared against bytes; revisit as the latency knob.
-    __TARGET_DEPTH = __OUTPUT_FREQ // 50
+    # from the former waiting loop where the same expression has
+    # always been compared against bytes; revisit as the latency
+    # setting.
+    __MAX_QUEUED_AUDIO_BYTES = __OUTPUT_FREQ // 50
 
     def __init__(self) -> None:
         self.__chunks: list[SoundPulses] = []
-        self.__heartbeat: None | int = None
-        self.__cursor: None | int = None
+
+        # The stamp of the last TimeAdvanced notification, not yet
+        # consumed.
+        self.__last_time_advanced_tick: None | int = None
+
+        # The tick position up to which sound has been consumed.
+        self.__consumed_up_to_tick: None | int = None
+
         self.__fast_forward = False
         self.__resampler = _PulseResampler(self.__OUTPUT_FREQ)
 
@@ -164,17 +173,16 @@ class SoundDevice(Device):
         import sdl2.audio
         sdl2.audio.SDL_CloseAudioDevice(self.__device)
 
-    # Mixing happens by time, in the pulse domain: a chunk is
-    # located by its publication context, so the chunks of a window
-    # all cover exactly that window, and the mixed level function
-    # changes at the union of their transition points. How emitters
-    # agree to coexist is their concern; no channel identity is
-    # needed.
+    # Mixing happens by time, in the pulse domain: the chunks
+    # published for a span of time all cover exactly that span, so
+    # the mixed level function changes at the union of their
+    # transition points. How emitters agree to coexist is their
+    # concern; no channel identity is needed.
     def __mix_pulses(self, chunks: list[SoundPulses], span: int) -> (
             tuple[numpy.typing.NDArray[numpy.float64],
                   numpy.typing.NDArray[numpy.uint32]]):
         for c in chunks:
-            # A chunk covers exactly the window being closed and
+            # A chunk covers exactly the span being consumed and
             # defines its level over the whole of it.
             assert c.num_ticks == span
             assert len(c.ticks) > 0 and c.ticks[0] == 0
@@ -192,24 +200,25 @@ class SoundDevice(Device):
 
         return mixed, ticks
 
-    # Consume on the dispatch following the heartbeat, by which
-    # point the heartbeat's dispatch has provably completed and all
-    # chunks of its window are in — regardless of device order.
-    # Production only: the resampled samples go to the pending
-    # buffer; output policy lives in __feed().
+    # Consume on the dispatch following a TimeAdvanced notification,
+    # by which point its dispatch has provably completed and all
+    # chunks published for the elapsed span are in — regardless of
+    # device order. Production only: the resampled samples go to the
+    # pending buffer; __feed() pushes them to the device.
     def __consume(self) -> None:
-        if self.__heartbeat is None:
+        if self.__last_time_advanced_tick is None:
             return
-        stamp, self.__heartbeat = self.__heartbeat, None
+        stamp = self.__last_time_advanced_tick
+        self.__last_time_advanced_tick = None
         chunks, self.__chunks = self.__chunks, []
 
         # Resynchronise after construction or reset.
-        if self.__cursor is None:
-            self.__cursor = stamp
+        if self.__consumed_up_to_tick is None:
+            self.__consumed_up_to_tick = stamp
             return
 
-        span = (stamp - self.__cursor) % (1 << 32)
-        self.__cursor = stamp
+        span = (stamp - self.__consumed_up_to_tick) % (1 << 32)
+        self.__consumed_up_to_tick = stamp
 
         if self.__fast_forward or span == 0:
             return
@@ -243,17 +252,18 @@ class SoundDevice(Device):
             samples.ctypes.data_as(ctypes.c_void_p),
             len(samples) * 4)
 
-    # The gauge: emulation should be held while the device queue is
-    # at or above the target depth; the drain ETA is exact.
+    # Emulation should not advance while the amount of queued audio
+    # is above the limit; the time for the excess to play out is
+    # exactly computable.
     def __answer_hold(self, event: GetHoldState) -> None:
         if self.__fast_forward:
             return
 
         import sdl2.audio
         queued = sdl2.audio.SDL_GetQueuedAudioSize(self.__device)
-        if queued > self.__TARGET_DEPTH:
+        if queued > self.__MAX_QUEUED_AUDIO_BYTES:
             BYTES_PER_SAMPLE = 4
-            event.hold(wake_in=(queued - self.__TARGET_DEPTH) /
+            event.hold(wake_in=(queued - self.__MAX_QUEUED_AUDIO_BYTES) /
                        (BYTES_PER_SAMPLE * self.__OUTPUT_FREQ))
 
     def on_event(self, event: DeviceEvent,
@@ -261,8 +271,8 @@ class SoundDevice(Device):
         if isinstance(event, EmulatorReset):
             self.__chunks.clear()
             self.__pending.clear()
-            self.__heartbeat = None
-            self.__cursor = None
+            self.__last_time_advanced_tick = None
+            self.__consumed_up_to_tick = None
             self.__resampler = _PulseResampler(self.__OUTPUT_FREQ)
         elif isinstance(event, NewSoundPulses):
             self.__chunks.append(event.pulses)
@@ -274,7 +284,7 @@ class SoundDevice(Device):
             self.__consume()
             self.__feed()
         elif isinstance(event, TimeAdvanced):
-            self.__heartbeat = event.tick_count
+            self.__last_time_advanced_tick = event.tick_count
         elif isinstance(event, GetHoldState):
             self.__answer_hold(event)
         elif isinstance(event, Destroy):

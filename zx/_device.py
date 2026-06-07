@@ -25,10 +25,10 @@ class DeviceEvent(object):
 
 
 # Emulation-related events are located in simulated time: facts
-# carry their location, and consumers hold cursors and take
-# wrap-aware deltas of the free-running tick counter. UI-originated
-# events are not located in simulated time and stay plain
-# DeviceEvents.
+# carry their location, and consumers remember their own last seen
+# positions and take wrap-aware differences of the free-running
+# tick counter. UI-originated events are not located in simulated
+# time and stay plain DeviceEvents.
 class EmulationEvent(DeviceEvent):
     def __init__(self, tick_count: int) -> None:
         self.tick_count = tick_count
@@ -107,19 +107,19 @@ class OutputFrame(DeviceEvent):
         self.port_reads = port_reads
 
 
-# The bare heartbeat: notified after every quantum that advanced
-# emulation, so that time passes even in silence. Dispatched last,
-# as the finality point: all facts for the window it closes are
-# published by the time its dispatch completes. Consumers may rely
-# on that completion at the next dispatch — never on device order.
+# Notified after every quantum that advanced emulation, carrying
+# nothing but its stamp, so that time passes even when nothing else
+# happened. Dispatched last: all facts about the elapsed span of
+# time are published by the time its dispatch completes. Consumers
+# may rely on that completion at the next dispatch — never on
+# device order.
 class TimeAdvanced(EmulationEvent):
     pass
 
 
-# The tick_count stamp closes the collection window: these are the
-# writes collected by that moment. Per-write stamps locate the
-# writes within the window and are strictly ordered within one
-# event. Notified only when there are writes to report.
+# The writes collected by the stamped moment. Per-write stamps say
+# when exactly each write happened and are strictly ordered within
+# one event. Notified only when there are writes to report.
 class NewPortWrites(EmulationEvent):
     def __init__(self, tick_count: int,
                  writes: numpy.typing.NDArray[numpy.uint64]) -> None:
@@ -133,14 +133,14 @@ class GetHoldState(DeviceEvent):
     def __init__(self) -> None:
         self.held = False
 
-        # In how many seconds the earliest holder would like control
-        # back, or None when only external input can change the
-        # answer. All answers are given within one dispatch, so the
-        # durations are directly comparable.
+        # In how many seconds the earliest of the holding devices
+        # expects the answer to change, or None when only external
+        # input can change it. All answers are given within one
+        # dispatch, so the durations are directly comparable.
         self.wake_in: None | float = None
 
-    # Any holder holds; the earliest wake deadline wins. A holder
-    # with no deadline relies on the waiter's cap.
+    # Any device may hold; the earliest wake deadline wins. Holding
+    # with no deadline relies on the waiting device's cap.
     def hold(self, wake_in: None | float = None) -> None:
         self.held = True
         if wake_in is not None:
@@ -200,9 +200,10 @@ class PauseUnpauseTape(DeviceEvent):
 
 
 # Notified at the start of every loop iteration. Carries the hold
-# state evaluated by the machine, so devices never re-query it: when
-# held, emulation does not advance this quantum, and the waiter may
-# sleep up to wake_in seconds (capped, and cut short by input).
+# state evaluated by the machine, so devices never re-query it:
+# when held, emulation does not advance this quantum, and a device
+# that waits may sleep up to wake_in seconds (capped, and cut short
+# by input).
 class QuantumRun(DeviceEvent):
     def __init__(self, *, held: bool = False,
                  wake_in: None | float = None) -> None:
@@ -264,8 +265,9 @@ class ToggleTapePause(DeviceEvent):
     pass
 
 
-# A chunk of an emitter's continuous pulse stream, published for
-# the window being closed by the current heartbeat dispatch.
+# A chunk of an emitter's continuous pulse stream, covering the
+# span of time elapsed by the TimeAdvanced notification being
+# dispatched.
 class NewSoundPulses(DeviceEvent):
     def __init__(self, pulses: SoundPulses) -> None:
         self.pulses = pulses

@@ -1875,8 +1875,9 @@ class ScreenWindow(Device):
         # Give the OS some CPU time while the machine is held; wake
         # immediately on any SDL event. Pass NULL so the event stays
         # in the queue for the normal polling loop to handle. The
-        # holders' deadline cuts the wait short; the cap keeps the
-        # UI responsive when there is no deadline.
+        # earliest deadline declared by the holding devices cuts the
+        # wait short; the cap keeps the UI responsive when there is
+        # no deadline.
         if event.held:
             CAP_MS = 20
             timeout_ms = CAP_MS
