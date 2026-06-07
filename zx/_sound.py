@@ -71,6 +71,71 @@ class PulseStream(object):
                            num_ticks=self.__ticks_per_frame)
 
 
+class _PulseResampler(object):
+    # The single stateful resampler of the mixed pulse stream.
+    # Chunks of one stream cannot be resampled independently: the
+    # fractional sample position and the averaging window carry
+    # across chunk boundaries.
+
+    # The number of upscaled samples averaged per output sample.
+    # Averaging helps removing high-frequency noise in some
+    # programs, e.g., the Wham! music editor.
+    __UPSCALE = 10
+
+    def __init__(self, output_rate: int) -> None:
+        self.__output_rate = output_rate
+        self.__source_rate: None | int = None
+
+        # The finalised stream position, in source ticks.
+        self.__num_ticks = 0
+
+        # Upscaled samples of an incomplete averaging window. They
+        # are not yet fully supported by finalised input — the next
+        # chunk may still affect the output sample they belong to —
+        # so they must not reach the sound card until completed.
+        self.__carry: numpy.typing.NDArray[numpy.float64] = (
+            numpy.zeros(0, dtype=numpy.float64))
+
+    def feed(self, levels: numpy.typing.NDArray[numpy.float64],
+             ticks: numpy.typing.NDArray[numpy.uint32],
+             num_ticks: int, rate: int) -> (
+                 numpy.typing.NDArray[numpy.float32]):
+        # The source rate is a property of the stream, not of its
+        # chunks.
+        if self.__source_rate is None:
+            self.__source_rate = rate
+        assert rate == self.__source_rate
+
+        # Chunks define their level over their whole span.
+        assert len(ticks) > 0 and ticks[0] == 0
+
+        N = self.__UPSCALE
+        ratio = self.__output_rate * N / self.__source_rate
+
+        # Upscaled-index boundaries of the level segments: each
+        # transition and then the span end, all positioned on the
+        # continuous stream timeline.
+        begin = self.__num_ticks
+        bounds = numpy.empty(len(ticks) + 1, dtype=numpy.int64)
+        bounds[:-1] = ((begin + ticks) * ratio + 0.5).astype(numpy.int64)
+        bounds[-1] = int((begin + num_ticks) * ratio + 0.5)
+
+        upscaled = numpy.repeat(levels, numpy.diff(bounds))
+
+        self.__num_ticks = begin + num_ticks
+
+        # Emit only output samples whose averaging window is fully
+        # supported by the finalised input; hold back the rest.
+        upscaled = numpy.concatenate([self.__carry, upscaled])
+        num_full = len(upscaled) // N * N
+        self.__carry = upscaled[num_full:]
+
+        samples: numpy.typing.NDArray[numpy.float32] = (
+            upscaled[:num_full].reshape(-1, N).mean(
+                axis=1, dtype=numpy.float32))
+        return samples
+
+
 class SoundDevice(Device):
     # TODO: Rename to output rate.
     __OUTPUT_FREQ = 44100
@@ -78,6 +143,7 @@ class SoundDevice(Device):
     def __init__(self) -> None:
         self.__frame_events: list[NewSoundFrame] = []
         self.__fast_forward = False
+        self.__resampler = _PulseResampler(self.__OUTPUT_FREQ)
 
         # TODO: Don't use SDL until we know we are actually
         # outputting sound via it. (The user may want to do something
@@ -106,56 +172,48 @@ class SoundDevice(Device):
     def __new_sound_frame(self, frame_event: NewSoundFrame) -> None:
         self.__frame_events.append(frame_event)
 
-    def __generate_samples(self, event: NewSoundFrame) -> (
-            numpy.typing.NDArray[numpy.float32]):
-        pulses = event.pulses
-        levels, ticks = pulses.levels, pulses.ticks
-        assert len(levels) == len(ticks)
+    # Mixing happens by time, in the pulse domain: the chunks of a
+    # finality window all cover that window, so the mixed level
+    # function changes at the union of their transition points.
+    # Sequential-vs-simultaneous is encoded in the spans; no channel
+    # identity is needed.
+    def __mix_pulses(self, chunks: list[SoundPulses]) -> (
+            tuple[numpy.typing.NDArray[numpy.float64],
+                  numpy.typing.NDArray[numpy.uint32],
+                  int, int]):
+        assert len(chunks) > 0, 'TODO: Support having no sound channels!'
 
-        source_rate = pulses.rate
+        num_ticks = chunks[0].num_ticks
+        rate = chunks[0].rate
+        for c in chunks:
+            assert c.num_ticks == num_ticks
+            assert c.rate == rate
+            # Chunks define their level over their whole span.
+            assert len(c.ticks) > 0 and c.ticks[0] == 0
 
-        # Make sure we have source samples for the whole chunk.
-        assert ticks[0] == 0
-        assert ticks[-1] == pulses.num_ticks - 1
+        ticks = numpy.unique(
+            numpy.concatenate([c.ticks for c in chunks]))
 
-        target_rate = self.__OUTPUT_FREQ
+        mixed = numpy.zeros(len(ticks), dtype=numpy.float64)
+        for c in chunks:
+            # The level of the segment covering each union point.
+            segments = numpy.searchsorted(c.ticks, ticks,
+                                          side='right') - 1
+            mixed += c.levels[segments]
+        mixed /= len(chunks)
 
-        # Convert CPU ticks into an upscaled number of sample indexes.
-        N = 10
-        sample_indexes = ticks * (target_rate * N / source_rate)
-        sample_indexes = (sample_indexes + 0.5).astype(numpy.int32)
-
-        # Compute intervals between the samples, in source ticks.
-        counts = numpy.diff(sample_indexes)
-
-        # Create an array of samples.
-        samples = numpy.repeat(levels[:-1], counts)
-
-        # Downscale samples back to their intented rate by averaging
-        # adjacent samples. This helps removing high-frequency noise in
-        # some programs, e.g., the Wham! music editor.
-        averaged_samples: numpy.typing.NDArray[numpy.float32] = (
-            samples.reshape(-1, N).mean(axis=1, dtype=numpy.float32))
-
-        return averaged_samples
-
-    def __mix_channels(
-            self, samples: list[numpy.typing.NDArray[numpy.float32]]) -> (
-                numpy.typing.NDArray[numpy.float32]):
-        assert len(samples) > 0, 'TODO: Support having no sound channels!'
-        mixed: numpy.typing.NDArray[numpy.float32] = (
-            numpy.sum(samples, axis=0) / len(samples))
-        return mixed
+        return mixed, ticks, num_ticks, rate
 
     def __output_frame(self) -> None:
         if self.__fast_forward:
             self.__frame_events.clear()
             return
 
-        samples = [self.__generate_samples(e) for e in self.__frame_events]
+        chunks = [e.pulses for e in self.__frame_events]
         self.__frame_events.clear()
 
-        mixed_samples = self.__mix_channels(samples)
+        levels, ticks, num_ticks, rate = self.__mix_pulses(chunks)
+        samples = self.__resampler.feed(levels, ticks, num_ticks, rate)
 
         import sdl2.audio
         import ctypes
@@ -165,13 +223,14 @@ class SoundDevice(Device):
 
         sdl2.audio.SDL_QueueAudio(
             self.__device,
-            mixed_samples.ctypes.data_as(ctypes.c_void_p),
-            len(mixed_samples) * 4)
+            samples.ctypes.data_as(ctypes.c_void_p),
+            len(samples) * 4)
 
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
         if isinstance(event, EmulatorReset):
             self.__frame_events.clear()
+            self.__resampler = _PulseResampler(self.__OUTPUT_FREQ)
         elif isinstance(event, NewSoundFrame):
             self.__new_sound_frame(event)
         elif isinstance(event, SetFastForward):
