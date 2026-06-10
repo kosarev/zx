@@ -248,6 +248,14 @@ class SetFastForward(DeviceEvent):
         self.active = active
 
 
+# How fast emulated time runs relative to wallclock. Only the sound
+# path acts on it (as the resampler ratio); the rest of the machine is
+# unaware of speed.
+class SetEmulationSpeed(DeviceEvent):
+    def __init__(self, speed: float) -> None:
+        self.speed = speed
+
+
 class RequestSaveSnapshot(DeviceEvent):
     pass
 

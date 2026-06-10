@@ -22,17 +22,18 @@ from ._device import EmulatorReset
 from ._device import GetHoldState
 from ._device import NewSoundPulses
 from ._device import QuantumRun
+from ._device import SetEmulationSpeed
 from ._device import SetFastForward
 from ._device import TimeAdvanced
 
 
-# How fast emulated time runs relative to wallclock. The sound stream
-# is the wallclock reference, so speed is purely the resampler ratio:
-# at speed 2 a simulated span yields half the output samples, the
-# sound queue fills half as fast, and the queued-audio backpressure
-# lets emulation advance twice as far before holding. Pitch shifts
-# with it, as on a real tape run fast. A constant for now; the aim is
-# to expose it as a setting.
+# The initial speed: how fast emulated time runs relative to
+# wallclock. The sound stream is the wallclock reference, so speed is
+# purely the resampler ratio: at speed 2 a simulated span yields half
+# the output samples, the sound queue fills half as fast, and the
+# queued-audio backpressure lets emulation advance twice as far before
+# holding. Pitch shifts with it, as on a real tape run fast. Changed at
+# runtime via SetEmulationSpeed.
 # Only speeds >= 1.0 are supported: slower than realtime would make a
 # single frame produce more audio than the latency budget, which needs
 # sub-frame quanta we do not have yet.
@@ -96,8 +97,9 @@ class _PulseResampler(object):
     # programs, e.g., the Wham! music editor.
     __UPSCALE = 10
 
-    def __init__(self, output_rate: int) -> None:
+    def __init__(self, output_rate: int, speed: float) -> None:
         self.__output_rate = output_rate
+        self.__speed = speed
         self.__source_rate: None | int = None
 
         # The finalised stream position, in source ticks.
@@ -109,6 +111,10 @@ class _PulseResampler(object):
         # so they must not reach the sound card until completed.
         self.__carry: numpy.typing.NDArray[numpy.float64] = (
             numpy.zeros(0, dtype=numpy.float64))
+
+    def set_speed(self, speed: float) -> None:
+        assert speed >= 1.0
+        self.__speed = speed
 
     def feed(self, levels: numpy.typing.NDArray[numpy.float64],
              ticks: numpy.typing.NDArray[numpy.uint32],
@@ -126,7 +132,7 @@ class _PulseResampler(object):
         # Speed compresses the source timeline: faster emulation packs
         # the same simulated span into fewer output samples.
         N = self.__UPSCALE
-        ratio = self.__output_rate * N / (self.__source_rate * SPEED)
+        ratio = self.__output_rate * N / (self.__source_rate * self.__speed)
 
         # Upscaled-index boundaries of the level segments: each
         # transition and then the span end, all positioned on the
@@ -179,7 +185,8 @@ class SoundDevice(Device):
         self.__consumed_up_to_tick: None | int = None
 
         self.__fast_forward = False
-        self.__resampler = _PulseResampler(self.__OUTPUT_FREQ)
+        self.__speed = SPEED
+        self.__resampler = _PulseResampler(self.__OUTPUT_FREQ, self.__speed)
 
         # Produced samples awaiting delivery to the device.
         self.__pending: list[numpy.typing.NDArray[numpy.float32]] = []
@@ -307,13 +314,17 @@ class SoundDevice(Device):
             self.__pending.clear()
             self.__last_time_advanced_tick = None
             self.__consumed_up_to_tick = None
-            self.__resampler = _PulseResampler(self.__OUTPUT_FREQ)
+            self.__resampler = _PulseResampler(
+                self.__OUTPUT_FREQ, self.__speed)
         elif isinstance(event, NewSoundPulses):
             self.__chunks.append(event.pulses)
         elif isinstance(event, SetFastForward):
             if event.active:
                 assert not self.__fast_forward
             self.__fast_forward = event.active
+        elif isinstance(event, SetEmulationSpeed):
+            self.__speed = event.speed
+            self.__resampler.set_speed(event.speed)
         elif isinstance(event, QuantumRun):
             self.__consume()
             self.__feed()
