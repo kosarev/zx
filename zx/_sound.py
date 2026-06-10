@@ -124,14 +124,17 @@ class SoundDevice(Device):
     # TODO: Rename to output rate.
     __OUTPUT_FREQ = 44100
 
-    # The amount of queued-but-unplayed audio, in bytes, above which
-    # emulation should not advance. It also determines the output
-    # latency.
-    # TODO: This is ~5ms of audio (4 bytes per sample), inherited
-    # from the former waiting loop where the same expression has
-    # always been compared against bytes; revisit as the latency
-    # setting.
-    __MAX_QUEUED_AUDIO_BYTES = __OUTPUT_FREQ // 50
+    __BYTES_PER_SAMPLE = 4
+
+    # The amount of queued-but-unplayed audio above which emulation
+    # should not advance. This is at once the underrun margin, the
+    # output latency and the AV-skew bound — all of them the amount of
+    # not-yet-played audio. A safe default for now; anything tighter
+    # risks underruns under load (e.g. tape loading) on slower hosts.
+    # TODO: Surface this through the GUI settings as the latency knob.
+    __OUTPUT_LATENCY_MS = 50
+    __MAX_QUEUED_AUDIO_BYTES = (
+        round(__OUTPUT_FREQ * __OUTPUT_LATENCY_MS / 1000) * __BYTES_PER_SAMPLE)
 
     def __init__(self) -> None:
         self.__chunks: list[SoundPulses] = []
@@ -250,7 +253,7 @@ class SoundDevice(Device):
         sdl2.audio.SDL_QueueAudio(
             self.__device,
             samples.ctypes.data_as(ctypes.c_void_p),
-            len(samples) * 4)
+            len(samples) * self.__BYTES_PER_SAMPLE)
 
     # Emulation should not advance while the amount of queued audio
     # is above the limit; the time for the excess to play out is
@@ -262,9 +265,8 @@ class SoundDevice(Device):
         import sdl2.audio
         queued = sdl2.audio.SDL_GetQueuedAudioSize(self.__device)
         if queued > self.__MAX_QUEUED_AUDIO_BYTES:
-            BYTES_PER_SAMPLE = 4
             event.hold(wake_in=(queued - self.__MAX_QUEUED_AUDIO_BYTES) /
-                       (BYTES_PER_SAMPLE * self.__OUTPUT_FREQ))
+                       (self.__BYTES_PER_SAMPLE * self.__OUTPUT_FREQ))
 
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
