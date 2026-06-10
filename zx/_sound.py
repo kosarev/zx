@@ -26,6 +26,21 @@ from ._device import SetFastForward
 from ._device import TimeAdvanced
 
 
+# How fast emulated time runs relative to wallclock. The sound stream
+# is the wallclock reference, so speed is purely the resampler ratio:
+# at speed 2 a simulated span yields half the output samples, the
+# sound queue fills half as fast, and the queued-audio backpressure
+# lets emulation advance twice as far before holding. Pitch shifts
+# with it, as on a real tape run fast. A constant for now; the aim is
+# to expose it as a setting.
+# Only speeds >= 1.0 are supported: slower than realtime would make a
+# single frame produce more audio than the latency budget, which needs
+# sub-frame quanta we do not have yet.
+# TODO: Surface this through the GUI settings.
+SPEED = 1.0
+assert SPEED >= 1.0
+
+
 class PulseStream(object):
     def __init__(self, model: type[SpectrumModel]) -> None:
         # TODO: This is really the clock rate of the tick timeline.
@@ -93,8 +108,10 @@ class _PulseResampler(object):
         # Chunks define their level over their whole span.
         assert len(ticks) > 0 and ticks[0] == 0
 
+        # Speed compresses the source timeline: faster emulation packs
+        # the same simulated span into fewer output samples.
         N = self.__UPSCALE
-        ratio = self.__output_rate * N / self.__source_rate
+        ratio = self.__output_rate * N / (self.__source_rate * SPEED)
 
         # Upscaled-index boundaries of the level segments: each
         # transition and then the span end, all positioned on the
