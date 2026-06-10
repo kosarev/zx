@@ -63,8 +63,23 @@ class PulseStream(object):
             levels = numpy.insert(levels, 0, self.__current_level)
             ticks = numpy.insert(ticks, 0, 0)
 
-        assert int(ticks[-1]) < num_ticks
+        # The level entering the next chunk is that of the last
+        # transition, including one landing exactly on this chunk's
+        # end.
         self.__current_level = levels[-1]
+
+        # The span is half-open: a transition exactly on its end
+        # belongs to the next chunk at offset 0, not to this one. This
+        # happens when a port access falls on the very tick that closes
+        # the chunk. Drop such transitions here; their level is carried
+        # forward above, so the next chunk opens at it. Anything
+        # strictly beyond the end would be a stamping bug.
+        beyond = ticks[ticks >= num_ticks]
+        assert (beyond == num_ticks).all(), (list(map(int, beyond)), num_ticks)
+
+        keep = ticks < num_ticks
+        levels = levels[keep]
+        ticks = ticks[keep]
 
         return SoundPulses(self.__rate, levels, ticks,
                            num_ticks=num_ticks)
