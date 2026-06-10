@@ -21,6 +21,7 @@ from ._device import DeviceEvent
 from ._device import EmulatorReset
 from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
+from ._device import GetHoldState
 from ._device import GetMainMenuItems
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
@@ -47,6 +48,13 @@ from ._utils import div_ceil
 
 
 SCREENCAST = False
+
+# How many frames per second the host window is refreshed at.
+# Independent of the emulated machine's frame rate: video is state
+# and can be sampled at any rate. A constant for now; the aim is to
+# expose it as a setting.
+# TODO: Surface this through the GUI settings.
+HOST_WINDOW_FPS = 50.0
 
 PI = 3.1415926535
 
@@ -1545,6 +1553,7 @@ class ScreenWindow(Device):
         _Handler = typing.Callable[[DeviceEvent, Dispatcher], None]
         self._EVENT_HANDLERS: dict[type[DeviceEvent], _Handler] = {
             GetMainMenuItems: self.__on_get_main_menu_items,
+            GetHoldState: self.__on_get_hold_state,
             MenuItemHit: self.__on_menu_item_hit,
             _ClickEvent: self.__on_click,
             _ExceptionEvent: self.__on_exception,
@@ -1596,6 +1605,11 @@ class ScreenWindow(Device):
         self.frame_size = self.frame_width * self.frame_height
 
         self.__controllers: dict[int, ctypes.c_void_p] = {}
+
+        # The wallclock moment the window is next due to be presented.
+        # Zero is long in the past, so the first opportunity presents
+        # immediately.
+        self.__next_present_timestamp = 0.0
 
     def _on_output_frame(self, event: DeviceEvent,
                          dispatcher: Dispatcher) -> None:
@@ -1867,6 +1881,16 @@ class ScreenWindow(Device):
         else:
             self._notification = TapeResumeNotification(tape_time.time)
 
+    def __on_get_hold_state(self, event: DeviceEvent,
+                            devices: Dispatcher) -> None:
+        assert isinstance(event, GetHoldState)
+
+        # Declare when the next present is due so that a wait caused by
+        # another holder is cut short in time to keep the presentation
+        # rate. The screen never holds the machine itself.
+        event.wake_within(
+            max(0.0, self.__next_present_timestamp - get_timestamp()))
+
     def _on_quantum_run(self, event: DeviceEvent,
                         dispatcher: Dispatcher) -> None:
         assert isinstance(event, QuantumRun)
@@ -1912,7 +1936,13 @@ class ScreenWindow(Device):
         while self.__events:
             self.on_event(self.__events.pop(0), dispatcher)
 
-        self.__update_screen(dispatcher)
+        # Present on the host's own frame schedule rather than once
+        # per quantum: the window samples the latest emulated state at
+        # its own rate.
+        now = get_timestamp()
+        if now >= self.__next_present_timestamp:
+            self.__update_screen(dispatcher)
+            self.__next_present_timestamp = now + 1.0 / HOST_WINDOW_FPS
 
     def __on_destroy(self, event: DeviceEvent,
                      devices: Dispatcher) -> None:

@@ -133,10 +133,12 @@ class GetHoldState(DeviceEvent):
     def __init__(self) -> None:
         self.held = False
 
-        # In how many seconds the earliest of the holding devices
-        # expects the answer to change, or None when only external
-        # input can change it. All answers are given within one
-        # dispatch, so the durations are directly comparable.
+        # In how many seconds the earliest holding device expects the
+        # answer to change, or a non-holding device wants the waiter
+        # woken by (e.g. to meet a presentation deadline), or None
+        # when only external input can change it. All answers are
+        # given within one dispatch, so the durations are directly
+        # comparable.
         self.wake_in: None | float = None
 
     # Any device may hold; the earliest wake deadline wins. Holding
@@ -144,8 +146,14 @@ class GetHoldState(DeviceEvent):
     def hold(self, wake_in: None | float = None) -> None:
         self.held = True
         if wake_in is not None:
-            if self.wake_in is None or wake_in < self.wake_in:
-                self.wake_in = wake_in
+            self.wake_within(wake_in)
+
+    # A device that does not hold may still have a wallclock deadline
+    # by which it wants the waiter woken (e.g. a presentation
+    # refresh). This narrows the wake deadline without holding.
+    def wake_within(self, wake_in: float) -> None:
+        if self.wake_in is None or wake_in < self.wake_in:
+            self.wake_in = wake_in
 
 
 class GetEmulationPauseState(DeviceEvent):
