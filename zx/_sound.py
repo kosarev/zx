@@ -176,6 +176,13 @@ class SoundDevice(Device):
     __MAX_QUEUED_AUDIO_BYTES = (
         round(__OUTPUT_FREQ * __OUTPUT_LATENCY_MS / 1000) * __BYTES_PER_SAMPLE)
 
+    # A nominal display refresh rate used only to keep slow-motion
+    # quanta from advancing in over-large chunks. It is not the
+    # screen's actual present rate — respecting that precisely is not
+    # worth coupling the sound and screen devices; a decent assumed
+    # value is enough for a cap.
+    __ASSUMED_REFRESH_FPS = 50
+
     def __init__(self, model: type[SpectrumModel]) -> None:
         # The rate of the simulated-tick timeline the pulse chunks are
         # stamped in, needed to size the sub-frame budget at slow
@@ -314,22 +321,27 @@ class SoundDevice(Device):
             event.hold(wake_in=(queued - self.__MAX_QUEUED_AUDIO_BYTES) /
                        (self.__BYTES_PER_SAMPLE * self.__OUTPUT_FREQ))
 
-    # Below realtime a whole-frame quantum would produce more than the
-    # latency budget of output audio in one step (output audio per
-    # quantum = simulated time / speed), so the latency setting would
-    # stop meaning anything and the queue would swing far past its
-    # target. Cap the quantum at the ticks whose audio fits the
-    # budget: output_seconds = simulated_ticks / source_rate / speed,
-    # kept <= latency gives simulated_ticks <= latency * speed *
-    # source_rate. At or above realtime this exceeds a frame, so the
-    # frame end applies first and nothing changes — hence we only
-    # report a limit below realtime.
+    # Cap how much output audio a single quantum may produce below
+    # realtime, where a whole-frame quantum would otherwise make far
+    # more than makes sense in one step (output audio per quantum =
+    # simulated time / speed). Two bounds, the smaller winning:
+    #  - the latency budget, so the queue does not swing past its
+    #    target and the latency setting keeps meaning something;
+    #  - a nominal display refresh, so the picture advances in small,
+    #    frequent steps and slow motion stays smooth rather than
+    #    jumping in large chunks.
+    # The cap in ticks is max_output_seconds * speed * source_rate
+    # (output_seconds = simulated_ticks / source_rate / speed). At or
+    # above realtime it exceeds a frame, so the frame end applies first
+    # and nothing changes — hence we only report a limit below realtime.
     def __report_tick_limit(self, event: GetQuantumTickLimit) -> None:
         if self.__fast_forward or self.__speed >= 1.0:
             return
 
         latency_seconds = self.__OUTPUT_LATENCY_MS / 1000
-        budget = round(latency_seconds * self.__speed * self.__source_rate)
+        max_output_seconds = min(latency_seconds,
+                                 1.0 / self.__ASSUMED_REFRESH_FPS)
+        budget = round(max_output_seconds * self.__speed * self.__source_rate)
         event.stop_after(max(1, budget))
 
     def on_event(self, event: DeviceEvent,
