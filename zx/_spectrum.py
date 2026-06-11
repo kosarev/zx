@@ -46,6 +46,7 @@ from ._device import LoadFile
 from ._device import LoadTape
 from ._device import OutputFrame
 from ._device import GetHoldState
+from ._device import GetQuantumTickLimit
 from ._device import NewPortWrites
 from ._device import PauseStateUpdated
 from ._device import PauseUnpauseTape
@@ -718,6 +719,14 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         if hold.held:
             return
+
+        # Cap how far this quantum advances, e.g. for sub-frame quanta
+        # at slow speeds. With no device declaring a limit the quantum
+        # runs to the frame end as before.
+        limit = GetQuantumTickLimit()
+        self.devices.notify(limit)
+        self.ticks_limit = (0 if limit.stop_after_ticks is None
+                            else limit.stop_after_ticks)
 
         events = RunEvents(self._run())
 
