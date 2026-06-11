@@ -540,7 +540,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 if screen is None:
                     screen = ScreenWindow(self.FRAME_SIZE)
                 if sound_device is None:
-                    sound_device = SoundDevice()
+                    sound_device = SoundDevice(self.model)
 
                 devices.extend([screen, sound_device])
 

@@ -20,6 +20,7 @@ from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EmulatorReset
 from ._device import GetHoldState
+from ._device import GetQuantumTickLimit
 from ._device import NewSoundPulses
 from ._device import QuantumRun
 from ._device import SetEmulationSpeed
@@ -174,7 +175,12 @@ class SoundDevice(Device):
     __MAX_QUEUED_AUDIO_BYTES = (
         round(__OUTPUT_FREQ * __OUTPUT_LATENCY_MS / 1000) * __BYTES_PER_SAMPLE)
 
-    def __init__(self) -> None:
+    def __init__(self, model: type[SpectrumModel]) -> None:
+        # The rate of the simulated-tick timeline the pulse chunks are
+        # stamped in, needed to size the sub-frame budget at slow
+        # speeds.
+        self.__source_rate = model._TICKS_PER_FRAME * 50
+
         self.__chunks: list[SoundPulses] = []
 
         # The stamp of the last TimeAdvanced notification, not yet
@@ -307,6 +313,24 @@ class SoundDevice(Device):
             event.hold(wake_in=(queued - self.__MAX_QUEUED_AUDIO_BYTES) /
                        (self.__BYTES_PER_SAMPLE * self.__OUTPUT_FREQ))
 
+    # Below realtime a whole-frame quantum would produce more than the
+    # latency budget of output audio in one step (output audio per
+    # quantum = simulated time / speed), so the latency setting would
+    # stop meaning anything and the queue would swing far past its
+    # target. Cap the quantum at the ticks whose audio fits the
+    # budget: output_seconds = simulated_ticks / source_rate / speed,
+    # kept <= latency gives simulated_ticks <= latency * speed *
+    # source_rate. At or above realtime this exceeds a frame, so the
+    # frame end applies first and nothing changes — hence we only
+    # report a limit below realtime.
+    def __report_tick_limit(self, event: GetQuantumTickLimit) -> None:
+        if self.__fast_forward or self.__speed >= 1.0:
+            return
+
+        latency_seconds = self.__OUTPUT_LATENCY_MS / 1000
+        budget = round(latency_seconds * self.__speed * self.__source_rate)
+        event.stop_after(max(1, budget))
+
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
         if isinstance(event, EmulatorReset):
@@ -332,5 +356,7 @@ class SoundDevice(Device):
             self.__last_time_advanced_tick = event.tick_count
         elif isinstance(event, GetHoldState):
             self.__answer_hold(event)
+        elif isinstance(event, GetQuantumTickLimit):
+            self.__report_tick_limit(event)
         elif isinstance(event, Destroy):
             self.__destroy()
