@@ -107,6 +107,16 @@ class OutputFrame(DeviceEvent):
         self.port_reads = port_reads
 
 
+# Asks the machine for the current frame pixels. The core renders the
+# screen up to the moment control returns, so the answer always
+# reflects the present emulated state, mid-frame included. The screen
+# pulls this at its own presentation rate, decoupled from the emulated
+# frame rate.
+class GetFramePixels(DeviceEvent):
+    def __init__(self) -> None:
+        self.pixels: None | Bytes = None
+
+
 # Notified after every quantum that advanced emulation, carrying
 # nothing but its stamp, so that time passes even when nothing else
 # happened. Dispatched last: all facts about the elapsed span of

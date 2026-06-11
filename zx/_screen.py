@@ -34,7 +34,7 @@ from ._device import RequestLoadFile
 from ._device import RequestSaveSnapshot
 from ._device import QuantumRun
 from ._device import SaveSnapshot
-from ._device import OutputFrame
+from ._device import GetFramePixels
 from ._device import TapeStateUpdated
 from ._device import ToggleEmulationPause
 from ._device import ToggleFullscreen
@@ -1562,7 +1562,6 @@ class ScreenWindow(Device):
             _ShowMainMenu: self.__on_show_main_menu,
             PauseStateUpdated: self._on_updated_pause_state,
             QuantumRun: self._on_quantum_run,
-            OutputFrame: self._on_output_frame,
             TapeStateUpdated: self._on_updated_tape_state,
             _RequestResetMachine: self.__on_request_reset_machine,
             RequestLoadFile: self.__on_request_load_file,
@@ -1611,12 +1610,10 @@ class ScreenWindow(Device):
         # immediately.
         self.__next_present_timestamp = 0.0
 
-    def _on_output_frame(self, event: DeviceEvent,
-                         dispatcher: Dispatcher) -> None:
-        assert isinstance(event, OutputFrame)
+    def __update_pixel_texture(self, pixels_data: typing.Any) -> None:
         rect = None
         pitch = self.frame_width * 4
-        self.__pixels[:] = event.pixels
+        self.__pixels[:] = pixels_data
         pixels = ctypes.c_void_p(ctypes.addressof(
             ctypes.c_char.from_buffer(self.__pixels)))
         import sdl2
@@ -1624,6 +1621,15 @@ class ScreenWindow(Device):
                                pixels, pitch)
 
     def __update_screen(self, dispatcher: Dispatcher) -> None:
+        # Pull the current emulated screen as of this moment. The
+        # screen owns its presentation cadence, so it samples the
+        # core's current-to-the-moment pixels here rather than being
+        # pushed one image per emulated frame.
+        frame_pixels = GetFramePixels()
+        dispatcher.notify(frame_pixels)
+        if frame_pixels.pixels is not None:
+            self.__update_pixel_texture(frame_pixels.pixels)
+
         w, h = ctypes.c_int(), ctypes.c_int()
         lw, lh = ctypes.c_int(), ctypes.c_int()
         import sdl2

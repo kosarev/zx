@@ -35,6 +35,7 @@ from ._device import FetchesLimitHit
 from ._device import SetBreakpoint
 from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
+from ._device import GetFramePixels
 from ._device import InstallSnapshot
 from ._device import IsTapePlayerPaused
 from ._device import SetFetchesLimit
@@ -879,6 +880,10 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 event.hold()
         elif isinstance(event, GetEmulationTime):
             event.time = self._emulation_time
+        elif isinstance(event, GetFramePixels):
+            # The core has already rendered the screen up to the
+            # current tick on returning control, so this is current.
+            event.pixels = self.get_frame_pixels()
         elif isinstance(event, KeyStroke):
             key = KEYS.get(event.id, None)
             if key:
