@@ -35,12 +35,13 @@ from ._device import TimeAdvanced
 # queued-audio backpressure lets emulation advance twice as far before
 # holding. Pitch shifts with it, as on a real tape run fast. Changed at
 # runtime via SetEmulationSpeed.
-# Only speeds >= 1.0 are supported: slower than realtime would make a
-# single frame produce more audio than the latency budget, which needs
-# sub-frame quanta we do not have yet.
+# Below realtime a whole frame would produce more audio than the
+# latency budget in one step; SoundDevice handles that by reporting a
+# sub-frame tick limit, so the quantum stays within the budget. Any
+# positive speed is supported.
 # TODO: Surface this through the GUI settings.
 SPEED = 1.0
-assert SPEED >= 1.0
+assert SPEED > 0
 
 
 class PulseStream(object):
@@ -114,7 +115,7 @@ class _PulseResampler(object):
             numpy.zeros(0, dtype=numpy.float64))
 
     def set_speed(self, speed: float) -> None:
-        assert speed >= 1.0
+        assert speed > 0
         self.__speed = speed
 
     def feed(self, levels: numpy.typing.NDArray[numpy.float64],
