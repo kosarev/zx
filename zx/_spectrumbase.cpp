@@ -149,6 +149,14 @@ public:
     events_mask run() {
         install_state();
         events_mask events = base::run();
+
+        // Bring the rendered screen up to the current tick before
+        // handing control back, so the Python side always sees the
+        // screen state as of this moment — mid-frame returns (e.g. a
+        // sub-frame tick limit) included. Forward-only, so it composes
+        // with the rest of the frame's rendering.
+        render_screen_to_tick(get_ticks());
+
         retrieve_state();
         return events;
     }
