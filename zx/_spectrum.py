@@ -318,6 +318,7 @@ class SpectrumState(Z80State):
         self.__ticks_since_int = p.parse32()
         self.__tick_count = p.parse32()
         self.__fetches_to_stop = p.parse32()
+        self.__ticks_to_stop = p.parse32()
         self.__events = p.parse32()
         self.__int_suppressed = p.parse8()
         self.__int_after_ei_allowed = p.parse8()
@@ -354,6 +355,18 @@ class SpectrumState(Z80State):
     @fetches_limit.setter
     def fetches_limit(self, fetches_to_stop: int) -> None:
         self.__fetches_to_stop[:] = fetches_to_stop.to_bytes(4, 'little')
+
+    # The number of ticks after which the run loop stops between
+    # instructions (raising ticks_limit_hit), without ending the
+    # frame. Null means no limit. Set per quantum to cap how far a
+    # quantum advances, e.g. for sub-frame quanta at slow speeds.
+    @property
+    def ticks_limit(self) -> int:
+        return int.from_bytes(self.__ticks_to_stop, 'little')
+
+    @ticks_limit.setter
+    def ticks_limit(self, ticks_to_stop: int) -> None:
+        self.__ticks_to_stop[:] = ticks_to_stop.to_bytes(4, 'little')
 
     # TODO: Can we do without this?
     def get_events(self) -> int:
