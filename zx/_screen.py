@@ -52,11 +52,10 @@ from ._utils import div_ceil
 
 SCREENCAST = False
 
-# How many frames per second the host window is refreshed at.
-# Independent of the emulated machine's frame rate: video is state
-# and can be sampled at any rate. A constant for now; the aim is to
-# expose it as a setting.
-# TODO: Surface this through the GUI settings.
+# The default frames per second the host window is refreshed at,
+# adjustable at runtime via the 'fps' setting. Independent of the
+# emulated machine's frame rate: video is state and can be sampled at
+# any rate.
 HOST_WINDOW_FPS = 50.0
 
 PI = 3.1415926535
@@ -1621,6 +1620,9 @@ class Screencast(object):
 
 
 class ScreenWindow(Device):
+    # The discrete refresh-rate presets the fps setting offers.
+    __FPS_CHOICES = (25, 50, 60, 75, 100, 120)
+
     __SDL_KEYS_TO_ZX_KEYS = {
         'RETURN': 'ENTER',
         'LEFT SHIFT': 'CAPS SHIFT',
@@ -1677,6 +1679,8 @@ class ScreenWindow(Device):
         _Handler = typing.Callable[[DeviceEvent, Dispatcher], None]
         self._EVENT_HANDLERS: dict[type[DeviceEvent], _Handler] = {
             GetMainMenuItems: self.__on_get_main_menu_items,
+            GetSettings: self.__on_get_settings,
+            SetSettingValue: self.__on_set_setting_value,
             GetHoldState: self.__on_get_hold_state,
             MenuItemHit: self.__on_menu_item_hit,
             _ClickEvent: self.__on_click,
@@ -1731,6 +1735,9 @@ class ScreenWindow(Device):
         self.frame_size = self.frame_width * self.frame_height
 
         self.__controllers: dict[int, ctypes.c_void_p] = {}
+
+        # The host present rate, adjustable via the 'fps' setting.
+        self.__fps = HOST_WINDOW_FPS
 
         # The wallclock moment the window is next due to be presented.
         # Zero is long in the past, so the first opportunity presents
@@ -1970,6 +1977,19 @@ class ScreenWindow(Device):
                                   else 'Pause tape')
         event.add_items(*self.__menu_descriptors)
 
+    def __on_get_settings(self, event: DeviceEvent,
+                          devices: Dispatcher) -> None:
+        assert isinstance(event, GetSettings)
+        event.add_settings(SettingDescriptor(
+            id='fps', label='Refresh rate (fps)',
+            choices=self.__FPS_CHOICES, current=self.__fps))
+
+    def __on_set_setting_value(self, event: DeviceEvent,
+                               devices: Dispatcher) -> None:
+        assert isinstance(event, SetSettingValue)
+        if event.id == 'fps':
+            self.__fps = float(event.value)
+
     def __on_toggle_panel(self, event: DeviceEvent,
                           devices: Dispatcher) -> None:
         self.__panel_active ^= True
@@ -2079,7 +2099,7 @@ class ScreenWindow(Device):
         now = get_timestamp()
         if now >= self.__next_present_timestamp:
             self.__update_screen(dispatcher)
-            self.__next_present_timestamp = now + 1.0 / HOST_WINDOW_FPS
+            self.__next_present_timestamp = now + 1.0 / self.__fps
 
     def __on_destroy(self, event: DeviceEvent,
                      devices: Dispatcher) -> None:
