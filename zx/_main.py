@@ -34,6 +34,7 @@ from ._device import Dispatcher
 from ._device import FetchesLimitHit
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
+from ._settings import GlobalSettingsManager
 from ._except import EmulationExit
 from ._file import detect_file_format
 from ._file import parse_file
@@ -82,8 +83,10 @@ def run(args: list[str]) -> None:
         handle_extra_arguments(args)
 
     session_snapshot = os.path.join(get_config_dir(), 'session.zx')
+    settings_file = os.path.join(get_config_dir(), 'settings.json')
 
-    with Spectrum(model=model) as app:
+    with Spectrum(model=model, extra_devices=[
+            GlobalSettingsManager(settings_file)]) as app:
         if filename:
             app._load_file(filename)
         elif os.path.exists(session_snapshot):
