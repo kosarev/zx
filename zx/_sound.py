@@ -21,10 +21,13 @@ from ._device import Dispatcher
 from ._device import EmulatorReset
 from ._device import GetHoldState
 from ._device import GetQuantumTickLimit
+from ._device import GetSettings
 from ._device import NewSoundPulses
 from ._device import QuantumRun
 from ._device import SetEmulationSpeed
 from ._device import SetFastForward
+from ._device import SetSettingValue
+from ._device import SettingDescriptor
 from ._device import TimeAdvanced
 
 
@@ -171,6 +174,11 @@ class SoundDevice(Device):
     # The output sample rate produced. A backend must play at this rate.
     # TODO: Rename to output rate.
     _OUTPUT_FREQ = 44100
+
+    # The discrete speed presets the speed setting offers: geometric
+    # around 1x, the home speed. Fast-forward stays a separate gate,
+    # not the top of this scale.
+    __SPEED_CHOICES = (0.1, 0.25, 0.5, 1.0, 2.0, 4.0)
 
     __BYTES_PER_SAMPLE = 4
 
@@ -338,6 +346,16 @@ class SoundDevice(Device):
         budget = round(max_output_seconds * self.__speed * self.__source_rate)
         event.stop_after(max(1, budget))
 
+    # The device owns the speed setting (it is the resampler ratio).
+    def __report_settings(self, event: GetSettings) -> None:
+        event.add_settings(SettingDescriptor(
+            id='speed', label='Speed',
+            choices=self.__SPEED_CHOICES, current=self.__speed))
+
+    def __apply_speed(self, speed: float) -> None:
+        self.__speed = speed
+        self.__resampler.set_speed(speed)
+
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
         if isinstance(event, EmulatorReset):
@@ -354,8 +372,10 @@ class SoundDevice(Device):
                 assert not self.__fast_forward
             self.__fast_forward = event.active
         elif isinstance(event, SetEmulationSpeed):
-            self.__speed = event.speed
-            self.__resampler.set_speed(event.speed)
+            self.__apply_speed(event.speed)
+        elif isinstance(event, SetSettingValue):
+            if event.id == 'speed':
+                self.__apply_speed(float(event.value))
         elif isinstance(event, QuantumRun):
             self.__consume()
             self.__feed()
@@ -365,6 +385,8 @@ class SoundDevice(Device):
             self.__answer_hold(event)
         elif isinstance(event, GetQuantumTickLimit):
             self.__report_tick_limit(event)
+        elif isinstance(event, GetSettings):
+            self.__report_settings(event)
         elif isinstance(event, Destroy):
             self._close()
 

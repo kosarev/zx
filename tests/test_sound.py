@@ -16,10 +16,13 @@ from zx._data import SoundPulses
 from zx._data import SpectrumModel
 from zx._device import Dispatcher
 from zx._device import EmulatorReset
+from zx._device import GetSettings
 from zx._device import NewSoundPulses
 from zx._device import QuantumRun
+from zx._device import SetSettingValue
 from zx._device import TimeAdvanced
 from zx._sound import SoundDevice
+from zx._sound import SPEED
 
 
 # A sound device that captures the produced samples instead of playing
@@ -68,3 +71,23 @@ def test_sound_device_produces_samples() -> None:
     samples = numpy.concatenate(device.output)
     assert len(samples) > 0
     assert numpy.allclose(samples, level)
+
+
+def test_sound_device_speed_setting() -> None:
+    dispatcher = Dispatcher()
+    device = SoundDevice(Spectrum48)
+
+    # The device advertises its speed setting, at the initial speed.
+    settings = GetSettings()
+    device.on_event(settings, dispatcher)
+    speed = next(s for s in settings.settings if s.id == 'speed')
+    assert speed.label == 'Speed'
+    assert speed.current == SPEED
+    assert 2.0 in speed.choices
+
+    # Applying it through the generic event changes the reported value.
+    device.on_event(SetSettingValue('speed', 2.0), dispatcher)
+    settings = GetSettings()
+    device.on_event(settings, dispatcher)
+    speed = next(s for s in settings.settings if s.id == 'speed')
+    assert speed.current == 2.0

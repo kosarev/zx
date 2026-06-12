@@ -56,6 +56,41 @@ class MenuItemHit(DeviceEvent):
         self.item = item
 
 
+# A value a setting can take.
+SettingValue = float | int | str
+
+
+# Describes one setting a device owns: a stable id, a human label, the
+# discrete values it offers (for a clamped chooser in the UI), and its
+# current value.
+class SettingDescriptor(object):
+    def __init__(self, id: str, label: str,
+                 choices: tuple[SettingValue, ...],
+                 current: SettingValue) -> None:
+        self.id = id
+        self.label = label
+        self.choices = choices
+        self.current = current
+
+
+class GetSettings(DeviceEvent):
+    def __init__(self) -> None:
+        self.settings: list[SettingDescriptor] = []
+
+    # Devices contribute their settings by adding them, so several
+    # devices can populate the settings together.
+    def add_settings(self, *settings: SettingDescriptor) -> None:
+        self.settings.extend(settings)
+
+
+# Applies a setting's value. Broadcast; the owning device self-selects
+# by the setting id.
+class SetSettingValue(DeviceEvent):
+    def __init__(self, id: str, value: SettingValue) -> None:
+        self.id = id
+        self.value = value
+
+
 class Destroy(DeviceEvent):
     pass
 
