@@ -182,15 +182,10 @@ class SoundDevice(Device):
 
     __BYTES_PER_SAMPLE = 4
 
-    # The amount of queued-but-unplayed audio above which emulation
-    # should not advance. This is at once the underrun margin, the
-    # output latency and the AV-skew bound — all of them the amount of
-    # not-yet-played audio. A safe default for now; anything tighter
-    # risks underruns under load (e.g. tape loading) on slower hosts.
-    # TODO: Surface this through the GUI settings as the latency knob.
-    __OUTPUT_LATENCY_MS = 50
-    __MAX_QUEUED_AUDIO_BYTES = (
-        round(_OUTPUT_FREQ * __OUTPUT_LATENCY_MS / 1000) * __BYTES_PER_SAMPLE)
+    # The discrete latency presets the latency setting offers, in
+    # milliseconds of queued-but-unplayed audio, at or above the ~25ms
+    # underrun floor.
+    __LATENCY_CHOICES = (25, 50, 100, 200)
 
     # A nominal display refresh rate used only to keep slow-motion
     # quanta from advancing in over-large chunks. It is not the
@@ -220,6 +215,12 @@ class SoundDevice(Device):
 
         # Produced samples awaiting delivery to the output.
         self.__pending: list[numpy.typing.NDArray[numpy.float32]] = []
+
+        # The target amount of queued-but-unplayed audio, in
+        # milliseconds: at once the underrun margin, the output latency
+        # and the AV-skew bound. 50ms is imperceptible and absorbs
+        # worst-case stalls (e.g. tape loading) on slower hosts.
+        self.__latency_ms = 50
 
         self._open()
 
@@ -311,6 +312,12 @@ class SoundDevice(Device):
 
         self._output(samples)
 
+    # The queued-audio target in bytes, derived from the latency
+    # setting.
+    def __max_queued_bytes(self) -> int:
+        return (round(self._OUTPUT_FREQ * self.__latency_ms / 1000) *
+                self.__BYTES_PER_SAMPLE)
+
     # Emulation should not advance while the amount of queued audio
     # is above the limit; the time for the excess to play out is
     # exactly computable.
@@ -319,8 +326,9 @@ class SoundDevice(Device):
             return
 
         queued = self._queued_bytes()
-        if queued > self.__MAX_QUEUED_AUDIO_BYTES:
-            event.hold(wake_in=(queued - self.__MAX_QUEUED_AUDIO_BYTES) /
+        max_queued = self.__max_queued_bytes()
+        if queued > max_queued:
+            event.hold(wake_in=(queued - max_queued) /
                        (self.__BYTES_PER_SAMPLE * self._OUTPUT_FREQ))
 
     # Cap how much output audio a single quantum may produce below
@@ -340,17 +348,22 @@ class SoundDevice(Device):
         if self.__fast_forward or self.__speed >= 1.0:
             return
 
-        latency_seconds = self.__OUTPUT_LATENCY_MS / 1000
+        latency_seconds = self.__latency_ms / 1000
         max_output_seconds = min(latency_seconds,
                                  1.0 / self.__ASSUMED_REFRESH_FPS)
         budget = round(max_output_seconds * self.__speed * self.__source_rate)
         event.stop_after(max(1, budget))
 
-    # The device owns the speed setting (it is the resampler ratio).
+    # The device owns the speed (resampler ratio) and latency
+    # (queued-audio target) settings.
     def __report_settings(self, event: GetSettings) -> None:
-        event.add_settings(SettingDescriptor(
-            id='speed', label='Speed',
-            choices=self.__SPEED_CHOICES, current=self.__speed))
+        event.add_settings(
+            SettingDescriptor(
+                id='speed', label='Speed',
+                choices=self.__SPEED_CHOICES, current=self.__speed),
+            SettingDescriptor(
+                id='latency', label='Sound latency (ms)',
+                choices=self.__LATENCY_CHOICES, current=self.__latency_ms))
 
     def __apply_speed(self, speed: float) -> None:
         self.__speed = speed
@@ -376,6 +389,8 @@ class SoundDevice(Device):
         elif isinstance(event, SetSettingValue):
             if event.id == 'speed':
                 self.__apply_speed(float(event.value))
+            elif event.id == 'latency':
+                self.__latency_ms = int(event.value)
         elif isinstance(event, QuantumRun):
             self.__consume()
             self.__feed()

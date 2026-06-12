@@ -20,9 +20,9 @@ from zx._device import GetSettings
 from zx._device import NewSoundPulses
 from zx._device import QuantumRun
 from zx._device import SetSettingValue
+from zx._device import SettingDescriptor
 from zx._device import TimeAdvanced
 from zx._sound import SoundDevice
-from zx._sound import SPEED
 
 
 # A sound device that captures the produced samples instead of playing
@@ -73,21 +73,26 @@ def test_sound_device_produces_samples() -> None:
     assert numpy.allclose(samples, level)
 
 
-def test_sound_device_speed_setting() -> None:
+def test_sound_device_settings() -> None:
     dispatcher = Dispatcher()
     device = SoundDevice(Spectrum48)
 
-    # The device advertises its speed setting, at the initial speed.
-    settings = GetSettings()
-    device.on_event(settings, dispatcher)
-    speed = next(s for s in settings.settings if s.id == 'speed')
-    assert speed.label == 'Speed'
-    assert speed.current == SPEED
-    assert 2.0 in speed.choices
+    def report() -> dict[str, SettingDescriptor]:
+        event = GetSettings()
+        device.on_event(event, dispatcher)
+        return {s.id: s for s in event.settings}
 
-    # Applying it through the generic event changes the reported value.
-    device.on_event(SetSettingValue('speed', 2.0), dispatcher)
-    settings = GetSettings()
-    device.on_event(settings, dispatcher)
-    speed = next(s for s in settings.settings if s.id == 'speed')
-    assert speed.current == 2.0
+    # The device advertises at least one setting.
+    settings = report()
+    assert settings
+
+    # Each setting starts at one of its choices and, applied through
+    # the generic event to a different choice, reports the new value.
+    for id, descriptor in settings.items():
+        assert descriptor.current in descriptor.choices
+        if len(descriptor.choices) < 2:
+            continue
+        target = next(c for c in descriptor.choices
+                      if c != descriptor.current)
+        device.on_event(SetSettingValue(id, target), dispatcher)
+        assert report()[id].current == target
