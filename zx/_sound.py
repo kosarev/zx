@@ -28,6 +28,7 @@ from ._device import SetEmulationSpeed
 from ._device import SetFastForward
 from ._device import SetSettingValue
 from ._device import SettingDescriptor
+from ._device import SettingScope
 from ._device import TimeAdvanced
 
 
@@ -359,10 +360,11 @@ class SoundDevice(Device):
     def __report_settings(self, event: GetSettings) -> None:
         event.add_settings(
             SettingDescriptor(
-                id='speed', label='Speed',
+                id='speed', scope=SettingScope.HOST, label='Speed',
                 choices=self.__SPEED_CHOICES, current=self.__speed),
             SettingDescriptor(
-                id='latency', label='Sound latency (ms)',
+                id='latency', scope=SettingScope.HOST,
+                label='Sound latency (ms)',
                 choices=self.__LATENCY_CHOICES, current=self.__latency_ms))
 
     def __apply_speed(self, speed: float) -> None:

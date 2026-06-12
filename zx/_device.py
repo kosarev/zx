@@ -60,14 +60,27 @@ class MenuItemHit(DeviceEvent):
 SettingValue = float | int | str
 
 
-# Describes one setting a device owns: a stable id, a human label, the
-# discrete values it offers (for a clamped chooser in the UI), and its
-# current value.
+# Where a setting belongs, which decides where it is persisted.
+class SettingScope(enum.Enum):
+    # A host/session preference (e.g. sound latency, refresh rate):
+    # saved to the global preferences, never touched by loading
+    # content such as snapshots or tapes.
+    HOST = enum.auto()
+
+    # Part of the loaded content (e.g. the model, key mappings): it
+    # travels with snapshot and session files.
+    CONTENT = enum.auto()
+
+
+# Describes one setting a device owns: a stable id, the scope that
+# decides where it is persisted, a human label, the discrete values it
+# offers (for a clamped chooser in the UI), and its current value.
 class SettingDescriptor(object):
-    def __init__(self, id: str, label: str,
+    def __init__(self, id: str, scope: SettingScope, label: str,
                  choices: tuple[SettingValue, ...],
                  current: SettingValue) -> None:
         self.id = id
+        self.scope = scope
         self.label = label
         self.choices = choices
         self.current = current

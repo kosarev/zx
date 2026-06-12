@@ -21,6 +21,7 @@ from zx._device import NewSoundPulses
 from zx._device import QuantumRun
 from zx._device import SetSettingValue
 from zx._device import SettingDescriptor
+from zx._device import SettingScope
 from zx._device import TimeAdvanced
 from zx._sound import SoundDevice
 
@@ -89,6 +90,7 @@ def test_sound_device_settings() -> None:
     # Each setting starts at one of its choices and, applied through
     # the generic event to a different choice, reports the new value.
     for id, descriptor in settings.items():
+        assert isinstance(descriptor.scope, SettingScope)
         assert descriptor.current in descriptor.choices
         if len(descriptor.choices) < 2:
             continue

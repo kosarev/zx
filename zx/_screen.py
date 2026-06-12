@@ -37,6 +37,7 @@ from ._device import QuantumRun
 from ._device import SaveSnapshot
 from ._device import SetSettingValue
 from ._device import SettingDescriptor
+from ._device import SettingScope
 from ._device import GetFramePixels
 from ._device import TapeStateUpdated
 from ._device import ToggleEmulationPause
@@ -1981,7 +1982,7 @@ class ScreenWindow(Device):
                           devices: Dispatcher) -> None:
         assert isinstance(event, GetSettings)
         event.add_settings(SettingDescriptor(
-            id='fps', label='Refresh rate (fps)',
+            id='fps', scope=SettingScope.HOST, label='Refresh rate (fps)',
             choices=self.__FPS_CHOICES, current=self.__fps))
 
     def __on_set_setting_value(self, event: DeviceEvent,
