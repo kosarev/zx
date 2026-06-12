@@ -11,6 +11,7 @@
 #   Published under the MIT license.
 
 import zx
+from zx._device import Device
 from zx._spectrum import RunEvents
 
 
@@ -38,3 +39,10 @@ def test_ticks_limit() -> None:
         events = RunEvents(mach._run())
         assert RunEvents.END_OF_FRAME in events
         assert mach.ticks_since_int >= frame_ticks
+
+
+def test_extra_devices() -> None:
+    # Devices the caller attaches are added to the device set.
+    extra = Device()
+    with zx.Spectrum(headless=True, extra_devices=[extra]) as mach:
+        assert extra in list(mach.devices)

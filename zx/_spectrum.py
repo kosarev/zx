@@ -513,6 +513,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                  devices: list[Device] | None = None,
                  playback_player: PlaybackPlayer | None = None,
                  playback_recorder: PlaybackRecorder | None = None,
+                 extra_devices: list[Device] | None = None,
                  profile: Profile | None = None):
         SpectrumState.__init__(self, self._get_state_view())
         Device.__init__(self)
@@ -544,6 +545,14 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                     sound_device = SDLSound(self.model)
 
                 devices.extend([screen, sound_device])
+
+            # The caller's extra devices come last — typically the
+            # end-user tool layer adding environment-coupling agents
+            # (e.g. a settings-persistence manager), kept out of the
+            # default set so an API- or test-built emulator stays
+            # hermetic.
+            if extra_devices is not None:
+                devices.extend(extra_devices)
 
         dispatcher = Dispatcher(devices)
 
