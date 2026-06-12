@@ -160,9 +160,17 @@ class _PulseResampler(object):
         return samples
 
 
+# The sound device of the emulated machine. It mixes the pulse
+# emitters and resamples their combined stream into output samples,
+# and paces emulation against the amount of not-yet-played audio. The
+# actual audio hardware is abstracted into a handful of device
+# operations a backend subclass implements (SDLSound); the base does
+# nothing for them, so a bare instance is a usable silent device that
+# a test or API consumer can drive and observe by overriding _output().
 class SoundDevice(Device):
+    # The output sample rate produced. A backend must play at this rate.
     # TODO: Rename to output rate.
-    __OUTPUT_FREQ = 44100
+    _OUTPUT_FREQ = 44100
 
     __BYTES_PER_SAMPLE = 4
 
@@ -174,7 +182,7 @@ class SoundDevice(Device):
     # TODO: Surface this through the GUI settings as the latency knob.
     __OUTPUT_LATENCY_MS = 50
     __MAX_QUEUED_AUDIO_BYTES = (
-        round(__OUTPUT_FREQ * __OUTPUT_LATENCY_MS / 1000) * __BYTES_PER_SAMPLE)
+        round(_OUTPUT_FREQ * __OUTPUT_LATENCY_MS / 1000) * __BYTES_PER_SAMPLE)
 
     # A nominal display refresh rate used only to keep slow-motion
     # quanta from advancing in over-large chunks. It is not the
@@ -200,34 +208,26 @@ class SoundDevice(Device):
 
         self.__fast_forward = False
         self.__speed = SPEED
-        self.__resampler = _PulseResampler(self.__OUTPUT_FREQ, self.__speed)
+        self.__resampler = _PulseResampler(self._OUTPUT_FREQ, self.__speed)
 
-        # Produced samples awaiting delivery to the device.
+        # Produced samples awaiting delivery to the output.
         self.__pending: list[numpy.typing.NDArray[numpy.float32]] = []
 
-        # TODO: Don't use SDL until we know we are actually
-        # outputting sound via it. (The user may want to do something
-        # else with the original or mixed samples, or may want some
-        # custom some channel mixing.)
-        import sdl2.audio  # type: ignore
-        sdl2.SDL_Init(sdl2.SDL_INIT_AUDIO)
+        self._open()
 
-        spec = sdl2.audio.SDL_AudioSpec(
-            freq=self.__OUTPUT_FREQ,
-            aformat=sdl2.audio.AUDIO_F32,
-            channels=1,
-            samples=(self.__OUTPUT_FREQ // 50),  # TODO
-            )
+    # The audio-hardware operations. A backend subclass implements
+    # them; the base does nothing, so it is a silent device.
+    def _open(self) -> None:
+        pass
 
-        self.__device = sdl2.audio.SDL_OpenAudioDevice(None, 0, spec, None, 0)
+    def _output(self, samples: numpy.typing.NDArray[numpy.float32]) -> None:
+        pass
 
-        # Start playing.
-        # TODO: Delay until we actually have some audio to output?
-        sdl2.audio.SDL_PauseAudioDevice(self.__device, 0)
+    def _queued_bytes(self) -> int:
+        return 0
 
-    def __destroy(self) -> None:
-        import sdl2.audio
-        sdl2.audio.SDL_CloseAudioDevice(self.__device)
+    def _close(self) -> None:
+        pass
 
     # Mixing happens by time, in the pulse domain: the chunks
     # published for a span of time all cover exactly that span, so
@@ -260,7 +260,7 @@ class SoundDevice(Device):
     # by which point its dispatch has provably completed and all
     # chunks published for the elapsed span are in — regardless of
     # device order. Production only: the resampled samples go to the
-    # pending buffer; __feed() pushes them to the device.
+    # pending buffer; __feed() delivers them to the output.
     def __consume(self) -> None:
         if self.__last_time_advanced_tick is None:
             return
@@ -289,8 +289,8 @@ class SoundDevice(Device):
         if len(samples):
             self.__pending.append(samples)
 
-    # Push the pending samples to the device, unconditionally. The
-    # device queue is unbounded, so nothing needs to fit; the amount
+    # Deliver the pending samples to the output, unconditionally. The
+    # output queue is unbounded, so nothing needs to fit; the amount
     # of queued audio stays bounded because emulation does not
     # advance while it is above the threshold, so it never exceeds
     # the threshold plus one quantum's worth of samples. The sound
@@ -301,12 +301,7 @@ class SoundDevice(Device):
         samples = numpy.concatenate(self.__pending)
         self.__pending.clear()
 
-        import sdl2.audio
-        import ctypes
-        sdl2.audio.SDL_QueueAudio(
-            self.__device,
-            samples.ctypes.data_as(ctypes.c_void_p),
-            len(samples) * self.__BYTES_PER_SAMPLE)
+        self._output(samples)
 
     # Emulation should not advance while the amount of queued audio
     # is above the limit; the time for the excess to play out is
@@ -315,11 +310,10 @@ class SoundDevice(Device):
         if self.__fast_forward:
             return
 
-        import sdl2.audio
-        queued = sdl2.audio.SDL_GetQueuedAudioSize(self.__device)
+        queued = self._queued_bytes()
         if queued > self.__MAX_QUEUED_AUDIO_BYTES:
             event.hold(wake_in=(queued - self.__MAX_QUEUED_AUDIO_BYTES) /
-                       (self.__BYTES_PER_SAMPLE * self.__OUTPUT_FREQ))
+                       (self.__BYTES_PER_SAMPLE * self._OUTPUT_FREQ))
 
     # Cap how much output audio a single quantum may produce below
     # realtime, where a whole-frame quantum would otherwise make far
@@ -352,7 +346,7 @@ class SoundDevice(Device):
             self.__last_time_advanced_tick = None
             self.__consumed_up_to_tick = None
             self.__resampler = _PulseResampler(
-                self.__OUTPUT_FREQ, self.__speed)
+                self._OUTPUT_FREQ, self.__speed)
         elif isinstance(event, NewSoundPulses):
             self.__chunks.append(event.pulses)
         elif isinstance(event, SetFastForward):
@@ -372,4 +366,46 @@ class SoundDevice(Device):
         elif isinstance(event, GetQuantumTickLimit):
             self.__report_tick_limit(event)
         elif isinstance(event, Destroy):
-            self.__destroy()
+            self._close()
+
+
+# The audio hardware, backed by SDL. It only implements the device
+# operations; all sound logic lives in the base SoundDevice.
+class SDLSound(SoundDevice):
+    def _open(self) -> None:
+        # TODO: Don't use SDL until we know we are actually
+        # outputting sound via it. (The user may want to do something
+        # else with the original or mixed samples, or may want some
+        # custom some channel mixing.)
+        import sdl2.audio  # type: ignore
+        sdl2.SDL_Init(sdl2.SDL_INIT_AUDIO)
+
+        spec = sdl2.audio.SDL_AudioSpec(
+            freq=self._OUTPUT_FREQ,
+            aformat=sdl2.audio.AUDIO_F32,
+            channels=1,
+            samples=(self._OUTPUT_FREQ // 50),  # TODO
+            )
+
+        self.__device = sdl2.audio.SDL_OpenAudioDevice(None, 0, spec, None, 0)
+
+        # Start playing.
+        # TODO: Delay until we actually have some audio to output?
+        sdl2.audio.SDL_PauseAudioDevice(self.__device, 0)
+
+    def _output(self, samples: numpy.typing.NDArray[numpy.float32]) -> None:
+        import sdl2.audio
+        import ctypes
+        sdl2.audio.SDL_QueueAudio(
+            self.__device,
+            samples.ctypes.data_as(ctypes.c_void_p),
+            samples.nbytes)
+
+    def _queued_bytes(self) -> int:
+        import sdl2.audio
+        queued: int = sdl2.audio.SDL_GetQueuedAudioSize(self.__device)
+        return queued
+
+    def _close(self) -> None:
+        import sdl2.audio
+        sdl2.audio.SDL_CloseAudioDevice(self.__device)

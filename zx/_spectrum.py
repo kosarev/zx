@@ -69,7 +69,7 @@ from ._rom import load_rom_image
 from ._rzx import make_rzx
 from ._screen import ScreenWindow
 from ._scr import _SCRSnapshot
-from ._sound import SoundDevice
+from ._sound import SDLSound
 from ._spectrumbase import _SpectrumBase
 from ._tape import TapePlayer
 from ._time import Time
@@ -541,7 +541,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 if screen is None:
                     screen = ScreenWindow(self.FRAME_SIZE)
                 if sound_device is None:
-                    sound_device = SoundDevice(self.model)
+                    sound_device = SDLSound(self.model)
 
                 devices.extend([screen, sound_device])
 
