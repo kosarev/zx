@@ -23,6 +23,7 @@ from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
 from ._device import GetHoldState
 from ._device import GetMainMenuItems
+from ._device import GetSettings
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
 from ._device import KeyStroke
@@ -34,6 +35,8 @@ from ._device import RequestLoadFile
 from ._device import RequestSaveSnapshot
 from ._device import QuantumRun
 from ._device import SaveSnapshot
+from ._device import SetSettingValue
+from ._device import SettingDescriptor
 from ._device import GetFramePixels
 from ._device import TapeStateUpdated
 from ._device import ToggleEmulationPause
@@ -871,6 +874,10 @@ class _RequestResetMachine(DeviceEvent):
     pass
 
 
+class _RequestSettings(DeviceEvent):
+    pass
+
+
 class _ConfirmReset(DeviceEvent):
     pass
 
@@ -1345,6 +1352,123 @@ class _FileBrowserPanel(_Panel):
         super().draw(renderer, dispatcher)
 
 
+# Lists the settings the devices advertise, each a row whose value is
+# changed in place with LEFT/RIGHT over its choices.
+class _SettingsPanel(_Panel):
+    __texture: None | _Texture
+
+    def __init__(self, theme: _Theme) -> None:
+        super().__init__(theme)
+        self.__texture = None
+        self.__menu: _Menu = _Menu([])
+        self.__descriptors: list[SettingDescriptor] = []
+
+    def invalidate(self) -> None:
+        super().invalidate()
+        if self.__texture:
+            self.__texture.free()
+        self.__texture = None
+
+    def activate(self) -> None:
+        self.__menu.selected_item = None
+        super().activate()
+
+    # A row shows the setting's label and current value, with < and >
+    # only on the sides where another choice is available.
+    def __format(self, d: SettingDescriptor) -> str:
+        value = (format(d.current, 'g')
+                 if isinstance(d.current, (int, float))
+                 else str(d.current))
+        i = d.choices.index(d.current) if d.current in d.choices else -1
+        left = '<' if i > 0 else ' '
+        right = '>' if 0 <= i < len(d.choices) - 1 else ' '
+        return f'{d.label}:   {left} {value} {right}'
+
+    def __rebuild(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
+        assert self.__texture is None
+
+        selected = 0
+        if self.__menu.selected_item in self.__menu.items:
+            selected = self.__menu.items.index(self.__menu.selected_item)
+
+        settings = GetSettings()
+        dispatcher.notify(settings)
+        self.__descriptors = settings.settings
+        self.__menu.items = [
+            _MenuItem(MenuItemDescriptor(self.__format(d)))
+            for d in self.__descriptors]
+
+        theme = self._theme
+        assert theme.normal_font is not None
+        assert theme.window_size is not None
+        width, height = theme.window_size
+
+        surface = _Surface(width, height)
+        surface.fill(theme.overlay_bg)
+
+        self.__menu.min_width = float(width)
+        self.__menu.indent = 0.5
+        self.__menu.rebuild(theme)
+        self.__menu.x = 0.0
+        self.__menu.y = max(0, (height - self.__menu.height) // 2)
+        if self.__menu.items:
+            self.__menu.selected_item = self.__menu.items[
+                min(selected, len(self.__menu.items) - 1)]
+        self.__menu.draw(surface)
+
+        texture = renderer.create_texture_from_surface(surface)
+        surface.free()
+        self.__texture = texture
+
+    def __change(self, step: int, dispatcher: Dispatcher) -> None:
+        item = self.__menu.selected_item
+        if item is None:
+            return
+        d = self.__descriptors[self.__menu.items.index(item)]
+        if d.current not in d.choices:
+            return
+        i = d.choices.index(d.current)
+        j = max(0, min(i + step, len(d.choices) - 1))
+        if j != i:
+            dispatcher.notify(SetSettingValue(d.id, d.choices[j]))
+            self.invalidate()
+
+    def __on_key(self, key_id: str, pressed: bool,
+                 dispatcher: Dispatcher) -> None:
+        if not pressed:
+            return
+        invalidated = self.__menu.on_key(key_id)
+        if invalidated is not None:
+            if invalidated:
+                self.invalidate()
+            return
+        if key_id == 'LEFT':
+            self.__change(-1, dispatcher)
+        elif key_id == 'RIGHT':
+            self.__change(1, dispatcher)
+        elif key_id in ('ESCAPE', 'F1'):
+            dispatcher.notify(_TogglePanel())
+        elif key_id == 'BACKSPACE':
+            dispatcher.notify(_ShowMainMenu())
+
+    def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
+        dialog = self._dialog
+        super().on_event(event, dispatcher)
+        if dialog is not None:
+            return
+        if isinstance(event, _KeyEvent):
+            self.__on_key(event.id, event.pressed, dispatcher)
+
+    def draw(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
+        if self.__texture is None:
+            self.__rebuild(renderer, dispatcher)
+        assert self.__texture is not None
+        assert self._theme.window_size is not None
+        renderer.copy(self.__texture, 0, 0, *self._theme.window_size)
+        super().draw(renderer, dispatcher)
+        self.__menu.highlight(renderer)
+
+
 _ButtonSpec = tuple[str, None | str, type[DeviceEvent]]
 
 
@@ -1564,6 +1688,7 @@ class ScreenWindow(Device):
             QuantumRun: self._on_quantum_run,
             TapeStateUpdated: self._on_updated_tape_state,
             _RequestResetMachine: self.__on_request_reset_machine,
+            _RequestSettings: self.__on_request_settings,
             RequestLoadFile: self.__on_request_load_file,
             RequestSaveSnapshot: self.__on_request_save_snapshot,
             ToggleFullscreen: self.__on_toggle_fullscreen,
@@ -1583,11 +1708,13 @@ class ScreenWindow(Device):
             self.__emulation_item,
             self.__tape_item,
             _PrimaryMainMenuItem('Reset machine', _RequestResetMachine, 'F5'),
+            _PrimaryMainMenuItem('Settings', _RequestSettings, 'F8'),
             _PrimaryMainMenuItem('Toggle fullscreen', ToggleFullscreen, 'F11'),
             _PrimaryMainMenuItem('Quit', _Exit, 'F10'),
         ]
         self.__main_menu_panel = _MainMenuPanel(self._theme)
         self.__file_browser_panel = _FileBrowserPanel(self._theme)
+        self.__settings_panel = _SettingsPanel(self._theme)
         self.__panel: _Panel = self.__main_menu_panel
         self.__panel_active = False
         self._notification: None | Notification = None
@@ -1697,6 +1824,10 @@ class ScreenWindow(Device):
                                    devices: Dispatcher) -> None:
         self.__activate_panel(self.__main_menu_panel)
         devices.notify(_ConfirmReset())
+
+    def __on_request_settings(self, event: DeviceEvent,
+                              devices: Dispatcher) -> None:
+        self.__activate_panel(self.__settings_panel)
 
     def __activate_panel(self, panel: _Panel) -> None:
         panel.activate()
