@@ -91,6 +91,14 @@ class SetSettingValue(DeviceEvent):
         self.value = value
 
 
+# Instructs each device to do its local startup now that the set is
+# assembled and live (dispatched on entering the emulator context),
+# when it can finally reach its peers through the dispatcher — which
+# __init__ cannot. The counterpart to DestroyEmulator.
+class InitEmulator(DeviceEvent):
+    pass
+
+
 class DestroyEmulator(DeviceEvent):
     pass
 

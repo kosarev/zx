@@ -11,7 +11,11 @@
 #   Published under the MIT license.
 
 import zx
+from zx._device import DestroyEmulator
 from zx._device import Device
+from zx._device import DeviceEvent
+from zx._device import Dispatcher
+from zx._device import InitEmulator
 from zx._spectrum import RunEvents
 
 
@@ -46,3 +50,25 @@ def test_extra_devices() -> None:
     extra = Device()
     with zx.Spectrum(headless=True, extra_devices=[extra]) as mach:
         assert extra in list(mach.devices)
+
+
+def test_init_and_destroy_emulator_dispatched() -> None:
+    # Entering the emulator context instructs the devices to init;
+    # leaving it instructs them to destroy.
+    class _Recorder(Device):
+        def __init__(self) -> None:
+            self.inited = False
+            self.destroyed = False
+
+        def on_event(self, event: DeviceEvent,
+                     devices: Dispatcher) -> None:
+            if isinstance(event, InitEmulator):
+                self.inited = True
+            elif isinstance(event, DestroyEmulator):
+                self.destroyed = True
+
+    recorder = _Recorder()
+    with zx.Spectrum(headless=True, extra_devices=[recorder]):
+        assert recorder.inited
+        assert not recorder.destroyed
+    assert recorder.destroyed

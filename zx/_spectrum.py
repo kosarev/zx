@@ -25,6 +25,7 @@ from ._data import SpectrumModel
 from ._data import UnifiedPlayback
 from ._data import UnifiedSnapshot
 from ._device import DestroyEmulator
+from ._device import InitEmulator
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
@@ -847,6 +848,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             self.devices.notify(SetFastForward(False))
 
     def __enter__(self) -> 'Spectrum':
+        self.devices.notify(InitEmulator())
         return self
 
     def __exit__(self, xtype: None | type[BaseException],
