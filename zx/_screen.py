@@ -15,10 +15,10 @@ import numpy
 import os
 import typing
 
-from ._device import Destroy
+from ._device import DestroyEmulator
 from ._device import Device
 from ._device import DeviceEvent
-from ._device import EmulatorReset
+from ._device import ResetEmulator
 from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
 from ._device import GetHoldState
@@ -881,7 +881,7 @@ class _ConfirmReset(DeviceEvent):
     pass
 
 
-class _UIEmulatorReset(EmulatorReset):
+class _UIResetEmulator(ResetEmulator):
     pass
 
 
@@ -1032,9 +1032,9 @@ class _MainMenuPanel(_Panel):
             self._dialog = _MessageDialog(
                 self._theme, 'Reset machine?', (80, 60, 20, 255),
                 'Reset the emulated machine?',
-                [('Yes', None, _UIEmulatorReset),
+                [('Yes', None, _UIResetEmulator),
                  ('No', 'ESC', _DismissDialog)])
-        elif isinstance(event, _UIEmulatorReset):
+        elif isinstance(event, _UIResetEmulator):
             dispatcher.notify(_TogglePanel())
         elif isinstance(event, (PauseStateUpdated, TapeStateUpdated)):
             self.invalidate()
@@ -1696,7 +1696,7 @@ class ScreenWindow(Device):
             RequestLoadFile: self.__on_request_load_file,
             RequestSaveSnapshot: self.__on_request_save_snapshot,
             ToggleFullscreen: self.__on_toggle_fullscreen,
-            Destroy: self.__on_destroy,
+            DestroyEmulator: self.__on_destroy,
         }
 
         self._theme = _Theme()

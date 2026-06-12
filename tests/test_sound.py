@@ -15,7 +15,7 @@ from zx._data import Spectrum48
 from zx._data import SoundPulses
 from zx._data import SpectrumModel
 from zx._device import Dispatcher
-from zx._device import EmulatorReset
+from zx._device import ResetEmulator
 from zx._device import GetSettings
 from zx._device import NewSoundPulses
 from zx._device import QuantumRun
@@ -51,7 +51,7 @@ def test_sound_device_produces_samples() -> None:
     rate = Spectrum48._TICKS_PER_FRAME * 50
     span = Spectrum48._TICKS_PER_FRAME  # One frame's worth of ticks.
 
-    device.on_event(EmulatorReset(), dispatcher)
+    device.on_event(ResetEmulator(), dispatcher)
 
     # The first window only establishes the baseline tick position, so
     # nothing is produced yet.

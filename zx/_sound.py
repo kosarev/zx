@@ -14,11 +14,11 @@ import typing
 
 from ._data import SoundPulses
 from ._data import SpectrumModel
-from ._device import Destroy
+from ._device import DestroyEmulator
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
-from ._device import EmulatorReset
+from ._device import ResetEmulator
 from ._device import GetHoldState
 from ._device import GetQuantumTickLimit
 from ._device import GetSettings
@@ -371,7 +371,7 @@ class SoundDevice(Device):
 
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
-        if isinstance(event, EmulatorReset):
+        if isinstance(event, ResetEmulator):
             self.__chunks.clear()
             self.__pending.clear()
             self.__last_time_advanced_tick = None
@@ -402,7 +402,7 @@ class SoundDevice(Device):
             self.__report_tick_limit(event)
         elif isinstance(event, GetSettings):
             self.__report_settings(event)
-        elif isinstance(event, Destroy):
+        elif isinstance(event, DestroyEmulator):
             self._close()
 
 

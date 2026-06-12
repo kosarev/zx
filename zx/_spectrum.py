@@ -24,11 +24,11 @@ from ._data import Spectrum48
 from ._data import SpectrumModel
 from ._data import UnifiedPlayback
 from ._data import UnifiedSnapshot
-from ._device import Destroy
+from ._device import DestroyEmulator
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
-from ._device import EmulatorReset
+from ._device import ResetEmulator
 from ._device import EndOfFrame
 from ._device import BreakpointHit
 from ._device import FetchesLimitHit
@@ -571,7 +571,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.__paused = False
 
     def reset(self) -> None:
-        self.devices.notify(EmulatorReset())
+        self.devices.notify(ResetEmulator())
 
     def __install_rom(self) -> None:
         PAGE_SIZE = 0x4000
@@ -804,7 +804,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
     def _load_file(self, filename: str) -> None:
         file = parse_file(filename)
 
-        self.devices.notify(EmulatorReset())
+        self.devices.notify(ResetEmulator())
 
         if isinstance(file, MachineSnapshot):
             self.install_snapshot(file)
@@ -852,7 +852,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
     def __exit__(self, xtype: None | type[BaseException],
                  value: None | BaseException,
                  traceback: None | types.TracebackType) -> None:
-        self.devices.notify(Destroy())
+        self.devices.notify(DestroyEmulator())
 
     def stop(self) -> None:
         raise EmulationExit()
@@ -910,7 +910,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             self.__enter_playback_mode(event.playback)
         elif isinstance(event, StopPlayback):
             self._quit_playback_mode()
-        elif isinstance(event, EmulatorReset):
+        elif isinstance(event, ResetEmulator):
             self.on_reset()
             self.__install_rom()
         elif isinstance(event, LoadFile):

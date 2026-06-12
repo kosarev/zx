@@ -15,7 +15,7 @@ from ._data import SpectrumModel
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
-from ._device import EmulatorReset
+from ._device import ResetEmulator
 from ._device import NewPortWrites
 from ._device import NewSoundPulses
 from ._device import TimeAdvanced
@@ -80,7 +80,7 @@ class Beeper(Device):
         dispatcher.notify(NewSoundPulses(pulses))
 
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
-        if isinstance(event, EmulatorReset):
+        if isinstance(event, ResetEmulator):
             self.__stream.reset()
             self.__published_up_to_tick = None
             self.__levels.clear()

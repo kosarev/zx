@@ -91,7 +91,7 @@ class SetSettingValue(DeviceEvent):
         self.value = value
 
 
-class Destroy(DeviceEvent):
+class DestroyEmulator(DeviceEvent):
     pass
 
 
@@ -99,7 +99,7 @@ class Destroy(DeviceEvent):
 # devices to discard any accumulated transient state. Dispatched both
 # on explicit user request and before loading a file, so that the
 # loaded state is applied on top of a clean reset state.
-class EmulatorReset(DeviceEvent):
+class ResetEmulator(DeviceEvent):
     pass
 
 

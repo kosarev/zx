@@ -18,7 +18,7 @@ from ._data import SpectrumModel
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
-from ._device import EmulatorReset
+from ._device import ResetEmulator
 from ._device import ReadPort
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
@@ -248,7 +248,7 @@ class TapePlayer(Device):
 
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
-        if isinstance(event, EmulatorReset):
+        if isinstance(event, ResetEmulator):
             # Note that the internal timeline keeps running across
             # resets — only the transient sound state is discarded.
             self.__audible_pulses = []
