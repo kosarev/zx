@@ -18,7 +18,8 @@ def test_basic() -> None:
 
     # Define and access some fields.
     rec = zx._data.DataRecord(a=5, b=7)
-    assert (getattr(rec, 'a'), getattr(rec, 'b')) == (5, 7)
+    # getattr (not rec.a) so mypy accepts access to the dynamic fields.
+    assert (getattr(rec, 'a'), getattr(rec, 'b')) == (5, 7)  # noqa: B009
     assert list(rec) == [('a', 5), ('b', 7)]
     assert 'DataRecord' in rec.dumps()
 

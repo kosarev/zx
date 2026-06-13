@@ -101,7 +101,7 @@ class WAVFile(SoundFile, format_name='WAV'):
             # TODO: Can be faster using numpy?
             LOW = 0
             HIGH = 0xff
-            for level, duration, tags in pulses:
+            for level, duration, _tags in pulses:
                 duration = int(duration * frame_rate / cls._TICKS_FREQ)
                 sample = HIGH if level else LOW
                 frame = bytes([sample])

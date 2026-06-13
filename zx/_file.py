@@ -39,7 +39,7 @@ def _open_file_or_url(path: str) -> typing.Any:
             return urllib.request.urlopen(req)
         except urllib.error.HTTPError as e:
             raise Error(
-                f'Cannot read remote file: {e.reason}, code {e.code}.')
+                f'Cannot read remote file: {e.reason}, code {e.code}.') from e
 
     return pathlib.Path(path).open('rb')
 
@@ -68,12 +68,12 @@ def detect_file_format(image: None | Bytes,
 
     # Then, look at the signature.
     if image:
-        for ext, signature, format in KNOWN_FORMATS:
+        for _ext, signature, format in KNOWN_FORMATS:
             if signature and image[:len(signature)] == signature:
                 return format
 
     # Finally, just try to guess by the given extension.
-    for ext, signature, format in KNOWN_FORMATS:
+    for ext, _signature, format in KNOWN_FORMATS:
         if filename_extension == ext:
             return format
 

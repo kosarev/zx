@@ -1,7 +1,7 @@
 # Ruff configuration. Run locally only for now - not wired into CI, which
-# still gates on pycodestyle. Transitional: runs alongside pycodestyle,
-# which stays the authority. The `ignore` list is the debt ledger - it
-# only shrinks over time as rules are lifted one at a time.
+# gates on pycodestyle and mypy. Runs alongside pycodestyle, which stays
+# the authority. Every selected rule is fully enforced - the transitional
+# debt ledger has been worked off (see #41).
 
 target-version = "py310"
 line-length = 79
@@ -21,19 +21,6 @@ extend-exclude = ["z80", "build"]
 select = [
     "E", "W", "F", "I", "B", "UP",
     "C4", "SIM", "RUF", "PGH", "PTH", "TC", "Q",
-]
-
-# Debt ledger: codes currently violated somewhere in the tree, suppressed
-# so the run is green today. Lift one at a time, fix all its sites, then
-# delete it from here. This list only shrinks. Counts are at baseline.
-ignore = [
-    # bugbear (judgement calls - lift last)
-    "B006",    #  2  mutable-argument-default
-    "B007",    #  4  unused-loop-control-variable
-    "B009",    #  2  get-attr-with-constant
-    "B024",    #  1  abstract-base-class-without-abstract-method
-    "B904",    #  3  raise-without-from-inside-except
-    "B905",    #  4  zip-without-explicit-strict
 ]
 
 [lint.flake8-quotes]

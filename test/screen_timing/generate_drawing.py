@@ -131,7 +131,9 @@ class drawing_generator:
             yield HL
 
     # TODO: Test and optimize.
-    def generate_delay(self, delay, clobbers=[], step=0):
+    def generate_delay(self, delay, clobbers=None, step=0):
+        if clobbers is None:
+            clobbers = []
         while delay:
             # print('delay:', delay)
             if (delay < 4 or delay == 5) and step:
@@ -253,7 +255,7 @@ class drawing_generator:
 
             assert 0, f"Don't know how to generate a delay of {delay} ticks!"
 
-    def move_to_tick(self, tick, clobbers=[], step=0):
+    def move_to_tick(self, tick, clobbers=None, step=0):
         assert tick >= self._tick
         self.generate_delay(tick - self._tick, clobbers, step)
 

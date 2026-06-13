@@ -32,7 +32,9 @@ class ZXBasicCompilerProgram(DataRecord, format_name='ZXB'):
             from src.zxbc import CodeEmitter  # type: ignore
             from src.zxbc import main as zxb_main  # type: ignore
         except ModuleNotFoundError:
-            raise Error('The ZX Basic compiler does not seem to be installed.')
+            raise Error(
+                'The ZX Basic compiler does not seem to be installed.'
+            ) from None
 
         fields: dict[str, typing.Any] = {}
 

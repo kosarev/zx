@@ -6,7 +6,6 @@
 #
 #   Published under the MIT license.
 
-import abc
 import ctypes
 import enum
 import os
@@ -895,7 +894,7 @@ class _Exit(_ExceptionEvent):
         super().__init__(EmulationExit())
 
 
-class _Panel(abc.ABC):
+class _Panel:
     def __init__(self, theme: '_Theme') -> None:
         self._theme = theme
         self._controls: list[_Control] = []

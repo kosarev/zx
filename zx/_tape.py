@@ -195,8 +195,7 @@ class TapePlayer(Device):
             # Get subsequent pulse, if any.
             new_pulse = None
             if self._pulses:
-                for new_pulse in self._pulses:
-                    break
+                new_pulse = next(iter(self._pulses), None)
 
             if new_pulse:
                 # print(new_pulse)
@@ -236,7 +235,7 @@ class TapePlayer(Device):
             return
 
         # Play the tape sound for the user.
-        levels, ticks = (zip(*self.__audible_pulses)
+        levels, ticks = (zip(*self.__audible_pulses, strict=False)
                          if len(self.__audible_pulses) != 0 else ([], []))
         offsets = numpy.array(ticks, dtype=numpy.int64) - published_up_to
         pulses = self.__audible_output.stream_chunk(

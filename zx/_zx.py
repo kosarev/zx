@@ -23,5 +23,6 @@ class ZXFile(DataRecord, format_name='ZX'):
         try:
             d = json.loads(bytes(image).decode('utf-8'))
         except (ValueError, UnicodeDecodeError) as e:
-            raise Error(f"Cannot parse '{filename}' as a .zx file: {e}.")
+            raise Error(
+                f"Cannot parse '{filename}' as a .zx file: {e}.") from e
         return DataRecord.from_json(d)

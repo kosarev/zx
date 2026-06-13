@@ -169,7 +169,7 @@ def test_file(filename: str, batch_mode: bool,
             return
 
         mismatch_count = None
-        for i, (c1, c2) in enumerate(zip(b1, b2)):
+        for i, (c1, c2) in enumerate(zip(b1, b2, strict=False)):
             mismatch = c1 != c2
             print(f'{i} {c1:02x} {c2:02x}', '*' if mismatch else '')
             if mismatch_count is None:
@@ -197,10 +197,10 @@ def test_file(filename: str, batch_mode: bool,
         elif isinstance(a, bytes):
             match_bytes(a, b, path)
         elif isinstance(a, (tuple, list)):
-            for i, (ea, eb) in enumerate(zip(a, b)):
+            for i, (ea, eb) in enumerate(zip(a, b, strict=False)):
                 match(ea, eb, f'{path}.{type(a).__qualname__}[{i}]')
         elif isinstance(a, DataRecord):
-            for (na, va), (nb, vb) in zip(a, b):
+            for (na, va), (nb, vb) in zip(a, b, strict=False):
                 assert na == nb
                 match(va, vb, f'{path}.{na}')
         else:
