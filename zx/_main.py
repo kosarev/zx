@@ -67,7 +67,7 @@ def pop_option(args: list[str], option: str) -> bool:
 
 def handle_extra_arguments(args: list[str]) -> None:
     if args:
-        raise Error('Extra argument %r.' % args[0])
+        raise Error(f'Extra argument {args[0]!r}.')
 
 
 def run(args: list[str]) -> None:
@@ -112,7 +112,7 @@ def profile(args: list[str]) -> None:
     with open(profile_filename, 'w') as f:
         # TODO: mypy false positive.
         for addr, annot in profile:  # type: ignore[attr-defined]
-            print('@0x%04x %s' % (addr, annot), file=f)
+            print(f'@0x{addr:04x} {annot}', file=f)
 
 
 def dump(args: list[str]) -> None:
@@ -161,7 +161,7 @@ def test_file(filename: str, batch_mode: bool,
             dest_filename = dest_filename + ext
 
         os.rename(filename, dest_path)
-        print('%r moved to %r' % (filename, dest_dir))
+        print(f'{filename!r} moved to {dest_dir!r}')
 
     def match_bytes(b1: Bytes, b2: Bytes, path: str) -> None:
         if b1 == b2:
@@ -427,8 +427,7 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
     _, dest_ext = os.path.splitext(dest_filename)
     dest_format = detect_file_format(image=None, filename_extension=dest_ext)
     if not dest_format:
-        raise Error("Cannot determine the format of file '%s'." % (
-                        dest_filename))
+        raise Error(f"Cannot determine the format of file '{dest_filename}'.")
 
     CONVERTERS: list[tuple[
             type[DataRecord], type[DataRecord],
@@ -448,9 +447,9 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
             conv(src, src_filename, src_format, dest_filename, dest_format)
             return
 
-    raise Error("Don't know how to convert from %s to %s files." % (
-                src_format.FORMAT_NAME,
-                dest_format.FORMAT_NAME))
+    raise Error(
+        f"Don't know how to convert from {src_format.FORMAT_NAME} "
+        f"to {dest_format.FORMAT_NAME} files.")
 
 
 def convert(args: list[str]) -> None:
@@ -502,7 +501,7 @@ def handle_command_line(args: list[str]) -> None:
     }
 
     if command not in COMMANDS:
-        raise Error('Unknown command %r.' % command)
+        raise Error(f'Unknown command {command!r}.')
 
     COMMANDS[command](args[1:])
 
@@ -516,7 +515,7 @@ def main(args: None | list[str] = None) -> None:
     except EmulationExit:
         pass
     except USER_ERRORS as e:
-        sys.exit('zx: %s' % verbalize_error(e))
+        sys.exit(f'zx: {verbalize_error(e)}')
 
 
 if __name__ == "__main__":

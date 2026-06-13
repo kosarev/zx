@@ -128,7 +128,7 @@ def parse_snapshot_block(image: Bytes) -> RZXSnapshot:
     filename_extension = header['filename_extension']
     assert isinstance(filename_extension, bytes)
     if filename_extension not in [b'z80\x00', b'Z80\x00']:
-        raise Error('Unknown RZX snapshot format %r.' % filename_extension,
+        raise Error(f'Unknown RZX snapshot format {filename_extension!r}.',
                     id='unknown_rzx_snapshot_format')
 
     snapshot = Z80Snapshot.decode('snapshot.z80', snapshot_image)
@@ -209,7 +209,7 @@ def parse_block(parser: BinaryParser) -> typing.Any:
     block_length = block['length']
     assert isinstance(block_length, int)
     if block_length < 5:
-        raise Error('RZX block length is too small: %d' % block_length)
+        raise Error(f'RZX block length is too small: {block_length}')
     payload_size = block_length - 5
     payload_image = parser.read_bytes(payload_size)
 
@@ -219,7 +219,7 @@ def parse_block(parser: BinaryParser) -> typing.Any:
 
     # TODO: Handle unknown blocks.
     if block_id not in RZX_BLOCK_PARSERS:
-        raise Error('Unsupported RZX block %r.' % block_id,
+        raise Error(f'Unsupported RZX block {block_id!r}.',
                     id='unsupported_rzx_block')
 
     return RZX_BLOCK_PARSERS[block_id](payload_image)
@@ -235,8 +235,10 @@ def _parse_rzx(image: Bytes) -> list[RZXChunk]:
                            ('flags', '<L')])
     rzx_signature = b'RZX!'
     if header['signature'] != rzx_signature:
-        raise Error('Bad RZX file signature %r; expected %r.' % (
-                        header['signature'], rzx_signature))
+        signature = header['signature']
+        raise Error(
+            f'Bad RZX file signature {signature!r}; '
+            f'expected {rzx_signature!r}.')
 
     # Unpack blocks.
     chunks: list[RZXChunk] = []
@@ -337,7 +339,7 @@ class RZXFile(MachinePlayback, format_name='RZX'):
                                          port_samples=f.samples.data)
                     for f in chunk.frames)
             else:
-                raise Error('Unknown RZX chunk: %r.' % chunk,
+                raise Error(f'Unknown RZX chunk: {chunk!r}.',
                             id='unknown_rzx_chunk')
         return UnifiedPlayback(segments=segments, creator=creator,
                                creator_major_version=creator_major_version,

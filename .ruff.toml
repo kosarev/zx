@@ -29,7 +29,6 @@ ignore = [
     # imports / dead code (autofix, lift first)
     "F811",    #  1  redefined-while-unused
     # modernisation: pyupgrade (mostly autofix)
-    "UP031",   # 42  printf-string-formatting (hand)
     # Ruff-native (RUF012 is a real bug-class - lift early)
     "RUF005",  #  1  collection-literal-concatenation
     "RUF012",  # 15  mutable-class-default

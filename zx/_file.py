@@ -38,8 +38,8 @@ def _open_file_or_url(path: str) -> typing.Any:
             req = urllib.request.Request(path, headers=HEADERS)
             return urllib.request.urlopen(req)
         except urllib.error.HTTPError as e:
-            raise Error('Cannot read remote file: %s, code %d.' % (
-                            e.reason, e.code))
+            raise Error(
+                f'Cannot read remote file: {e.reason}, code {e.code}.')
 
     return open(path, 'rb')
 
@@ -104,18 +104,18 @@ def parse_file_image(filename: str, image: Bytes) -> DataRecord:
     base, ext = os.path.splitext(filename)
     format = detect_file_format(image, ext)
     if not format:
-        raise Error("Cannot determine the format of file '%s'." % filename)
+        raise Error(f"Cannot determine the format of file '{filename}'.")
 
     if issubclass(format, ArchiveFile):
         candidates = _parse_archive(format, image)
         if len(candidates) == 0:
-            raise Error('No files of known formats in archive %r.' %
-                        filename)
+            raise Error(f'No files of known formats in archive {filename!r}.')
 
         if len(candidates) > 1:
+            names = ', '.join(repr(n) for n, f, im in candidates)
             raise Error(
-                'More than one file of a known format in archive %r: %s.' % (
-                    filename, ', '.join(repr(n) for n, f, im in candidates)))
+                f'More than one file of a known format in '
+                f'archive {filename!r}: {names}.')
 
         filename, format, image = candidates[0]
 

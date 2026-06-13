@@ -49,6 +49,6 @@ class ZXBasicCompilerProgram(DataRecord, format_name='ZXB'):
 
             status = zxb_main(args=[path], emitter=Emitter())
             if status:
-                raise Error('ZX Basic compiler returned %d.' % status)
+                raise Error(f'ZX Basic compiler returned {status}.')
 
         return ZXBasicCompilerProgram(**fields)

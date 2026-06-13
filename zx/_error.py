@@ -26,9 +26,9 @@ def verbalize_error(e: Error | IOError) -> str:
         args = [reason]
     elif isinstance(e, IOError):
         code, reason = e.args
-        args = ['%s (code %s).' % (reason, code)]
+        args = [f'{reason} (code {code}).']
         if isinstance(e, FileNotFoundError):
             args.insert(0, e.filename)
     else:
-        args = [type(e).__name__] + ['%s' % x for x in e.args]
+        args = [type(e).__name__] + [f'{x}' for x in e.args]
     return ': '.join(args)

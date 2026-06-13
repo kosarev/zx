@@ -287,7 +287,7 @@ class TZXFile(SoundFile, format_name='TZX'):
             parser.read_bytes(length)
 
             if id not in cls._ARCHIVE_INFO_STRING_IDS:
-                raise Error('Unknown TZX archive info string id 0x%02x.' % id)
+                raise Error(f'Unknown TZX archive info string id 0x{id:02x}.')
 
         # TODO: Encode all the details.
         return TZXArchiveInfo()
@@ -307,7 +307,7 @@ class TZXFile(SoundFile, format_name='TZX'):
         block_id = parser.parse_field('B')
         assert isinstance(block_id, int)
         if block_id not in cls._BLOCK_PARSERS:
-            raise Error('Unsupported TZX block id 0x%x.' % block_id)
+            raise Error(f'Unsupported TZX block id 0x{block_id:x}.')
 
         result = cls._BLOCK_PARSERS[block_id].__get__(None, cls)(parser)
         assert isinstance(result, TZXBlock)
@@ -320,8 +320,9 @@ class TZXFile(SoundFile, format_name='TZX'):
         signature = parser.parse_field('8s')
         TZX_SIGNATURE = b'ZXTape!\x1a'
         if signature != TZX_SIGNATURE:
-            raise Error('Bad TZX file signature %r; expected %r.' % (
-                        signature, TZX_SIGNATURE))
+            raise Error(
+                f'Bad TZX file signature {signature!r}; '
+                f'expected {TZX_SIGNATURE!r}.')
 
         # Parse header.
         header = parser.parse([('major_revision', 'B'),

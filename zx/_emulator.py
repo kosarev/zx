@@ -219,7 +219,7 @@ class Emulator(Dispatcher):
     def load_tape(self, filename: str) -> None:
         tape = parse_file(filename)
         if not isinstance(tape, SoundFile):
-            raise Error('%r does not seem to be a tape file.' % filename)
+            raise Error(f'{filename!r} does not seem to be a tape file.')
 
         # Let the initialization complete.
         self.reset_and_wait()
@@ -271,7 +271,7 @@ class Emulator(Dispatcher):
         elif isinstance(file, ZXBasicCompilerProgram):
             self.__load_zx_basic_compiler_program(file)
         else:
-            raise Error("Don't know how to load file %r." % filename)
+            raise Error(f"Don't know how to load file {filename!r}.")
 
     def _run_file(self, filename: str, *, fast_forward: bool = False) -> None:
         self._load_file(filename)

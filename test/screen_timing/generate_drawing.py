@@ -81,20 +81,21 @@ class drawing_generator:
     def add_label(self):
         n = self._label
         self._label += 1
-        return 'l%d' % n
+        return f'l{n}'
 
     def add_instr(self, instr, ticks):
         if type(ticks) is not list:
             ticks = [ticks]
-        self.add_line('    %-24s; %5d  %5s' % (
-            instr, self._tick, ' + '.join('%d' % x for x in ticks)))
+        ticks_text = ' + '.join(f'{x}' for x in ticks)
+        self.add_line(
+            f'    {instr:<24}; {self._tick:5d}  {ticks_text:>5}')
         self._tick += sum(ticks)
 
     def generate_load(self, load):
         if isinstance(load.reg, RegPair):
-            self.add_instr('ld %s, 0x%04x' % (load.reg.name, load.value), 10)
+            self.add_instr(f'ld {load.reg.name}, 0x{load.value:04x}', 10)
         else:
-            self.add_instr('ld %s, 0x%02x' % (load.reg.name, load.value), 7)
+            self.add_instr(f'ld {load.reg.name}, 0x{load.value:02x}', 7)
 
     def generate_out_a(self, out):
         self.move_to_beam_pos(out.beam_pos, ticks_to_reserve=7)
@@ -102,7 +103,7 @@ class drawing_generator:
 
     def generate_write_at_hl(self, write):
         delay = self.get_memory_contention_delay(self._tick + 4)
-        self.add_instr('ld (hl), %s' % write.reg.name, [7, delay])
+        self.add_instr(f'ld (hl), {write.reg.name}', [7, delay])
 
     def generate_write_screen_at_hl(self, write):
         self.move_to_beam_pos(write.beam_pos, ticks_to_reserve=4)
@@ -143,7 +144,7 @@ class drawing_generator:
             if delay == 6:
                 done = False
                 for rp in self._get_reg_pair_clobbers(clobbers):
-                    self.add_instr('inc %s' % rp.name, 6)
+                    self.add_instr(f'inc {rp.name}', 6)
                     done = True
                     break
 
@@ -155,7 +156,7 @@ class drawing_generator:
                     continue
 
                 assert 0, ('No register pair to clobber to generate a '
-                           'delay of %d ticks!' % delay)
+                           f'delay of {delay} ticks!')
 
             if delay == 7:
                 self.add_instr('or 0', 7)
@@ -174,11 +175,11 @@ class drawing_generator:
                     continue
                 else:
                     assert 0, ('Need to clobber the register R to generate a '
-                               'delay of %d ticks!' % delay)
+                               f'delay of {delay} ticks!')
 
             if delay == 10:
                 label = self.add_label()
-                self.add_instr('jp %s' % label, 10)
+                self.add_instr(f'jp {label}', 10)
                 self.add_line(label + ':')
                 break
 
@@ -228,17 +229,17 @@ class drawing_generator:
                 n = min(n, 0xff)  # TODO: Support longer loops.
                 assert n > 0
 
-                self.add_instr('ld %s, %d' % (clobber.name, n), 7)
+                self.add_instr(f'ld {clobber.name}, {n}', 7)
                 delay -= 7
 
                 label = self.add_label()
                 ticks = n * 16 - 5
-                self.add_line('%-28s; %5d  %5d' % (
-                    label + ':', self._tick, ticks))
-                self.add_line('    %-24s;        %5d' % (
-                    'dec %s' % clobber.name, 4))
-                self.add_line('    %-24s;        %5s' % (
-                    'jr nz, %s' % label, '7 + 5'))
+                self.add_line(
+                    f'{label + ":":<28}; {self._tick:5d}  {ticks:5d}')
+                self.add_line(
+                    f'    {"dec " + clobber.name:<24};        {4:5d}')
+                self.add_line(
+                    f'    {"jr nz, " + label:<24};        {"7 + 5":>5}')
 
                 self._tick += ticks
                 delay -= ticks
@@ -249,7 +250,7 @@ class drawing_generator:
                         delay in NON_CLOBBERING_PATTERNS), delay
                 continue
 
-            assert 0, "Don't know how to generate a delay of %d ticks!" % delay
+            assert 0, f"Don't know how to generate a delay of {delay} ticks!"
 
     def move_to_tick(self, tick, clobbers=[], step=0):
         assert tick >= self._tick
@@ -300,7 +301,7 @@ class drawing_generator:
 
         self.align_end_tick()
 
-        self.add_line('    %-24s; %5d' % ('', self._tick))
+        self.add_line(f'    {"":<24}; {self._tick:5d}')
 
     def emit_source(self):
         for line in self._lines:
