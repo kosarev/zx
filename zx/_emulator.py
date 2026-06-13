@@ -64,6 +64,13 @@ from ._zxb import ZXBasicCompilerProgram
 # only a deliberate defiance of the declared type could, which is no
 # different from any encapsulation in Python.
 class Emulator(Dispatcher):
+    """The emulator: a container of devices driven by a run loop.
+
+    Construct one - optionally headless (no window or sound) or for a
+    specific model - then load a snapshot or tape and run it. It is a
+    context manager and releases its resources on exit.
+    """
+
     def __init__(self, *,
                  model: type[SpectrumModel] | None = None,
                  core: Spectrum | None = None,

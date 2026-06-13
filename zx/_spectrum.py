@@ -478,6 +478,13 @@ class Profile:
 
 
 class Spectrum(_SpectrumBase, SpectrumState, Device):
+    """The ZX Spectrum core: one emulated machine as a device.
+
+    Holds the CPU, memory and screen state and steps the emulation. It is
+    the core device an Emulator drives; construct it directly only for
+    low-level use, otherwise let Emulator create it.
+    """
+
     # Memory marks.
     __NO_MARKS = 0
     __BREAKPOINT_MARK = 1 << 0

@@ -504,6 +504,12 @@ def handle_command_line(args: list[str]) -> None:
 
 
 def main(args: None | list[str] = None) -> None:
+    """The ``zx`` command-line entry point.
+
+    Parses ``args`` (defaulting to ``sys.argv[1:]``) and runs the
+    requested command - run a file, convert between formats, dump, etc.
+    User errors are reported and exit the process.
+    """
     if args is None:
         args = sys.argv[1:]
 
