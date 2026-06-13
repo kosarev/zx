@@ -109,7 +109,7 @@ def profile(args: list[str]) -> None:
 
     # TODO: Amend profile data by reading them out first instead
     # of overwriting.
-    with open(profile_filename, 'wt') as f:
+    with open(profile_filename, 'w') as f:
         # TODO: mypy false positive.
         for addr, annot in profile:  # type: ignore[attr-defined]
             print('@0x%04x %s' % (addr, annot), file=f)
