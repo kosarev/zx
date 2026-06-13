@@ -10,6 +10,7 @@
 
 
 import pytest
+
 import zx
 from zx._data import MemoryBlock
 from zx._data import UnifiedPlayback

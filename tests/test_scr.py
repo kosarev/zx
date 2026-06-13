@@ -11,8 +11,9 @@
 #   Published under the MIT license.
 
 
-import zx
 import pytest
+
+import zx
 
 
 def test_basic() -> None:

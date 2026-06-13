@@ -10,6 +10,7 @@
 
 
 import json
+
 from ._binary import Bytes
 from ._data import DataRecord
 from ._error import Error

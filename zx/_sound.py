@@ -9,8 +9,9 @@
 #   Published under the MIT license.
 
 import ctypes
-import numpy
 import typing
+
+import numpy
 
 from ._data import SoundPulses
 from ._data import SpectrumModel
@@ -18,11 +19,11 @@ from ._device import DestroyEmulator
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
-from ._device import ResetEmulator
 from ._device import GetHoldState
 from ._device import GetQuantumTickLimit
 from ._device import GetSettings
 from ._device import NewSoundPulses
+from ._device import ResetEmulator
 from ._device import RunQuantum
 from ._device import SetEmulationSpeed
 from ._device import SetFastForward
@@ -30,7 +31,6 @@ from ._device import SetSettingValue
 from ._device import SettingDescriptor
 from ._device import SettingScope
 from ._device import TimeAdvanced
-
 
 # The initial speed: how fast emulated time runs relative to
 # wallclock. The sound stream is the wallclock reference, so speed is
@@ -433,8 +433,9 @@ class SDLSound(SoundDevice):
         sdl2.audio.SDL_PauseAudioDevice(self.__device, 0)
 
     def _output(self, samples: numpy.typing.NDArray[numpy.float32]) -> None:
-        import sdl2.audio
         import ctypes
+
+        import sdl2.audio
         sdl2.audio.SDL_QueueAudio(
             self.__device,
             samples.ctypes.data_as(ctypes.c_void_p),

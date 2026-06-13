@@ -10,8 +10,10 @@
 
 from __future__ import annotations
 
-import numpy
 import typing
+
+import numpy
+
 import zx
 
 from ._binary import Bytes

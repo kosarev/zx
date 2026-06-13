@@ -9,8 +9,9 @@
 #   Published under the MIT license.
 
 
-import numpy
 import typing
+
+import numpy
 
 from ._binary import Bytes
 from ._data import SoundFile
@@ -18,16 +19,16 @@ from ._data import SpectrumModel
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
-from ._device import ResetEmulator
-from ._device import ReadPort
-from ._device import StopQuantum
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
 from ._device import IsTapePlayerStopped
 from ._device import LoadTape
-from ._device import PauseUnpauseTape
-from ._device import TapeStateUpdated
 from ._device import NewSoundPulses
+from ._device import PauseUnpauseTape
+from ._device import ReadPort
+from ._device import ResetEmulator
+from ._device import StopQuantum
+from ._device import TapeStateUpdated
 from ._device import TimeAdvanced
 from ._sound import PulseStream
 from ._time import Time

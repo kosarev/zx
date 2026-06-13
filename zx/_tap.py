@@ -10,11 +10,15 @@
 
 
 import typing
-from ._binary import Bytes, BinaryParser
+
+from ._binary import BinaryParser
+from ._binary import Bytes
 from ._data import ByteData
 from ._data import HexData
 from ._data import SoundFile
-from ._tape import get_block_pulses, tag_last_pulse, get_end_pulse
+from ._tape import get_block_pulses
+from ._tape import get_end_pulse
+from ._tape import tag_last_pulse
 
 
 class TAPFile(SoundFile, format_name='TAP'):

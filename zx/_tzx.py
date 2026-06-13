@@ -12,14 +12,18 @@
 from __future__ import annotations
 
 import typing
-from ._binary import Bytes, BinaryParser
+
+from ._binary import BinaryParser
+from ._binary import Bytes
 from ._data import ByteData
-from ._data import HexData
 from ._data import DataRecord
+from ._data import HexData
 from ._data import SoundFile
 from ._error import Error
-from ._tape import (get_block_pulses, get_data_pulses, tag_last_pulse,
-                    get_end_pulse)
+from ._tape import get_block_pulses
+from ._tape import get_data_pulses
+from ._tape import get_end_pulse
+from ._tape import tag_last_pulse
 
 
 class TZXBlock(DataRecord, format_name=None):

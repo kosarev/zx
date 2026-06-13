@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+#   ZX Spectrum Emulator.
+#   https://github.com/kosarev/zx
+#
+#   Copyright (C) 2025-2026 Ivan Kosarev.
+#   mail@ivankosarev.com
+#
+#   Published under the MIT license.
+
+import pytest
 
 import zx
-import pytest
 
 
 def test_basic() -> None:

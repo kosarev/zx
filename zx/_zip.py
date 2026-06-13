@@ -3,16 +3,18 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2019 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
 
 
-import typing
 import io
+import typing
 import zipfile
+
 import zx
+
 from ._binary import Bytes
 from ._data import ArchiveFile
 

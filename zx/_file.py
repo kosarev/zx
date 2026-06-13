@@ -8,10 +8,12 @@
 #
 #   Published under the MIT license.
 
-import typing
 import os
+import typing
+
 from ._binary import Bytes
-from ._data import ArchiveFile, DataRecord
+from ._data import ArchiveFile
+from ._data import DataRecord
 from ._error import Error
 from ._rzx import RZXFile
 from ._scr import _SCRSnapshot
@@ -27,8 +29,8 @@ from ._zxb import ZXBasicCompilerProgram
 
 def _open_file_or_url(path: str) -> typing.Any:
     if path.startswith(('http:', 'https:', 'ftp:')):
-        import urllib.request
         import urllib.error
+        import urllib.request
         try:
             HEADERS = {
                 'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.1; '

@@ -9,9 +9,10 @@
 #   Published under the MIT license.
 
 
-import typing
 import io
+import typing
 import wave
+
 from ._binary import Bytes
 from ._data import ByteData
 from ._data import HexData

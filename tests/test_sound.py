@@ -11,13 +11,13 @@
 
 import numpy
 
-from zx._data import Spectrum48
 from zx._data import SoundPulses
+from zx._data import Spectrum48
 from zx._data import SpectrumModel
 from zx._device import Dispatcher
-from zx._device import ResetEmulator
 from zx._device import GetSettings
 from zx._device import NewSoundPulses
+from zx._device import ResetEmulator
 from zx._device import RunQuantum
 from zx._device import SetSettingValue
 from zx._device import SettingDescriptor

@@ -9,11 +9,12 @@
 #   Published under the MIT license.
 
 import typing
+
 from ._device import Device
 from ._device import DeviceEvent
+from ._device import Dispatcher
 from ._device import KeyStroke
 from ._device import ReadPort
-from ._device import Dispatcher
 from ._utils import tupilise
 
 

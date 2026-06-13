@@ -10,13 +10,14 @@
 #   Published under the MIT license.
 
 
-import typing
 import collections
 import functools
 import multiprocessing
 import os
-import platformdirs
 import sys
+import typing
+
+import platformdirs
 
 from ._binary import Bytes
 from ._data import ArchiveFile
@@ -25,28 +26,28 @@ from ._data import MachinePlayback
 from ._data import MachineSnapshot
 from ._data import SoundFile
 from ._data import Spectrum128
-from ._error import Error
-from ._error import USER_ERRORS
-from ._error import verbalize_error
+from ._data import UnifiedPlayback
+from ._data import UnifiedSnapshot
 from ._device import BreakpointHit
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import FetchesLimitHit
-from ._playback import PlaybackPlayer
-from ._playback import PlaybackRecorder
-from ._settings import GlobalSettingsManager
+from ._emulator import Emulator
+from ._error import USER_ERRORS
+from ._error import Error
+from ._error import verbalize_error
 from ._except import EmulationExit
 from ._file import detect_file_format
 from ._file import parse_file
 from ._file import parse_file_image
-from ._zx import ZXFile
-from ._rzx import make_rzx
+from ._playback import PlaybackPlayer
+from ._playback import PlaybackRecorder
 from ._rzx import RZXFile
-from ._emulator import Emulator
+from ._rzx import make_rzx
+from ._settings import GlobalSettingsManager
 from ._spectrum import Profile
 from ._spectrum import Spectrum
-from ._data import UnifiedPlayback
-from ._data import UnifiedSnapshot
+from ._zx import ZXFile
 
 
 def get_config_dir() -> str:

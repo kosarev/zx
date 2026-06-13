@@ -8,19 +8,21 @@
 #
 #   Published under the MIT license.
 
-import ctypes
 import abc
+import ctypes
 import enum
-import numpy
 import os
 import typing
+
+import numpy
 
 from ._device import DestroyEmulator
 from ._device import Device
 from ._device import DeviceEvent
-from ._device import ResetEmulator
+from ._device import Dispatcher
 from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
+from ._device import GetFramePixels
 from ._device import GetHoldState
 from ._device import GetMainMenuItems
 from ._device import GetSettings
@@ -33,23 +35,23 @@ from ._device import MenuItemHit
 from ._device import PauseStateUpdated
 from ._device import RequestLoadFile
 from ._device import RequestSaveSnapshot
+from ._device import ResetEmulator
 from ._device import RunQuantum
 from ._device import SaveSnapshot
 from ._device import SetSettingValue
 from ._device import SettingDescriptor
 from ._device import SettingScope
-from ._device import GetFramePixels
 from ._device import TapeStateUpdated
 from ._device import ToggleEmulationPause
 from ._device import ToggleFullscreen
 from ._device import ToggleTapePause
-from ._device import Dispatcher
 from ._error import USER_ERRORS
 from ._error import verbalize_error
 from ._except import EmulationExit
-from ._time import get_elapsed_time, get_timestamp, Time
+from ._time import Time
+from ._time import get_elapsed_time
+from ._time import get_timestamp
 from ._utils import div_ceil
-
 
 SCREENCAST = False
 

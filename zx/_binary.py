@@ -3,17 +3,17 @@
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #
-#   Copyright (C) 2017-2025 Ivan Kosarev.
+#   Copyright (C) 2017-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
 
 
-import typing
 import struct
+import typing
+
 from ._error import Error
 from ._utils import tupilise
-
 
 Bytes = bytes | bytearray | memoryview
 

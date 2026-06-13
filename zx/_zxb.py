@@ -8,9 +8,10 @@
 #
 #   Published under the MIT license.
 
-import typing
 import os
 import tempfile
+import typing
+
 from ._binary import Bytes
 from ._data import DataRecord
 from ._error import Error
@@ -24,8 +25,8 @@ class ZXBasicCompilerProgram(DataRecord, format_name='ZXB'):
     def parse(cls, filename: str,
               image: Bytes) -> 'ZXBasicCompilerProgram':
         try:
-            from src.zxbc import (  # type: ignore
-                main as zxb_main, CodeEmitter)
+            from src.zxbc import CodeEmitter  # type: ignore
+            from src.zxbc import main as zxb_main  # type: ignore
         except ModuleNotFoundError:
             raise Error('The ZX Basic compiler does not seem to be installed.')
 

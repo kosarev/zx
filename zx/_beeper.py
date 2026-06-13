@@ -8,16 +8,17 @@
 #
 #   Published under the MIT license.
 
-import numpy
 import typing
+
+import numpy
 
 from ._data import SpectrumModel
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
-from ._device import ResetEmulator
 from ._device import NewPortWrites
 from ._device import NewSoundPulses
+from ._device import ResetEmulator
 from ._device import TimeAdvanced
 from ._sound import PulseStream
 

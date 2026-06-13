@@ -11,12 +11,13 @@
 
 from __future__ import annotations
 
-import numpy
 import typing
 
-from ._binary import Bytes
+import numpy
+
 from ._binary import BinaryParser
 from ._binary import BinaryWriter
+from ._binary import Bytes
 from ._data import ByteData
 from ._data import DataRecord
 from ._data import HexData

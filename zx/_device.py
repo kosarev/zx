@@ -8,8 +8,9 @@
 #
 #   Published under the MIT license.
 
-import typing
 import enum
+import typing
+
 import numpy
 
 from ._binary import Bytes

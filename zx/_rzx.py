@@ -12,8 +12,10 @@
 from __future__ import annotations
 
 import typing
-from ._binary import Bytes, BinaryParser, BinaryWriter
-from ._data import _InlineJSONDict
+
+from ._binary import BinaryParser
+from ._binary import BinaryWriter
+from ._binary import Bytes
 from ._data import ByteData
 from ._data import DataRecord
 from ._data import HexData
@@ -23,6 +25,7 @@ from ._data import MachineSnapshot
 from ._data import UnifiedPlayback
 from ._data import UnifiedPlaybackFrame
 from ._data import UnifiedPlaybackSegment
+from ._data import _InlineJSONDict
 from ._error import Error
 from ._z80snapshot import Z80Snapshot
 

@@ -10,8 +10,10 @@
 
 
 import io
-import pytest
 import wave
+
+import pytest
+
 import zx
 
 

@@ -9,8 +9,13 @@
 #   Published under the MIT license.
 
 
-from ._binary import Bytes, BinaryParser, BinaryWriter
-from ._data import ByteData, HexData, MachineSnapshot, MemoryBlock
+from ._binary import BinaryParser
+from ._binary import BinaryWriter
+from ._binary import Bytes
+from ._data import ByteData
+from ._data import HexData
+from ._data import MachineSnapshot
+from ._data import MemoryBlock
 from ._data import UnifiedSnapshot
 from ._error import Error
 

@@ -120,6 +120,7 @@ frame. Key frame spacing is a critical design parameter.
 """
 
 import typing
+
 from ._data import UnifiedPlayback
 from ._data import UnifiedPlaybackFrame
 from ._data import UnifiedPlaybackSegment
