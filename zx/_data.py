@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import typing
 
-import numpy
-
 import zx
 
-from ._binary import Bytes
+if typing.TYPE_CHECKING:
+    import numpy
+
+    from ._binary import Bytes
 
 
 class _InlineJSONDict(dict[str, typing.Any]):

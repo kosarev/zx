@@ -27,9 +27,6 @@ select = [
 # so the run is green today. Lift one at a time, fix all its sites, then
 # delete it from here. This list only shrinks. Counts are at baseline.
 ignore = [
-    # typing-only imports
-    "TC001",   #  1  typing-only-first-party-import
-    "TC002",   #  1  typing-only-third-party-import
     # no blanket ignores
     "PGH003",  #  2  blanket-type-ignore
     "PGH004",  #  1  blanket-noqa
