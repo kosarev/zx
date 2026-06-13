@@ -23,8 +23,14 @@ class ZXBasicCompilerProgram(DataRecord, format_name='ZXB'):
     def parse(cls, filename: str,
               image: Bytes) -> 'ZXBasicCompilerProgram':
         try:
-            from src.zxbc import CodeEmitter  # type: ignore[attr-defined]
-            from src.zxbc import main as zxb_main  # type: ignore[attr-defined]
+            # The optional ZX Basic compiler has no type information, and
+            # mypy reports a different error code for it depending on the
+            # Python version and whether it is installed (attr-defined /
+            # import-untyped / import-not-found), so a blanket ignore is
+            # the only one correct everywhere. PGH003 is waived for this
+            # file in .ruff.toml accordingly.
+            from src.zxbc import CodeEmitter  # type: ignore
+            from src.zxbc import main as zxb_main  # type: ignore
         except ModuleNotFoundError:
             raise Error('The ZX Basic compiler does not seem to be installed.')
 
