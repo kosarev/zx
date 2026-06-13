@@ -16,7 +16,7 @@ from ._utils import tupilise
 
 
 # TODO: Redesign.
-class Key(object):
+class Key:
     def __init__(self, id: str, index: int) -> None:
         # TODO: Lowercase.
         self.ID = id

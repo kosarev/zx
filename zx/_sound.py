@@ -44,7 +44,7 @@ SPEED = 1.0
 assert SPEED > 0
 
 
-class PulseStream(object):
+class PulseStream:
     def __init__(self, model: type[SpectrumModel]) -> None:
         # TODO: This is really the clock rate of the tick timeline.
         self.__rate = model._TICKS_PER_FRAME * 50
@@ -88,7 +88,7 @@ class PulseStream(object):
                            num_ticks=num_ticks)
 
 
-class _PulseResampler(object):
+class _PulseResampler:
     # The single stateful resampler of the mixed pulse stream.
     # Chunks of one stream cannot be resampled independently: the
     # fractional sample position and the averaging window carry

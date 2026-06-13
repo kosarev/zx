@@ -62,7 +62,7 @@ def _write_json(obj: typing.Any, depth: int = 0) -> typing.Iterator[str]:
         yield json.dumps(obj)
 
 
-class DataRecord(object):
+class DataRecord:
     FORMAT_NAME: None | str
 
     def __init_subclass__(cls, *, format_name: None | str):
@@ -203,7 +203,7 @@ class ArchiveFile(DataRecord, format_name=None):
 
 
 # TODO: Should derive from DataRecord?
-class SoundPulses(object):
+class SoundPulses:
     # A chunk of a pulse stream covering num_ticks ticks, with level
     # transitions at the given offsets within that span. A chunk with
     # no transitions still represents that much sustained level.

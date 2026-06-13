@@ -17,7 +17,7 @@ import zx
 HEADLESS = True
 
 
-class DurationSet(object):
+class DurationSet:
     def __init__(self):
         self.__sum = 0
         self.count = 0

@@ -9,7 +9,7 @@
 import time
 
 
-class Time(object):
+class Time:
     _seconds: float
 
     def __init__(self) -> None:

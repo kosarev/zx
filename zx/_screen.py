@@ -419,7 +419,7 @@ class _Theme:
                      colour)
 
 
-class Notification(object):
+class Notification:
     _timestamp: None | float
 
     def __init__(self, time: Time) -> None:
@@ -1598,7 +1598,7 @@ class _MessageDialog(_Panel):
 
 
 # TODO: A quick solution for making screencasts.
-class Screencast(object):
+class Screencast:
     _counter: int
 
     def __init__(self) -> None:

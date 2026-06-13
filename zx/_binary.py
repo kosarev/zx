@@ -16,7 +16,7 @@ from ._utils import tupilise
 Bytes = bytes | bytearray | memoryview
 
 
-class BinaryParser(object):
+class BinaryParser:
     image: Bytes
 
     def __init__(self, image: Bytes):
@@ -65,7 +65,7 @@ class BinaryParser(object):
         return res
 
 
-class BinaryWriter(object):
+class BinaryWriter:
     _chunks: list[Bytes]
 
     def __init__(self) -> None:

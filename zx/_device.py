@@ -19,7 +19,7 @@ from ._data import UnifiedSnapshot
 from ._time import Time
 
 
-class DeviceEvent(object):
+class DeviceEvent:
     pass
 
 
@@ -33,7 +33,7 @@ class EmulationEvent(DeviceEvent):
         self.tick_count = tick_count
 
 
-class MenuItemDescriptor(object):
+class MenuItemDescriptor:
     def __init__(self, label: str,
                  hotkey: None | str = None) -> None:
         self.label = label
@@ -74,7 +74,7 @@ class SettingScope(enum.Enum):
 # Describes one setting a device owns: a stable id, the scope that
 # decides where it is persisted, a human label, the discrete values it
 # offers (for a clamped chooser in the UI), and its current value.
-class SettingDescriptor(object):
+class SettingDescriptor:
     def __init__(self, id: str, scope: SettingScope, label: str,
                  choices: tuple[SettingValue, ...],
                  current: SettingValue) -> None:
@@ -383,12 +383,12 @@ class NewSoundPulses(DeviceEvent):
         self.pulses = pulses
 
 
-class Device(object):
+class Device:
     def on_event(self, event: DeviceEvent, devices: 'Dispatcher') -> None:
         pass
 
 
-class Dispatcher(object):
+class Dispatcher:
     __devices: typing.Iterable[Device]
 
     def __init__(self, devices: None | list[Device] = None) -> None:

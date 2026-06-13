@@ -63,7 +63,7 @@ class RunEvents(enum.IntFlag):
     STOP_REQUESTED = 1 << 5
 
 
-class StateParser(object):
+class StateParser:
     def __init__(self, image: memoryview) -> None:
         self.__image = image
         self.__pos = 0
@@ -88,7 +88,7 @@ class StateParser(object):
         return self.read_bytes(4)
 
 
-class Z80State(object):
+class Z80State:
     def __init__(self, image: memoryview) -> None:
         p = StateParser(image)
         self.__bc = p.parse16()
@@ -460,7 +460,7 @@ class SpectrumState(Z80State):
 
 
 # Stores information about the running code.
-class Profile(object):
+class Profile:
     _annots: dict[int, str] = dict()
 
     def add_instr_addr(self, addr: int) -> None:

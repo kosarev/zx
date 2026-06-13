@@ -12,12 +12,12 @@
 import sys
 
 
-class Reg(object):
+class Reg:
     def __init__(self, name):
         self.name = name
 
 
-class RegPair(object):
+class RegPair:
     def __init__(self, name):
         self.name = name
 
@@ -62,7 +62,7 @@ class WriteScreenAtHL(Command):
         self.reg = reg
 
 
-class drawing_generator(object):
+class drawing_generator:
     SCREEN_WIDTH = 256
     SCREEN_HEIGHT = 192
     TICKS_PER_LINE = 224
