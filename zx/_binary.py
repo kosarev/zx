@@ -53,7 +53,7 @@ class BinaryParser:
 
     def parse(self, format: list[str] | list[tuple[str, str]]) -> (
             dict[str, typing.Any]):
-        res = dict()
+        res = {}
         for field in format:
             if isinstance(field, str):
                 field_format, field_id = field.split(':', maxsplit=1)

@@ -36,7 +36,6 @@ ignore = [
     "SIM117",  #  1  multiple-with-statements
     "SIM910",  #  1  dict-get-with-none-default
     # comprehensions
-    "C408",    #  3  unnecessary-collection-call
     # import aliases / typing-only imports
     "ICN001",  # 10  unconventional-import-alias
     "TC001",   #  1  typing-only-first-party-import

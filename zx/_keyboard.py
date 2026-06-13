@@ -41,7 +41,7 @@ _KEY_IDS = [
     ('CAPS SHIFT', 'CS'), 'Z', 'X', 'C', 'V',
     'B', 'N', 'M', ('SYMBOL SHIFT', 'SS'), ('BREAK SPACE', 'SPACE')]
 
-KEYS = dict()
+KEYS = {}
 for index, ids in enumerate(_KEY_IDS):
     ids = tupilise(ids)
     id, *aliases = ids
