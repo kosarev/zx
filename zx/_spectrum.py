@@ -825,11 +825,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
     def paused(self) -> bool:
         return self.__paused
 
-    @paused.setter
-    def paused(self, value: bool) -> None:
+    def __set_paused(self, value: bool, devices: Dispatcher) -> None:
         self.__paused = value
-        assert self.devices is not None
-        self.devices.notify(PauseStateUpdated())
+        devices.notify(PauseStateUpdated())
 
     def set_breakpoints(self, addr: int, size: int) -> None:
         self.mark_addrs(addr, size, self.__BREAKPOINT_MARK)
@@ -860,8 +858,8 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         elif isinstance(event, KeyStroke):
             key = KEYS.get(event.id, None)
             if key:
-                self.paused = False
-                self.devices.notify(StopPlayback())
+                self.__set_paused(False, devices)
+                devices.notify(StopPlayback())
         elif isinstance(event, EndOfFrame):
             self.__on_end_of_frame(devices)
         elif isinstance(event, SetBreakpoint):
@@ -882,6 +880,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         elif isinstance(event, SaveSnapshot):
             self._save_snapshot_file(Z80Snapshot, event.filename)
         elif isinstance(event, ToggleEmulationPause):
-            self.paused ^= True
+            self.__set_paused(not self.paused, devices)
         elif isinstance(event, ToggleTapePause):
             self._toggle_tape_pause()

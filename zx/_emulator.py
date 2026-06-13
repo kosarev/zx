@@ -188,11 +188,3 @@ class Emulator(Dispatcher):
 
     def _save_snapshot_file(self, format: typing.Any, filename: str) -> None:
         self.__require_core()._save_snapshot_file(format, filename)
-
-    @property
-    def paused(self) -> bool:
-        return self.__require_core().paused
-
-    @paused.setter
-    def paused(self, value: bool) -> None:
-        self.__require_core().paused = value
