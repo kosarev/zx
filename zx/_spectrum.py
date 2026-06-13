@@ -14,10 +14,8 @@ import enum
 import numpy
 import typing
 
-from ._data import MachinePlayback
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
-from ._data import SoundFile
 from ._data import Spectrum48
 from ._data import SpectrumModel
 from ._data import UnifiedPlayback
@@ -34,31 +32,21 @@ from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
 from ._device import GetFramePixels
 from ._device import InstallSnapshot
-from ._device import IsTapePlayerPaused
 from ._device import SetFetchesLimit
 from ._device import StartPlayback
 from ._device import StopPlayback
 from ._device import StopQuantum
-from ._device import IsTapePlayerStopped
 from ._device import KeyStroke
-from ._device import LoadFile
-from ._device import LoadTape
 from ._device import OutputFrame
 from ._device import GetHoldState
 from ._device import GetQuantumTickLimit
 from ._device import NewPortWrites
 from ._device import PauseStateUpdated
-from ._device import PauseUnpauseTape
 from ._device import RunQuantum
 from ._device import ReadPort
 from ._device import TimeAdvanced
-from ._device import SaveSnapshot
-from ._device import SetFastForward
 from ._device import ToggleEmulationPause
-from ._device import ToggleTapePause
-from ._error import Error
 from ._except import EmulationExit
-from ._file import parse_file
 from ._keyboard import KEYS
 from ._playback import PlaybackPlayer
 from ._rom import load_rom_image
@@ -67,7 +55,6 @@ from ._scr import _SCRSnapshot
 from ._spectrumbase import _SpectrumBase
 from ._time import Time
 from ._z80snapshot import Z80Snapshot
-from ._zxb import ZXBasicCompilerProgram
 
 
 class RunEvents(enum.IntFlag):
@@ -492,7 +479,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
     FRAME_SIZE = 48 + 256 + 48, 48 + 192 + 40
 
-    devices: Dispatcher
     __profile: None | Profile
     __playback: UnifiedPlayback | None
 
@@ -510,14 +496,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         # TODO: Double-underscore or make public.
         self._emulation_time = Time()
 
-        # The core is one device in a set the Emulator container owns.
-        # Until it is placed in one (and handed the real dispatcher),
-        # it dispatches only to itself, so that a bare core is still
-        # usable and runnable on its own.
-        # TODO: The run loop and orchestration that use this dispatcher
-        # move into the Emulator as the split proceeds.
-        self.devices = Dispatcher([self])  # TODO: Rename the field?
-
         self.set_on_input_callback(self.__on_input)
 
         self.__port_reads = bytearray()
@@ -530,9 +508,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         self.__paused = False
 
-    def reset(self) -> None:
-        self.devices.notify(ResetEmulator())
-
     def __install_rom(self) -> None:
         PAGE_SIZE = 0x4000
         rom = load_rom_image(self.model._ROM_FILE_NAME)
@@ -541,61 +516,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         if len(rom) > PAGE_SIZE:
             assert len(rom) == 2 * PAGE_SIZE
             self.write(0x0000, rom[PAGE_SIZE:], rom_page=1)
-
-    # TODO: Double-underscore or make public.
-    def _save_snapshot_file(self, format: type[MachineSnapshot],
-                            filename: str) -> None:
-        with open(filename, 'wb') as f:
-            f.write(format.from_snapshot(self.to_snapshot()).encode())
-
-    # TODO: Double-underscore or make public.
-    def _is_tape_paused(self) -> bool:
-        tape_state = IsTapePlayerPaused()
-        self.devices.notify(tape_state)
-        return tape_state.paused
-
-    def __pause_tape(self, is_paused: bool = True) -> None:
-        self.devices.notify(PauseUnpauseTape(is_paused))
-
-    def __unpause_tape(self) -> None:
-        self.__pause_tape(is_paused=False)
-
-    def _toggle_tape_pause(self) -> None:
-        self.__pause_tape(not self._is_tape_paused())
-
-    # TODO: Should we introduce TapeFile? Or PulseFile?
-    def __load_tape_to_player(self, file: SoundFile) -> None:
-        self.devices.notify(LoadTape(file))
-        self.__pause_tape()
-
-    # TODO: Do we still need?
-    def __is_end_of_tape(self, devices: Dispatcher) -> bool:
-        tape_state = IsTapePlayerStopped()
-        devices.notify(tape_state)
-        return tape_state.stopped
-
-    def __translate_key_strokes(self, keys: typing.Iterable[int | str]) -> (
-            typing.Iterator[str]):
-        for key in keys:
-            if isinstance(key, int):
-                yield from str(key)
-            else:
-                yield key
-
-    def generate_key_strokes(self, *keys: int | str) -> None:
-        for key in self.__translate_key_strokes(keys):
-            strokes = key.split('+')
-            # print(strokes)
-
-            for id in strokes:
-                # print(id)
-                self.devices.notify(KeyStroke(KEYS[id].ID, pressed=True))
-                self.run(duration=0.1, fast_forward=True)
-
-            for id in reversed(strokes):
-                # print(id)
-                self.devices.notify(KeyStroke(KEYS[id].ID, pressed=False))
-                self.run(duration=0.1, fast_forward=True)
 
     def __on_input(self, addr: int, devices: Dispatcher) -> int:
         read_port = ReadPort(addr, self.tick_count)
@@ -660,37 +580,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.suppress_interrupts = False
         self.allow_int_after_ei = False
 
-    def __run_quantum(self) -> None:
-        # Evaluate the hold once per quantum and broadcast the
-        # result, so devices never re-query it.
-        hold = GetHoldState()
-        self.devices.notify(hold)
-
-        self.devices.notify(RunQuantum(held=hold.held,
-                                       wake_in=hold.wake_in))
-
-        # TODO: For debug purposes.
-        '''
-        frame_count += 1
-        if frame_count == -12820:
-            frame_state = SpectrumState(bytes(self.image))
-            self.__save_crash_rzx(player, frame_state, chunk_i, frame_i)
-            assert 0
-
-        if frame_count == -65952 - 1000:
-            self.enable_trace()
-        '''
-
-        if hold.held:
-            return
-
-        self.run_quantum(self.devices)
-
-    # Advances the core by one quantum, when the quantum proceeds (it is
-    # not held). The dispatcher is passed in for this call only, never
-    # stored.
-    # TODO: The RunQuantum broadcast and the held check above move into
-    # the Emulator's loop, which will then call this method.
+    # Advances the core by one quantum -- the Emulator's loop calls this
+    # when the quantum is not held. The dispatcher is passed in for this
+    # call only, never stored.
     def run_quantum(self, devices: Dispatcher) -> None:
         # Cap how far this quantum advances, e.g. for sub-frame quanta
         # at slow speeds. With no device declaring a limit the quantum
@@ -721,93 +613,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         # TimeAdvanced goes last: all facts about the elapsed span
         # of time are published by the time its dispatch completes.
         devices.notify(TimeAdvanced(now))
-
-    def run(self, duration: None | float = None,
-            fast_forward: bool = False) -> None:
-        end_time = None
-        if duration is not None:
-            end_time = self._emulation_time.get() + duration
-
-        if fast_forward:
-            self.devices.notify(SetFastForward(True))
-        try:
-            while (end_time is None or
-                   self._emulation_time.get() < end_time):
-                self.__run_quantum()
-        finally:
-            if fast_forward:
-                self.devices.notify(SetFastForward(False))
-
-    def _load_input_recording(self, file: MachinePlayback) -> None:
-        self.devices.notify(StartPlayback(file.to_unified_playback()))
-
-    def reset_and_wait(self) -> None:
-        self.pc = 0x0000
-        self.run(duration=1.8, fast_forward=True)
-
-    def __load_zx_basic_compiler_program(
-            self, file: ZXBasicCompilerProgram) -> None:
-        assert isinstance(file, ZXBasicCompilerProgram)
-
-        self.reset_and_wait()
-
-        # CLEAR <entry_point>
-        entry_point = file.entry_point
-        self.generate_key_strokes('X', entry_point, 'ENTER')
-
-        self.write(entry_point, file.program_bytes)
-
-        # RANDOMIZE USR <entry_point>
-        self.generate_key_strokes('T', 'CS+SS', 'L', entry_point, 'ENTER')
-
-        # assert 0, list(file)
-
-    # TODO: Double-underscore or make public.
-    def _load_file(self, filename: str) -> None:
-        file = parse_file(filename)
-
-        self.devices.notify(ResetEmulator())
-
-        if isinstance(file, MachineSnapshot):
-            self.install_snapshot(file)
-        elif isinstance(file, MachinePlayback):
-            self._load_input_recording(file)
-        elif isinstance(file, SoundFile):
-            self.__load_tape_to_player(file)
-        elif isinstance(file, ZXBasicCompilerProgram):
-            self.__load_zx_basic_compiler_program(file)
-        else:
-            raise Error("Don't know how to load file %r." % filename)
-
-    # TODO: Double-underscore or make public.
-    def _run_file(self, filename: str, *, fast_forward: bool = False) -> None:
-        self._load_file(filename)
-        self.run(fast_forward=fast_forward)
-
-    def load_tape(self, filename: str) -> None:
-        tape = parse_file(filename)
-        if not isinstance(tape, SoundFile):
-            raise Error('%r does not seem to be a tape file.' % filename)
-
-        # Let the initialization complete.
-        self.reset_and_wait()
-
-        # Type in 'LOAD ""'.
-        self.generate_key_strokes('J', 'SS+P', 'SS+P', 'ENTER')
-
-        # Load and run the tape.
-        self.__load_tape_to_player(tape)
-        self.__unpause_tape()
-
-        # Run until the player reports the tape finished; the player
-        # raises StopQuantum at the exact end, so each quantum stops
-        # there and this check sees it promptly.
-        self.devices.notify(SetFastForward(True))
-        try:
-            while not self.__is_end_of_tape(self.devices):
-                self.__run_quantum()
-        finally:
-            self.devices.notify(SetFastForward(False))
 
     def stop(self) -> None:
         raise EmulationExit()
@@ -868,11 +673,5 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         elif isinstance(event, ResetEmulator):
             self.on_reset()
             self.__install_rom()
-        elif isinstance(event, LoadFile):
-            self._load_file(event.filename)
-        elif isinstance(event, SaveSnapshot):
-            self._save_snapshot_file(Z80Snapshot, event.filename)
         elif isinstance(event, ToggleEmulationPause):
             self.__set_paused(not self.paused, devices)
-        elif isinstance(event, ToggleTapePause):
-            self._toggle_tape_pause()

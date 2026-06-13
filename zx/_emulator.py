@@ -13,15 +13,32 @@ import types
 import typing
 
 from ._beeper import Beeper
+from ._data import MachinePlayback
+from ._data import MachineSnapshot
+from ._data import SoundFile
 from ._data import SpectrumModel
 from ._device import DestroyEmulator
 from ._device import Device
+from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import GetEmulationTime
 from ._device import GetHoldState
 from ._device import InitEmulator
+from ._device import IsTapePlayerPaused
+from ._device import IsTapePlayerStopped
+from ._device import KeyStroke
+from ._device import LoadFile
+from ._device import LoadTape
+from ._device import PauseUnpauseTape
+from ._device import ResetEmulator
 from ._device import RunQuantum
+from ._device import SaveSnapshot
 from ._device import SetFastForward
+from ._device import StartPlayback
+from ._device import ToggleTapePause
+from ._error import Error
+from ._file import parse_file
+from ._keyboard import KEYS
 from ._keyboard import Keyboard
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
@@ -30,6 +47,8 @@ from ._sound import SDLSound
 from ._spectrum import Profile
 from ._spectrum import Spectrum
 from ._tape import TapePlayer
+from ._z80snapshot import Z80Snapshot
+from ._zxb import ZXBasicCompilerProgram
 
 
 # The top-level container: it IS the dispatcher through which devices
@@ -93,35 +112,23 @@ class Emulator(Dispatcher):
 
         self.__core = core
 
-        self.__dispatcher = Dispatcher(devices)
+        Dispatcher.__init__(self, devices)
 
-        # The core needs the live dispatcher for its run loop and its
-        # C-side callbacks (port reads, breakpoints); a device may hold
-        # the dispatcher it is part of.
-        if self.__core is not None:
-            self.__core.devices = self.__dispatcher
-
-    @property
-    def devices(self) -> Dispatcher:
-        return self.__dispatcher
-
-    # TODO: This accessor exists only because the run loop and
-    # orchestration are temporarily delegated to a single Spectrum core;
-    # it goes away once they move into the Emulator.
+    # The orchestration drives a single core (the common case); a device
+    # set without one cannot be run or loaded into.
     def __require_core(self) -> Spectrum:
         assert self.__core is not None, (
-            'orchestration is delegated to a Spectrum core, but this '
-            'device set has none')
+            'this device set has no core to run or load into')
         return self.__core
 
     def __enter__(self) -> 'Emulator':
-        self.__dispatcher.notify(InitEmulator())
+        self.notify(InitEmulator())
         return self
 
     def __exit__(self, xtype: None | type[BaseException],
                  value: None | BaseException,
                  traceback: None | types.TracebackType) -> None:
-        self.__dispatcher.notify(DestroyEmulator())
+        self.notify(DestroyEmulator())
 
     def run(self, duration: None | float = None,
             fast_forward: bool = False) -> None:
@@ -130,13 +137,13 @@ class Emulator(Dispatcher):
             end_time = self.__emulation_time() + duration
 
         if fast_forward:
-            self.__dispatcher.notify(SetFastForward(True))
+            self.notify(SetFastForward(True))
         try:
             while end_time is None or self.__emulation_time() < end_time:
                 self.__run_quantum()
         finally:
             if fast_forward:
-                self.__dispatcher.notify(SetFastForward(False))
+                self.notify(SetFastForward(False))
 
     # One iteration of the run loop: evaluate the hold once and broadcast
     # it (so devices never re-query), and unless held, advance the core
@@ -147,44 +154,145 @@ class Emulator(Dispatcher):
     # there is a single core.
     def __run_quantum(self) -> None:
         hold = GetHoldState()
-        self.__dispatcher.notify(hold)
+        self.notify(hold)
 
-        self.__dispatcher.notify(RunQuantum(held=hold.held,
-                                            wake_in=hold.wake_in))
+        self.notify(RunQuantum(held=hold.held, wake_in=hold.wake_in))
 
         if hold.held:
             return
 
-        self.__require_core().run_quantum(self.__dispatcher)
+        self.__require_core().run_quantum(self)
 
     def __emulation_time(self) -> float:
         event = GetEmulationTime()
-        self.__dispatcher.notify(event)
+        self.notify(event)
         return event.time.get()
 
-    # TODO: The orchestration below still lives on the core and is
-    # delegated to here; it moves into the Emulator in later steps of
-    # the split.
     def reset(self) -> None:
-        self.__require_core().reset()
+        self.notify(ResetEmulator())
 
     def reset_and_wait(self) -> None:
-        self.__require_core().reset_and_wait()
+        self.__require_core().pc = 0x0000
+        self.run(duration=1.8, fast_forward=True)
+
+    def __translate_key_strokes(self, keys: typing.Iterable[int | str]) -> (
+            typing.Iterator[str]):
+        for key in keys:
+            if isinstance(key, int):
+                yield from str(key)
+            else:
+                yield key
 
     def generate_key_strokes(self, *keys: int | str) -> None:
-        self.__require_core().generate_key_strokes(*keys)
+        for key in self.__translate_key_strokes(keys):
+            strokes = key.split('+')
+
+            for id in strokes:
+                self.notify(KeyStroke(KEYS[id].ID, pressed=True))
+                self.run(duration=0.1, fast_forward=True)
+
+            for id in reversed(strokes):
+                self.notify(KeyStroke(KEYS[id].ID, pressed=False))
+                self.run(duration=0.1, fast_forward=True)
+
+    def _is_tape_paused(self) -> bool:
+        tape_state = IsTapePlayerPaused()
+        self.notify(tape_state)
+        return tape_state.paused
+
+    def __pause_tape(self, is_paused: bool = True) -> None:
+        self.notify(PauseUnpauseTape(is_paused))
+
+    def __unpause_tape(self) -> None:
+        self.__pause_tape(is_paused=False)
+
+    def _toggle_tape_pause(self) -> None:
+        self.__pause_tape(not self._is_tape_paused())
+
+    def __load_tape_to_player(self, file: SoundFile) -> None:
+        self.notify(LoadTape(file))
+        self.__pause_tape()
+
+    def __is_end_of_tape(self) -> bool:
+        tape_state = IsTapePlayerStopped()
+        self.notify(tape_state)
+        return tape_state.stopped
 
     def load_tape(self, filename: str) -> None:
-        self.__require_core().load_tape(filename)
+        tape = parse_file(filename)
+        if not isinstance(tape, SoundFile):
+            raise Error('%r does not seem to be a tape file.' % filename)
+
+        # Let the initialization complete.
+        self.reset_and_wait()
+
+        # Type in 'LOAD ""'.
+        self.generate_key_strokes('J', 'SS+P', 'SS+P', 'ENTER')
+
+        # Load and run the tape.
+        self.__load_tape_to_player(tape)
+        self.__unpause_tape()
+
+        # Run until the player reports the tape finished; the player
+        # raises StopQuantum at the exact end, so each quantum stops
+        # there and this check sees it promptly.
+        self.notify(SetFastForward(True))
+        try:
+            while not self.__is_end_of_tape():
+                self.__run_quantum()
+        finally:
+            self.notify(SetFastForward(False))
+
+    def _load_input_recording(self, file: MachinePlayback) -> None:
+        self.notify(StartPlayback(file.to_unified_playback()))
+
+    def __load_zx_basic_compiler_program(
+            self, file: ZXBasicCompilerProgram) -> None:
+        self.reset_and_wait()
+
+        # CLEAR <entry_point>
+        entry_point = file.entry_point
+        self.generate_key_strokes('X', entry_point, 'ENTER')
+
+        self.__require_core().write(entry_point, file.program_bytes)
+
+        # RANDOMIZE USR <entry_point>
+        self.generate_key_strokes('T', 'CS+SS', 'L', entry_point, 'ENTER')
 
     def _load_file(self, filename: str) -> None:
-        self.__require_core()._load_file(filename)
+        file = parse_file(filename)
+
+        self.notify(ResetEmulator())
+
+        if isinstance(file, MachineSnapshot):
+            self.__require_core().install_snapshot(file)
+        elif isinstance(file, MachinePlayback):
+            self._load_input_recording(file)
+        elif isinstance(file, SoundFile):
+            self.__load_tape_to_player(file)
+        elif isinstance(file, ZXBasicCompilerProgram):
+            self.__load_zx_basic_compiler_program(file)
+        else:
+            raise Error("Don't know how to load file %r." % filename)
 
     def _run_file(self, filename: str, *, fast_forward: bool = False) -> None:
-        self.__require_core()._run_file(filename, fast_forward=fast_forward)
+        self._load_file(filename)
+        self.run(fast_forward=fast_forward)
 
-    def _load_input_recording(self, playback: typing.Any) -> None:
-        self.__require_core()._load_input_recording(playback)
+    def _save_snapshot_file(self, format: type[MachineSnapshot],
+                            filename: str) -> None:
+        with open(filename, 'wb') as f:
+            f.write(format.from_snapshot(
+                self.__require_core().to_snapshot()).encode())
 
-    def _save_snapshot_file(self, format: typing.Any, filename: str) -> None:
-        self.__require_core()._save_snapshot_file(format, filename)
+    # Defined after the methods it dispatches to. Owner-level events are
+    # raised by the UI and acted on by the container, not by any device.
+    def notify(self, event: DeviceEvent) -> None:
+        Dispatcher.notify(self, event)
+
+        if isinstance(event, LoadFile):
+            self._load_file(event.filename)
+        elif isinstance(event, SaveSnapshot):
+            self._save_snapshot_file(Z80Snapshot, event.filename)
+        elif isinstance(event, ToggleTapePause):
+            self._toggle_tape_pause()

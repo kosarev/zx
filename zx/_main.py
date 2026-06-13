@@ -283,17 +283,6 @@ class _PlaybackRecoverer(Spectrum):
         self._recorder = PlaybackRecorder(active=True)
         super().__init__()
 
-    # The recording is loaded here, not in __init__, because the player
-    # device only receives StartPlayback once the Emulator has assembled
-    # the device set and handed this core the live dispatcher.
-    def recover(self, playback: MachinePlayback) -> UnifiedPlayback:
-        self._load_input_recording(playback)
-        try:
-            self.run()
-        except EmulationExit:
-            pass
-        return self._recorder.make_playback()
-
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, FetchesLimitHit):
             # Some emulators, e.g., SPIN, may store an interrupt point in
@@ -354,10 +343,17 @@ def recover_playback(playback: MachinePlayback) -> UnifiedPlayback:
     recoverer: _PlaybackRecoverer = (
         _SPINPlaybackRecoverer() if unified.is_spin_v05
         else _PlaybackRecoverer())
+    # The recording is loaded after the Emulator has assembled the
+    # device set, so the player receives StartPlayback.
     with Emulator(core=recoverer, headless=True,
                   playback_player=recoverer._player,
-                  playback_recorder=recoverer._recorder):
-        return recoverer.recover(playback)
+                  playback_recorder=recoverer._recorder) as emu:
+        emu._load_input_recording(playback)
+        try:
+            emu.run()
+        except EmulationExit:
+            pass
+        return recoverer._recorder.make_playback()
 
 
 def recover_file(filename: str) -> None:
