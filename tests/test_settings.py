@@ -20,7 +20,7 @@ from zx._sound import SoundDevice
 
 
 def test_settings_round_trip(tmp_path: pathlib.Path) -> None:
-    path = str(tmp_path / 'settings.json')
+    path = tmp_path / 'settings.json'
 
     # A changed setting is saved on shutdown...
     sound = SoundDevice(Spectrum48)

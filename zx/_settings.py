@@ -8,7 +8,7 @@
 
 
 import json
-import os
+import pathlib
 
 from ._device import DestroyEmulator
 from ._device import Device
@@ -26,15 +26,15 @@ from ._device import SettingScope
 # and from the file. Attached only by the end-user tool layer, so an
 # API- or test-built emulator stays hermetic.
 class GlobalSettingsManager(Device):
-    def __init__(self, filename: str) -> None:
+    def __init__(self, filename: pathlib.Path) -> None:
         self.__filename = filename
 
     # A missing file is the normal first run (use the defaults); a
     # corrupt one is not silently ignored — json.load raises.
     def __load(self, dispatcher: Dispatcher) -> None:
-        if not os.path.exists(self.__filename):
+        if not self.__filename.exists():
             return
-        with open(self.__filename) as f:
+        with self.__filename.open() as f:
             values = json.load(f)
         for id, value in values.items():
             dispatcher.notify(SetSettingValue(id, value))
@@ -44,7 +44,7 @@ class GlobalSettingsManager(Device):
         dispatcher.notify(settings)
         values = {s.id: s.current for s in settings.settings
                   if s.scope == SettingScope.HOST}
-        with open(self.__filename, 'w') as f:
+        with self.__filename.open('w') as f:
             json.dump(values, f, indent=2)
 
     def on_event(self, event: DeviceEvent,

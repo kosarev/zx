@@ -10,6 +10,7 @@
 
 # TODO: Remove unused imports.
 import enum
+import pathlib
 import typing
 
 import numpy
@@ -550,10 +551,10 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             ],
         }
 
-        with open('__crash.z80', 'wb') as f:
+        with pathlib.Path('__crash.z80').open('wb') as f:
             f.write(snapshot)
 
-        with open('__crash.rzx', 'wb') as f:
+        with pathlib.Path('__crash.rzx').open('wb') as f:
             f.write(make_rzx(crash_recording))
 
     def __on_end_of_frame(self, devices: Dispatcher) -> None:

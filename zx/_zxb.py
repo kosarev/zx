@@ -6,7 +6,7 @@
 #
 #   Published under the MIT license.
 
-import os
+import pathlib
 import tempfile
 import typing
 
@@ -43,11 +43,11 @@ class ZXBasicCompilerProgram(DataRecord, format_name='ZXB'):
                 fields['program_bytes'] = bytes(program_bytes)
 
         with tempfile.TemporaryDirectory() as dir:
-            path = os.path.join(dir, filename)
-            with open(path, 'wb') as f:
+            path = pathlib.Path(dir) / filename
+            with path.open('wb') as f:
                 f.write(image)
 
-            status = zxb_main(args=[path], emitter=Emitter())
+            status = zxb_main(args=[str(path)], emitter=Emitter())
             if status:
                 raise Error(f'ZX Basic compiler returned {status}.')
 

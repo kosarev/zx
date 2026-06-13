@@ -13,6 +13,7 @@ import contextlib
 import functools
 import multiprocessing
 import os
+import pathlib
 import sys
 import typing
 
@@ -82,7 +83,7 @@ def run(args: list[str]) -> None:
         handle_extra_arguments(args)
 
     session_snapshot = os.path.join(get_config_dir(), 'session.zx')
-    settings_file = os.path.join(get_config_dir(), 'settings.json')
+    settings_file = pathlib.Path(get_config_dir()) / 'settings.json'
 
     with Emulator(model=model, extra_devices=[
             GlobalSettingsManager(settings_file)]) as app:
