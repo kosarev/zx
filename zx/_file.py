@@ -6,7 +6,7 @@
 #
 #   Published under the MIT license.
 
-import os
+import pathlib
 import typing
 
 from ._binary import Bytes
@@ -41,7 +41,7 @@ def _open_file_or_url(path: str) -> typing.Any:
             raise Error(
                 f'Cannot read remote file: {e.reason}, code {e.code}.')
 
-    return open(path, 'rb')
+    return pathlib.Path(path).open('rb')
 
 
 def detect_file_format(image: None | Bytes,
@@ -84,7 +84,7 @@ def _parse_archive(format: type[ArchiveFile], image: Bytes) -> (
         list[tuple[str, type[DataRecord], Bytes]]):
     candidates: list[tuple[str, type[DataRecord], Bytes]] = []
     for member_name, member_image in format.read_files(image):
-        _, ext = os.path.splitext(member_name)
+        ext = pathlib.Path(member_name).suffix
         member_format = detect_file_format(member_image, ext)
 
         if not member_format:
@@ -101,7 +101,7 @@ def _parse_archive(format: type[ArchiveFile], image: Bytes) -> (
 
 
 def parse_file_image(filename: str, image: Bytes) -> DataRecord:
-    _, ext = os.path.splitext(filename)
+    ext = pathlib.Path(filename).suffix
     format = detect_file_format(image, ext)
     if not format:
         raise Error(f"Cannot determine the format of file '{filename}'.")
