@@ -9,6 +9,7 @@
 #   Published under the MIT license.
 
 
+from ._emulator import Emulator
 from ._except import EmulationExit
 from ._except import EmulatorException
 from ._main import main
@@ -16,4 +17,4 @@ from ._spectrum import Spectrum
 
 __version__ = '0.13.15'
 
-__all__ = ['Spectrum', 'main']
+__all__ = ['Emulator', 'Spectrum', 'main']

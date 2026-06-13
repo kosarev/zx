@@ -22,7 +22,7 @@ from zx._main import recover_playback
 
 
 def assert_plays_ok(playback: UnifiedPlayback) -> None:
-    with zx.Spectrum(headless=True) as machine:
+    with zx.Emulator(headless=True) as machine:
         try:
             machine._load_input_recording(playback)
             machine.run()
@@ -32,7 +32,7 @@ def assert_plays_ok(playback: UnifiedPlayback) -> None:
 
 def assert_play_fails(playback: UnifiedPlayback, error_id: str) -> None:
     with pytest.raises(Error) as exc_info:
-        with zx.Spectrum(headless=True) as machine:
+        with zx.Emulator(headless=True) as machine:
             machine._load_input_recording(playback)
             machine.run()
     assert exc_info.value.id == error_id

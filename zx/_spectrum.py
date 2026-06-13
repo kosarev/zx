@@ -12,10 +12,8 @@
 # TODO: Remove unused imports.
 import enum
 import numpy
-import types
 import typing
 
-from ._beeper import Beeper
 from ._data import MachinePlayback
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
@@ -24,8 +22,6 @@ from ._data import Spectrum48
 from ._data import SpectrumModel
 from ._data import UnifiedPlayback
 from ._data import UnifiedSnapshot
-from ._device import DestroyEmulator
-from ._device import InitEmulator
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
@@ -62,17 +58,12 @@ from ._device import ToggleTapePause
 from ._error import Error
 from ._except import EmulationExit
 from ._file import parse_file
-from ._keyboard import Keyboard
 from ._keyboard import KEYS
 from ._playback import PlaybackPlayer
-from ._playback import PlaybackRecorder
 from ._rom import load_rom_image
 from ._rzx import make_rzx
-from ._screen import ScreenWindow
 from ._scr import _SCRSnapshot
-from ._sound import SDLSound
 from ._spectrumbase import _SpectrumBase
-from ._tape import TapePlayer
 from ._time import Time
 from ._z80snapshot import Z80Snapshot
 from ._zxb import ZXBasicCompilerProgram
@@ -506,15 +497,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
     def __init__(self, *,
                  model: type[SpectrumModel] | None = None,
-                 screen: Device | None = None,
-                 keyboard: Device | None = None,
-                 beeper: Device | None = None,
-                 sound_device: Device | None = None,
-                 headless: bool = False,
-                 devices: list[Device] | None = None,
-                 playback_player: PlaybackPlayer | None = None,
-                 playback_recorder: PlaybackRecorder | None = None,
-                 extra_devices: list[Device] | None = None,
                  profile: Profile | None = None):
         SpectrumState.__init__(self, self._get_state_view())
         Device.__init__(self)
@@ -529,35 +511,13 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         self.__events_to_signal = RunEvents.NO_EVENTS
 
-        if devices is None:
-            if keyboard is None:
-                keyboard = Keyboard()
-            if beeper is None:
-                beeper = Beeper(self.model)
-
-            devices = [self, TapePlayer(self.model), keyboard, beeper,
-                       playback_player or PlaybackPlayer(),
-                       playback_recorder or PlaybackRecorder()]
-
-            if not headless:
-                if screen is None:
-                    screen = ScreenWindow(self.FRAME_SIZE)
-                if sound_device is None:
-                    sound_device = SDLSound(self.model)
-
-                devices.extend([screen, sound_device])
-
-            # The caller's extra devices come last — typically the
-            # end-user tool layer adding environment-coupling agents
-            # (e.g. a settings-persistence manager), kept out of the
-            # default set so an API- or test-built emulator stays
-            # hermetic.
-            if extra_devices is not None:
-                devices.extend(extra_devices)
-
-        dispatcher = Dispatcher(devices)
-
-        self.devices = dispatcher  # TODO: Rename the field?
+        # The core is one device in a set the Emulator container owns.
+        # Until it is placed in one (and handed the real dispatcher),
+        # it dispatches only to itself, so that a bare core is still
+        # usable and runnable on its own.
+        # TODO: The run loop and orchestration that use this dispatcher
+        # move into the Emulator as the split proceeds.
+        self.devices = Dispatcher([self])  # TODO: Rename the field?
 
         self.set_on_input_callback(self.__on_input)
 
@@ -846,15 +806,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self.__run_quantum()
         finally:
             self.devices.notify(SetFastForward(False))
-
-    def __enter__(self) -> 'Spectrum':
-        self.devices.notify(InitEmulator())
-        return self
-
-    def __exit__(self, xtype: None | type[BaseException],
-                 value: None | BaseException,
-                 traceback: None | types.TracebackType) -> None:
-        self.devices.notify(DestroyEmulator())
 
     def stop(self) -> None:
         raise EmulationExit()

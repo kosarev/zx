@@ -42,6 +42,7 @@ from ._file import parse_file_image
 from ._zx import ZXFile
 from ._rzx import make_rzx
 from ._rzx import RZXFile
+from ._emulator import Emulator
 from ._spectrum import Profile
 from ._spectrum import Spectrum
 from ._data import UnifiedPlayback
@@ -85,7 +86,7 @@ def run(args: list[str]) -> None:
     session_snapshot = os.path.join(get_config_dir(), 'session.zx')
     settings_file = os.path.join(get_config_dir(), 'settings.json')
 
-    with Spectrum(model=model, extra_devices=[
+    with Emulator(model=model, extra_devices=[
             GlobalSettingsManager(settings_file)]) as app:
         if filename:
             app._load_file(filename)
@@ -105,7 +106,7 @@ def profile(args: list[str]) -> None:
     handle_extra_arguments(args)
 
     profile = Profile()
-    with Spectrum(profile=profile) as app:
+    with Emulator(profile=profile) as app:
         app._load_file(file_to_run)
         app.run()
 
@@ -222,7 +223,7 @@ def test_file(filename: str, batch_mode: bool,
             unified2 = type(file).from_snapshot(unified).to_unified_snapshot()
             match(unified, unified2)
         elif isinstance(file, RZXFile):
-            with Spectrum(headless=True) as app:
+            with Emulator(headless=True) as app:
                 app._run_file(filename)
         else:
             raise Error(f"Don't know how to test {file}",
@@ -276,20 +277,22 @@ def test(args: list[str]) -> None:
 # non-conforming recordings (e.g., SPIN v0.5 ones) are corrected
 # before they reach the player.
 class _PlaybackRecoverer(Spectrum):
-    def __init__(self, *, playback: MachinePlayback,
+    def __init__(self, *,
                  playback_player: PlaybackPlayer | None = None) -> None:
         self._player = playback_player or PlaybackPlayer()
-        self.__recorder = PlaybackRecorder(active=True)
-        super().__init__(headless=True, playback_player=self._player,
-                         playback_recorder=self.__recorder)
-        self._load_input_recording(playback)
+        self._recorder = PlaybackRecorder(active=True)
+        super().__init__()
 
-    def recover(self) -> UnifiedPlayback:
+    # The recording is loaded here, not in __init__, because the player
+    # device only receives StartPlayback once the Emulator has assembled
+    # the device set and handed this core the live dispatcher.
+    def recover(self, playback: MachinePlayback) -> UnifiedPlayback:
+        self._load_input_recording(playback)
         try:
             self.run()
         except EmulationExit:
             pass
-        return self.__recorder.make_playback()
+        return self._recorder.make_playback()
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, FetchesLimitHit):
@@ -312,9 +315,8 @@ class _SPINPlaybackPlayer(PlaybackPlayer):
 
 
 class _SPINPlaybackRecoverer(_PlaybackRecoverer):
-    def __init__(self, *, playback: MachinePlayback) -> None:
-        super().__init__(playback=playback,
-                         playback_player=_SPINPlaybackPlayer())
+    def __init__(self) -> None:
+        super().__init__(playback_player=_SPINPlaybackPlayer())
 
         # The bytes-saving ROM procedure needs special processing.
         self.set_breakpoint(0x04d4)
@@ -350,10 +352,12 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
 def recover_playback(playback: MachinePlayback) -> UnifiedPlayback:
     unified = playback.to_unified_playback()
     recoverer: _PlaybackRecoverer = (
-        _SPINPlaybackRecoverer(playback=playback) if unified.is_spin_v05
-        else _PlaybackRecoverer(playback=playback))
-    with recoverer:
-        return recoverer.recover()
+        _SPINPlaybackRecoverer() if unified.is_spin_v05
+        else _PlaybackRecoverer())
+    with Emulator(core=recoverer, headless=True,
+                  playback_player=recoverer._player,
+                  playback_recorder=recoverer._recorder):
+        return recoverer.recover(playback)
 
 
 def recover_file(filename: str) -> None:
@@ -373,7 +377,7 @@ def recover(args: list[str]) -> None:
 
 def fast_forward(args: list[str]) -> None:
     for filename in args:
-        with Spectrum() as app:
+        with Emulator() as app:
             app._run_file(filename, fast_forward=True)
 
 
@@ -384,7 +388,7 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
     assert issubclass(src_format, SoundFile), src_format
     assert issubclass(dest_format, MachineSnapshot), dest_format
 
-    with Spectrum(headless=True) as app:
+    with Emulator(headless=True) as app:
         app.load_tape(src_filename)
         app._save_snapshot_file(dest_format, dest_filename)
 
@@ -417,7 +421,7 @@ def _convert_snapshot_to_snapshot(src: DataRecord,
     assert issubclass(src_format, MachineSnapshot), src_format
     assert issubclass(dest_format, MachineSnapshot), dest_format
 
-    with Spectrum(headless=True) as app:
+    with Emulator(headless=True) as app:
         app._load_file(src_filename)
         app._save_snapshot_file(dest_format, dest_filename)
 

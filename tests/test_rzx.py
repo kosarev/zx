@@ -15,7 +15,7 @@ import pytest
 
 def test_basic() -> None:
     # Create a simple RZX.
-    mach = zx.Spectrum(headless=True)
+    mach = zx.Spectrum()
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
     snapshot = zx._z80snapshot.Z80Snapshot.from_snapshot(mach.to_snapshot())
     snapshot_chunk = zx._rzx.RZXSnapshot(format=b'Z80\x00',

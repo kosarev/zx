@@ -15,7 +15,7 @@ import pytest
 
 def test_basic() -> None:
     # Create a Z80 snapshot.
-    mach = zx.Spectrum(headless=True)
+    mach = zx.Spectrum()
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
     HL = 0x1234
     mach.hl = HL
