@@ -12,8 +12,6 @@
 import io
 import wave
 
-import pytest
-
 import zx
 
 

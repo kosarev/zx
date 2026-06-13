@@ -11,8 +11,6 @@
 #   Published under the MIT license.
 
 
-import pytest
-
 import zx
 
 

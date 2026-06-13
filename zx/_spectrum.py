@@ -39,7 +39,6 @@ from ._device import OutputFrame
 from ._device import PauseStateUpdated
 from ._device import ReadPort
 from ._device import ResetEmulator
-from ._device import RunQuantum
 from ._device import SetBreakpoint
 from ._device import SetFetchesLimit
 from ._device import StartPlayback
@@ -52,7 +51,6 @@ from ._keyboard import KEYS
 from ._playback import PlaybackPlayer
 from ._rom import load_rom_image
 from ._rzx import make_rzx
-from ._scr import _SCRSnapshot
 from ._spectrumbase import _SpectrumBase
 from ._time import Time
 from ._z80snapshot import Z80Snapshot

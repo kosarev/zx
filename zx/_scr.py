@@ -10,10 +10,8 @@
 
 
 import collections
-import typing
 
 from ._binary import BinaryParser
-from ._binary import BinaryWriter
 from ._binary import Bytes
 from ._data import MachineSnapshot
 from ._data import MemoryBlock

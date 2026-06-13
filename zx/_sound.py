@@ -8,8 +8,6 @@
 #
 #   Published under the MIT license.
 
-import ctypes
-import typing
 
 import numpy
 

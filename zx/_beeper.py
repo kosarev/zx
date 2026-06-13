@@ -8,7 +8,6 @@
 #
 #   Published under the MIT license.
 
-import typing
 
 import numpy
 

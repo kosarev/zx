@@ -8,7 +8,6 @@
 #
 #   Published under the MIT license.
 
-import typing
 
 from ._device import Device
 from ._device import DeviceEvent

@@ -17,7 +17,6 @@ from ._binary import Bytes
 from ._data import ByteData
 from ._data import HexData
 from ._data import SoundFile
-from ._error import Error
 from ._tape import tag_last_pulse
 
 

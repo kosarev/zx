@@ -13,8 +13,6 @@ import io
 import typing
 import zipfile
 
-import zx
-
 from ._binary import Bytes
 from ._data import ArchiveFile
 

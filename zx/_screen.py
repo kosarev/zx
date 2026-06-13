@@ -14,8 +14,6 @@ import enum
 import os
 import typing
 
-import numpy
-
 from ._device import DestroyEmulator
 from ._device import Device
 from ._device import DeviceEvent

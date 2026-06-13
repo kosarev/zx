@@ -10,7 +10,6 @@
 #   Published under the MIT license.
 
 
-import collections
 import functools
 import multiprocessing
 import os
@@ -20,7 +19,6 @@ import typing
 import platformdirs
 
 from ._binary import Bytes
-from ._data import ArchiveFile
 from ._data import DataRecord
 from ._data import MachinePlayback
 from ._data import MachineSnapshot
@@ -43,7 +41,6 @@ from ._file import parse_file_image
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._rzx import RZXFile
-from ._rzx import make_rzx
 from ._settings import GlobalSettingsManager
 from ._spectrum import Profile
 from ._spectrum import Spectrum

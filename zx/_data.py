@@ -17,7 +17,6 @@ import numpy
 import zx
 
 from ._binary import Bytes
-from ._error import Error
 
 
 class _InlineJSONDict(dict[str, typing.Any]):

@@ -17,4 +17,10 @@ from ._spectrum import Spectrum
 
 __version__ = '0.13.15'
 
-__all__ = ['Emulator', 'Spectrum', 'main']
+__all__ = [
+    'EmulationExit',
+    'Emulator',
+    'EmulatorException',
+    'Spectrum',
+    'main',
+]
