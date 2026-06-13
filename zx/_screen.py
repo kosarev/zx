@@ -925,12 +925,12 @@ class _Panel(abc.ABC):
             self._dialog.on_event(event, dispatcher)
             return
 
-        if isinstance(event, _KeyEvent) and event.pressed:
-            if event.id == 'TAB' and self._controls:
-                idx = (self._controls.index(self._selected_control)
-                       if self._selected_control in self._controls else -1)
-                self._selected_control = self._controls[
-                    (idx + 1) % len(self._controls)]
+        if (isinstance(event, _KeyEvent) and event.pressed and
+                event.id == 'TAB' and self._controls):
+            idx = (self._controls.index(self._selected_control)
+                   if self._selected_control in self._controls else -1)
+            self._selected_control = self._controls[
+                (idx + 1) % len(self._controls)]
 
     def draw(self, renderer: _Renderer,
              dispatcher: Dispatcher) -> None:

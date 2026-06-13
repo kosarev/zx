@@ -9,6 +9,7 @@
 #   Published under the MIT license.
 
 
+import contextlib
 import functools
 import multiprocessing
 import os
@@ -89,10 +90,8 @@ def run(args: list[str]) -> None:
             app._load_file(filename)
         elif os.path.exists(session_snapshot):
             app._load_file(session_snapshot)
-        try:
+        with contextlib.suppress(EmulationExit):
             app.run()
-        except EmulationExit:
-            pass
         app._save_snapshot_file(UnifiedSnapshot, session_snapshot)
 
 
@@ -281,12 +280,11 @@ class _PlaybackRecoverer(Spectrum):
         super().__init__()
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
-        if isinstance(event, FetchesLimitHit):
-            # Some emulators, e.g., SPIN, may store an interrupt point in
-            # the middle of a IX- or IY-prefixed instruction, so we
-            # continue until such instruction, if any, is completed.
-            if self.iregp_kind != 'hl':
-                self.fetches_limit = 1
+        # Some emulators, e.g., SPIN, may store an interrupt point in
+        # the middle of a IX- or IY-prefixed instruction, so we
+        # continue until such instruction, if any, is completed.
+        if isinstance(event, FetchesLimitHit) and self.iregp_kind != 'hl':
+            self.fetches_limit = 1
 
         super().on_event(event, devices)
 
@@ -319,18 +317,17 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
         # with no quirk knowledge.
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
-        if isinstance(event, BreakpointHit):
-            # SPIN v0.5 skips the bytes-saving ROM procedure in fast save mode.
-            if self.pc == 0x04d4:
-                sp = self.sp
-                self.pc = self.read16(sp)
-                self.sp = sp + 2
+        # SPIN v0.5 skips the bytes-saving ROM procedure in fast save mode.
+        if isinstance(event, BreakpointHit) and self.pc == 0x04d4:
+            sp = self.sp
+            self.pc = self.read16(sp)
+            self.sp = sp + 2
 
-        if isinstance(event, FetchesLimitHit):
-            # SPIN v0.5 doesn't update the fetch counter if the last
-            # instruction in a frame is IN.
-            if self._player.has_remaining_samples:
-                self.fetches_limit = 1
+        # SPIN v0.5 doesn't update the fetch counter if the last
+        # instruction in a frame is IN.
+        if (isinstance(event, FetchesLimitHit) and
+                self._player.has_remaining_samples):
+            self.fetches_limit = 1
 
         super().on_event(event, devices)
 
@@ -346,10 +343,8 @@ def recover_playback(playback: MachinePlayback) -> UnifiedPlayback:
                   playback_player=recoverer._player,
                   playback_recorder=recoverer._recorder) as emu:
         emu._load_input_recording(playback)
-        try:
+        with contextlib.suppress(EmulationExit):
             emu.run()
-        except EmulationExit:
-            pass
         return recoverer._recorder.make_playback()
 
 

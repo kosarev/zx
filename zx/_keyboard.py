@@ -88,7 +88,7 @@ class Keyboard(Device):
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, KeyStroke):
-            key = KEYS.get(event.id, None)
+            key = KEYS.get(event.id)
             if key:
                 self.handle_key_stroke(key, event.pressed)
         elif isinstance(event, ReadPort):
