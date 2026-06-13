@@ -11,35 +11,30 @@ extend-exclude = ["z80", "build"]
 [lint]
 # E/W pycodestyle, F pyflakes, I isort, B bugbear, UP pyupgrade,
 # C4 comprehensions, SIM simplifications, RUF Ruff-native,
-# PGH no-blanket-ignores, PTH pathlib-over-os.path, ICN import aliases,
+# PGH no-blanket-ignores, PTH pathlib-over-os.path,
 # TC typing-only imports, Q quote style (single, the house style).
 # Deliberately NOT selected: D (docstrings - the public API is documented
 # by hand, internals use comments), S (asserts), PL (complexity/magic
 # values, lazy-import policy), TD/FIX (tagged-TODO ceremony), EM/TRY003/
-# ANN/FBT (opinionated).
+# ANN/FBT (opinionated), ICN (import aliases - we spell module names in
+# full and use no aliases, so there are none to get wrong).
 select = [
     "E", "W", "F", "I", "B", "UP",
-    "C4", "SIM", "RUF", "PGH", "PTH", "ICN", "TC", "Q",
+    "C4", "SIM", "RUF", "PGH", "PTH", "TC", "Q",
 ]
 
 # Debt ledger: codes currently violated somewhere in the tree, suppressed
 # so the run is green today. Lift one at a time, fix all its sites, then
 # delete it from here. This list only shrinks. Counts are at baseline.
 ignore = [
-    # imports / dead code (autofix, lift first)
+    # dead code
     "F811",    #  1  redefined-while-unused
-    # modernisation: pyupgrade (mostly autofix)
-    # Ruff-native (RUF012 is a real bug-class - lift early)
-    # simplifications
-    # comprehensions
-    # import aliases / typing-only imports
-    "ICN001",  # 10  unconventional-import-alias
+    # typing-only imports
     "TC001",   #  1  typing-only-first-party-import
     "TC002",   #  1  typing-only-third-party-import
     # no blanket ignores
     "PGH003",  #  2  blanket-type-ignore
     "PGH004",  #  1  blanket-noqa
-    # quote style (residual after declaring single quotes)
     # pathlib over os.path (38 sites, lift as one migration)
     "PTH",     # 38  os.path/os.* -> pathlib (whole family)
     # bugbear (judgement calls - lift last)
