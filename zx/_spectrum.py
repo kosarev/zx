@@ -277,17 +277,19 @@ class Z80State:
 class SpectrumState(Z80State):
     __PAGE_SIZE = 0x4000
 
-    __ROM_PAGE_IMAGE_OFFSETS = {0: 0 * __PAGE_SIZE,
-                                1: 4 * __PAGE_SIZE}
+    __ROM_PAGE_IMAGE_OFFSETS: typing.ClassVar[dict[int, int]] = {
+        0: 0 * __PAGE_SIZE,
+        1: 4 * __PAGE_SIZE}
 
-    __RAM_PAGE_IMAGE_OFFSETS = {5: 1 * __PAGE_SIZE,
-                                2: 2 * __PAGE_SIZE,
-                                0: 3 * __PAGE_SIZE,
-                                1: 5 * __PAGE_SIZE,
-                                3: 6 * __PAGE_SIZE,
-                                4: 7 * __PAGE_SIZE,
-                                6: 8 * __PAGE_SIZE,
-                                7: 9 * __PAGE_SIZE}
+    __RAM_PAGE_IMAGE_OFFSETS: typing.ClassVar[dict[int, int]] = {
+        5: 1 * __PAGE_SIZE,
+        2: 2 * __PAGE_SIZE,
+        0: 3 * __PAGE_SIZE,
+        1: 5 * __PAGE_SIZE,
+        3: 6 * __PAGE_SIZE,
+        4: 7 * __PAGE_SIZE,
+        6: 8 * __PAGE_SIZE,
+        7: 9 * __PAGE_SIZE}
 
     def __init__(self, image: memoryview) -> None:
         p = StateParser(image)
@@ -461,7 +463,10 @@ class SpectrumState(Z80State):
 
 # Stores information about the running code.
 class Profile:
-    _annots: dict[int, str] = dict()
+    def __init__(self) -> None:
+        # Per instance: a class-level default would be shared by all
+        # profiles.
+        self._annots: dict[int, str] = {}
 
     def add_instr_addr(self, addr: int) -> None:
         self._annots[addr] = 'instr'

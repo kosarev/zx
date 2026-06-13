@@ -8,6 +8,7 @@
 
 
 import collections
+import typing
 
 from ._binary import BinaryParser
 from ._binary import Bytes
@@ -48,7 +49,8 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
     def x_encode(self) -> bytes:
         return self.dot_patterns + self.colour_attrs
 
-    _FIELDS = ['6144s:dot_patterns', '768s:colour_attrs']
+    _FIELDS: typing.ClassVar[list[str]] = [
+        '6144s:dot_patterns', '768s:colour_attrs']
 
     @classmethod
     def decode(cls, filename: str, image: Bytes) -> '_SCRSnapshot':

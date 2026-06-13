@@ -261,7 +261,7 @@ class TZXFile(SoundFile, format_name='TZX'):
         assert isinstance(size, int)
         return TZXTextDescription(text=parser.read_bytes(size))
 
-    _ARCHIVE_INFO_STRING_IDS = {
+    _ARCHIVE_INFO_STRING_IDS: typing.ClassVar[dict[int, str]] = {
         0x00: 'Full title',
         0x01: 'Software house/publisher',
         0x02: 'Author(s)',
@@ -292,7 +292,8 @@ class TZXFile(SoundFile, format_name='TZX'):
         # TODO: Encode all the details.
         return TZXArchiveInfo()
 
-    _BLOCK_PARSERS = {
+    _BLOCK_PARSERS: typing.ClassVar[
+            dict[int, typing.Callable[..., TZXBlock]]] = {
         0x10: _parse_standard_speed_data_block,
         0x11: _parse_turbo_speed_data_block,
         0x14: _parse_pure_data_block,

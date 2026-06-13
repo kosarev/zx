@@ -1620,7 +1620,7 @@ class ScreenWindow(Device):
     # The discrete refresh-rate presets the fps setting offers.
     __FPS_CHOICES = (25, 50, 60, 75, 100, 120)
 
-    __SDL_KEYS_TO_ZX_KEYS = {
+    __SDL_KEYS_TO_ZX_KEYS: typing.ClassVar[dict[str, str]] = {
         'RETURN': 'ENTER',
         'LEFT SHIFT': 'CAPS SHIFT',
         'RIGHT SHIFT': 'SYMBOL SHIFT'}

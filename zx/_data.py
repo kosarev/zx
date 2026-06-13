@@ -168,7 +168,7 @@ class Metadata(DataRecord, format_name=None):
 
 
 class SpectrumModel(type):
-    _MODELS_BY_CXX_CODES: dict[int, type[SpectrumModel]] = {}
+    _MODELS_BY_CXX_CODES: typing.ClassVar[dict[int, type[SpectrumModel]]] = {}
 
     _CXX_MODEL_CODE: int
     _ROM_FILE_NAME: str

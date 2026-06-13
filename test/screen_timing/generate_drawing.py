@@ -10,6 +10,7 @@
 
 
 import sys
+import typing
 
 
 class Reg:
@@ -109,7 +110,7 @@ class drawing_generator:
         self.move_to_beam_pos(write.beam_pos, ticks_to_reserve=4)
         self.generate_write_at_hl(write)
 
-    _COMMAND_GENERATORS = {
+    _COMMAND_GENERATORS: typing.ClassVar[dict] = {
         Load: generate_load,
         OutA: generate_out_a,
         WriteAtHL: generate_write_at_hl,

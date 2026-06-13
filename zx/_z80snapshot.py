@@ -45,7 +45,8 @@ class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None):
     def __init__(self, *, last_write_to_port_1ffd: int = 0):
         super().__init__(last_write_to_port_1ffd=last_write_to_port_1ffd)
 
-    __V3_EXTRA_HEADER = ['B:last_write_to_port_1ffd']
+    __V3_EXTRA_HEADER: typing.ClassVar[list[str]] = [
+        'B:last_write_to_port_1ffd']
 
     @classmethod
     def parse_header(cls, parser: BinaryParser) -> Z80SnapshotV3ExtraHeader:
@@ -72,7 +73,7 @@ class Z80SnapshotV3Header(DataRecord, format_name=None):
 
     v3_extra_header: Z80SnapshotV3ExtraHeader | None
 
-    __V3_HEADER = [
+    __V3_HEADER: typing.ClassVar[list[str]] = [
         '<H:ticks_count_low', 'B:ticks_count_high', 'B:spectator_flag',
         'B:mgt_rom_paged', 'B:multiface_rom_paged',
         'B:memory_at_0000_1fff_is_rom', 'B:memory_at_2000_3fff_is_rom',
@@ -141,7 +142,7 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
 
     v3_header: Z80SnapshotV3Header | None
 
-    __V2_HEADER = [
+    __V2_HEADER: typing.ClassVar[list[str]] = [
         '<H:pc', 'B:hardware_mode', 'B:misc1', 'B:misc2', 'B:flags3',
         'B:port_fffd_value', '16B:sound_chip_regs']
 
@@ -183,7 +184,8 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
 
 class Z80Snapshot(MachineSnapshot, format_name='Z80'):
     # Some snapshots contain zero pages as well.
-    __MEMORY_PAGE_ADDRS = {0: 0x0000, 4: 0x8000, 5: 0xc000, 8: 0x4000}
+    __MEMORY_PAGE_ADDRS: typing.ClassVar[dict[int, int]] = {
+        0: 0x0000, 4: 0x8000, 5: 0xc000, 8: 0x4000}
 
     a: int
     f: int
@@ -430,7 +432,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             border_colour=(flags1 >> 1) & 0x7,
             memory_blocks=memory_blocks)
 
-    __V1_HEADER = [
+    __V1_HEADER: typing.ClassVar[list[str]] = [
         'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',
         'B:flags1', '<H:de', '<H:alt_bc', '<H:alt_de', '<H:alt_hl',
         'B:alt_a', 'B:alt_f', '<H:iy', '<H:ix', 'B:iff1', 'B:iff2', 'B:flags2']

@@ -7,6 +7,8 @@
 #   Published under the MIT license.
 
 
+import typing
+
 from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
@@ -19,7 +21,7 @@ from ._error import Error
 
 
 class SNASnapshot(MachineSnapshot, format_name='SNA'):
-    _HEADER = [
+    _HEADER: typing.ClassVar[list[str]] = [
         'B:i', '<H:alt_hl', '<H:alt_de', '<H:alt_bc', '<H:alt_af',
         '<H:hl', '<H:de', '<H:bc', '<H:iy', '<H:ix',
         'B:iff', 'B:r', '<H:af', '<H:sp',
