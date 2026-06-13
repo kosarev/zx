@@ -32,14 +32,20 @@ from ._spectrum import Spectrum
 from ._tape import TapePlayer
 
 
-# The top-level container: it owns the device set, the dispatcher
-# through which devices reach each other, and the lifecycle. It makes
-# no assumption that there is exactly one CPU/core -- it just holds a
-# set of devices, one or more of which may be a Spectrum (or a core of
-# another kind). Devices are handed the Dispatcher, never the Emulator,
-# so a device structurally cannot reach up and orchestrate the
-# container.
-class Emulator(object):
+# The top-level container: it IS the dispatcher through which devices
+# reach each other, and it owns the device set, the run loop and the
+# lifecycle. It makes no assumption that there is exactly one CPU/core
+# -- it just holds a set of devices, one or more of which may be a
+# Spectrum (or a core of another kind).
+#
+# A device is handed this object as the `devices` parameter of on_event,
+# but typed there as a plain Dispatcher, so its own code can only use the
+# Dispatcher interface; and it never finds the Emulator among the
+# iterated devices (the Emulator is not in its own device list). So a
+# device cannot accidentally reach up and orchestrate the container --
+# only a deliberate defiance of the declared type could, which is no
+# different from any encapsulation in Python.
+class Emulator(Dispatcher):
     def __init__(self, *,
                  model: type[SpectrumModel] | None = None,
                  core: Spectrum | None = None,
@@ -149,7 +155,7 @@ class Emulator(object):
         if hold.held:
             return
 
-        self.__require_core().run_quantum()
+        self.__require_core().run_quantum(self.__dispatcher)
 
     def __emulation_time(self) -> float:
         event = GetEmulationTime()

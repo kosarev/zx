@@ -519,7 +519,10 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         # move into the Emulator as the split proceeds.
         self.devices = Dispatcher([self])  # TODO: Rename the field?
 
-        self.set_on_input_callback(self.__on_input)
+        # The input callback reaches the dispatcher through a closure,
+        # not a stored reference.
+        self.set_on_input_callback(
+            lambda addr: self.__on_input(addr, self.devices))
 
         self.__port_reads = bytearray()
 
@@ -570,9 +573,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.__pause_tape()
 
     # TODO: Do we still need?
-    def __is_end_of_tape(self) -> bool:
+    def __is_end_of_tape(self, devices: Dispatcher) -> bool:
         tape_state = IsTapePlayerStopped()
-        self.devices.notify(tape_state)
+        devices.notify(tape_state)
         return tape_state.stopped
 
     def __translate_key_strokes(self, keys: typing.Iterable[int | str]) -> (
@@ -598,14 +601,17 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 self.devices.notify(KeyStroke(KEYS[id].ID, pressed=False))
                 self.run(duration=0.1, fast_forward=True)
 
-    def __on_input(self, addr: int) -> int:
+    def __on_input(self, addr: int, devices: Dispatcher) -> int:
         read_port = ReadPort(addr, self.tick_count)
-        self.devices.notify(read_port)
+        devices.notify(read_port)
         v = read_port.value
         self.__port_reads.append(v)
 
+        # TODO: This end-of-tape signalling belongs in the tape player,
+        # not in the core's input callback.
         END_OF_TAPE = RunEvents.END_OF_TAPE
-        if END_OF_TAPE in self.__events_to_signal and self.__is_end_of_tape():
+        if (END_OF_TAPE in self.__events_to_signal
+                and self.__is_end_of_tape(devices)):
             self.raise_events(END_OF_TAPE)
             self.__events_to_signal &= ~END_OF_TAPE
 
@@ -691,18 +697,22 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         if hold.held:
             return
 
-        self.run_quantum()
+        self.run_quantum(self.devices)
 
     # Advances the core by one quantum, when the quantum proceeds (it is
-    # not held).
+    # not held). The dispatcher is passed in for this call only and
+    # reaches the C input callback through a closure; it is never stored.
     # TODO: The RunQuantum broadcast and the held check above move into
     # the Emulator's loop, which will then call this method.
-    def run_quantum(self) -> None:
+    def run_quantum(self, devices: Dispatcher) -> None:
+        self.set_on_input_callback(
+            lambda addr: self.__on_input(addr, devices))
+
         # Cap how far this quantum advances, e.g. for sub-frame quanta
         # at slow speeds. With no device declaring a limit the quantum
         # runs to the frame end as before.
         limit = GetQuantumTickLimit()
-        self.devices.notify(limit)
+        devices.notify(limit)
         self.ticks_limit = (0 if limit.stop_after_ticks is None
                             else limit.stop_after_ticks)
 
@@ -713,20 +723,20 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         writes = numpy.frombuffer(self.drain_port_writes(),
                                   dtype=numpy.uint64)
         if len(writes):
-            self.devices.notify(NewPortWrites(now, writes))
+            devices.notify(NewPortWrites(now, writes))
 
         if RunEvents.BREAKPOINT_HIT in events:
-            self.on_breakpoint()
+            self.on_breakpoint(devices)
 
         if self.__playback is not None:
             if RunEvents.FETCHES_LIMIT_HIT in events:
-                self.devices.notify(FetchesLimitHit())
+                devices.notify(FetchesLimitHit())
         elif RunEvents.END_OF_FRAME in events:
-            self.devices.notify(EndOfFrame())
+            devices.notify(EndOfFrame())
 
         # TimeAdvanced goes last: all facts about the elapsed span
         # of time are published by the time its dispatch completes.
-        self.devices.notify(TimeAdvanced(now))
+        devices.notify(TimeAdvanced(now))
 
     def run(self, duration: None | float = None,
             fast_forward: bool = False) -> None:
@@ -809,7 +819,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.__events_to_signal |= RunEvents.END_OF_TAPE
         self.devices.notify(SetFastForward(True))
         try:
-            while not self.__is_end_of_tape():
+            while not self.__is_end_of_tape(self.devices):
                 self.__run_quantum()
         finally:
             self.devices.notify(SetFastForward(False))
@@ -833,11 +843,11 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
     def set_breakpoint(self, addr: int) -> None:
         self.set_breakpoints(addr, 1)
 
-    def on_breakpoint(self) -> None:
+    def on_breakpoint(self, devices: Dispatcher) -> None:
         if self.__profile:
             self.__profile.add_instr_addr(self.pc)
 
-        self.devices.notify(BreakpointHit())
+        devices.notify(BreakpointHit())
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, GetEmulationPauseState):
