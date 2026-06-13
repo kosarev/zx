@@ -20,7 +20,7 @@ with open(os.path.join(here, 'zx/__init__.py')) as f:
     s, = [s for s in f.readlines() if '__version__' in s]
     s, eq, v = s.split()
     assert s == '__version__' and eq == '='
-    assert v[0] == '\'' and v[-1] == '\''
+    assert v[0] == "'" and v[-1] == "'"
     v = v[1:-1].split('.')
     ZX_MAJOR_VERSION = int(v[0])
     ZX_MINOR_VERSION = int(v[1])

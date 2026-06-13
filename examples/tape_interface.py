@@ -122,5 +122,5 @@ def main():
         app.measure_tape_interface_parameters()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

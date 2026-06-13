@@ -40,8 +40,6 @@ ignore = [
     "PGH003",  #  2  blanket-type-ignore
     "PGH004",  #  1  blanket-noqa
     # quote style (residual after declaring single quotes)
-    "Q000",    #  5  bad-quotes-inline-string
-    "Q003",    #  2  avoidable-escaped-quote
     # pathlib over os.path (38 sites, lift as one migration)
     "PTH",     # 38  os.path/os.* -> pathlib (whole family)
     # bugbear (judgement calls - lift last)

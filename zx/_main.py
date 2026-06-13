@@ -96,9 +96,9 @@ def run(args: list[str]) -> None:
 
 
 def profile(args: list[str]) -> None:
-    file_to_run = pop_argument(args, "The file to run is not specified.")
-    profile_filename = pop_argument(args, "The profile filename is not "
-                                          "specified.")
+    file_to_run = pop_argument(args, 'The file to run is not specified.')
+    profile_filename = pop_argument(args, 'The profile filename is not '
+                                          'specified.')
     handle_extra_arguments(args)
 
     profile = Profile()
@@ -513,7 +513,7 @@ def main(args: None | list[str] = None) -> None:
         sys.exit(f'zx: {verbalize_error(e)}')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # import cProfile
     # cProfile.run('main()')
     main()
