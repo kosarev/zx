@@ -691,6 +691,13 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         if hold.held:
             return
 
+        self.run_quantum()
+
+    # Advances the core by one quantum, when the quantum proceeds (it is
+    # not held).
+    # TODO: The RunQuantum broadcast and the held check above move into
+    # the Emulator's loop, which will then call this method.
+    def run_quantum(self) -> None:
         # Cap how far this quantum advances, e.g. for sub-frame quanta
         # at slow speeds. With no device declaring a limit the quantum
         # runs to the frame end as before.
