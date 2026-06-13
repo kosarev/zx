@@ -48,7 +48,7 @@ from ._device import GetQuantumTickLimit
 from ._device import NewPortWrites
 from ._device import PauseStateUpdated
 from ._device import PauseUnpauseTape
-from ._device import QuantumRun
+from ._device import RunQuantum
 from ._device import ReadPort
 from ._device import TimeAdvanced
 from ._device import SaveSnapshot
@@ -673,7 +673,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         hold = GetHoldState()
         self.devices.notify(hold)
 
-        self.devices.notify(QuantumRun(held=hold.held,
+        self.devices.notify(RunQuantum(held=hold.held,
                                        wake_in=hold.wake_in))
 
         # TODO: For debug purposes.

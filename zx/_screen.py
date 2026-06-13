@@ -33,7 +33,7 @@ from ._device import MenuItemHit
 from ._device import PauseStateUpdated
 from ._device import RequestLoadFile
 from ._device import RequestSaveSnapshot
-from ._device import QuantumRun
+from ._device import RunQuantum
 from ._device import SaveSnapshot
 from ._device import SetSettingValue
 from ._device import SettingDescriptor
@@ -1690,7 +1690,7 @@ class ScreenWindow(Device):
             _TogglePanel: self.__on_toggle_panel,
             _ShowMainMenu: self.__on_show_main_menu,
             PauseStateUpdated: self._on_updated_pause_state,
-            QuantumRun: self._on_quantum_run,
+            RunQuantum: self._on_run_quantum,
             TapeStateUpdated: self._on_updated_tape_state,
             _RequestResetMachine: self.__on_request_reset_machine,
             _RequestSettings: self.__on_request_settings,
@@ -2049,9 +2049,9 @@ class ScreenWindow(Device):
         event.wake_within(
             max(0.0, self.__next_present_timestamp - get_timestamp()))
 
-    def _on_quantum_run(self, event: DeviceEvent,
+    def _on_run_quantum(self, event: DeviceEvent,
                         dispatcher: Dispatcher) -> None:
-        assert isinstance(event, QuantumRun)
+        assert isinstance(event, RunQuantum)
         import sdl2
 
         # Give the OS some CPU time while the machine is held; wake

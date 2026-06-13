@@ -18,7 +18,7 @@ from zx._device import Dispatcher
 from zx._device import ResetEmulator
 from zx._device import GetSettings
 from zx._device import NewSoundPulses
-from zx._device import QuantumRun
+from zx._device import RunQuantum
 from zx._device import SetSettingValue
 from zx._device import SettingDescriptor
 from zx._device import SettingScope
@@ -57,7 +57,7 @@ def test_sound_device_produces_samples() -> None:
     # The first window only establishes the baseline tick position, so
     # nothing is produced yet.
     device.on_event(TimeAdvanced(0), dispatcher)
-    device.on_event(QuantumRun(), dispatcher)
+    device.on_event(RunQuantum(), dispatcher)
     assert device.output == []
 
     # A second window holding a constant level produces output samples,
@@ -66,7 +66,7 @@ def test_sound_device_produces_samples() -> None:
     device.on_event(NewSoundPulses(_level_chunk(rate, level, span)),
                     dispatcher)
     device.on_event(TimeAdvanced(span), dispatcher)
-    device.on_event(QuantumRun(), dispatcher)
+    device.on_event(RunQuantum(), dispatcher)
 
     assert device.output
     samples = numpy.concatenate(device.output)

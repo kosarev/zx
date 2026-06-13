@@ -294,12 +294,13 @@ class PauseUnpauseTape(DeviceEvent):
         self.pause = pause
 
 
-# Notified at the start of every loop iteration. Carries the hold
-# state evaluated by the machine, so devices never re-query it:
-# when held, emulation does not advance this quantum, and a device
-# that waits may sleep up to wake_in seconds (capped, and cut short
-# by input).
-class QuantumRun(DeviceEvent):
+# Broadcast at the start of every loop iteration: the signal that a
+# quantum is to be attempted now. It carries the hold state evaluated
+# by the machine, so devices never re-query it -- when held, emulation
+# does not advance this quantum (a held quantum is still a quantum),
+# and a device that waits may sleep up to wake_in seconds (capped, and
+# cut short by input).
+class RunQuantum(DeviceEvent):
     def __init__(self, *, held: bool = False,
                  wake_in: None | float = None) -> None:
         self.held = held

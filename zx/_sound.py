@@ -23,7 +23,7 @@ from ._device import GetHoldState
 from ._device import GetQuantumTickLimit
 from ._device import GetSettings
 from ._device import NewSoundPulses
-from ._device import QuantumRun
+from ._device import RunQuantum
 from ._device import SetEmulationSpeed
 from ._device import SetFastForward
 from ._device import SetSettingValue
@@ -393,7 +393,7 @@ class SoundDevice(Device):
                 self.__apply_speed(float(event.value))
             elif event.id == 'latency':
                 self.__latency_ms = int(event.value)
-        elif isinstance(event, QuantumRun):
+        elif isinstance(event, RunQuantum):
             self.__consume()
             self.__feed()
         elif isinstance(event, TimeAdvanced):
