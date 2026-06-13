@@ -17,7 +17,11 @@ from ._data import SpectrumModel
 from ._device import DestroyEmulator
 from ._device import Device
 from ._device import Dispatcher
+from ._device import GetEmulationTime
+from ._device import GetHoldState
 from ._device import InitEmulator
+from ._device import RunQuantum
+from ._device import SetFastForward
 from ._keyboard import Keyboard
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
@@ -113,14 +117,48 @@ class Emulator(object):
                  traceback: None | types.TracebackType) -> None:
         self.__dispatcher.notify(DestroyEmulator())
 
-    # TODO: The run loop and orchestration still live on the core and
-    # are delegated to here; they move into the Emulator in later steps
-    # of the split (the run loop becoming the RunQuantum broadcast each
-    # core answers).
     def run(self, duration: None | float = None,
             fast_forward: bool = False) -> None:
-        self.__require_core().run(duration=duration, fast_forward=fast_forward)
+        end_time = None
+        if duration is not None:
+            end_time = self.__emulation_time() + duration
 
+        if fast_forward:
+            self.__dispatcher.notify(SetFastForward(True))
+        try:
+            while end_time is None or self.__emulation_time() < end_time:
+                self.__run_quantum()
+        finally:
+            if fast_forward:
+                self.__dispatcher.notify(SetFastForward(False))
+
+    # One iteration of the run loop: evaluate the hold once and broadcast
+    # it (so devices never re-query), and unless held, advance the core
+    # by a quantum. The broadcast is unconditional -- every device sees
+    # RunQuantum each iteration, held or not; the held check only skips
+    # advancing the core.
+    # TODO: With more than one core this advances each of them; for now
+    # there is a single core.
+    def __run_quantum(self) -> None:
+        hold = GetHoldState()
+        self.__dispatcher.notify(hold)
+
+        self.__dispatcher.notify(RunQuantum(held=hold.held,
+                                            wake_in=hold.wake_in))
+
+        if hold.held:
+            return
+
+        self.__require_core().run_quantum()
+
+    def __emulation_time(self) -> float:
+        event = GetEmulationTime()
+        self.__dispatcher.notify(event)
+        return event.time.get()
+
+    # TODO: The orchestration below still lives on the core and is
+    # delegated to here; it moves into the Emulator in later steps of
+    # the split.
     def reset(self) -> None:
         self.__require_core().reset()
 
