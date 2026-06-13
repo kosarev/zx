@@ -84,7 +84,7 @@ def _parse_archive(format: type[ArchiveFile], image: Bytes) -> (
         list[tuple[str, type[DataRecord], Bytes]]):
     candidates: list[tuple[str, type[DataRecord], Bytes]] = []
     for member_name, member_image in format.read_files(image):
-        base, ext = os.path.splitext(member_name)
+        _, ext = os.path.splitext(member_name)
         member_format = detect_file_format(member_image, ext)
 
         if not member_format:
@@ -101,7 +101,7 @@ def _parse_archive(format: type[ArchiveFile], image: Bytes) -> (
 
 
 def parse_file_image(filename: str, image: Bytes) -> DataRecord:
-    base, ext = os.path.splitext(filename)
+    _, ext = os.path.splitext(filename)
     format = detect_file_format(image, ext)
     if not format:
         raise Error(f"Cannot determine the format of file '{filename}'.")

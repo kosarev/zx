@@ -108,7 +108,7 @@ def tag_last_pulse(pulses: typing.Iterable[tuple[bool, int,
     if current_pulse:
         level, duration, ids = current_pulse
         if 'END' not in ids:
-            ids = tuple(list(ids) + ['END'])
+            ids = (*ids, 'END')
             yield level, duration, ids
 
 

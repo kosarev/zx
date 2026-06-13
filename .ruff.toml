@@ -30,9 +30,6 @@ ignore = [
     "F811",    #  1  redefined-while-unused
     # modernisation: pyupgrade (mostly autofix)
     # Ruff-native (RUF012 is a real bug-class - lift early)
-    "RUF005",  #  1  collection-literal-concatenation
-    "RUF021",  #  1  parenthesize-chained-operators
-    "RUF059",  #  3  unused-unpacked-variable
     # simplifications
     "SIM102",  #  4  collapsible-if
     "SIM105",  #  2  suppressible-exception

@@ -439,7 +439,7 @@ class Notification:
             return
 
         assert theme.display_scale is not None
-        width, height = screen_size
+        width, _ = screen_size
         window_width, window_height = window_size
 
         size = min(80 * theme.display_scale, width * 0.2)

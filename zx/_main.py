@@ -470,7 +470,7 @@ def handle_command_line(args: list[str]) -> None:
     # Guess the command by the arguments.
     if (not args or
             args[0].startswith('--') or
-            len(args) == 1 and looks_like_filename(args[0])):
+            (len(args) == 1 and looks_like_filename(args[0]))):
         run(args)
         return
 
