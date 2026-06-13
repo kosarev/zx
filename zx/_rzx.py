@@ -42,7 +42,7 @@ class RZXFrame(RZXChunk, format_name=None):
                          samples=HexData.wrap(samples))
 
     @classmethod
-    def wrap(cls, frame: 'RZXFrame') -> 'RZXFrame':
+    def wrap(cls, frame: RZXFrame) -> RZXFrame:
         if isinstance(frame, cls):
             return frame
         return cls(num_fetches=frame.num_fetches,
@@ -344,5 +344,5 @@ class RZXFile(MachinePlayback, format_name='RZX'):
                                creator_minor_version=creator_minor_version)
 
     @classmethod
-    def decode(cls, filename: str, image: Bytes) -> 'RZXFile':
+    def decode(cls, filename: str, image: Bytes) -> RZXFile:
         return RZXFile(chunks=_parse_rzx(image))

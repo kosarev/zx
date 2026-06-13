@@ -314,7 +314,7 @@ class TZXFile(SoundFile, format_name='TZX'):
         return result
 
     @classmethod
-    def decode(cls, filename: str, image: Bytes) -> 'TZXFile':
+    def decode(cls, filename: str, image: Bytes) -> TZXFile:
         parser = BinaryParser(image)
 
         signature = parser.parse_field('8s')

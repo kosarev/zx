@@ -899,7 +899,7 @@ class _Panel(abc.ABC):
         self._theme = theme
         self._controls: list[_Control] = []
         self._selected_control: None | _Control = None
-        self._dialog: None | '_Panel' = None
+        self._dialog: None | _Panel = None
 
     def invalidate(self) -> None:
         if self._dialog is not None:

@@ -48,7 +48,7 @@ class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None):
     __V3_EXTRA_HEADER = ['B:last_write_to_port_1ffd']
 
     @classmethod
-    def parse_header(cls, parser: BinaryParser) -> 'Z80SnapshotV3ExtraHeader':
+    def parse_header(cls, parser: BinaryParser) -> Z80SnapshotV3ExtraHeader:
         v3_extra_fields = parser.parse(cls.__V3_EXTRA_HEADER)
         return Z80SnapshotV3ExtraHeader(**v3_extra_fields)
 
@@ -111,7 +111,7 @@ class Z80SnapshotV3Header(DataRecord, format_name=None):
             v3_extra_header=v3_extra_header)
 
     @classmethod
-    def parse_header(cls, parser: BinaryParser) -> 'Z80SnapshotV3Header':
+    def parse_header(cls, parser: BinaryParser) -> Z80SnapshotV3Header:
         v3_fields = parser.parse(cls.__V3_HEADER)
 
         v3_extra_header = None
@@ -163,7 +163,7 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
             v3_header=v3_header)
 
     @classmethod
-    def parse_header(cls, parser: BinaryParser) -> 'Z80SnapshotV2Header':
+    def parse_header(cls, parser: BinaryParser) -> Z80SnapshotV2Header:
         v2_fields = parser.parse(cls.__V2_HEADER)
 
         v3_header = None
@@ -241,7 +241,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             memory_blocks=memory_blocks)
 
     @classmethod
-    def from_snapshot(cls, snapshot: MachineSnapshot) -> 'Z80Snapshot':
+    def from_snapshot(cls, snapshot: MachineSnapshot) -> Z80Snapshot:
         unified = snapshot.to_unified_snapshot()
 
         # TODO: The z80 format cannot represent processor states in
@@ -528,7 +528,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                               data=image)
 
     @classmethod
-    def decode(cls, filename: str, image: Bytes) -> 'Z80Snapshot':
+    def decode(cls, filename: str, image: Bytes) -> Z80Snapshot:
         # Parse headers.
         parser = BinaryParser(image)
         v1_fields = parser.parse(cls.__V1_HEADER)

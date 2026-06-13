@@ -112,7 +112,7 @@ class DataRecord(object):
     # by 'type' via recursive __subclasses__() search, then recursively
     # converts all nested dicts and lists before calling cls(**fields).
     @classmethod
-    def from_json(cls, d: dict[str, typing.Any]) -> 'DataRecord':
+    def from_json(cls, d: dict[str, typing.Any]) -> DataRecord:
         def find(base: type) -> type | None:
             for sub in base.__subclasses__():
                 if sub.__name__ == type_name:
@@ -142,7 +142,7 @@ class DataRecord(object):
 
     # Decode a format-specific binary image. Counterpart of encode().
     @classmethod
-    def decode(cls, filename: str, image: Bytes) -> 'DataRecord':
+    def decode(cls, filename: str, image: Bytes) -> DataRecord:
         raise NotImplementedError
 
     def dumps(self) -> str:
@@ -168,7 +168,7 @@ class Metadata(DataRecord, format_name=None):
 
 
 class SpectrumModel(type):
-    _MODELS_BY_CXX_CODES: dict[int, type['SpectrumModel']] = {}
+    _MODELS_BY_CXX_CODES: dict[int, type[SpectrumModel]] = {}
 
     _CXX_MODEL_CODE: int
     _ROM_FILE_NAME: str
@@ -240,18 +240,18 @@ class ByteData(DataRecord, format_name=None):
             f'{type(self).__name__} has no JSON serialisation')
 
     @classmethod
-    def from_bytes(cls, data: Bytes) -> 'ByteData':
+    def from_bytes(cls, data: Bytes) -> ByteData:
         return cls(data)
 
     @classmethod
-    def wrap(cls, data: 'Bytes | ByteData') -> 'ByteData':
+    def wrap(cls, data: Bytes | ByteData) -> ByteData:
         return data if isinstance(data, ByteData) else cls.from_bytes(data)
 
 
 class HexData(ByteData, format_name=None):
     __CHUNK_SIZE = 32
 
-    def __init__(self, data: 'Bytes | str | list[str]'):
+    def __init__(self, data: Bytes | str | list[str]):
         if isinstance(data, (str, list)):
             hex_str = ''.join(data) if isinstance(data, list) else data
             data = bytes.fromhex(hex_str)
@@ -270,7 +270,7 @@ class Latin1Data(ByteData, format_name=None):
         super().__init__(data.encode('latin-1'))
 
     @classmethod
-    def from_bytes(cls, data: Bytes) -> 'Latin1Data':
+    def from_bytes(cls, data: Bytes) -> Latin1Data:
         return cls(bytes(data).decode('latin-1'))
 
     def to_json(self) -> dict[str, str | list[str]]:
@@ -292,7 +292,7 @@ class MemoryBlock(DataRecord, format_name=None):
 
     def __init__(self, *, addr: int, rom_page: int | None = None,
                  ram_page: int | None = None,
-                 data: 'Bytes | ByteData'):
+                 data: Bytes | ByteData):
         super().__init__(addr=addr, rom_page=rom_page,
                          ram_page=ram_page, data=HexData.wrap(data))
 
@@ -368,7 +368,7 @@ class UnifiedSnapshot(MachineSnapshot, format_name=None):
             memory_blocks=blocks)
 
     @classmethod
-    def from_snapshot(cls, snapshot: MachineSnapshot) -> 'UnifiedSnapshot':
+    def from_snapshot(cls, snapshot: MachineSnapshot) -> UnifiedSnapshot:
         return snapshot.to_unified_snapshot()
 
     def encode(self) -> bytes:
@@ -379,7 +379,7 @@ class UnifiedSnapshot(MachineSnapshot, format_name=None):
 
 
 class MachinePlayback(DataRecord, format_name=None):
-    def to_unified_playback(self) -> 'UnifiedPlayback':
+    def to_unified_playback(self) -> UnifiedPlayback:
         raise NotImplementedError
 
 
@@ -388,7 +388,7 @@ class UnifiedPlaybackFrame(DataRecord, format_name=None):
     port_samples: ByteData
 
     def __init__(self, *, num_fetches: int,
-                 port_samples: 'Bytes | ByteData') -> None:
+                 port_samples: Bytes | ByteData) -> None:
         super().__init__(num_fetches=num_fetches,
                          port_samples=HexData.wrap(port_samples))
 
@@ -426,5 +426,5 @@ class UnifiedPlayback(MachinePlayback, format_name=None):
                 self.creator_major_version == 0 and
                 self.creator_minor_version == 5)
 
-    def to_unified_playback(self) -> 'UnifiedPlayback':
+    def to_unified_playback(self) -> UnifiedPlayback:
         return self
