@@ -9,25 +9,68 @@ line-length = 79
 extend-exclude = ["z80", "build"]
 
 [lint]
-select = ["E", "W", "F", "I", "B", "UP"]
+# E/W pycodestyle, F pyflakes, I isort, B bugbear, UP pyupgrade,
+# C4 comprehensions, SIM simplifications, RUF Ruff-native,
+# PGH no-blanket-ignores, PTH pathlib-over-os.path, ICN import aliases,
+# TC typing-only imports, Q quote style (single, the house style).
+# Deliberately NOT selected: D (docstrings - the public API is documented
+# by hand, internals use comments), S (asserts), PL (complexity/magic
+# values, lazy-import policy), TD/FIX (tagged-TODO ceremony), EM/TRY003/
+# ANN/FBT (opinionated).
+select = [
+    "E", "W", "F", "I", "B", "UP",
+    "C4", "SIM", "RUF", "PGH", "PTH", "ICN", "TC", "Q",
+]
 
 # Debt ledger: codes currently violated somewhere in the tree, suppressed
 # so the run is green today. Lift one at a time, fix all its sites, then
 # delete it from here. This list only shrinks. Counts are at baseline.
 ignore = [
-    "I001",    # 44  unsorted-imports               [autofix]
-    "F401",    # 28  unused-import                   [autofix]
-    "F841",    #  9  unused-variable                 [autofix]
-    "F811",    #  1  redefined-while-unused          [autofix]
-    "UP004",   # 22  useless-object-inheritance      [autofix]
-    "UP009",   # 46  utf8-encoding-declaration       [autofix]
-    "UP015",   #  1  redundant-open-modes            [autofix]
-    "UP031",   # 42  printf-string-formatting
-    "UP037",   # 23  quoted-annotation               [autofix]
+    # imports / dead code (autofix, lift first)
+    "I001",    # 44  unsorted-imports
+    "F401",    # 28  unused-import
+    "F841",    #  9  unused-variable
+    "F811",    #  1  redefined-while-unused
+    # modernisation: pyupgrade (mostly autofix)
+    "UP004",   # 22  useless-object-inheritance
+    "UP009",   # 46  utf8-encoding-declaration (obsolete coding lines)
+    "UP015",   #  1  redundant-open-modes
+    "UP031",   # 42  printf-string-formatting (hand)
+    "UP037",   # 23  quoted-annotation
+    # Ruff-native (RUF012 is a real bug-class - lift early)
+    "RUF005",  #  1  collection-literal-concatenation
+    "RUF012",  # 15  mutable-class-default
+    "RUF021",  #  1  parenthesize-chained-operators
+    "RUF059",  #  3  unused-unpacked-variable
+    # simplifications
+    "SIM102",  #  4  collapsible-if
+    "SIM105",  #  2  suppressible-exception
+    "SIM117",  #  1  multiple-with-statements
+    "SIM910",  #  1  dict-get-with-none-default
+    # comprehensions
+    "C408",    #  3  unnecessary-collection-call
+    # import aliases / typing-only imports
+    "ICN001",  # 10  unconventional-import-alias
+    "TC001",   #  1  typing-only-first-party-import
+    "TC002",   #  1  typing-only-third-party-import
+    # no blanket ignores
+    "PGH003",  #  2  blanket-type-ignore
+    "PGH004",  #  1  blanket-noqa
+    # quote style (residual after declaring single quotes)
+    "Q000",    #  5  bad-quotes-inline-string
+    "Q003",    #  2  avoidable-escaped-quote
+    # pathlib over os.path (38 sites, lift as one migration)
+    "PTH",     # 38  os.path/os.* -> pathlib (whole family)
+    # bugbear (judgement calls - lift last)
     "B006",    #  2  mutable-argument-default
     "B007",    #  4  unused-loop-control-variable
-    "B009",    #  2  get-attr-with-constant          [autofix]
+    "B009",    #  2  get-attr-with-constant
     "B024",    #  1  abstract-base-class-without-abstract-method
     "B904",    #  3  raise-without-from-inside-except
     "B905",    #  4  zip-without-explicit-strict
 ]
+
+[lint.flake8-quotes]
+inline-quotes = "single"
+multiline-quotes = "single"
+docstring-quotes = "double"
