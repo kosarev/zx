@@ -519,10 +519,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         # move into the Emulator as the split proceeds.
         self.devices = Dispatcher([self])  # TODO: Rename the field?
 
-        # The input callback reaches the dispatcher through a closure,
-        # not a stored reference.
-        self.set_on_input_callback(
-            lambda addr: self.__on_input(addr, self.devices))
+        self.set_on_input_callback(self.__on_input)
 
         self.__port_reads = bytearray()
 
@@ -700,14 +697,11 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.run_quantum(self.devices)
 
     # Advances the core by one quantum, when the quantum proceeds (it is
-    # not held). The dispatcher is passed in for this call only and
-    # reaches the C input callback through a closure; it is never stored.
+    # not held). The dispatcher is passed in for this call only, never
+    # stored.
     # TODO: The RunQuantum broadcast and the held check above move into
     # the Emulator's loop, which will then call this method.
     def run_quantum(self, devices: Dispatcher) -> None:
-        self.set_on_input_callback(
-            lambda addr: self.__on_input(addr, devices))
-
         # Cap how far this quantum advances, e.g. for sub-frame quanta
         # at slow speeds. With no device declaring a limit the quantum
         # runs to the frame end as before.
@@ -716,7 +710,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.ticks_limit = (0 if limit.stop_after_ticks is None
                             else limit.stop_after_ticks)
 
-        events = RunEvents(self._run())
+        events = RunEvents(self._run(devices))
 
         now = self.tick_count
 

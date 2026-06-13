@@ -35,13 +35,13 @@ def test_ticks_limit() -> None:
     frame_ticks = 69888
 
     mach.ticks_limit = 1000
-    events = RunEvents(mach._run())
+    events = RunEvents(mach._run(mach.devices))
     assert RunEvents.END_OF_FRAME not in events
     assert 1000 <= mach.ticks_since_int < frame_ticks
 
     # With no limit the quantum runs on to the frame end.
     mach.ticks_limit = 0
-    events = RunEvents(mach._run())
+    events = RunEvents(mach._run(mach.devices))
     assert RunEvents.END_OF_FRAME in events
     assert mach.ticks_since_int >= frame_ticks
 

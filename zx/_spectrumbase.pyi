@@ -1,6 +1,8 @@
 
 import typing
 
+from ._device import Dispatcher
+
 class _SpectrumBase:
     def _get_state_view(self) -> memoryview:
         ...
@@ -17,8 +19,10 @@ class _SpectrumBase:
     def mark_addrs(self, addr: int, size: int, marks: int) -> None:
         ...
 
-    def set_on_input_callback(self, callback: typing.Callable[[int], int]) -> (
-            typing.Callable[[int], int]):
+    def set_on_input_callback(
+            self,
+            callback: typing.Callable[[int, Dispatcher], int]) -> (
+            typing.Callable[[int, Dispatcher], int]):
         ...
 
     def set_on_output_callback(self,
@@ -26,7 +30,7 @@ class _SpectrumBase:
             typing.Callable[[int], None]):
         ...
 
-    def _run(self) -> int:
+    def _run(self, devices: Dispatcher) -> int:
         ...
 
     def on_handle_active_int(self) -> None:

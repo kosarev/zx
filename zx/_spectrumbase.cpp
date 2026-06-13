@@ -146,7 +146,13 @@ public:
         return pixels;
     }
 
-    events_mask run() {
+    events_mask run(PyObject *dispatcher) {
+        // Hold the dispatcher for the duration of the run so the Python
+        // callbacks invoked from the C core (e.g. on input) can be
+        // passed it; the Python side never stores it. Cleared on
+        // return.
+        run_dispatcher = dispatcher;
+
         install_state();
         events_mask events = base::run();
 
@@ -158,6 +164,8 @@ public:
         render_screen_to_tick(get_ticks());
 
         retrieve_state();
+
+        run_dispatcher = nullptr;
         return events;
     }
 
@@ -247,7 +255,10 @@ public:
         if(!on_input_callback)
             return default_value;
 
-        PyObject *arg = Py_BuildValue("(i)", addr);
+        // on_input only fires during a run(), which always sets the
+        // dispatcher.
+        assert(run_dispatcher);
+        PyObject *arg = Py_BuildValue("(iO)", addr, run_dispatcher);
         decref_guard arg_guard(arg);
 
         retrieve_state();
@@ -287,6 +298,10 @@ private:
     pixels_buffer_type pixels;
     PyObject *on_input_callback = nullptr;
     PyObject *on_output_callback = nullptr;
+
+    // The dispatcher of the current run, set only while run() is on the
+    // stack, passed to the Python callbacks invoked from the core.
+    PyObject *run_dispatcher = nullptr;
 };
 
 struct object_instance {
@@ -379,7 +394,10 @@ static PyObject *set_on_output_callback(PyObject *self, PyObject *args) {
 
 PyObject *run(PyObject *self, PyObject *args) {
     auto &emulator = cast_emulator(self);
-    events_mask events = emulator.run();
+    PyObject *dispatcher;
+    if(!PyArg_ParseTuple(args, "O", &dispatcher))
+        return nullptr;
+    events_mask events = emulator.run(dispatcher);
     if(PyErr_Occurred())
         return nullptr;
     return Py_BuildValue("i", events);
@@ -417,7 +435,7 @@ PyMethodDef methods[] = {
      "Set a callback function handling reading from ports."},
     {"set_on_output_callback", set_on_output_callback, METH_VARARGS,
      "Set a callback function handling writing to ports."},
-    {"_run", run, METH_NOARGS,
+    {"_run", run, METH_VARARGS,
      "Run emulator until one or several events are signalled."},
     {"on_handle_active_int", on_handle_active_int, METH_NOARGS,
      "Attempts to initiate a masked interrupt."},
