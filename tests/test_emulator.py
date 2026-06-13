@@ -21,7 +21,7 @@ from zx._spectrum import RunEvents
 
 def test_basic() -> None:
     # Create an emulator instance.
-    with zx.Emulator(headless=True) as mach:
+    with zx.Emulator(headless=True):
         pass
 
 

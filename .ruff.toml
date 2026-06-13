@@ -27,7 +27,6 @@ select = [
 # delete it from here. This list only shrinks. Counts are at baseline.
 ignore = [
     # imports / dead code (autofix, lift first)
-    "F841",    #  9  unused-variable
     "F811",    #  1  redefined-while-unused
     # modernisation: pyupgrade (mostly autofix)
     "UP004",   # 22  useless-object-inheritance

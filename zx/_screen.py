@@ -981,8 +981,6 @@ class _MainMenuPanel(_Panel):
         assert theme.window_size is not None
         width, height = theme.window_size
 
-        font = theme.normal_font
-
         surface = _Surface(width, height)
         surface.fill(theme.overlay_bg)
 
@@ -1725,11 +1723,6 @@ class ScreenWindow(Device):
         self._notification: None | Notification = None
         self._screencast = Screencast()
 
-        if SCREENCAST:
-            width, height = 640, 390
-        else:
-            width, height = (self.frame_width * self.scale,
-                             self.frame_height * self.scale)
         minimum_size = self.frame_width // 4, self.frame_height // 4
         sdl2.SDL_SetWindowMinimumSize(self.__window, *minimum_size)
 

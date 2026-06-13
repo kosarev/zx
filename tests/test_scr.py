@@ -16,7 +16,6 @@ import zx
 
 def test_basic() -> None:
     # Create a SCR snapshot.
-    mach = zx.Spectrum()
     format = zx._scr._SCRSnapshot
     assert format.FORMAT_NAME == 'SCR'
     # TODO: scr = format.make_snapshot(mach)

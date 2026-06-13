@@ -226,7 +226,7 @@ def test_file(filename: str, batch_mode: bool,
         else:
             raise Error(f"Don't know how to test {file}",
                         id='not_testable')
-    except EmulationExit as e:
+    except EmulationExit:
         pass
     except Exception as e:
         if not batch_mode:
