@@ -8,15 +8,15 @@
 #
 #   Published under the MIT license.
 
-import os
+import pathlib
 import sys
 
 from setuptools import Extension
 from setuptools import setup
 
-here = os.path.abspath(os.path.dirname(__file__))
+here = pathlib.Path(__file__).resolve().parent
 
-with open(os.path.join(here, 'zx/__init__.py')) as f:
+with (here / 'zx/__init__.py').open() as f:
     s, = [s for s in f.readlines() if '__version__' in s]
     s, eq, v = s.split()
     assert s == '__version__' and eq == '='
@@ -27,7 +27,7 @@ with open(os.path.join(here, 'zx/__init__.py')) as f:
     ZX_PATCH_VERSION = int(v[2])
     version = f'{ZX_MAJOR_VERSION}.{ZX_MINOR_VERSION}.{ZX_PATCH_VERSION}'
 
-with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
+with (here / 'README.md').open(encoding='utf-8') as f:
     long_description = f.read()
 
 
