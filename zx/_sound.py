@@ -412,7 +412,7 @@ class SDLSound(SoundDevice):
         # outputting sound via it. (The user may want to do something
         # else with the original or mixed samples, or may want some
         # custom some channel mixing.)
-        import sdl2.audio  # type: ignore
+        import sdl2.audio  # type: ignore[import-untyped]
         sdl2.SDL_Init(sdl2.SDL_INIT_AUDIO)
 
         spec = sdl2.audio.SDL_AudioSpec(

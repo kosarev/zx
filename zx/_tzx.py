@@ -182,7 +182,7 @@ class TZXFile(SoundFile, format_name='TZX'):
 
         # Some codes are sensitive to keeping the existing tape level
         # after the last block. For example, the Ms Pacman TZX at
-        # https://www.worldofspectrum.org//pub/sinclair/games/m/Ms.Pac-Man.tzx.zip  # noqa
+        # https://www.worldofspectrum.org//pub/sinclair/games/m/Ms.Pac-Man.tzx.zip  # noqa: E501
         # md5sum 67149beea737fb45998fba7472b3f449  Ms Pacman.tzx
         # requires ~15,000 more ticks at the same tape level.
         # It might make no difference for emulators, however it does
