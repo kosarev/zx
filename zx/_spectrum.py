@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #   ZX Spectrum Emulator.
 #   https://github.com/kosarev/zx
 #

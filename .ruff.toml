@@ -30,7 +30,6 @@ ignore = [
     "F811",    #  1  redefined-while-unused
     # modernisation: pyupgrade (mostly autofix)
     "UP004",   # 22  useless-object-inheritance
-    "UP009",   # 46  utf8-encoding-declaration (obsolete coding lines)
     "UP015",   #  1  redundant-open-modes
     "UP031",   # 42  printf-string-formatting (hand)
     "UP037",   # 23  quoted-annotation
