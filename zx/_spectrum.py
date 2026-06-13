@@ -38,6 +38,7 @@ from ._device import IsTapePlayerPaused
 from ._device import SetFetchesLimit
 from ._device import StartPlayback
 from ._device import StopPlayback
+from ._device import StopQuantum
 from ._device import IsTapePlayerStopped
 from ._device import KeyStroke
 from ._device import LoadFile
@@ -74,7 +75,7 @@ class RunEvents(enum.IntFlag):
     END_OF_FRAME = 1 << 1
     FETCHES_LIMIT_HIT = 1 << 3
     BREAKPOINT_HIT = 1 << 4
-    END_OF_TAPE = 1 << 5
+    STOP_REQUESTED = 1 << 5
 
 
 class StateParser(object):
@@ -509,8 +510,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         # TODO: Double-underscore or make public.
         self._emulation_time = Time()
 
-        self.__events_to_signal = RunEvents.NO_EVENTS
-
         # The core is one device in a set the Emulator container owns.
         # Until it is placed in one (and handed the real dispatcher),
         # it dispatches only to itself, so that a bare core is still
@@ -603,15 +602,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         devices.notify(read_port)
         v = read_port.value
         self.__port_reads.append(v)
-
-        # TODO: This end-of-tape signalling belongs in the tape player,
-        # not in the core's input callback.
-        END_OF_TAPE = RunEvents.END_OF_TAPE
-        if (END_OF_TAPE in self.__events_to_signal
-                and self.__is_end_of_tape(devices)):
-            self.raise_events(END_OF_TAPE)
-            self.__events_to_signal &= ~END_OF_TAPE
-
         return v
 
     def __save_crash_rzx(self, player: PlaybackPlayer, state: SpectrumState,
@@ -809,8 +799,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.__load_tape_to_player(tape)
         self.__unpause_tape()
 
-        # Wait till the end of the tape.
-        self.__events_to_signal |= RunEvents.END_OF_TAPE
+        # Run until the player reports the tape finished; the player
+        # raises StopQuantum at the exact end, so each quantum stops
+        # there and this check sees it promptly.
         self.devices.notify(SetFastForward(True))
         try:
             while not self.__is_end_of_tape(self.devices):
@@ -868,6 +859,8 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             self.install_snapshot(event.snapshot)
         elif isinstance(event, SetFetchesLimit):
             self.fetches_limit = event.num_fetches
+        elif isinstance(event, StopQuantum):
+            self.raise_events(RunEvents.STOP_REQUESTED)
         elif isinstance(event, StartPlayback):
             self.__enter_playback_mode(event.playback)
         elif isinstance(event, StopPlayback):

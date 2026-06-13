@@ -20,6 +20,7 @@ from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import ResetEmulator
 from ._device import ReadPort
+from ._device import StopQuantum
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
 from ._device import IsTapePlayerStopped
@@ -264,6 +265,12 @@ class TapePlayer(Device):
                 tick = self.__unwrap(event.tick_count)
                 if not self.__get_level_at_tick(tick):
                     event.supply(0xbf)  # EAR bit low when no tape signal
+
+                # If that read exhausted the tape, ask the run to stop
+                # at this exact tick (fires once -- the block is skipped
+                # thereafter, since the tape is now ended).
+                if self._pulses is None:
+                    dispatcher.notify(StopQuantum())
         elif isinstance(event, IsTapePlayerPaused):
             event.paused |= self.__is_paused()
         elif isinstance(event, IsTapePlayerStopped):

@@ -307,6 +307,13 @@ class RunQuantum(DeviceEvent):
         self.wake_in = wake_in
 
 
+# Raised by a device to ask that the current quantum end now (e.g. the
+# tape player when the tape runs out at a port read), so the run returns
+# control at that exact tick. The machine stops the run in response.
+class StopQuantum(DeviceEvent):
+    pass
+
+
 class ReadPort(EmulationEvent):
     def __init__(self, addr: int, tick_count: int = 0) -> None:
         super().__init__(tick_count)
