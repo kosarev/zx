@@ -1,0 +1,33 @@
+# Ruff configuration. Run locally only for now - not wired into CI, which
+# still gates on pycodestyle. Transitional: runs alongside pycodestyle,
+# which stays the authority. The `ignore` list is the debt ledger - it
+# only shrinks over time as rules are lifted one at a time.
+
+target-version = "py310"
+line-length = 79
+
+extend-exclude = ["z80", "build"]
+
+[lint]
+select = ["E", "W", "F", "I", "B", "UP"]
+
+# Debt ledger: codes currently violated somewhere in the tree, suppressed
+# so the run is green today. Lift one at a time, fix all its sites, then
+# delete it from here. This list only shrinks. Counts are at baseline.
+ignore = [
+    "I001",    # 44  unsorted-imports               [autofix]
+    "F401",    # 28  unused-import                   [autofix]
+    "F841",    #  9  unused-variable                 [autofix]
+    "F811",    #  1  redefined-while-unused          [autofix]
+    "UP004",   # 22  useless-object-inheritance      [autofix]
+    "UP009",   # 46  utf8-encoding-declaration       [autofix]
+    "UP015",   #  1  redundant-open-modes            [autofix]
+    "UP031",   # 42  printf-string-formatting
+    "UP037",   # 23  quoted-annotation               [autofix]
+    "B006",    #  2  mutable-argument-default
+    "B007",    #  4  unused-loop-control-variable
+    "B009",    #  2  get-attr-with-constant          [autofix]
+    "B024",    #  1  abstract-base-class-without-abstract-method
+    "B904",    #  3  raise-without-from-inside-except
+    "B905",    #  4  zip-without-explicit-strict
+]
