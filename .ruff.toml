@@ -27,8 +27,6 @@ select = [
 # so the run is green today. Lift one at a time, fix all its sites, then
 # delete it from here. This list only shrinks. Counts are at baseline.
 ignore = [
-    # pathlib over os.path (38 sites, lift as one migration)
-    "PTH",     # 38  os.path/os.* -> pathlib (whole family)
     # bugbear (judgement calls - lift last)
     "B006",    #  2  mutable-argument-default
     "B007",    #  4  unused-loop-control-variable

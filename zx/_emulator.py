@@ -7,6 +7,7 @@
 #   Published under the MIT license.
 
 
+import pathlib
 import types
 import typing
 
@@ -279,7 +280,7 @@ class Emulator(Dispatcher):
 
     def _save_snapshot_file(self, format: type[MachineSnapshot],
                             filename: str) -> None:
-        with open(filename, 'wb') as f:
+        with pathlib.Path(filename).open('wb') as f:
             f.write(format.from_snapshot(
                 self.__require_core().to_snapshot()).encode())
 

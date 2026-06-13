@@ -12,7 +12,6 @@
 import contextlib
 import functools
 import multiprocessing
-import os
 import pathlib
 import sys
 import typing
@@ -48,9 +47,9 @@ from ._spectrum import Spectrum
 from ._zx import ZXFile
 
 
-def get_config_dir() -> str:
-    path = str(platformdirs.user_config_dir('zx'))
-    os.makedirs(path, exist_ok=True)
+def get_config_dir() -> pathlib.Path:
+    path = pathlib.Path(platformdirs.user_config_dir('zx'))
+    path.mkdir(parents=True, exist_ok=True)
     return path
 
 
@@ -82,18 +81,18 @@ def run(args: list[str]) -> None:
         filename = args.pop(0)
         handle_extra_arguments(args)
 
-    session_snapshot = os.path.join(get_config_dir(), 'session.zx')
-    settings_file = pathlib.Path(get_config_dir()) / 'settings.json'
+    session_snapshot = get_config_dir() / 'session.zx'
+    settings_file = get_config_dir() / 'settings.json'
 
     with Emulator(model=model, extra_devices=[
             GlobalSettingsManager(settings_file)]) as app:
         if filename:
             app._load_file(filename)
-        elif os.path.exists(session_snapshot):
-            app._load_file(session_snapshot)
+        elif session_snapshot.exists():
+            app._load_file(str(session_snapshot))
         with contextlib.suppress(EmulationExit):
             app.run()
-        app._save_snapshot_file(UnifiedSnapshot, session_snapshot)
+        app._save_snapshot_file(UnifiedSnapshot, str(session_snapshot))
 
 
 def profile(args: list[str]) -> None:
@@ -109,7 +108,7 @@ def profile(args: list[str]) -> None:
 
     # TODO: Amend profile data by reading them out first instead
     # of overwriting.
-    with open(profile_filename, 'w') as f:
+    with pathlib.Path(profile_filename).open('w') as f:
         # TODO: mypy false positive.
         for addr, annot in profile:  # type: ignore[attr-defined]
             print(f'@0x{addr:04x} {annot}', file=f)
@@ -142,16 +141,18 @@ def usage() -> None:
 def test_file(filename: str, batch_mode: bool,
               parallel_mode: bool = False) -> None:
     def move(dest_dir: str) -> None:
-        os.makedirs(dest_dir, exist_ok=True)
+        pathlib.Path(dest_dir).mkdir(parents=True, exist_ok=True)
 
         # Make sure the destination filename is unique.
         dest_filename = filename
         while True:
-            dest_path = os.path.join(dest_dir, dest_filename)
-            if not os.path.exists(dest_path):
+            dest_path = pathlib.Path(dest_dir) / dest_filename
+            if not dest_path.exists():
                 break
 
-            dest_filename, ext = os.path.splitext(dest_filename)
+            stem = pathlib.Path(dest_filename)
+            ext = stem.suffix
+            dest_filename = str(stem.with_suffix(''))
             r = dest_filename.rsplit('--', maxsplit=1)
             if len(r) == 1:
                 dest_filename = r[0] + '--2'
@@ -160,7 +161,7 @@ def test_file(filename: str, batch_mode: bool,
 
             dest_filename = dest_filename + ext
 
-        os.rename(filename, dest_path)
+        pathlib.Path(filename).rename(dest_path)
         print(f'{filename!r} moved to {dest_dir!r}')
 
     def match_bytes(b1: Bytes, b2: Bytes, path: str) -> None:
@@ -209,7 +210,7 @@ def test_file(filename: str, batch_mode: bool,
         if not parallel_mode:
             print(repr(filename))
 
-        with open(filename, 'rb') as f:
+        with pathlib.Path(filename).open('rb') as f:
             image = f.read()
         file = parse_file_image(filename, image)
 
@@ -397,7 +398,7 @@ def _convert_any_to_zx(src: DataRecord,
                        src_format: type[DataRecord],
                        dest_filename: str,
                        dest_format: type[DataRecord]) -> None:
-    with open(dest_filename, 'wb') as f:
+    with pathlib.Path(dest_filename).open('wb') as f:
         # Use Unix line endings regardless of platform for consistency.
         f.write((src.dumps() + '\n').encode('utf-8'))
 
@@ -420,7 +421,7 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
     src_format = type(src)
     # print(src, '->', dest_filename)
 
-    _, dest_ext = os.path.splitext(dest_filename)
+    dest_ext = pathlib.Path(dest_filename).suffix
     dest_format = detect_file_format(image=None, filename_extension=dest_ext)
     if not dest_format:
         raise Error(f"Cannot determine the format of file '{dest_filename}'.")
