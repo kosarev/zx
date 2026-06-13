@@ -10,6 +10,7 @@ import abc
 import ctypes
 import enum
 import os
+import pathlib
 import typing
 
 from ._device import DestroyEmulator
@@ -1058,10 +1059,10 @@ class _MainMenuPanel(_Panel):
 
 
 class _FileEntryDescriptor(MenuItemDescriptor):
-    def __init__(self, name: str, path: str) -> None:
+    def __init__(self, name: str, path: pathlib.Path) -> None:
         super().__init__(name)
         self.path = path
-        self.is_dir = os.path.isdir(path)
+        self.is_dir = path.is_dir()
 
 
 class _FileBrowserPanel(_Panel):
@@ -1071,7 +1072,7 @@ class _FileBrowserPanel(_Panel):
     def __init__(self, theme: _Theme) -> None:
         super().__init__(theme)
         self.__texture = None
-        self.__path = os.getcwd()
+        self.__path = pathlib.Path.cwd()
         self.__menu: _Menu = _Menu([])
         self.__menu_button = _Button('Main menu', hotkey='BACKSPACE')
         self.__save_button = _Button('Save', hotkey='RETURN')
@@ -1096,20 +1097,18 @@ class _FileBrowserPanel(_Panel):
 
     def __load_entries(self) -> None:
         selected = self.__menu.selected_item
-        selected_path: None | str = None
+        selected_path: None | pathlib.Path = None
         if selected is not None:
             assert isinstance(selected.descriptor, _FileEntryDescriptor)
             selected_path = selected.descriptor.path
 
         try:
-            names = sorted(os.listdir(self.__path))
+            names = sorted(p.name for p in self.__path.iterdir())
         except OSError:
             names = []
-        parent = os.path.normpath(os.path.join(self.__path, '..'))
         descriptors = (
-            [_FileEntryDescriptor('..', parent)] +
-            [_FileEntryDescriptor(n, os.path.normpath(
-                os.path.join(self.__path, n))) for n in names]
+            [_FileEntryDescriptor('..', self.__path.parent)] +
+            [_FileEntryDescriptor(n, self.__path / n) for n in names]
         )
         self.__menu.selected_item = None
         self.__menu.items[:] = [_MenuItem(d) for d in descriptors]
@@ -1152,7 +1151,7 @@ class _FileBrowserPanel(_Panel):
         surface = _Surface(width, height)
         surface.fill(theme.overlay_bg)
 
-        path_surface = font.render(self.__path, DIM_RGB)
+        path_surface = font.render(str(self.__path), DIM_RGB)
         surface.blit(path_surface, font.em, (menu_y - font.line_height) / 2)
         path_surface.free()
 
@@ -1202,7 +1201,7 @@ class _FileBrowserPanel(_Panel):
         surface.free()
         self.__texture = texture
 
-    def __navigate(self, path: str) -> None:
+    def __navigate(self, path: pathlib.Path) -> None:
         prev_path = self.__path
         self.__path = path
         self.__load_entries()
@@ -1217,8 +1216,8 @@ class _FileBrowserPanel(_Panel):
         filename = self.__text_input.text.strip()
         if not filename:
             return
-        path = os.path.join(self.__path, filename)
-        if os.path.exists(path):
+        path = self.__path / filename
+        if path.exists():
             self._dialog = _MessageDialog(
                 self._theme, 'Overwrite?', (80, 60, 20, 255),
                 f'{filename!r} already exists. Overwrite?',
@@ -1240,7 +1239,7 @@ class _FileBrowserPanel(_Panel):
             self.invalidate()
         else:
             try:
-                dispatcher.notify(LoadFile(item.descriptor.path))
+                dispatcher.notify(LoadFile(str(item.descriptor.path)))
                 dispatcher.notify(_TogglePanel())
             except USER_ERRORS as e:
                 dispatcher.notify(_ShowError(verbalize_error(e)))
@@ -1315,9 +1314,9 @@ class _FileBrowserPanel(_Panel):
 
         if isinstance(event, _ConfirmOverwrite):
             filename = self.__text_input.text.strip()
-            path = os.path.join(self.__path, filename)
+            path = self.__path / filename
             try:
-                dispatcher.notify(SaveSnapshot(path))
+                dispatcher.notify(SaveSnapshot(str(path)))
                 dispatcher.notify(_TogglePanel())
             except USER_ERRORS as e:
                 dispatcher.notify(_ShowError(verbalize_error(e)))
