@@ -33,10 +33,3 @@ docstring-quotes = "double"
 # reflowing of a combined/parenthesised block. I001 then only sorts.
 [lint.isort]
 force-single-line = true
-
-[lint.per-file-ignores]
-# The optional ZX Basic compiler import (src.zxbc) gets a different mypy
-# error code per Python version and install state (attr-defined /
-# import-untyped / import-not-found), so a blanket `# type: ignore` is
-# the only thing correct everywhere - allow it here.
-"zx/_zxb.py" = ["PGH003"]
