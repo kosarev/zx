@@ -30,11 +30,12 @@ jobs:
       run: |
         sudo apt-get update
         python -m pip install --upgrade pip
-        python -m pip install --upgrade pycodestyle pytest numpy pyyaml mypy types-PyYAML pysdl2 platformdirs
+        python -m pip install --upgrade pycodestyle ruff pytest numpy pyyaml mypy types-PyYAML pysdl2 platformdirs
         python -m pip install --upgrade setuptools wheel
-    - name: Run pycodestyle and mypy
+    - name: Run pycodestyle, ruff and mypy
       run: |
         pycodestyle --exclude=z80 .
+        ruff check .
         mypy --config-file .mypy.ini zx tests
     - name: Install the package
       run: |

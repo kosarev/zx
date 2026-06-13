@@ -1,7 +1,6 @@
-# Ruff configuration. Run locally only for now - not wired into CI, which
-# gates on pycodestyle and mypy. Runs alongside pycodestyle, which stays
-# the authority. Every selected rule is fully enforced - the transitional
-# debt ledger has been worked off (see #41).
+# Ruff configuration. Enforced in CI alongside pycodestyle and mypy.
+# Every selected rule is fully enforced - the transitional debt ledger
+# has been worked off (see #41).
 
 target-version = "py310"
 line-length = 79
