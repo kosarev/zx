@@ -27,8 +27,6 @@ select = [
 # so the run is green today. Lift one at a time, fix all its sites, then
 # delete it from here. This list only shrinks. Counts are at baseline.
 ignore = [
-    # dead code
-    "F811",    #  1  redefined-while-unused
     # typing-only imports
     "TC001",   #  1  typing-only-first-party-import
     "TC002",   #  1  typing-only-third-party-import
