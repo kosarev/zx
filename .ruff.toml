@@ -74,3 +74,9 @@ ignore = [
 inline-quotes = "single"
 multiline-quotes = "single"
 docstring-quotes = "double"
+
+# One name per import line (the house style): each import is its own line,
+# so a git diff shows exactly which name was added or removed, with no
+# reflowing of a combined/parenthesised block. I001 then only sorts.
+[lint.isort]
+force-single-line = true
