@@ -50,20 +50,29 @@ from ._z80snapshot import Z80Snapshot
 from ._zxb import ZXBasicCompilerProgram
 
 
-# The top-level container: it IS the dispatcher through which devices
-# reach each other, and it owns the device set, the run loop and the
-# lifecycle. It makes no assumption that there is exactly one CPU/core
-# -- it just holds a set of devices, one or more of which may be a
-# Spectrum (or a core of another kind).
-#
-# A device is handed this object as the `devices` parameter of on_event,
-# but typed there as a plain Dispatcher, so its own code can only use the
-# Dispatcher interface; and it never finds the Emulator among the
-# iterated devices (the Emulator is not in its own device list). So a
-# device cannot accidentally reach up and orchestrate the container --
-# only a deliberate defiance of the declared type could, which is no
-# different from any encapsulation in Python.
-class Emulator(Dispatcher):
+# A Dispatcher that also lets the Emulator act on owner events
+# (LoadFile etc.) raised by a device.
+class _OwnerDispatcher(Dispatcher):
+    def __init__(self, devices: list[Device], emulator: 'Emulator') -> None:
+        super().__init__(devices)
+        self.__emulator = emulator
+
+    def notify(self, event: DeviceEvent) -> None:
+        super().notify(event)
+
+        emulator = self.__emulator
+        if isinstance(event, LoadFile):
+            emulator._load_file(event.filename)
+        elif isinstance(event, SaveSnapshot):
+            emulator._save_snapshot_file(Z80Snapshot, event.filename)
+        elif isinstance(event, ToggleTapePause):
+            emulator._toggle_tape_pause()
+
+
+# The top-level container: owns the device set, the run loop and the
+# lifecycle, and assumes no single CPU/core. Not a dispatcher itself --
+# it makes a temporary Dispatcher over its devices to dispatch.
+class Emulator:
     """The emulator: a container of devices driven by a run loop.
 
     Construct one - optionally headless (no window or sound) or for a
@@ -117,8 +126,7 @@ class Emulator(Dispatcher):
             core = next((d for d in devices if isinstance(d, Spectrum)), None)
 
         self.__core = core
-
-        Dispatcher.__init__(self, devices)
+        self.devices = list(devices)
 
     # The orchestration drives a single core (the common case); a device
     # set without one cannot be run or loaded into.
@@ -167,7 +175,8 @@ class Emulator(Dispatcher):
         if hold.held:
             return
 
-        self.__require_core().run_quantum(self)
+        dispatcher = _OwnerDispatcher(self.devices, self)
+        self.__require_core().run_quantum(dispatcher)
 
     def __emulation_time(self) -> float:
         event = GetEmulationTime()
@@ -291,14 +300,6 @@ class Emulator(Dispatcher):
             f.write(format.from_snapshot(
                 self.__require_core().to_snapshot()).encode())
 
-    # Defined after the methods it dispatches to. Owner-level events are
-    # raised by the UI and acted on by the container, not by any device.
     def notify(self, event: DeviceEvent) -> None:
-        Dispatcher.notify(self, event)
-
-        if isinstance(event, LoadFile):
-            self._load_file(event.filename)
-        elif isinstance(event, SaveSnapshot):
-            self._save_snapshot_file(Z80Snapshot, event.filename)
-        elif isinstance(event, ToggleTapePause):
-            self._toggle_tape_pause()
+        dispatcher = _OwnerDispatcher(self.devices, self)
+        dispatcher.notify(event)

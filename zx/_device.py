@@ -7,7 +7,6 @@
 #   Published under the MIT license.
 
 import enum
-import typing
 
 import numpy
 
@@ -388,18 +387,14 @@ class Device:
         pass
 
 
+# Broadcasts events to the devices.
 class Dispatcher:
-    __devices: typing.Iterable[Device]
-
     def __init__(self, devices: None | list[Device] = None) -> None:
         if devices is None:
             devices = []
 
         self.__devices = list(devices)
 
-    def __iter__(self) -> typing.Iterator[Device]:
-        yield from self.__devices
-
     def notify(self, event: DeviceEvent) -> None:
-        for device in self:
+        for device in self.__devices:
             device.on_event(event, self)

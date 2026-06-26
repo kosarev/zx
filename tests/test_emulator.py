@@ -51,7 +51,7 @@ def test_extra_devices() -> None:
     # Devices the caller attaches are added to the device set.
     extra = Device()
     with zx.Emulator(headless=True, extra_devices=[extra]) as mach:
-        assert extra in list(mach)
+        assert extra in mach.devices
 
 
 def test_init_and_destroy_emulator_dispatched() -> None:
