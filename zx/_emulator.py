@@ -69,15 +69,15 @@ class _OwnerDispatcher(Dispatcher):
             emulator._toggle_tape_pause()
 
 
-# The top-level container: owns the device set, the run loop and the
-# lifecycle, and assumes no single CPU/core. Not a dispatcher itself --
-# it makes a temporary Dispatcher over its devices to dispatch.
 class Emulator:
-    """The emulator: a container of devices driven by a run loop.
+    """Owns a set of devices and runs them. It is a context manager that
+    releases its resources on exit.
 
-    Construct one - optionally headless (no window or sound) or for a
-    specific model - then load a snapshot or tape and run it. It is a
-    context manager and releases its resources on exit.
+    The devices are independent peers, unaware of the Emulator or each
+    other, and communicate only by sending events to a Dispatcher, which
+    passes each event to every device. The Emulator makes a Dispatcher for
+    each operation and then drops it. This is also where it acts on events
+    that ask it to do something, such as LoadFile asking it to load a file.
     """
 
     def __init__(self, *,
@@ -164,8 +164,12 @@ class Emulator:
     # by a quantum. The broadcast is unconditional -- every device sees
     # RunQuantum each iteration, held or not; the held check only skips
     # advancing the core.
-    # TODO: With more than one core this advances each of them; for now
-    # there is a single core.
+    # TODO: This is still the single-core "advance one quantum" loop.
+    # Replace run_quantum with advance_toward(T) that runs to a horizon;
+    # make TimeAdvanced report the floor (the minimum across devices)
+    # rather than the core's tick; handle deferred port reads
+    # (EXECUTION_DEFERRED) by retrying; add converge-to-T rollback; and
+    # drive more than one core.
     def __run_quantum(self) -> None:
         hold = GetHoldState()
         self.notify(hold)
