@@ -286,7 +286,7 @@ class _PlaybackRecoverer(Spectrum):
         # the middle of a IX- or IY-prefixed instruction, so we
         # continue until such instruction, if any, is completed.
         if isinstance(event, FetchesLimitHit) and self.iregp_kind != 'hl':
-            self.fetches_limit = 1
+            self.m1_fetches_to_stop = 1
 
         super().on_event(event, devices)
 
@@ -329,7 +329,7 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
         # instruction in a frame is IN.
         if (isinstance(event, FetchesLimitHit) and
                 self._player.has_remaining_samples):
-            self.fetches_limit = 1
+            self.m1_fetches_to_stop = 1
 
         super().on_event(event, devices)
 

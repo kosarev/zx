@@ -83,7 +83,7 @@ struct __attribute__((packed)) machine_state {
 
     least_u32 ticks_since_int = 0;
     least_u32 tick_count = 0;
-    least_u32 fetches_to_stop = 0;
+    least_u32 m1_fetches_to_stop = 0;
     least_u32 ticks_to_stop = 0;
     least_u32 events = 0;
     least_u8 int_suppressed = false;
@@ -118,7 +118,7 @@ public:
 
         state.ticks_since_int = ticks_since_int;
         state.tick_count = tick_count;
-        state.fetches_to_stop = fetches_to_stop;
+        state.m1_fetches_to_stop = m1_fetches_to_stop;
         state.ticks_to_stop = ticks_to_stop;
         state.events = events;
         state.int_suppressed = int_suppressed;
@@ -132,7 +132,7 @@ public:
 
         ticks_since_int = state.ticks_since_int;
         tick_count = state.tick_count;
-        fetches_to_stop = state.fetches_to_stop;
+        m1_fetches_to_stop = state.m1_fetches_to_stop;
         ticks_to_stop = state.ticks_to_stop;
         events = state.events;
         int_suppressed = state.int_suppressed;

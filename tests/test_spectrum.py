@@ -72,7 +72,7 @@ def test_deferred_input() -> None:
 
     # Stop as soon as the instruction completes. Aborted attempts do
     # not count toward the limit, nor do they report hitting it.
-    mach.fetches_limit = 1
+    mach.m1_fetches_to_stop = 1
 
     # The deferred read aborts and rolls back the instruction: no
     # time passes, no fetches counted, nothing written.

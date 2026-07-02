@@ -306,7 +306,7 @@ class SpectrumState(Z80State):
 
         self.__ticks_since_int = p.parse32()
         self.__tick_count = p.parse32()
-        self.__fetches_to_stop = p.parse32()
+        self.__m1_fetches_to_stop = p.parse32()
         self.__ticks_to_stop = p.parse32()
         self.__events = p.parse32()
         self.__int_suppressed = p.parse8()
@@ -337,14 +337,16 @@ class SpectrumState(Z80State):
     def allow_int_after_ei(self, allow: bool) -> None:
         self.__int_after_ei_allowed[0] = int(allow)
 
+    # The number of M1 fetches left before the run stops between
+    # instructions (raising fetches_limit_hit); counts down as the
+    # machine executes. Null means no limit.
     @property
-    def fetches_limit(self) -> int:
-        assert 0  # TODO
-        # return self.get('fetches_to_stop')
+    def m1_fetches_to_stop(self) -> int:
+        return int.from_bytes(self.__m1_fetches_to_stop, 'little')
 
-    @fetches_limit.setter
-    def fetches_limit(self, fetches_to_stop: int) -> None:
-        self.__fetches_to_stop[:] = fetches_to_stop.to_bytes(4, 'little')
+    @m1_fetches_to_stop.setter
+    def m1_fetches_to_stop(self, fetches: int) -> None:
+        self.__m1_fetches_to_stop[:] = fetches.to_bytes(4, 'little')
 
     # The number of ticks after which the run loop stops between
     # instructions (raising ticks_limit_hit), without ending the
@@ -682,7 +684,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         elif isinstance(event, InstallSnapshot):
             self.install_snapshot(event.snapshot)
         elif isinstance(event, SetFetchesLimit):
-            self.fetches_limit = event.num_fetches
+            self.m1_fetches_to_stop = event.num_fetches
         elif isinstance(event, StopQuantum):
             self.raise_events(RunEvents.STOP_REQUESTED)
         elif isinstance(event, StartPlayback):

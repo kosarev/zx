@@ -297,8 +297,7 @@ public:
 
     fast_u8 on_m1_fetch_cycle() {
         // Handle stopping by hitting a specified number of fetches.
-        // TODO: Rename fetches_to_stop -> m1_fetches_to_stop.
-        if(fetches_to_stop && --fetches_to_stop == 0)
+        if(m1_fetches_to_stop && --m1_fetches_to_stop == 0)
             events |= events_mask::fetches_limit_hit;
 
         return base::on_m1_fetch_cycle();
@@ -403,7 +402,7 @@ public:
         retry_state.ticks_since_int = ticks_since_int;
         retry_state.tick_count = tick_count;
         retry_state.ticks_to_stop = ticks_to_stop;
-        retry_state.fetches_to_stop = fetches_to_stop;
+        retry_state.m1_fetches_to_stop = m1_fetches_to_stop;
     }
 
     void on_restore_retry_state() {
@@ -412,7 +411,7 @@ public:
         ticks_since_int = retry_state.ticks_since_int;
         tick_count = retry_state.tick_count;
         ticks_to_stop = retry_state.ticks_to_stop;
-        fetches_to_stop = retry_state.fetches_to_stop;
+        m1_fetches_to_stop = retry_state.m1_fetches_to_stop;
     }
 
     bool is_marked_addr(fast_u16 addr, memory_marks marks) const {
@@ -1007,8 +1006,8 @@ protected:
     // fetch limits).
     ticks_type tick_count = 0;
 
-    ticks_type ticks_to_stop = 0;    // Null means no limit.
-    ticks_type fetches_to_stop = 0;  // Null means no limit.
+    ticks_type ticks_to_stop = 0;       // Null means no limit.
+    ticks_type m1_fetches_to_stop = 0;  // Null means no limit.
 
     // An aborted input instruction is retried from scratch, so the
     // counters that accumulate as an instruction executes are saved
@@ -1021,7 +1020,7 @@ protected:
         ticks_type ticks_since_int;
         ticks_type tick_count;
         ticks_type ticks_to_stop;
-        ticks_type fetches_to_stop;
+        ticks_type m1_fetches_to_stop;
     } retry_state = {};
 
     fast_u16 addr_bus_value = 0;
