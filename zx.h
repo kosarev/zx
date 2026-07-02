@@ -380,6 +380,13 @@ public:
         handle_port_contention(addr);
         fast_u8 n = self().on_input(addr);
 
+        // The port value not being known yet aborts the input
+        // instruction to be retried later.
+        if(n == z80::retry_input) {
+            self().on_raise_events(events_mask::retry_input);
+            return n;
+        }
+
         if(FILE *trace = get_trace_file()) {
             std::fprintf(trace, "read_port %04x %02x\n",
                          static_cast<unsigned>(addr),
@@ -388,6 +395,24 @@ public:
         }
 
         return n;
+    }
+
+    void on_save_retry_state() {
+        retry_state.pc = self().get_pc();
+        retry_state.r = self().get_r();
+        retry_state.ticks_since_int = ticks_since_int;
+        retry_state.tick_count = tick_count;
+        retry_state.ticks_to_stop = ticks_to_stop;
+        retry_state.fetches_to_stop = fetches_to_stop;
+    }
+
+    void on_restore_retry_state() {
+        self().set_pc(retry_state.pc);
+        self().set_r(retry_state.r);
+        ticks_since_int = retry_state.ticks_since_int;
+        tick_count = retry_state.tick_count;
+        ticks_to_stop = retry_state.ticks_to_stop;
+        fetches_to_stop = retry_state.fetches_to_stop;
     }
 
     bool is_marked_addr(fast_u16 addr, memory_marks marks) const {
@@ -984,6 +1009,20 @@ protected:
 
     ticks_type ticks_to_stop = 0;    // Null means no limit.
     ticks_type fetches_to_stop = 0;  // Null means no limit.
+
+    // An aborted input instruction is retried from scratch, so the
+    // counters that accumulate as an instruction executes are saved
+    // at its start and restored on the abort. Nothing else is
+    // committed before the abort: no memory or register writes, and
+    // the retry recomputes the rest identically.
+    struct {
+        fast_u16 pc;
+        fast_u8 r;
+        ticks_type ticks_since_int;
+        ticks_type tick_count;
+        ticks_type ticks_to_stop;
+        ticks_type fetches_to_stop;
+    } retry_state = {};
 
     fast_u16 addr_bus_value = 0;
     unsigned border_colour = 0;

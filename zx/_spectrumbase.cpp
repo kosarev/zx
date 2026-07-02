@@ -271,6 +271,11 @@ public:
             return default_value;
         }
 
+        // None means the value is not known yet, aborting the input
+        // instruction to be retried later.
+        if(result == Py_None)
+            return z80::retry_input;
+
         if(!PyLong_Check(result)) {
             PyErr_SetString(PyExc_TypeError, "returning value must be integer");
             events |= events_mask::stop_requested;

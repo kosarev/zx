@@ -61,6 +61,7 @@ class RunEvents(enum.IntFlag):
     NO_EVENTS = 0
     END_OF_FRAME = 1 << 0
     BREAKPOINT_HIT = 1 << 1
+    RETRY_INPUT = 1 << 3
     FETCHES_LIMIT_HIT = 1 << 4
     STOP_REQUESTED = 1 << 5
 
@@ -148,6 +149,10 @@ class Z80State:
     @property
     def a(self) -> int:
         return self.__af[1]
+
+    @a.setter
+    def a(self, value: int) -> None:
+        self.__af[1] = value
 
     @property
     def f(self) -> int:
@@ -530,11 +535,12 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             assert len(rom) == 2 * PAGE_SIZE
             self.write(0x0000, rom[PAGE_SIZE:], rom_page=1)
 
-    def __on_input(self, addr: int, devices: Dispatcher) -> int:
+    def __on_input(self, addr: int, devices: Dispatcher) -> int | None:
         read_port = ReadPort(addr, self.tick_count)
         devices.notify(read_port)
         v = read_port.value
-        self.__port_reads.append(v)
+        if v is not None:
+            self.__port_reads.append(v)
         return v
 
     def __save_crash_rzx(self, player: PlaybackPlayer, state: SpectrumState,

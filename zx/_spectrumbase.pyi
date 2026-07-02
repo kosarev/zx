@@ -21,8 +21,8 @@ class _SpectrumBase:
 
     def set_on_input_callback(
             self,
-            callback: typing.Callable[[int, Dispatcher], int]) -> (
-            typing.Callable[[int, Dispatcher], int]):
+            callback: typing.Callable[[int, Dispatcher], int | None]) -> (
+            typing.Callable[[int, Dispatcher], int | None]):
         ...
 
     def set_on_output_callback(self,
