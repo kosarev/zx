@@ -61,8 +61,8 @@ class RunEvents(enum.IntFlag):
     NO_EVENTS = 0
     END_OF_FRAME = 1 << 0
     BREAKPOINT_HIT = 1 << 1
-    FETCHES_LIMIT_HIT = 1 << 5
-    STOP_REQUESTED = 1 << 6
+    FETCHES_LIMIT_HIT = 1 << 4
+    STOP_REQUESTED = 1 << 5
 
 
 class StateParser:
