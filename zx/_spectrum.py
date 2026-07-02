@@ -52,6 +52,7 @@ from ._playback import PlaybackPlayer
 from ._rom import load_rom_image
 from ._rzx import make_rzx
 from ._spectrumbase import _SpectrumBase
+from ._time import Resolution
 from ._time import Time
 from ._z80snapshot import Z80Snapshot
 
@@ -515,7 +516,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         self.frame_count = 0
         # TODO: Double-underscore or make public.
-        self._emulation_time = Time()
+        self._emulation_time = Time(0, Resolution(50))
 
         self.set_on_input_callback(self.__on_input)
 
@@ -588,7 +589,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.__port_reads.clear()
 
         self.frame_count += 1
-        self._emulation_time.advance(1 / 50)
+        self._emulation_time.advance(1)
 
     def __enter_playback_mode(self, playback: UnifiedPlayback) -> None:
         self.__playback = playback

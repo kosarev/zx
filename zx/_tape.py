@@ -29,6 +29,7 @@ from ._device import StopQuantum
 from ._device import TapeStateUpdated
 from ._device import TimeAdvanced
 from ._sound import PulseStream
+from ._time import Resolution
 from ._time import Time
 
 
@@ -122,7 +123,7 @@ class TapePlayer(Device):
         self._level = False
         self._pulse = 0
         self._ticks_per_frame = model._TICKS_PER_FRAME
-        self._time = Time()
+        self._time = Time(0, Resolution(self._ticks_per_frame * 50))
         self.__audible_output = PulseStream(model)
         self.__audible_pulses: list[tuple[int, int]] = []
 
@@ -188,8 +189,7 @@ class TapePlayer(Device):
                 ticks_to_skip = min(self._pulse, target_tick - self._tick)
                 self._pulse -= ticks_to_skip
                 self._tick += ticks_to_skip
-                self._time.advance(ticks_to_skip /
-                                   (self._ticks_per_frame * 50))
+                self._time.advance(ticks_to_skip)
                 continue
 
             # Get subsequent pulse, if any.

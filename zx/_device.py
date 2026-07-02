@@ -7,6 +7,7 @@
 #   Published under the MIT license.
 
 import enum
+import typing
 
 import numpy
 
@@ -15,7 +16,9 @@ from ._data import SoundFile
 from ._data import SoundPulses
 from ._data import UnifiedPlayback
 from ._data import UnifiedSnapshot
-from ._time import Time
+
+if typing.TYPE_CHECKING:
+    from ._time import Time
 
 
 class DeviceEvent:
@@ -248,13 +251,13 @@ class GetEmulationPauseState(DeviceEvent):
 
 class GetEmulationTime(DeviceEvent):
     def __init__(self) -> None:
-        self.time = Time()
+        self.time: Time | None = None
 
 
 # TODO: Combine these into Get/SetState kind of events.
 class GetTapePlayerTime(DeviceEvent):
     def __init__(self) -> None:
-        self.time = Time()
+        self.time: Time | None = None
 
 
 class IsTapePlayerPaused(DeviceEvent):

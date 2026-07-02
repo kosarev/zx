@@ -455,7 +455,7 @@ class Notification:
 
         cx = x + size / 2
         cy = y + size / 2
-        t = self._time.get()
+        t = self._time.to_float_seconds()
         theme.draw_notification_background(renderer, cx, cy, size, alpha)
         self._draw(theme, renderer, cx, cy, size, alpha, t)
 
@@ -2012,6 +2012,7 @@ class ScreenWindow(Device):
         if pause_state.paused:
             emulation_time = GetEmulationTime()
             devices.notify(emulation_time)
+            assert emulation_time.time is not None
             self._notification = PauseNotification(emulation_time.time)
         else:
             self._notification = None
@@ -2023,6 +2024,7 @@ class ScreenWindow(Device):
         devices.notify(tape_state)
         tape_time = GetTapePlayerTime()
         devices.notify(tape_time)
+        assert tape_time.time is not None
         if tape_state.paused:
             self._notification = TapePauseNotification(tape_time.time)
         else:

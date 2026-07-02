@@ -185,7 +185,8 @@ class Emulator:
     def __emulation_time(self) -> float:
         event = GetEmulationTime()
         self.notify(event)
-        return event.time.get()
+        assert event.time is not None
+        return event.time.to_float_seconds()
 
     def reset(self) -> None:
         self.notify(ResetEmulator())
