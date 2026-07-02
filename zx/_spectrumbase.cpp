@@ -266,10 +266,12 @@ public:
         decref_guard result_guard(result);
         install_state();
 
-        if(!result) {
-            events |= events_mask::stop_requested;
-            return default_value;
-        }
+        // On errors, abort the input instruction just like on a
+        // deferred read, so nothing is committed on a value that
+        // never existed; the pending exception then propagates on
+        // the end of the run.
+        if(!result)
+            return z80::retry_input;
 
         // None means the value is not known yet, aborting the input
         // instruction to be retried later.
@@ -278,8 +280,7 @@ public:
 
         if(!PyLong_Check(result)) {
             PyErr_SetString(PyExc_TypeError, "returning value must be integer");
-            events |= events_mask::stop_requested;
-            return default_value;
+            return z80::retry_input;
         }
 
         return z80::mask8(PyLong_AsUnsignedLong(result));
@@ -296,6 +297,12 @@ public:
         PyObject *result = PyObject_CallObject(on_output_callback, args);
         decref_guard result_guard(result);
         install_state();
+
+        // On errors, stop the run so the pending exception can
+        // propagate on its end. Unlike an input, the write cannot be
+        // aborted: it is already committed to the devices.
+        if(!result)
+            events |= events_mask::stop_requested;
     }
 
 private:

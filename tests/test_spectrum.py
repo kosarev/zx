@@ -22,8 +22,9 @@ from zx._spectrum import RunEvents
 
 def test_on_input_propagates_exception() -> None:
     # An exception raised while handling a port read must propagate
-    # out of the run, and promptly -- at the offending instruction,
-    # not at the end of the frame.
+    # out of the run promptly, aborting the input instruction just
+    # like a deferred read, so nothing is committed on a value that
+    # never existed.
     class _PortError(Exception):
         pass
 
@@ -37,11 +38,39 @@ def test_on_input_propagates_exception() -> None:
 
     mach.write(0x8000, b'\xdb\xfe')  # IN A, (0xfe)
     mach.pc = 0x8000
+    mach.a = 0x12
 
     with pytest.raises(_PortError):
         mach._run(dispatcher)
 
-    assert mach.ticks_since_int < 100
+    assert mach.pc == 0x8000
+    assert mach.ticks_since_int == 0
+    assert mach.r == 0
+    assert mach.a == 0x12
+
+
+def test_on_output_propagates_exception() -> None:
+    # An exception raised while handling a port write must propagate
+    # out of the run promptly. Unlike an input, the write cannot be
+    # aborted, so the instruction completes before the run stops.
+    class _PortError(Exception):
+        pass
+
+    def raise_on_output(addr: int, value: int) -> None:
+        raise _PortError()
+
+    mach = zx.Spectrum()
+    dispatcher = Dispatcher([mach])
+    mach.set_on_output_callback(raise_on_output)
+
+    mach.write(0x8000, b'\xd3\xfe')  # OUT (0xfe), A
+    mach.pc = 0x8000
+
+    with pytest.raises(_PortError):
+        mach._run(dispatcher)
+
+    assert mach.pc == 0x8002
+    assert mach.ticks_since_int == 11
 
 
 def test_deferred_input() -> None:
