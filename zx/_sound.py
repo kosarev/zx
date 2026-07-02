@@ -10,7 +10,6 @@
 import numpy
 
 from ._data import SoundPulses
-from ._data import SpectrumModel
 from ._device import DestroyEmulator
 from ._device import Device
 from ._device import DeviceEvent
@@ -45,9 +44,10 @@ assert SPEED > 0
 
 
 class PulseStream:
-    def __init__(self, model: type[SpectrumModel]) -> None:
-        # TODO: This is really the clock rate of the tick timeline.
-        self.__rate = model._TICKS_PER_FRAME * 50
+    # The rate is that of the tick timeline the input ticks are
+    # stamped in, in ticks per second.
+    def __init__(self, rate: int) -> None:
+        self.__rate = rate
 
         # The last set sound level.
         self.__current_level = numpy.uint32(0)
@@ -191,11 +191,11 @@ class SoundDevice(Device):
     # value is enough for a cap.
     __ASSUMED_REFRESH_FPS = 50
 
-    def __init__(self, model: type[SpectrumModel]) -> None:
+    def __init__(self) -> None:
         # The rate of the simulated-tick timeline the pulse chunks are
         # stamped in, needed to size the sub-frame budget at slow
-        # speeds.
-        self.__source_rate = model._TICKS_PER_FRAME * 50
+        # speeds. A property of the stream, learnt from its chunks.
+        self.__source_rate: None | int = None
 
         self.__chunks: list[SoundPulses] = []
 
@@ -345,6 +345,10 @@ class SoundDevice(Device):
         if self.__fast_forward or self.__speed >= 1.0:
             return
 
+        # No stream seen yet, so nothing to budget.
+        if self.__source_rate is None:
+            return
+
         latency_seconds = self.__latency_ms / 1000
         max_output_seconds = min(latency_seconds,
                                  1.0 / self.__ASSUMED_REFRESH_FPS)
@@ -377,6 +381,7 @@ class SoundDevice(Device):
             self.__resampler = _PulseResampler(
                 self._OUTPUT_FREQ, self.__speed)
         elif isinstance(event, NewSoundPulses):
+            self.__source_rate = event.pulses.rate
             self.__chunks.append(event.pulses)
         elif isinstance(event, SetFastForward):
             if event.active:

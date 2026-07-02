@@ -127,7 +127,7 @@ class TapePlayer(Device):
         self._level = False
         self._pulse = 0
         self._time = Time(0, Resolution(_TAPE_TICKS_PER_SECOND))
-        self.__audible_output = PulseStream(model)
+        self.__audible_output = PulseStream(model._TICKS_PER_FRAME * 50)
         self.__audible_pulses: list[tuple[int, int]] = []
 
         # Unwrapping of 32-bit event stamps onto the tape's

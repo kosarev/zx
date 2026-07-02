@@ -11,7 +11,6 @@ import numpy
 
 from zx._data import SoundPulses
 from zx._data import Spectrum48
-from zx._data import SpectrumModel
 from zx._device import Dispatcher
 from zx._device import GetSettings
 from zx._device import NewSoundPulses
@@ -28,8 +27,8 @@ from zx._sound import SoundDevice
 # them, so a test — or an API consumer — can read what the base
 # SoundDevice generates without any audio hardware.
 class _RecordingSound(SoundDevice):
-    def __init__(self, model: type[SpectrumModel]) -> None:
-        super().__init__(model)
+    def __init__(self) -> None:
+        super().__init__()
         self.output: list[numpy.typing.NDArray[numpy.float32]] = []
 
     def _output(self, samples: numpy.typing.NDArray[numpy.float32]) -> None:
@@ -45,7 +44,7 @@ def _level_chunk(rate: int, level: int, num_ticks: int) -> SoundPulses:
 
 def test_sound_device_produces_samples() -> None:
     dispatcher = Dispatcher()
-    device = _RecordingSound(Spectrum48)
+    device = _RecordingSound()
 
     rate = Spectrum48._TICKS_PER_FRAME * 50
     span = Spectrum48._TICKS_PER_FRAME  # One frame's worth of ticks.
@@ -74,7 +73,7 @@ def test_sound_device_produces_samples() -> None:
 
 def test_sound_device_settings() -> None:
     dispatcher = Dispatcher()
-    device = SoundDevice(Spectrum48)
+    device = SoundDevice()
 
     def report() -> dict[str, SettingDescriptor]:
         event = GetSettings()

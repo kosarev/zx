@@ -111,7 +111,7 @@ class Emulator:
                 if screen is None:
                     screen = ScreenWindow(core.FRAME_SIZE)
                 if sound_device is None:
-                    sound_device = SDLSound(model)
+                    sound_device = SDLSound()
 
                 devices.extend([screen, sound_device])
 

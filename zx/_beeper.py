@@ -22,7 +22,7 @@ from ._sound import PulseStream
 
 class Beeper(Device):
     def __init__(self, model: type[SpectrumModel]) -> None:
-        self.__stream = PulseStream(model)
+        self.__stream = PulseStream(model._TICKS_PER_FRAME * 50)
 
         # The tick position up to which the beeper's sound has been
         # published.

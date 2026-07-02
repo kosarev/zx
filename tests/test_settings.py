@@ -9,7 +9,6 @@
 
 import pathlib
 
-from zx._data import Spectrum48
 from zx._device import DestroyEmulator
 from zx._device import Dispatcher
 from zx._device import GetSettings
@@ -23,13 +22,13 @@ def test_settings_round_trip(tmp_path: pathlib.Path) -> None:
     path = tmp_path / 'settings.json'
 
     # A changed setting is saved on shutdown...
-    sound = SoundDevice(Spectrum48)
+    sound = SoundDevice()
     dispatcher = Dispatcher([sound, GlobalSettingsManager(path)])
     dispatcher.notify(SetSettingValue('speed', 2.0))
     dispatcher.notify(DestroyEmulator())
 
     # ...and applied to a fresh device set on startup.
-    sound = SoundDevice(Spectrum48)
+    sound = SoundDevice()
     dispatcher = Dispatcher([sound, GlobalSettingsManager(path)])
     dispatcher.notify(InitEmulator())
 
