@@ -49,8 +49,8 @@ class WAVFile(SoundFile, format_name='WAV'):
         assert num_channels in (1, 2)
         if num_channels == 2:
             # Combine the channels into one.
-            samples = samples.reshape(num_frames // 2, 2)
-            samples = samples.mean(axis=1, dtype=dtype)
+            channel_samples = samples.reshape(num_frames // 2, 2)
+            samples = channel_samples.mean(axis=1, dtype=dtype)
 
         # Turn it into an array of low and high levels.
         threshold = {1: 2**(sample_size * 8 - 1), 2: 0}[sample_size]
