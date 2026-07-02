@@ -56,12 +56,13 @@ from ._time import Time
 from ._z80snapshot import Z80Snapshot
 
 
+# Mirrors events_mask in zx.h.
 class RunEvents(enum.IntFlag):
     NO_EVENTS = 0
-    END_OF_FRAME = 1 << 1
-    FETCHES_LIMIT_HIT = 1 << 3
-    BREAKPOINT_HIT = 1 << 4
-    STOP_REQUESTED = 1 << 5
+    END_OF_FRAME = 1 << 0
+    BREAKPOINT_HIT = 1 << 1
+    FETCHES_LIMIT_HIT = 1 << 5
+    STOP_REQUESTED = 1 << 6
 
 
 class StateParser:

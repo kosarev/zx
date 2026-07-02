@@ -146,7 +146,7 @@ public:
         return pixels;
     }
 
-    events_mask run(PyObject *dispatcher) {
+    events_mask::type run(PyObject *dispatcher) {
         // Hold the dispatcher for the duration of the run so the Python
         // callbacks invoked from the C core (e.g. on input) can be
         // passed it; the Python side never stores it. Cleared on
@@ -154,7 +154,7 @@ public:
         run_dispatcher = dispatcher;
 
         install_state();
-        events_mask events = base::run();
+        events_mask::type events = base::run();
 
         // Bring the rendered screen up to the current tick before
         // handing control back, so the Python side always sees the
@@ -267,13 +267,13 @@ public:
         install_state();
 
         if(!result) {
-            stop();
+            events |= events_mask::stop_requested;
             return default_value;
         }
 
         if(!PyLong_Check(result)) {
             PyErr_SetString(PyExc_TypeError, "returning value must be integer");
-            stop();
+            events |= events_mask::stop_requested;
             return default_value;
         }
 
@@ -397,7 +397,7 @@ PyObject *run(PyObject *self, PyObject *args) {
     PyObject *dispatcher;
     if(!PyArg_ParseTuple(args, "O", &dispatcher))
         return nullptr;
-    events_mask events = emulator.run(dispatcher);
+    events_mask::type events = emulator.run(dispatcher);
     if(PyErr_Occurred())
         return nullptr;
     return Py_BuildValue("i", events);

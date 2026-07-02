@@ -52,14 +52,16 @@ constexpr bool round_up(T a, T b) {
     return div_ceil(a, b) * b;
 }
 
-typedef fast_u32 events_mask;
-const events_mask no_events         = 0;
-const events_mask machine_stopped   = 1u << 0;  // TODO: Eliminate.
-const events_mask end_of_frame      = 1u << 1;
-const events_mask ticks_limit_hit   = 1u << 2;
-const events_mask fetches_limit_hit = 1u << 3;
-const events_mask breakpoint_hit    = 1u << 4;
-const events_mask custom_event      = 1u << 31;
+// The events the machine reports.
+class events_mask : public z80::events_mask {
+public:
+    using base = z80::events_mask;
+
+    static const type fetches_limit_hit = type(1) << (base::unused_bit + 0);
+    static const type stop_requested = type(1) << (base::unused_bit + 1);
+
+    static const unsigned unused_bit = base::unused_bit + 2;
+};
 
 typedef fast_u8 memory_marks;
 const memory_marks no_marks           = 0;
@@ -204,9 +206,11 @@ public:
         on_reset();
     }
 
-    events_mask get_events() const { return events; }
+    events_mask::type get_events() const { return events; }
 
-    void stop() { events |= machine_stopped; }
+    // The z80 library reads and raises its events on the same word.
+    events_mask::type on_get_events() const { return events; }
+    void on_set_events(events_mask::type new_events) { events = new_events; }
 
     void on_tick(unsigned t) {
         ticks_since_int += t;
@@ -218,7 +222,7 @@ public:
                 ticks_to_stop -= t;
             } else {
                 ticks_to_stop = 0;
-                events |= ticks_limit_hit;
+                events |= events_mask::ticks_limit_hit;
             }
         }
     }
@@ -295,7 +299,7 @@ public:
         // Handle stopping by hitting a specified number of fetches.
         // TODO: Rename fetches_to_stop -> m1_fetches_to_stop.
         if(fetches_to_stop && --fetches_to_stop == 0)
-            events |= fetches_limit_hit;
+            events |= events_mask::fetches_limit_hit;
 
         return base::on_m1_fetch_cycle();
     }
@@ -407,7 +411,7 @@ public:
     void on_set_pc(fast_u16 pc) {
         // Catch breakpoints.
         if(is_breakpoint_addr(pc))
-            events |= breakpoint_hit;
+            events |= events_mask::breakpoint_hit;
 
         base::on_set_pc(pc);
     }
@@ -848,14 +852,14 @@ public:
         }
     }
 
-    events_mask run() {
+    events_mask::type run() {
         // Normalize the ticks-since-int counter.
         ticks_type ticks_per_frame = get_ticks_per_frame();
         if (ticks_since_int >= ticks_per_frame)
             start_new_frame();
 
         // Reset events.
-        events = no_events;
+        events = 0;
 
         // Execute instructions that fit the current frame.
         while(!events && ticks_since_int < ticks_per_frame) {
@@ -874,7 +878,7 @@ public:
 
         // Signal end-of-frame, if it's the case.
         if(ticks_since_int >= ticks_per_frame)
-            events |= end_of_frame;
+            events |= events_mask::end_of_frame;
 
         return events;
     }
@@ -967,7 +971,7 @@ protected:
         return static_cast<pixel_type>(r);
     }
 
-    events_mask events = no_events;
+    events_mask::type events = 0;
 
     ticks_type ticks_since_int = 0;
 
