@@ -348,17 +348,18 @@ class SpectrumState(Z80State):
     def m1_fetches_to_stop(self, fetches: int) -> None:
         self.__m1_fetches_to_stop[:] = fetches.to_bytes(4, 'little')
 
-    # The number of ticks after which the run loop stops between
+    # The number of ticks left before the run stops between
     # instructions (raising ticks_limit_hit), without ending the
-    # frame. Null means no limit. Set per quantum to cap how far a
-    # quantum advances, e.g. for sub-frame quanta at slow speeds.
+    # frame; counts down as the machine executes. Null means no
+    # limit. Set per quantum to cap how far a quantum advances,
+    # e.g. for sub-frame quanta at slow speeds.
     @property
-    def ticks_limit(self) -> int:
+    def ticks_to_stop(self) -> int:
         return int.from_bytes(self.__ticks_to_stop, 'little')
 
-    @ticks_limit.setter
-    def ticks_limit(self, ticks_to_stop: int) -> None:
-        self.__ticks_to_stop[:] = ticks_to_stop.to_bytes(4, 'little')
+    @ticks_to_stop.setter
+    def ticks_to_stop(self, ticks: int) -> None:
+        self.__ticks_to_stop[:] = ticks.to_bytes(4, 'little')
 
     # TODO: Can we do without this?
     def get_events(self) -> int:
@@ -610,8 +611,8 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         # runs to the frame end as before.
         limit = GetQuantumTickLimit()
         devices.notify(limit)
-        self.ticks_limit = (0 if limit.stop_after_ticks is None
-                            else limit.stop_after_ticks)
+        self.ticks_to_stop = (0 if limit.stop_after_ticks is None
+                              else limit.stop_after_ticks)
 
         events = RunEvents(self._run(devices))
 
