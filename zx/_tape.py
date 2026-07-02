@@ -32,6 +32,10 @@ from ._sound import PulseStream
 from ._time import Resolution
 from ._time import Time
 
+# Tape formats define pulse durations in ticks of the standard
+# 3.5 MHz clock.
+_TAPE_TICKS_PER_SECOND = 3_500_000
+
 
 def _get_pilot_pulses(pilot_tone_len: int,
                       pilot_pulse_len: int = 2168) -> (
@@ -122,8 +126,7 @@ class TapePlayer(Device):
         self._tick = 0
         self._level = False
         self._pulse = 0
-        self._ticks_per_frame = model._TICKS_PER_FRAME
-        self._time = Time(0, Resolution(self._ticks_per_frame * 50))
+        self._time = Time(0, Resolution(_TAPE_TICKS_PER_SECOND))
         self.__audible_output = PulseStream(model)
         self.__audible_pulses: list[tuple[int, int]] = []
 
