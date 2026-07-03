@@ -7,9 +7,12 @@
 #   Published under the MIT license.
 
 
+from __future__ import annotations
+
+import typing
+
 import numpy
 
-from ._data import SpectrumModel
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
@@ -19,15 +22,19 @@ from ._device import ResetEmulator
 from ._device import TimeAdvanced
 from ._sound import PulseStream
 
+if typing.TYPE_CHECKING:
+    from ._time import Time
+
 
 class Beeper(Device):
-    def __init__(self, model: type[SpectrumModel]) -> None:
-        self.__rate = model._TICKS_PER_FRAME * 50
-        self.__stream = PulseStream(self.__rate)
+    def __init__(self) -> None:
+        # Created when the first stamp reveals the rate of the
+        # timeline the transitions are stamped in.
+        self.__stream: None | PulseStream = None
 
-        # The tick position up to which the beeper's sound has been
+        # The time up to which the beeper's sound has been
         # published.
-        self.__published_up_to_tick: None | int = None
+        self.__published_up_to: None | Time = None
 
         # EAR transitions collected since then, with their
         # free-running tick stamps.
@@ -48,17 +55,22 @@ class Beeper(Device):
         self.__ticks.append(
             (writes >> numpy.uint64(32)).astype(numpy.uint32))
 
-    def __publish(self, stamp: int, dispatcher: Dispatcher) -> None:
-        published_up_to = self.__published_up_to_tick
-        self.__published_up_to_tick = stamp
+    def __publish(self, stamp: Time, dispatcher: Dispatcher) -> None:
+        published_up_to = self.__published_up_to
+        self.__published_up_to = stamp
 
         # Resynchronise after construction or reset.
         if published_up_to is None:
+            self.__stream = PulseStream(stamp.ticks_per_second)
             self.__levels.clear()
             self.__ticks.clear()
             return
 
-        span = stamp - published_up_to
+        # Positions subtract only within one timeline; the
+        # transitions are stamped in its ticks too. A rate change
+        # comes only with a reset, which resynchronises.
+        assert stamp.ticks_per_second == published_up_to.ticks_per_second
+        span = stamp.count - published_up_to.count
         if span == 0:
             return
 
@@ -70,25 +82,22 @@ class Beeper(Device):
 
             # Offsets within the published span; uint32 arithmetic
             # wraps.
-            ticks = ticks - numpy.uint32(published_up_to & 0xffffffff)
+            ticks = ticks - numpy.uint32(published_up_to.count & 0xffffffff)
         else:
             levels = numpy.zeros(0, dtype=numpy.uint32)
             ticks = numpy.zeros(0, dtype=numpy.uint32)
 
+        assert self.__stream is not None
         pulses = self.__stream.stream_chunk(levels, ticks, span)
         dispatcher.notify(NewSoundPulses(pulses))
 
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
         if isinstance(event, ResetEmulator):
-            self.__stream.reset()
-            self.__published_up_to_tick = None
+            self.__stream = None
+            self.__published_up_to = None
             self.__levels.clear()
             self.__ticks.clear()
         elif isinstance(event, NewPortWrites):
             self.__collect(event.writes)
         elif isinstance(event, TimeAdvanced):
-            # The EAR transitions are stamped in ticks of the same
-            # timeline the stamp counts, so no translation is needed
-            # or possible; publishing works in that timeline's ticks.
-            assert event.time.ticks_per_second == self.__rate
-            self.__publish(event.time.count, dispatcher)
+            self.__publish(event.time, dispatcher)

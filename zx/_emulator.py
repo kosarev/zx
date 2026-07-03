@@ -101,7 +101,7 @@ class Emulator:
             if keyboard is None:
                 keyboard = Keyboard()
             if beeper is None:
-                beeper = Beeper(model)
+                beeper = Beeper()
 
             devices = [core, TapePlayer(model), keyboard, beeper,
                        playback_player or PlaybackPlayer(),
