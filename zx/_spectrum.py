@@ -43,7 +43,6 @@ from ._device import SetFetchesLimit
 from ._device import StartPlayback
 from ._device import StopPlayback
 from ._device import StopQuantum
-from ._device import TimeAdvanced
 from ._device import ToggleEmulationPause
 from ._except import EmulationExit
 from ._keyboard import KEYS
@@ -641,10 +640,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
                 devices.notify(FetchesLimitHit())
         elif RunEvents.END_OF_FRAME in events:
             devices.notify(EndOfFrame())
-
-        # TimeAdvanced goes last: all facts about the elapsed span
-        # of time are published by the time its dispatch completes.
-        devices.notify(TimeAdvanced(now))
 
     def stop(self) -> None:
         raise EmulationExit()

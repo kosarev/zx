@@ -35,6 +35,7 @@ from ._device import RunQuantum
 from ._device import SaveSnapshot
 from ._device import SetFastForward
 from ._device import StartPlayback
+from ._device import TimeAdvanced
 from ._device import ToggleTapePause
 from ._error import Error
 from ._file import parse_file
@@ -164,11 +165,9 @@ class Emulator:
     # by a quantum. The broadcast is unconditional -- every device sees
     # RunQuantum each iteration, held or not; the held check only skips
     # advancing the core.
-    # TODO: This is still the single-core "advance one quantum" loop.
-    # Replace run_quantum with advance_toward(T) that runs to a horizon;
-    # make TimeAdvanced report the floor (the minimum across devices)
-    # rather than the core's tick; handle deferred port reads
-    # (EXECUTION_DEFERRED) by retrying; add converge-to-T rollback; and
+    # TODO: This is still the single-core loop: relocate the core's
+    # advance onto the RunQuantum event, handle deferred port reads
+    # (RETRY_INPUT) by retrying, add converge-to-T rollback, and
     # drive more than one core.
     def __run_quantum(self) -> None:
         hold = GetHoldState()
@@ -187,6 +186,15 @@ class Emulator:
         dispatcher = _OwnerDispatcher(self.devices, self)
         self.__require_core().run_quantum(
             dispatcher, stop_after=limit.stop_after_time)
+
+        # The floor: the time every device has crossed.
+        floor = GetEmulationTime()
+        self.notify(floor)
+        assert floor.time is not None
+
+        # TimeAdvanced goes last: all facts about the elapsed span
+        # of time are published by the time its dispatch completes.
+        self.notify(TimeAdvanced(floor.time))
 
     def __emulation_time(self) -> float:
         event = GetEmulationTime()
