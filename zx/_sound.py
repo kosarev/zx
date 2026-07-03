@@ -8,7 +8,6 @@
 
 
 import math
-import typing
 
 import numpy
 
@@ -18,7 +17,7 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import GetHoldState
-from ._device import GetQuantumTickLimit
+from ._device import GetQuantumTimeLimit
 from ._device import GetSettings
 from ._device import NewSoundPulses
 from ._device import ResetEmulator
@@ -29,9 +28,7 @@ from ._device import SetSettingValue
 from ._device import SettingDescriptor
 from ._device import SettingScope
 from ._device import TimeAdvanced
-
-if typing.TYPE_CHECKING:
-    from ._time import Time
+from ._time import Time
 
 # The initial speed: how fast emulated time runs relative to
 # wallclock. The sound stream is the wallclock reference, so speed is
@@ -204,11 +201,6 @@ class SoundDevice(Device):
     __ASSUMED_REFRESH_FPS = 50
 
     def __init__(self) -> None:
-        # The rate of the simulated-tick timeline the pulse chunks are
-        # stamped in, needed to size the sub-frame budget at slow
-        # speeds. A property of the stream, learnt from its chunks.
-        self.__source_rate: None | int = None
-
         self.__chunks: list[SoundPulses] = []
 
         # The stamp of the last TimeAdvanced notification, not yet
@@ -354,29 +346,33 @@ class SoundDevice(Device):
     # Cap how much output audio a single quantum may produce below
     # realtime, where a whole-frame quantum would otherwise make far
     # more than makes sense in one step (output audio per quantum =
-    # simulated time / speed). Two bounds, the smaller winning:
+    # emulated time / speed). Two bounds, the smaller winning:
     #  - the latency budget, so the queue does not swing past its
     #    target and the latency setting keeps meaning something;
     #  - a nominal display refresh, so the picture advances in small,
     #    frequent steps and slow motion stays smooth rather than
     #    jumping in large chunks.
-    # The cap in ticks is max_output_seconds * speed * source_rate
-    # (output_seconds = simulated_ticks / source_rate / speed). At or
-    # above realtime it exceeds a frame, so the frame end applies first
-    # and nothing changes — hence we only report a limit below realtime.
-    def __report_tick_limit(self, event: GetQuantumTickLimit) -> None:
+    # The requested stop is the consumed-up-to time plus the span
+    # these bounds allow. The span comes from wallclock amounts, so
+    # it is approximate by nature and rounding it is fine. At or
+    # above realtime it exceeds a frame, so the frame end applies
+    # first and nothing changes — hence we only report a limit below
+    # realtime.
+    def __report_time_limit(self, event: GetQuantumTimeLimit) -> None:
         if self.__fast_forward or self.__speed >= 1.0:
             return
 
-        # No stream seen yet, so nothing to budget.
-        if self.__source_rate is None:
+        # No time observed yet, so nothing to anchor the span to.
+        if self.__consumed_up_to is None:
             return
 
         latency_seconds = self.__latency_ms / 1000
         max_output_seconds = min(latency_seconds,
                                  1.0 / self.__ASSUMED_REFRESH_FPS)
-        budget = round(max_output_seconds * self.__speed * self.__source_rate)
-        event.stop_after(max(1, budget))
+        rate = self.__consumed_up_to.ticks_per_second
+        span = max(1, round(max_output_seconds * self.__speed * rate))
+        event.stop_after(self.__consumed_up_to +
+                         Time(span, ticks_per_second=rate))
 
     # The device owns the speed (resampler ratio) and latency
     # (queued-audio target) settings.
@@ -404,7 +400,6 @@ class SoundDevice(Device):
             self.__resampler = _PulseResampler(
                 self._OUTPUT_FREQ, self.__speed)
         elif isinstance(event, NewSoundPulses):
-            self.__source_rate = event.pulses.rate
             self.__chunks.append(event.pulses)
         elif isinstance(event, SetFastForward):
             if event.active:
@@ -424,8 +419,8 @@ class SoundDevice(Device):
             self.__last_time_advanced = event.time
         elif isinstance(event, GetHoldState):
             self.__answer_hold(event)
-        elif isinstance(event, GetQuantumTickLimit):
-            self.__report_tick_limit(event)
+        elif isinstance(event, GetQuantumTimeLimit):
+            self.__report_time_limit(event)
         elif isinstance(event, GetSettings):
             self.__report_settings(event)
         elif isinstance(event, DestroyEmulator):

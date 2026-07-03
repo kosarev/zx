@@ -6,18 +6,19 @@
 #
 #   Published under the MIT license.
 
+from __future__ import annotations
+
 import enum
 import typing
 
-import numpy
-
-from ._binary import Bytes
-from ._data import SoundFile
-from ._data import SoundPulses
-from ._data import UnifiedPlayback
-from ._data import UnifiedSnapshot
-
 if typing.TYPE_CHECKING:
+    import numpy
+
+    from ._binary import Bytes
+    from ._data import SoundFile
+    from ._data import SoundPulses
+    from ._data import UnifiedPlayback
+    from ._data import UnifiedSnapshot
     from ._time import Time
 
 
@@ -27,7 +28,7 @@ class DeviceEvent:
 
 # An emulation fact stamped with the emulated time it happened at.
 class EmulationEvent(DeviceEvent):
-    def __init__(self, time: 'Time') -> None:
+    def __init__(self, time: Time) -> None:
         self.time = time
 
 
@@ -184,7 +185,7 @@ class TimeAdvanced(EmulationEvent):
 # when exactly each write happened and are strictly ordered within
 # one event. Notified only when there are writes to report.
 class NewPortWrites(EmulationEvent):
-    def __init__(self, time: 'Time',
+    def __init__(self, time: Time,
                  writes: numpy.typing.NDArray[numpy.uint64]) -> None:
         super().__init__(time)
         self.writes = writes
@@ -219,25 +220,23 @@ class GetHoldState(DeviceEvent):
             self.wake_in = wake_in
 
 
-# Asks devices after how many ticks this quantum should stop. The
-# simulated-time twin of GetHoldState: where that bounds how long the
-# loop may sleep in wallclock time, this bounds how far the machine
-# runs in simulated time before the next quantum. The smallest
-# declared value wins; with none declared the quantum runs to the
-# frame end as usual.
-# This is not a hard ceiling: the run loop only checks between
-# instructions, so the quantum stops at the first instruction
-# boundary at or after the requested point and may overshoot it by a
-# whole instruction (we have no sub-instruction execution).
-class GetQuantumTickLimit(DeviceEvent):
+# Asks devices by what emulated time this quantum should stop. The
+# emulated-time twin of GetHoldState: that one bounds how long the
+# loop may sleep in wallclock time; this one bounds how far the
+# machine runs before the next quantum. The earliest requested time
+# wins; with no requests the quantum runs to the frame end as usual.
+# The requested time is not a hard ceiling: a runner stops at its
+# first natural boundary at or after it — for the core, the next
+# instruction boundary.
+class GetQuantumTimeLimit(DeviceEvent):
     def __init__(self) -> None:
-        self.stop_after_ticks: None | int = None
+        self.stop_after_time: None | Time = None
 
-    # A device requests that the quantum stop once it has advanced
-    # the given number of ticks; the smallest such request wins.
-    def stop_after(self, ticks: int) -> None:
-        if self.stop_after_ticks is None or ticks < self.stop_after_ticks:
-            self.stop_after_ticks = ticks
+    # Requests that the quantum stop right after the given time; the
+    # earliest request wins.
+    def stop_after(self, time: Time) -> None:
+        if self.stop_after_time is None or time < self.stop_after_time:
+            self.stop_after_time = time
 
 
 class GetEmulationPauseState(DeviceEvent):
@@ -312,7 +311,7 @@ class StopQuantum(DeviceEvent):
 
 
 class ReadPort(EmulationEvent):
-    def __init__(self, addr: int, time: 'Time') -> None:
+    def __init__(self, addr: int, time: Time) -> None:
         super().__init__(time)
         self.addr = addr
 
@@ -386,7 +385,7 @@ class NewSoundPulses(DeviceEvent):
 
 
 class Device:
-    def on_event(self, event: DeviceEvent, devices: 'Dispatcher') -> None:
+    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         pass
 
 
