@@ -55,7 +55,7 @@ from ._zxb import ZXBasicCompilerProgram
 
 # A Dispatcher that also passes every event to the Emulator, after
 # all the devices have seen it.
-class _OwnerDispatcher(Dispatcher):
+class _EmulatorDispatcher(Dispatcher):
     def __init__(self, devices: list[Device], emulator: 'Emulator') -> None:
         super().__init__(devices)
         self.__emulator = emulator
@@ -324,5 +324,5 @@ class Emulator:
                 self.__require_core().to_snapshot()).encode())
 
     def notify(self, event: DeviceEvent) -> None:
-        dispatcher = _OwnerDispatcher(self.devices, self)
+        dispatcher = _EmulatorDispatcher(self.devices, self)
         dispatcher.notify(event)
