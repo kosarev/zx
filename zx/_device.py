@@ -225,7 +225,7 @@ class GetHoldState(DeviceEvent):
 # loop may sleep in wallclock time; this one bounds how far the
 # machine runs before the next quantum. The earliest requested time
 # wins; with no requests the quantum runs to the frame end as usual.
-# The requested time is not a hard ceiling: a runner stops at its
+# The requested time is not a hard ceiling: a device stops at its
 # first natural boundary at or after it — for the core, the next
 # instruction boundary.
 class GetQuantumTimeLimit(DeviceEvent):

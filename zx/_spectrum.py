@@ -31,7 +31,6 @@ from ._device import GetEmulationPauseState
 from ._device import GetEmulationTime
 from ._device import GetFramePixels
 from ._device import GetHoldState
-from ._device import GetQuantumTimeLimit
 from ._device import InstallSnapshot
 from ._device import KeyStroke
 from ._device import NewPortWrites
@@ -607,21 +606,18 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
     # Advances the core by one quantum -- the Emulator's loop calls this
     # when the quantum is not held. The dispatcher is passed in for this
-    # call only, never stored.
-    def run_quantum(self, devices: Dispatcher) -> None:
-        # Cap how far this quantum advances, e.g. for sub-frame quanta
-        # at slow speeds. With no device requesting a limit the
-        # quantum runs to the frame end as before.
-        limit = GetQuantumTimeLimit()
-        devices.notify(limit)
-        if limit.stop_after_time is None:
+    # call only, never stored. stop_after is the round's time limit;
+    # with none the quantum runs to the frame end as before.
+    def run_quantum(self, devices: Dispatcher, *,
+                    stop_after: Time | None) -> None:
+        if stop_after is None:
             self.ticks_to_stop = 0
         else:
             # Count down to the whole tick enclosing the requested
             # time; the run then stops at the first instruction
             # boundary at or after it.
             front = self.__current_time()
-            remaining = limit.stop_after_time - front
+            remaining = stop_after - front
             budget = ((remaining.count * front.ticks_per_second +
                        remaining.ticks_per_second - 1) //
                       remaining.ticks_per_second)

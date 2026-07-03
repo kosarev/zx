@@ -22,6 +22,7 @@ from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import GetEmulationTime
 from ._device import GetHoldState
+from ._device import GetQuantumTimeLimit
 from ._device import InitEmulator
 from ._device import IsTapePlayerPaused
 from ._device import IsTapePlayerStopped
@@ -178,8 +179,14 @@ class Emulator:
         if hold.held:
             return
 
+        # Ask by what time this round should stop; each device
+        # budgets from its own position in time.
+        limit = GetQuantumTimeLimit()
+        self.notify(limit)
+
         dispatcher = _OwnerDispatcher(self.devices, self)
-        self.__require_core().run_quantum(dispatcher)
+        self.__require_core().run_quantum(
+            dispatcher, stop_after=limit.stop_after_time)
 
     def __emulation_time(self) -> float:
         event = GetEmulationTime()
