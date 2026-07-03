@@ -57,7 +57,7 @@ class Beeper(Device):
             self.__ticks.clear()
             return
 
-        span = (stamp - published_up_to) % (1 << 32)
+        span = stamp - published_up_to
         if span == 0:
             return
 

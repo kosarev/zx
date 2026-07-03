@@ -82,7 +82,7 @@ struct __attribute__((packed)) machine_state {
     processor_state proc;
 
     least_u32 ticks_since_int = 0;
-    least_u32 tick_count = 0;
+    uint_least64_t tick_count = 0;
     least_u32 m1_fetches_to_stop = 0;
     least_u32 ticks_to_stop = 0;
     least_u32 events = 0;

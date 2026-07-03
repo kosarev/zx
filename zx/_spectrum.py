@@ -90,6 +90,9 @@ class StateParser:
     def parse32(self) -> memoryview:
         return self.read_bytes(4)
 
+    def parse64(self) -> memoryview:
+        return self.read_bytes(8)
+
 
 class Z80State:
     def __init__(self, image: memoryview) -> None:
@@ -305,7 +308,7 @@ class SpectrumState(Z80State):
         Z80State.__init__(self, self.z80_image)
 
         self.__ticks_since_int = p.parse32()
-        self.__tick_count = p.parse32()
+        self.__tick_count = p.parse64()
         self.__m1_fetches_to_stop = p.parse32()
         self.__ticks_to_stop = p.parse32()
         self.__events = p.parse32()
@@ -381,9 +384,8 @@ class SpectrumState(Z80State):
     def ticks_since_int(self, ticks: int) -> None:
         self.__ticks_since_int[:] = ticks.to_bytes(4, 'little')
 
-    # The number of ticks since the machine creation, wrapping on
-    # overflow. Free-running, so per-quantum counts are wrap-aware
-    # deltas between readings.
+    # The number of ticks since the machine creation. Free-running
+    # and 64-bit, so it never wraps in any realistic run.
     @property
     def tick_count(self) -> int:
         return int.from_bytes(self.__tick_count, 'little')
@@ -515,15 +517,11 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         self.frame_count = 0
 
-        # Emulated time elapsed, counted in the core's own clock
-        # ticks and advanced by the actual ticks each quantum runs.
+        # Emulated time elapsed: the committed tick count viewed as
+        # a Time in the core's own clock ticks.
         # TODO: Double-underscore or make public.
         self._emulation_time = Time(
             0, ticks_per_second=self.model._TICKS_PER_FRAME * 50)
-
-        # The tick_count reading already counted into the emulation
-        # time; the counter wraps, so advances use wrap-aware deltas.
-        self.__tick_count_at_last_advance = self.tick_count
 
         self.set_on_input_callback(self.__on_input)
 
@@ -624,9 +622,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         events = RunEvents(self._run(devices))
 
         now = self.tick_count
-        self._emulation_time.advance(
-            (now - self.__tick_count_at_last_advance) % (1 << 32))
-        self.__tick_count_at_last_advance = now
+        self._emulation_time.count = now
 
         writes = numpy.frombuffer(self.drain_port_writes(),
                                   dtype=numpy.uint64)

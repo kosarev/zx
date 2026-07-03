@@ -495,9 +495,9 @@ public:
             uint_least64_t v = 0;
             v |= static_cast<uint_least64_t>(addr) << 0;
             v |= static_cast<uint_least64_t>(n) << 16;
-            // Stamp with the free-running counter, wrapping at 2^32;
-            // consumers locate writes within the windows closed by
-            // heartbeat readings.
+            // Stamp with the low 32 bits of the free-running counter;
+            // consumers rebase the stamps against the full 64-bit
+            // reading that closes the span they fall in.
             v |= static_cast<uint_least64_t>(tick_count & 0xffffffff) << 32;
             port_writes[num_port_writes++] = v;
         }
@@ -999,12 +999,11 @@ protected:
 
     ticks_type ticks_since_int = 0;
 
-    // The number of ticks since the machine creation, wrapping on
-    // overflow. Free-running, so per-quantum counts are wrap-aware
-    // deltas between readings; this keeps the counter independent
-    // of how quantum and frame boundaries are driven (ticks or
-    // fetch limits).
-    ticks_type tick_count = 0;
+    // The number of ticks since the machine creation. Free-running
+    // and 64-bit, so it never wraps in any realistic run; this keeps
+    // the counter independent of how quantum and frame boundaries
+    // are driven (ticks or fetch limits).
+    uint_fast64_t tick_count = 0;
 
     ticks_type ticks_to_stop = 0;       // Null means no limit.
     ticks_type m1_fetches_to_stop = 0;  // Null means no limit.
@@ -1018,7 +1017,7 @@ protected:
         fast_u16 pc;
         fast_u8 r;
         ticks_type ticks_since_int;
-        ticks_type tick_count;
+        uint_fast64_t tick_count;
         ticks_type ticks_to_stop;
         ticks_type m1_fetches_to_stop;
     } retry_state = {};

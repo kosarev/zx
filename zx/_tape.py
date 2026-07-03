@@ -129,22 +129,8 @@ class TapePlayer(Device):
         self.__audible_output = PulseStream(model._TICKS_PER_FRAME * 50)
         self.__audible_pulses: list[tuple[int, int]] = []
 
-        # Unwrapping of 32-bit event stamps onto the tape's
-        # monotonic internal timeline.
-        self.__last_stamp: None | int = None
-        self.__unwrapped = 0
-
-        # The internal tick up to which sound has been published.
+        # The tick up to which sound has been published.
         self.__published_up_to_tick: None | int = None
-
-    def __unwrap(self, stamp: int) -> int:
-        if self.__last_stamp is None:
-            # Anchor the internal timeline at the first stamp seen.
-            self.__unwrapped = stamp
-        else:
-            self.__unwrapped += (stamp - self.__last_stamp) % (1 << 32)
-        self.__last_stamp = stamp
-        return self.__unwrapped
 
     def __is_paused(self) -> bool:
         return self._is_paused
@@ -250,20 +236,18 @@ class TapePlayer(Device):
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
         if isinstance(event, ResetEmulator):
-            # Note that the internal timeline keeps running across
+            # Note that the tick counter keeps running across
             # resets — only the transient sound state is discarded.
             self.__audible_pulses = []
             self.__audible_output.reset()
             self.__published_up_to_tick = None
         elif isinstance(event, TimeAdvanced):
-            self.__publish_chunk(self.__unwrap(event.tick_count),
-                                 dispatcher)
+            self.__publish_chunk(event.tick_count, dispatcher)
         elif isinstance(event, GetTapePlayerTime):
             event.time = self.__get_time()
         elif isinstance(event, ReadPort):
             if self._pulses is not None:
-                tick = self.__unwrap(event.tick_count)
-                if not self.__get_level_at_tick(tick):
+                if not self.__get_level_at_tick(event.tick_count):
                     event.supply(0xbf)  # EAR bit low when no tape signal
 
                 # If that read exhausted the tape, ask the run to stop
