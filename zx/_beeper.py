@@ -28,9 +28,7 @@ if typing.TYPE_CHECKING:
 
 class Beeper(Device):
     def __init__(self) -> None:
-        # Created when the first stamp reveals the rate of the
-        # timeline the transitions are stamped in.
-        self.__stream: None | PulseStream = None
+        self.__stream = PulseStream()
 
         # The time up to which the beeper's sound has been
         # published.
@@ -61,7 +59,6 @@ class Beeper(Device):
 
         # Resynchronise after construction or reset.
         if published_up_to is None:
-            self.__stream = PulseStream(stamp.ticks_per_second)
             self.__levels.clear()
             self.__ticks.clear()
             return
@@ -87,13 +84,13 @@ class Beeper(Device):
             levels = numpy.zeros(0, dtype=numpy.uint32)
             ticks = numpy.zeros(0, dtype=numpy.uint32)
 
-        assert self.__stream is not None
-        pulses = self.__stream.stream_chunk(levels, ticks, span)
+        pulses = self.__stream.stream_chunk(levels, ticks, span,
+                                            rate=stamp.ticks_per_second)
         dispatcher.notify(NewSoundPulses(pulses))
 
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
         if isinstance(event, ResetEmulator):
-            self.__stream = None
+            self.__stream.reset()
             self.__published_up_to = None
             self.__levels.clear()
             self.__ticks.clear()

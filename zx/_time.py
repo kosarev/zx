@@ -6,6 +6,9 @@
 #
 #   Published under the MIT license.
 
+from __future__ import annotations
+
+import math
 import time
 
 
@@ -17,8 +20,27 @@ class Time:
         self.count = count
         self.ticks_per_second = ticks_per_second
 
-    def advance(self, ticks: int) -> None:
-        self.count += ticks
+    def __lt__(self, other: Time) -> bool:
+        return (self.count * other.ticks_per_second <
+                other.count * self.ticks_per_second)
+
+    def __le__(self, other: Time) -> bool:
+        return (self.count * other.ticks_per_second <=
+                other.count * self.ticks_per_second)
+
+    # Results take the resolution that represents both operands
+    # exactly.
+    def __add__(self, other: Time) -> Time:
+        rate = math.lcm(self.ticks_per_second, other.ticks_per_second)
+        return Time(self.count * (rate // self.ticks_per_second) +
+                    other.count * (rate // other.ticks_per_second),
+                    ticks_per_second=rate)
+
+    def __sub__(self, other: Time) -> Time:
+        rate = math.lcm(self.ticks_per_second, other.ticks_per_second)
+        return Time(self.count * (rate // self.ticks_per_second) -
+                    other.count * (rate // other.ticks_per_second),
+                    ticks_per_second=rate)
 
     def to_float_seconds(self) -> float:
         return self.count / self.ticks_per_second

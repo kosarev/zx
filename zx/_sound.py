@@ -7,6 +7,7 @@
 #   Published under the MIT license.
 
 
+import math
 import typing
 
 import numpy
@@ -49,20 +50,18 @@ assert SPEED > 0
 
 
 class PulseStream:
-    # The rate is that of the tick timeline the input ticks are
-    # stamped in, in ticks per second.
-    def __init__(self, rate: int) -> None:
-        self.__rate = rate
-
+    def __init__(self) -> None:
         # The last set sound level.
         self.__current_level = numpy.uint32(0)
 
     def reset(self) -> None:
         self.__current_level = numpy.uint32(0)
 
+    # The rate is that of the tick timeline the ticks count, in
+    # ticks per second.
     def stream_chunk(self, levels: numpy.typing.NDArray[numpy.uint32],
                      ticks: numpy.typing.NDArray[numpy.uint32],
-                     num_ticks: int) -> SoundPulses:
+                     num_ticks: int, *, rate: int) -> SoundPulses:
         assert num_ticks > 0
 
         # Chunks define their level over their whole span: the
@@ -89,7 +88,7 @@ class PulseStream:
         levels = levels[keep]
         ticks = ticks[keep]
 
-        return SoundPulses(self.__rate, levels, ticks,
+        return SoundPulses(rate, levels, ticks,
                            num_ticks=num_ticks)
 
 
@@ -124,14 +123,22 @@ class _PulseResampler:
         self.__speed = speed
 
     def feed(self, levels: numpy.typing.NDArray[numpy.float64],
-             ticks: numpy.typing.NDArray[numpy.uint32],
+             ticks: numpy.typing.NDArray[numpy.int64],
              num_ticks: int, rate: int) -> (
                  numpy.typing.NDArray[numpy.float32]):
-        # The source rate is a property of the stream, not of its
-        # chunks.
+        # Chunks may come at any rates; the stream position refines
+        # to the resolution representing them all exactly.
         if self.__source_rate is None:
             self.__source_rate = rate
-        assert rate == self.__source_rate
+        if rate != self.__source_rate:
+            refined = math.lcm(self.__source_rate, rate)
+            self.__num_ticks *= refined // self.__source_rate
+            self.__source_rate = refined
+
+        factor = self.__source_rate // rate
+        if factor != 1:
+            ticks = ticks * factor
+            num_ticks *= factor
 
         # Chunks define their level over their whole span.
         assert len(ticks) > 0 and ticks[0] == 0
@@ -241,26 +248,30 @@ class SoundDevice(Device):
         pass
 
     # Mixing happens by time, in the pulse domain: the chunks
-    # published for a span of time all cover exactly that span, so
-    # the mixed level function changes at the union of their
-    # transition points. How emitters agree to coexist is their
-    # concern; no channel identity is needed.
-    def __mix_pulses(self, chunks: list[SoundPulses], span: int) -> (
+    # published for a span of time all cover exactly that span, each
+    # in its own rate, so the mixed level function changes at the
+    # union of their transition points on the common grid. How
+    # emitters agree to coexist is their concern; no channel
+    # identity is needed.
+    def __mix_pulses(self, chunks: list[SoundPulses],
+                     num_ticks: int, rate: int) -> (
             tuple[numpy.typing.NDArray[numpy.float64],
-                  numpy.typing.NDArray[numpy.uint32]]):
+                  numpy.typing.NDArray[numpy.int64]]):
+        scaled = []
         for c in chunks:
             # A chunk covers exactly the span being consumed and
             # defines its level over the whole of it.
-            assert c.num_ticks == span
+            factor = rate // c.rate
+            assert c.num_ticks * factor == num_ticks
             assert len(c.ticks) > 0 and c.ticks[0] == 0
+            scaled.append(c.ticks.astype(numpy.int64) * factor)
 
-        ticks = numpy.unique(
-            numpy.concatenate([c.ticks for c in chunks]))
+        ticks = numpy.unique(numpy.concatenate(scaled))
 
         mixed = numpy.zeros(len(ticks), dtype=numpy.float64)
-        for c in chunks:
+        for c, c_ticks in zip(chunks, scaled, strict=True):
             # The level of the segment covering each union point.
-            segments = numpy.searchsorted(c.ticks, ticks,
+            segments = numpy.searchsorted(c_ticks, ticks,
                                           side='right') - 1
             mixed += c.levels[segments]
         mixed /= len(chunks)
@@ -287,24 +298,23 @@ class SoundDevice(Device):
         consumed_up_to = self.__consumed_up_to
         self.__consumed_up_to = stamp
 
-        # Positions subtract only within one timeline.
-        assert (stamp.ticks_per_second ==
-                consumed_up_to.ticks_per_second)
-        span = stamp.count - consumed_up_to.count
+        span = stamp - consumed_up_to
 
-        if self.__fast_forward or span == 0:
+        if self.__fast_forward or span.count == 0:
             return
 
         # With no emitters there is no stream.
         if len(chunks) == 0:
             return
 
-        # The chunks are stamped in ticks of the same timeline the
-        # stamps count, so the span means the same in both.
-        assert all(c.rate == stamp.ticks_per_second for c in chunks)
-        levels, ticks = self.__mix_pulses(chunks, span)
-        samples = self.__resampler.feed(levels, ticks, span,
-                                        chunks[0].rate)
+        # Bring the chunks and the span to one resolution.
+        rate = span.ticks_per_second
+        for c in chunks:
+            rate = math.lcm(rate, c.rate)
+        num_ticks = span.count * (rate // span.ticks_per_second)
+
+        levels, ticks = self.__mix_pulses(chunks, num_ticks, rate)
+        samples = self.__resampler.feed(levels, ticks, num_ticks, rate)
         if len(samples):
             self.__pending.append(samples)
 

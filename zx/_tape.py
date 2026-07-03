@@ -7,13 +7,13 @@
 #   Published under the MIT license.
 
 
+from __future__ import annotations
+
+import math
 import typing
 
 import numpy
 
-from ._binary import Bytes
-from ._data import SoundFile
-from ._data import SpectrumModel
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
@@ -30,6 +30,10 @@ from ._device import TapeStateUpdated
 from ._device import TimeAdvanced
 from ._sound import PulseStream
 from ._time import Time
+
+if typing.TYPE_CHECKING:
+    from ._binary import Bytes
+    from ._data import SoundFile
 
 # Tape formats define pulse durations in ticks of the standard
 # 3.5 MHz clock.
@@ -119,26 +123,27 @@ def tag_last_pulse(pulses: typing.Iterable[tuple[bool, int,
 class TapePlayer(Device):
     _pulses: None | typing.Iterable[tuple[bool, int, tuple[str, ...]]]
 
-    def __init__(self, model: type[SpectrumModel]) -> None:
+    def __init__(self) -> None:
         self._is_paused = True
         self._pulses = None
-        self._tick = 0
         self._level = False
-        self._pulse = 0
+
+        # The position the tape has resolved its signal up to.
+        self.__position = Time(0, ticks_per_second=_TAPE_TICKS_PER_SECOND)
+
+        # What remains of the current pulse.
+        self._pulse = Time(0, ticks_per_second=_TAPE_TICKS_PER_SECOND)
+
+        # The content position: how much tape has been played.
         self._time = Time(0, ticks_per_second=_TAPE_TICKS_PER_SECOND)
 
-        # The rate of the tick timeline the tape runs on: pulse
-        # positions, stamps and the audible output all count its
-        # ticks.
-        # TODO: Pulse durations are defined at _TAPE_TICKS_PER_SECOND,
-        # so consuming them at the core's rate skews them by 0.16%;
-        # the timeline should run at the tape's own rate instead.
-        self.__rate = model._TICKS_PER_FRAME * 50
-        self.__audible_output = PulseStream(self.__rate)
-        self.__audible_pulses: list[tuple[int, int]] = []
+        self.__audible_output = PulseStream()
 
-        # The tick up to which sound has been published.
-        self.__published_up_to_tick: None | int = None
+        # Level transitions, at their positions.
+        self.__audible_pulses: list[tuple[int, Time]] = []
+
+        # The stamp up to which sound has been published.
+        self.__published_up_to: None | Time = None
 
     def __is_paused(self) -> bool:
         return self._is_paused
@@ -166,36 +171,40 @@ class TapePlayer(Device):
     def __load_tape(self, file: SoundFile) -> None:
         self.__load_parsed_file(file)
 
-    def __get_level_at_tick(self, tick: int) -> bool:
-        assert tick >= self._tick, (self._tick, tick)
+    def __get_level_at_time(self, time: Time) -> bool:
+        assert self.__position <= time, (self.__position, time)
 
-        # Get through the series of levels until we get the one at the
-        # requested tick, which is when we are at the tick immediately
-        # following it.
-        target_tick = tick + 1
-        while self._tick != target_tick:
+        while True:
+            # While paused, time passes without playing any tape.
             if self._is_paused:
-                self._tick = target_tick
+                self.__position = time
+                break
+
+            # See if the time falls within the current pulse.
+            if self._pulse.count != 0:
+                end = self.__position + self._pulse
+                if time < end:
+                    self._time = self._time + (time - self.__position)
+                    self._pulse = end - time
+                    self.__position = time
+                    break
+
+                self._time = self._time + self._pulse
+                self._pulse = Time(0,
+                                   ticks_per_second=_TAPE_TICKS_PER_SECOND)
+                self.__position = end
                 continue
 
-            # See if we already have a non-zero-length pulse.
-            if self._pulse:
-                self.__audible_pulses.append((self._level, self._tick))
-
-                ticks_to_skip = min(self._pulse, target_tick - self._tick)
-                self._pulse -= ticks_to_skip
-                self._tick += ticks_to_skip
-                self._time.advance(ticks_to_skip)
-                continue
-
-            # Get subsequent pulse, if any.
+            # Get the subsequent pulse, if any.
             new_pulse = None
             if self._pulses:
                 new_pulse = next(iter(self._pulses), None)
 
             if new_pulse:
-                # print(new_pulse)
-                self._level, self._pulse, ids = new_pulse
+                self._level, duration, ids = new_pulse
+                self._pulse = Time(duration,
+                                   ticks_per_second=_TAPE_TICKS_PER_SECOND)
+                self.__audible_pulses.append((self._level, self.__position))
 
                 # The tape shall be considered stopped as soon as the last
                 # pulse is fetched, and not on the next attempt to fetch a
@@ -208,61 +217,62 @@ class TapePlayer(Device):
             # Do nothing, if there are no more pulses available.
             self._pulses = None
             self._level = False
-            self._tick = target_tick
+            self.__position = time
+            break
 
         return self._level
 
-    def __publish_chunk(self, tick: int, dispatcher: Dispatcher) -> None:
-        # Catch the tape model up to the time-advanced position so
-        # its sound advances even without port reads.
-        if self._tick < tick:
-            self.__get_level_at_tick(tick - 1)
+    def __publish_chunk(self, stamp: Time, dispatcher: Dispatcher) -> None:
+        # Catch the tape up to the time-advanced position so its
+        # sound advances even without port reads.
+        if self.__position < stamp:
+            self.__get_level_at_time(stamp)
 
-        published_up_to = self.__published_up_to_tick
-        self.__published_up_to_tick = tick
+        published_up_to = self.__published_up_to
+        self.__published_up_to = stamp
 
         # Resynchronise after construction or reset.
         if published_up_to is None:
             self.__audible_pulses = []
             return
 
-        span = tick - published_up_to
-        if span == 0:
+        span = stamp - published_up_to
+        if span.count == 0:
             return
 
-        # Play the tape sound for the user.
-        levels, ticks = (zip(*self.__audible_pulses, strict=False)
-                         if len(self.__audible_pulses) != 0 else ([], []))
-        offsets = numpy.array(ticks, dtype=numpy.int64) - published_up_to
+        # Play the tape sound for the user: materialise the
+        # transitions as offsets within the span, all in one
+        # resolution.
+        offsets = [t - published_up_to for _, t in self.__audible_pulses]
+        rate = span.ticks_per_second
+        for offset in offsets:
+            rate = math.lcm(rate, offset.ticks_per_second)
+
         pulses = self.__audible_output.stream_chunk(
-            numpy.array(levels, dtype=numpy.uint32),
-            offsets.astype(numpy.uint32),
-            span)
+            numpy.array([level for level, _ in self.__audible_pulses],
+                        dtype=numpy.uint32),
+            numpy.array([o.count * (rate // o.ticks_per_second)
+                         for o in offsets], dtype=numpy.uint32),
+            span.count * (rate // span.ticks_per_second),
+            rate=rate)
         dispatcher.notify(NewSoundPulses(pulses))
         self.__audible_pulses = []
 
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
         if isinstance(event, ResetEmulator):
-            # Note that the tick counter keeps running across
-            # resets — only the transient sound state is discarded.
+            # Note that the position keeps advancing across resets —
+            # only the transient sound state is discarded.
             self.__audible_pulses = []
             self.__audible_output.reset()
-            self.__published_up_to_tick = None
+            self.__published_up_to = None
         elif isinstance(event, TimeAdvanced):
-            # The audible pulses are stamped in ticks of the same
-            # timeline the stamp counts, so no translation is needed
-            # or possible; publishing works in that timeline's ticks.
-            assert event.time.ticks_per_second == self.__rate
-            self.__publish_chunk(event.time.count, dispatcher)
+            self.__publish_chunk(event.time, dispatcher)
         elif isinstance(event, GetTapePlayerTime):
             event.time = self.__get_time()
         elif isinstance(event, ReadPort):
             if self._pulses is not None:
-                # The level timeline runs in the same ticks the stamp
-                # counts, so the position needs no translation.
-                assert event.time.ticks_per_second == self.__rate
-                if not self.__get_level_at_tick(event.time.count):
+                if not self.__get_level_at_time(event.time):
                     event.supply(0xbf)  # EAR bit low when no tape signal
 
                 # If that read exhausted the tape, ask the run to stop

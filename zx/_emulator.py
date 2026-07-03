@@ -96,14 +96,13 @@ class Emulator:
         if devices is None:
             if core is None:
                 core = Spectrum(model=model, profile=profile)
-            model = core.model
 
             if keyboard is None:
                 keyboard = Keyboard()
             if beeper is None:
                 beeper = Beeper()
 
-            devices = [core, TapePlayer(model), keyboard, beeper,
+            devices = [core, TapePlayer(), keyboard, beeper,
                        playback_player or PlaybackPlayer(),
                        playback_recorder or PlaybackRecorder()]
 
