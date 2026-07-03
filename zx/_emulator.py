@@ -179,17 +179,14 @@ class Emulator:
         limit = GetQuantumTimeLimit()
         self.notify(limit)
 
-        self.notify(RunQuantum(wake_in=hold.wake_in,
-                               stop_after=limit.stop_after_time))
-
-        # The floor: the time every device has crossed.
-        floor = GetEmulationTime()
-        self.notify(floor)
-        assert floor.time is not None
+        run = RunQuantum(wake_in=hold.wake_in,
+                         stop_after=limit.stop_after_time)
+        self.notify(run)
+        assert run.advanced_floor is not None
 
         # TimeAdvanced goes last: all facts about the elapsed span
         # of time are published by the time its dispatch completes.
-        self.notify(TimeAdvanced(floor.time))
+        self.notify(TimeAdvanced(run.advanced_floor))
 
     def __emulation_time(self) -> float:
         event = GetEmulationTime()

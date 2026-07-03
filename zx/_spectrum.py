@@ -674,6 +674,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         elif isinstance(event, RunQuantum):
             if not event.held:
                 self.__advance(devices, event.stop_after)
+                event.advanced_through(self.__current_time())
         elif isinstance(event, GetEmulationTime):
             event.time = self.__current_time()
         elif isinstance(event, GetFramePixels):

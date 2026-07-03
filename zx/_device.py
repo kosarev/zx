@@ -307,6 +307,16 @@ class RunQuantum(DeviceEvent):
         # budget from their own positions in time.
         self.stop_after = stop_after
 
+        # The earliest time reported, so the time every advancing
+        # device has crossed once the dispatch completes.
+        self.advanced_floor: None | Time = None
+
+    # Devices advancing on this event report the time they have
+    # advanced through.
+    def advanced_through(self, time: Time) -> None:
+        if self.advanced_floor is None or time < self.advanced_floor:
+            self.advanced_floor = time
+
 
 # Raised by a device to ask that the current quantum end now (e.g. the
 # tape player when the tape runs out at a port read), so the run returns
