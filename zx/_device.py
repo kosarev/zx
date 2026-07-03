@@ -298,9 +298,14 @@ class PauseUnpauseTape(DeviceEvent):
 # cut short by input).
 class RunQuantum(DeviceEvent):
     def __init__(self, *, held: bool = False,
-                 wake_in: None | float = None) -> None:
+                 wake_in: None | float = None,
+                 stop_after: None | Time = None) -> None:
         self.held = held
         self.wake_in = wake_in
+
+        # The round's time limit; devices advancing on this event
+        # budget from their own positions in time.
+        self.stop_after = stop_after
 
 
 # Raised by a device to ask that the current quantum end now (e.g. the

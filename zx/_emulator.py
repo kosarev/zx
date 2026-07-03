@@ -160,32 +160,27 @@ class Emulator:
             if fast_forward:
                 self.notify(SetFastForward(False))
 
-    # One iteration of the run loop: evaluate the hold once and broadcast
-    # it (so devices never re-query), and unless held, advance the core
-    # by a quantum. The broadcast is unconditional -- every device sees
-    # RunQuantum each iteration, held or not; the held check only skips
-    # advancing the core.
-    # TODO: This is still the single-core loop: relocate the core's
-    # advance onto the RunQuantum event, handle deferred port reads
-    # (RETRY_INPUT) by retrying, add converge-to-T rollback, and
-    # drive more than one core.
+    # One round of the run loop: evaluate the hold once and broadcast
+    # RunQuantum -- every device sees it each round, held or not.
+    # When held the round is bookkeeping only; otherwise the round's
+    # time limit rides on the event and devices advance on it, each
+    # budgeting from its own position in time.
+    # TODO: Handle deferred port reads (RETRY_INPUT) by retrying; add
+    # converge-to-T rollback; drive more than one core.
     def __run_quantum(self) -> None:
         hold = GetHoldState()
         self.notify(hold)
 
-        self.notify(RunQuantum(held=hold.held, wake_in=hold.wake_in))
-
         if hold.held:
+            self.notify(RunQuantum(held=True, wake_in=hold.wake_in))
             return
 
-        # Ask by what time this round should stop; each device
-        # budgets from its own position in time.
+        # Ask by what time this round should stop.
         limit = GetQuantumTimeLimit()
         self.notify(limit)
 
-        dispatcher = _OwnerDispatcher(self.devices, self)
-        self.__require_core().run_quantum(
-            dispatcher, stop_after=limit.stop_after_time)
+        self.notify(RunQuantum(wake_in=hold.wake_in,
+                               stop_after=limit.stop_after_time))
 
         # The floor: the time every device has crossed.
         floor = GetEmulationTime()

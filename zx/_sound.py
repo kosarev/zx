@@ -362,17 +362,21 @@ class SoundDevice(Device):
         if self.__fast_forward or self.__speed >= 1.0:
             return
 
+        # Anchor at the last stamp seen, consumed or not.
+        anchor = self.__last_time_advanced
+        if anchor is None:
+            anchor = self.__consumed_up_to
+
         # No time observed yet, so nothing to anchor the span to.
-        if self.__consumed_up_to is None:
+        if anchor is None:
             return
 
         latency_seconds = self.__latency_ms / 1000
         max_output_seconds = min(latency_seconds,
                                  1.0 / self.__ASSUMED_REFRESH_FPS)
-        rate = self.__consumed_up_to.ticks_per_second
+        rate = anchor.ticks_per_second
         span = max(1, round(max_output_seconds * self.__speed * rate))
-        event.stop_after(self.__consumed_up_to +
-                         Time(span, ticks_per_second=rate))
+        event.stop_after(anchor + Time(span, ticks_per_second=rate))
 
     # The device owns the speed (resampler ratio) and latency
     # (queued-audio target) settings.

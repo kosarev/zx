@@ -38,6 +38,7 @@ from ._device import OutputFrame
 from ._device import PauseStateUpdated
 from ._device import ReadPort
 from ._device import ResetEmulator
+from ._device import RunQuantum
 from ._device import SetBreakpoint
 from ._device import SetFetchesLimit
 from ._device import StartPlayback
@@ -603,12 +604,10 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.suppress_interrupts = False
         self.allow_int_after_ei = False
 
-    # Advances the core by one quantum -- the Emulator's loop calls this
-    # when the quantum is not held. The dispatcher is passed in for this
-    # call only, never stored. stop_after is the round's time limit;
-    # with none the quantum runs to the frame end as before.
-    def run_quantum(self, devices: Dispatcher, *,
-                    stop_after: Time | None) -> None:
+    # Advances the core by one quantum, to the round's time limit if
+    # any, otherwise to the frame end as before.
+    def __advance(self, devices: Dispatcher,
+                  stop_after: Time | None) -> None:
         if stop_after is None:
             self.ticks_to_stop = 0
         else:
@@ -672,6 +671,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             # change the answer.
             if self.paused:
                 event.hold()
+        elif isinstance(event, RunQuantum):
+            if not event.held:
+                self.__advance(devices, event.stop_after)
         elif isinstance(event, GetEmulationTime):
             event.time = self.__current_time()
         elif isinstance(event, GetFramePixels):
