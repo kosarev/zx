@@ -28,7 +28,6 @@ from ._device import Dispatcher
 from ._device import EndOfFrame
 from ._device import FetchesLimitHit
 from ._device import GetEmulationPauseState
-from ._device import GetEmulationTime
 from ._device import GetFramePixels
 from ._device import GetHoldState
 from ._device import InstallSnapshot
@@ -675,8 +674,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             if not event.held:
                 self.__advance(devices, event.stop_after)
                 event.advanced_through(self.__current_time())
-        elif isinstance(event, GetEmulationTime):
-            event.time = self.__current_time()
         elif isinstance(event, GetFramePixels):
             # The core has already rendered the screen up to the
             # current tick on returning control, so this is current.

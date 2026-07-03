@@ -48,12 +48,13 @@ from ._sound import SDLSound
 from ._spectrum import Profile
 from ._spectrum import Spectrum
 from ._tape import TapePlayer
+from ._time import Time
 from ._z80snapshot import Z80Snapshot
 from ._zxb import ZXBasicCompilerProgram
 
 
-# A Dispatcher that also lets the Emulator act on owner events
-# (LoadFile etc.) raised by a device.
+# A Dispatcher that also passes every event to the Emulator, after
+# all the devices have seen it.
 class _OwnerDispatcher(Dispatcher):
     def __init__(self, devices: list[Device], emulator: 'Emulator') -> None:
         super().__init__(devices)
@@ -61,14 +62,7 @@ class _OwnerDispatcher(Dispatcher):
 
     def notify(self, event: DeviceEvent) -> None:
         super().notify(event)
-
-        emulator = self.__emulator
-        if isinstance(event, LoadFile):
-            emulator._load_file(event.filename)
-        elif isinstance(event, SaveSnapshot):
-            emulator._save_snapshot_file(Z80Snapshot, event.filename)
-        elif isinstance(event, ToggleTapePause):
-            emulator._toggle_tape_pause()
+        self.__emulator._on_event(event)
 
 
 class Emulator:
@@ -129,6 +123,9 @@ class Emulator:
         self.__core = core
         self.devices = list(devices)
 
+        # The time all devices have advanced to.
+        self.__advanced_floor = Time(0, ticks_per_second=1)
+
     # The orchestration drives a single core (the common case); a device
     # set without one cannot be run or loaded into.
     def __require_core(self) -> Spectrum:
@@ -183,10 +180,25 @@ class Emulator:
                          stop_after=limit.stop_after_time)
         self.notify(run)
         assert run.advanced_floor is not None
+        self.__advanced_floor = run.advanced_floor
 
         # TimeAdvanced goes last: all facts about the elapsed span
         # of time are published by the time its dispatch completes.
         self.notify(TimeAdvanced(run.advanced_floor))
+
+    # Handles the events that concern the Emulator itself, after all
+    # the devices have seen them.
+    def _on_event(self, event: DeviceEvent) -> None:
+        if isinstance(event, GetEmulationTime):
+            # Reflects the time all devices have advanced to — a
+            # fact about the whole set.
+            event.time = self.__advanced_floor
+        elif isinstance(event, LoadFile):
+            self._load_file(event.filename)
+        elif isinstance(event, SaveSnapshot):
+            self._save_snapshot_file(Z80Snapshot, event.filename)
+        elif isinstance(event, ToggleTapePause):
+            self._toggle_tape_pause()
 
     def __emulation_time(self) -> float:
         event = GetEmulationTime()
