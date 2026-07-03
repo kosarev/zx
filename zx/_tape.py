@@ -29,7 +29,6 @@ from ._device import StopQuantum
 from ._device import TapeStateUpdated
 from ._device import TimeAdvanced
 from ._sound import PulseStream
-from ._time import Resolution
 from ._time import Time
 
 # Tape formats define pulse durations in ticks of the standard
@@ -126,7 +125,7 @@ class TapePlayer(Device):
         self._tick = 0
         self._level = False
         self._pulse = 0
-        self._time = Time(0, Resolution(_TAPE_TICKS_PER_SECOND))
+        self._time = Time(0, ticks_per_second=_TAPE_TICKS_PER_SECOND)
         self.__audible_output = PulseStream(model._TICKS_PER_FRAME * 50)
         self.__audible_pulses: list[tuple[int, int]] = []
 

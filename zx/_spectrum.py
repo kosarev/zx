@@ -52,7 +52,6 @@ from ._playback import PlaybackPlayer
 from ._rom import load_rom_image
 from ._rzx import make_rzx
 from ._spectrumbase import _SpectrumBase
-from ._time import Resolution
 from ._time import Time
 from ._z80snapshot import Z80Snapshot
 
@@ -516,7 +515,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         self.frame_count = 0
         # TODO: Double-underscore or make public.
-        self._emulation_time = Time(0, Resolution(50))
+        self._emulation_time = Time(0, ticks_per_second=50)
 
         self.set_on_input_callback(self.__on_input)
 

@@ -9,25 +9,19 @@
 import time
 
 
-# The resolution of a time count: how many of its ticks make a second.
-# Time values of one producer share a single Resolution object.
-class Resolution:
-    def __init__(self, ticks_per_second: int) -> None:
-        self.ticks_per_second = ticks_per_second
-
-
-# A point in emulated time: an integer count of ticks in a resolution.
+# A point in emulated time: an integer count of ticks at a resolution
+# of ticks_per_second ticks a second.
 # Exact; to_float_seconds() is for presentation boundaries only.
 class Time:
-    def __init__(self, count: int, resolution: Resolution) -> None:
+    def __init__(self, count: int, *, ticks_per_second: int) -> None:
         self.count = count
-        self.resolution = resolution
+        self.ticks_per_second = ticks_per_second
 
     def advance(self, ticks: int) -> None:
         self.count += ticks
 
     def to_float_seconds(self) -> float:
-        return self.count / self.resolution.ticks_per_second
+        return self.count / self.ticks_per_second
 
 
 def get_timestamp() -> float:
