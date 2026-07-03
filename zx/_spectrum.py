@@ -538,8 +538,12 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             assert len(rom) == 2 * PAGE_SIZE
             self.write(0x0000, rom[PAGE_SIZE:], rom_page=1)
 
+    def __current_time(self) -> Time:
+        return Time(self.tick_count,
+                    ticks_per_second=self.model._TICKS_PER_FRAME * 50)
+
     def __on_input(self, addr: int, devices: Dispatcher) -> int | None:
-        read_port = ReadPort(addr, self.tick_count)
+        read_port = ReadPort(addr, self.__current_time())
         devices.notify(read_port)
         v = read_port.value
         if v is not None:
@@ -615,7 +619,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         events = RunEvents(self._run(devices))
 
-        now = self.tick_count
+        now = self.__current_time()
 
         writes = numpy.frombuffer(self.drain_port_writes(),
                                   dtype=numpy.uint64)
@@ -667,11 +671,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             if self.paused:
                 event.hold()
         elif isinstance(event, GetEmulationTime):
-            # The committed tick count viewed as a Time in the
-            # core's own clock ticks.
-            event.time = Time(
-                self.tick_count,
-                ticks_per_second=self.model._TICKS_PER_FRAME * 50)
+            event.time = self.__current_time()
         elif isinstance(event, GetFramePixels):
             # The core has already rendered the screen up to the
             # current tick on returning control, so this is current.

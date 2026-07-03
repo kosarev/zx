@@ -25,14 +25,10 @@ class DeviceEvent:
     pass
 
 
-# Emulation-related events are located in simulated time: facts
-# carry their location, and consumers remember their own last seen
-# positions and take wrap-aware differences of the free-running
-# tick counter. UI-originated events are not located in simulated
-# time and stay plain DeviceEvents.
+# An emulation fact stamped with the emulated time it happened at.
 class EmulationEvent(DeviceEvent):
-    def __init__(self, tick_count: int) -> None:
-        self.tick_count = tick_count
+    def __init__(self, time: 'Time') -> None:
+        self.time = time
 
 
 class MenuItemDescriptor:
@@ -188,9 +184,9 @@ class TimeAdvanced(EmulationEvent):
 # when exactly each write happened and are strictly ordered within
 # one event. Notified only when there are writes to report.
 class NewPortWrites(EmulationEvent):
-    def __init__(self, tick_count: int,
+    def __init__(self, time: 'Time',
                  writes: numpy.typing.NDArray[numpy.uint64]) -> None:
-        super().__init__(tick_count)
+        super().__init__(time)
         self.writes = writes
 
 
@@ -316,8 +312,8 @@ class StopQuantum(DeviceEvent):
 
 
 class ReadPort(EmulationEvent):
-    def __init__(self, addr: int, tick_count: int = 0) -> None:
-        super().__init__(tick_count)
+    def __init__(self, addr: int, time: 'Time') -> None:
+        super().__init__(time)
         self.addr = addr
 
         # All input lines are pulled high unless a device drives

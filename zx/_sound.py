@@ -7,6 +7,8 @@
 #   Published under the MIT license.
 
 
+import typing
+
 import numpy
 
 from ._data import SoundPulses
@@ -26,6 +28,9 @@ from ._device import SetSettingValue
 from ._device import SettingDescriptor
 from ._device import SettingScope
 from ._device import TimeAdvanced
+
+if typing.TYPE_CHECKING:
+    from ._time import Time
 
 # The initial speed: how fast emulated time runs relative to
 # wallclock. The sound stream is the wallclock reference, so speed is
@@ -201,10 +206,10 @@ class SoundDevice(Device):
 
         # The stamp of the last TimeAdvanced notification, not yet
         # consumed.
-        self.__last_time_advanced_tick: None | int = None
+        self.__last_time_advanced: None | Time = None
 
-        # The tick position up to which sound has been consumed.
-        self.__consumed_up_to_tick: None | int = None
+        # The time up to which sound has been consumed.
+        self.__consumed_up_to: None | Time = None
 
         self.__fast_forward = False
         self.__speed = SPEED
@@ -268,19 +273,24 @@ class SoundDevice(Device):
     # device order. Production only: the resampled samples go to the
     # pending buffer; __feed() delivers them to the output.
     def __consume(self) -> None:
-        if self.__last_time_advanced_tick is None:
+        if self.__last_time_advanced is None:
             return
-        stamp = self.__last_time_advanced_tick
-        self.__last_time_advanced_tick = None
+        stamp = self.__last_time_advanced
+        self.__last_time_advanced = None
         chunks, self.__chunks = self.__chunks, []
 
         # Resynchronise after construction or reset.
-        if self.__consumed_up_to_tick is None:
-            self.__consumed_up_to_tick = stamp
+        if self.__consumed_up_to is None:
+            self.__consumed_up_to = stamp
             return
 
-        span = (stamp - self.__consumed_up_to_tick) % (1 << 32)
-        self.__consumed_up_to_tick = stamp
+        consumed_up_to = self.__consumed_up_to
+        self.__consumed_up_to = stamp
+
+        # Positions subtract only within one timeline.
+        assert (stamp.ticks_per_second ==
+                consumed_up_to.ticks_per_second)
+        span = stamp.count - consumed_up_to.count
 
         if self.__fast_forward or span == 0:
             return
@@ -289,6 +299,9 @@ class SoundDevice(Device):
         if len(chunks) == 0:
             return
 
+        # The chunks are stamped in ticks of the same timeline the
+        # stamps count, so the span means the same in both.
+        assert all(c.rate == stamp.ticks_per_second for c in chunks)
         levels, ticks = self.__mix_pulses(chunks, span)
         samples = self.__resampler.feed(levels, ticks, span,
                                         chunks[0].rate)
@@ -376,8 +389,8 @@ class SoundDevice(Device):
         if isinstance(event, ResetEmulator):
             self.__chunks.clear()
             self.__pending.clear()
-            self.__last_time_advanced_tick = None
-            self.__consumed_up_to_tick = None
+            self.__last_time_advanced = None
+            self.__consumed_up_to = None
             self.__resampler = _PulseResampler(
                 self._OUTPUT_FREQ, self.__speed)
         elif isinstance(event, NewSoundPulses):
@@ -398,7 +411,7 @@ class SoundDevice(Device):
             self.__consume()
             self.__feed()
         elif isinstance(event, TimeAdvanced):
-            self.__last_time_advanced_tick = event.tick_count
+            self.__last_time_advanced = event.time
         elif isinstance(event, GetHoldState):
             self.__answer_hold(event)
         elif isinstance(event, GetQuantumTickLimit):

@@ -126,7 +126,15 @@ class TapePlayer(Device):
         self._level = False
         self._pulse = 0
         self._time = Time(0, ticks_per_second=_TAPE_TICKS_PER_SECOND)
-        self.__audible_output = PulseStream(model._TICKS_PER_FRAME * 50)
+
+        # The rate of the tick timeline the tape runs on: pulse
+        # positions, stamps and the audible output all count its
+        # ticks.
+        # TODO: Pulse durations are defined at _TAPE_TICKS_PER_SECOND,
+        # so consuming them at the core's rate skews them by 0.16%;
+        # the timeline should run at the tape's own rate instead.
+        self.__rate = model._TICKS_PER_FRAME * 50
+        self.__audible_output = PulseStream(self.__rate)
         self.__audible_pulses: list[tuple[int, int]] = []
 
         # The tick up to which sound has been published.
@@ -242,12 +250,19 @@ class TapePlayer(Device):
             self.__audible_output.reset()
             self.__published_up_to_tick = None
         elif isinstance(event, TimeAdvanced):
-            self.__publish_chunk(event.tick_count, dispatcher)
+            # The audible pulses are stamped in ticks of the same
+            # timeline the stamp counts, so no translation is needed
+            # or possible; publishing works in that timeline's ticks.
+            assert event.time.ticks_per_second == self.__rate
+            self.__publish_chunk(event.time.count, dispatcher)
         elif isinstance(event, GetTapePlayerTime):
             event.time = self.__get_time()
         elif isinstance(event, ReadPort):
             if self._pulses is not None:
-                if not self.__get_level_at_tick(event.tick_count):
+                # The level timeline runs in the same ticks the stamp
+                # counts, so the position needs no translation.
+                assert event.time.ticks_per_second == self.__rate
+                if not self.__get_level_at_tick(event.time.count):
                     event.supply(0xbf)  # EAR bit low when no tape signal
 
                 # If that read exhausted the tape, ask the run to stop

@@ -48,7 +48,9 @@ def test_basic() -> None:
     dispatcher = zx._device.Dispatcher()
     start = zx._device.StartPlayback(playback)
     player.on_event(start, dispatcher)
+    rate = zx._data.Spectrum48._TICKS_PER_FRAME * 50
     for expected in 0x42, 0xff, 0x00:
-        read_port = zx._device.ReadPort(0xfe)
+        read_port = zx._device.ReadPort(
+            0xfe, zx._time.Time(0, ticks_per_second=rate))
         player.on_event(read_port, dispatcher)
         assert read_port.value == expected

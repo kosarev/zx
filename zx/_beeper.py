@@ -22,7 +22,8 @@ from ._sound import PulseStream
 
 class Beeper(Device):
     def __init__(self, model: type[SpectrumModel]) -> None:
-        self.__stream = PulseStream(model._TICKS_PER_FRAME * 50)
+        self.__rate = model._TICKS_PER_FRAME * 50
+        self.__stream = PulseStream(self.__rate)
 
         # The tick position up to which the beeper's sound has been
         # published.
@@ -86,4 +87,8 @@ class Beeper(Device):
         elif isinstance(event, NewPortWrites):
             self.__collect(event.writes)
         elif isinstance(event, TimeAdvanced):
-            self.__publish(event.tick_count, dispatcher)
+            # The EAR transitions are stamped in ticks of the same
+            # timeline the stamp counts, so no translation is needed
+            # or possible; publishing works in that timeline's ticks.
+            assert event.time.ticks_per_second == self.__rate
+            self.__publish(event.time.count, dispatcher)

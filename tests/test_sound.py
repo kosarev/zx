@@ -21,6 +21,7 @@ from zx._device import SettingDescriptor
 from zx._device import SettingScope
 from zx._device import TimeAdvanced
 from zx._sound import SoundDevice
+from zx._time import Time
 
 
 # A sound device that captures the produced samples instead of playing
@@ -53,7 +54,8 @@ def test_sound_device_produces_samples() -> None:
 
     # The first window only establishes the baseline tick position, so
     # nothing is produced yet.
-    device.on_event(TimeAdvanced(0), dispatcher)
+    device.on_event(TimeAdvanced(Time(0, ticks_per_second=rate)),
+                    dispatcher)
     device.on_event(RunQuantum(), dispatcher)
     assert device.output == []
 
@@ -62,7 +64,8 @@ def test_sound_device_produces_samples() -> None:
     level = 100
     device.on_event(NewSoundPulses(_level_chunk(rate, level, span)),
                     dispatcher)
-    device.on_event(TimeAdvanced(span), dispatcher)
+    device.on_event(TimeAdvanced(Time(span, ticks_per_second=rate)),
+                    dispatcher)
     device.on_event(RunQuantum(), dispatcher)
 
     assert device.output
