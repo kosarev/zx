@@ -517,12 +517,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
 
         self.frame_count = 0
 
-        # Emulated time elapsed: the committed tick count viewed as
-        # a Time in the core's own clock ticks.
-        # TODO: Double-underscore or make public.
-        self._emulation_time = Time(
-            0, ticks_per_second=self.model._TICKS_PER_FRAME * 50)
-
         self.set_on_input_callback(self.__on_input)
 
         self.__port_reads = bytearray()
@@ -622,7 +616,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         events = RunEvents(self._run(devices))
 
         now = self.tick_count
-        self._emulation_time.count = now
 
         writes = numpy.frombuffer(self.drain_port_writes(),
                                   dtype=numpy.uint64)
@@ -674,7 +667,11 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             if self.paused:
                 event.hold()
         elif isinstance(event, GetEmulationTime):
-            event.time = self._emulation_time
+            # The committed tick count viewed as a Time in the
+            # core's own clock ticks.
+            event.time = Time(
+                self.tick_count,
+                ticks_per_second=self.model._TICKS_PER_FRAME * 50)
         elif isinstance(event, GetFramePixels):
             # The core has already rendered the screen up to the
             # current tick on returning control, so this is current.
