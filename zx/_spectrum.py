@@ -514,8 +514,16 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.__install_rom()
 
         self.frame_count = 0
+
+        # Emulated time elapsed, counted in the core's own clock
+        # ticks and advanced by the actual ticks each quantum runs.
         # TODO: Double-underscore or make public.
-        self._emulation_time = Time(0, ticks_per_second=50)
+        self._emulation_time = Time(
+            0, ticks_per_second=self.model._TICKS_PER_FRAME * 50)
+
+        # The tick_count reading already counted into the emulation
+        # time; the counter wraps, so advances use wrap-aware deltas.
+        self.__tick_count_at_last_advance = self.tick_count
 
         self.set_on_input_callback(self.__on_input)
 
@@ -588,7 +596,6 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         self.__port_reads.clear()
 
         self.frame_count += 1
-        self._emulation_time.advance(1)
 
     def __enter_playback_mode(self, playback: UnifiedPlayback) -> None:
         self.__playback = playback
@@ -617,6 +624,9 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
         events = RunEvents(self._run(devices))
 
         now = self.tick_count
+        self._emulation_time.advance(
+            (now - self.__tick_count_at_last_advance) % (1 << 32))
+        self.__tick_count_at_last_advance = now
 
         writes = numpy.frombuffer(self.drain_port_writes(),
                                   dtype=numpy.uint64)
