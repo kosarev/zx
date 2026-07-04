@@ -307,7 +307,9 @@ class MachineSnapshot(DataRecord, format_name=None):
         raise NotImplementedError
 
 
-class UnifiedSnapshot(MachineSnapshot, format_name=None):
+# The core device's slice of a machine snapshot. Null fields mean
+# the canonical reset values.
+class CoreSnapshot(DataRecord, format_name=None):
     af: int | None
     bc: int | None
     de: int | None
@@ -367,6 +369,16 @@ class UnifiedSnapshot(MachineSnapshot, format_name=None):
             ticks_since_int=ticks_since_int,
             border_colour=border_colour,
             memory_blocks=blocks)
+
+
+# The native machine snapshot: a composition of per-device
+# snapshots. An absent device snapshot means that device is at its
+# canonical reset state.
+class UnifiedSnapshot(MachineSnapshot, format_name=None):
+    core: CoreSnapshot | None
+
+    def __init__(self, *, core: CoreSnapshot | None = None):
+        super().__init__(core=core)
 
     @classmethod
     def from_snapshot(cls, snapshot: MachineSnapshot) -> UnifiedSnapshot:

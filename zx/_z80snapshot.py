@@ -17,6 +17,7 @@ from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
 from ._data import ByteData
+from ._data import CoreSnapshot
 from ._data import DataRecord
 from ._data import HexData
 from ._data import MachineSnapshot
@@ -244,39 +245,41 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
 
     @classmethod
     def from_snapshot(cls, snapshot: MachineSnapshot) -> Z80Snapshot:
-        unified = snapshot.to_unified_snapshot()
+        core = snapshot.to_unified_snapshot().core
+        if core is None:
+            core = CoreSnapshot()
 
         # TODO: The z80 format cannot represent processor states in
         #       the middle of IX- and IY-prefixed instructions, so
         #       such situations need some additional processing.
         # TODO: Check for similar problems with other state attributes.
         # TODO: How do other emulators solve this problem?
-        assert (unified.iregp_kind or 'hl') == 'hl'
+        assert (core.iregp_kind or 'hl') == 'hl'
 
         flags1 = 0
         flags2 = 0
 
         # Bit 7 of the stored R value is not signigicant and
         # shall be taken from bit 0 of flags1.
-        r = get_low8(unified.ir or 0)
+        r = get_low8(core.ir or 0)
         flags1 |= (r & 0x80) >> 7
         r &= 0x7f
 
-        border_colour = unified.border_colour or 0
+        border_colour = core.border_colour or 0
         assert 0 <= border_colour <= 7
         flags1 |= border_colour << 1
 
-        int_mode = unified.int_mode or 0
+        int_mode = core.int_mode or 0
         assert int_mode in [0, 1, 2]  # TODO
         flags2 |= int_mode
 
         # Build full memory image.
         # TODO: Frobid any data below address 0x4000.
         memory_blocks = []
-        if unified.memory_blocks is not None:
+        if core.memory_blocks is not None:
             RAM_SIZE = 0x10000
             image: list[None | int] = [None] * RAM_SIZE
-            for block in unified.memory_blocks:
+            for block in core.memory_blocks:
                 assert block.rom_page == 0  # TODO
                 assert block.ram_page == 0  # TODO
                 image[block.addr:block.addr + len(block.data.data)] = (
@@ -301,33 +304,33 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
         # (70908) T states per frame.
         ticks_per_frame = 69888  # TODO
         quarter_frame = ticks_per_frame // 4
-        ticks_since_int = unified.ticks_since_int or 0
+        ticks_since_int = core.ticks_since_int or 0
         ticks_high = (ticks_since_int // quarter_frame + 3) % 4
         ticks_low = (quarter_frame - 1) - ticks_since_int % quarter_frame
 
         return Z80Snapshot(
-            a=get_high8(unified.af or 0),
-            f=get_low8(unified.af or 0),
-            bc=unified.bc or 0,
-            hl=unified.hl or 0,
+            a=get_high8(core.af or 0),
+            f=get_low8(core.af or 0),
+            bc=core.bc or 0,
+            hl=core.hl or 0,
             pc=0,
-            sp=unified.sp or 0,
-            i=get_high8(unified.ir or 0),
-            r=get_low8(unified.ir or 0) & 0x7f,
+            sp=core.sp or 0,
+            i=get_high8(core.ir or 0),
+            r=get_low8(core.ir or 0) & 0x7f,
             flags1=flags1,
-            de=unified.de or 0,
-            alt_bc=unified.alt_bc or 0,
-            alt_de=unified.alt_de or 0,
-            alt_hl=unified.alt_hl or 0,
-            alt_a=get_high8(unified.alt_af or 0),
-            alt_f=get_low8(unified.alt_af or 0),
-            iy=unified.iy or 0,
-            ix=unified.ix or 0,
-            iff1=unified.iff1 or 0,
-            iff2=unified.iff2 or 0,
+            de=core.de or 0,
+            alt_bc=core.alt_bc or 0,
+            alt_de=core.alt_de or 0,
+            alt_hl=core.alt_hl or 0,
+            alt_a=get_high8(core.alt_af or 0),
+            alt_f=get_low8(core.alt_af or 0),
+            iy=core.iy or 0,
+            ix=core.ix or 0,
+            iff1=core.iff1 or 0,
+            iff2=core.iff2 or 0,
             flags2=flags2,
             v2_header=Z80SnapshotV2Header(
-                pc=unified.pc or 0,
+                pc=core.pc or 0,
                 v3_header=Z80SnapshotV3Header(
                     ticks_count_low=ticks_low,
                     ticks_count_high=ticks_high,
@@ -410,7 +413,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                     addr=self.__MEMORY_PAGE_ADDRS[block.page_no],
                     rom_page=0, ram_page=0, data=image))
 
-        return UnifiedSnapshot(
+        return UnifiedSnapshot(core=CoreSnapshot(
             af=make16(self.a, self.f),
             bc=self.bc,
             de=self.de,
@@ -430,7 +433,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             int_mode=int_mode,
             ticks_since_int=ticks_since_int,
             border_colour=(flags1 >> 1) & 0x7,
-            memory_blocks=memory_blocks)
+            memory_blocks=memory_blocks))
 
     __V1_HEADER: typing.ClassVar[list[str]] = [
         'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',

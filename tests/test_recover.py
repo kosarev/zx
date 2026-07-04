@@ -10,6 +10,7 @@
 import pytest
 
 import zx
+from zx._data import CoreSnapshot
 from zx._data import MemoryBlock
 from zx._data import UnifiedPlayback
 from zx._data import UnifiedPlaybackFrame
@@ -40,11 +41,11 @@ def assert_play_fails(playback: UnifiedPlayback, error_id: str) -> None:
 def test_iregp_mid_instruction() -> None:
     # One frame ending after just the 0xdd prefix byte, leaving the machine
     # mid-IX instruction at the frame boundary.
-    snapshot = UnifiedSnapshot(
+    snapshot = UnifiedSnapshot(core=CoreSnapshot(
         pc=0x8000,
         memory_blocks=[MemoryBlock(
             addr=0x8000,
-            data=b'\xdd\x21\x00\x00')])  # LD IX, 0x0000
+            data=b'\xdd\x21\x00\x00')]))  # LD IX, 0x0000
 
     playback = UnifiedPlayback(
         segments=[UnifiedPlaybackSegment(
@@ -58,11 +59,11 @@ def test_iregp_mid_instruction() -> None:
 def test_spin_v05_trailing_in_sample() -> None:
     # SPIN v0.5 records num_fetches=1 (first IN's M1 cycle only), leaving
     # the second IN's sample unconsumed at the frame boundary.
-    snapshot = UnifiedSnapshot(
+    snapshot = UnifiedSnapshot(core=CoreSnapshot(
         pc=0x8000,
         memory_blocks=[MemoryBlock(
             addr=0x8000,
-            data=b'\xdb\xfe\xdb\xfe')])  # IN A,(0xfe) x2
+            data=b'\xdb\xfe\xdb\xfe')]))  # IN A,(0xfe) x2
 
     playback = UnifiedPlayback(
         segments=[UnifiedPlaybackSegment(
@@ -81,12 +82,12 @@ def test_spin_v05_trailing_in_sample() -> None:
 def test_spin_v05_bytes_saving_trap() -> None:
     # SPIN v0.5 in fast save mode calls the bytes-saving ROM procedure at
     # 0x04d4 but expects it to be skipped (returning to the caller).
-    snapshot = UnifiedSnapshot(
+    snapshot = UnifiedSnapshot(core=CoreSnapshot(
         pc=0x8000,
         sp=0xc000,
         memory_blocks=[MemoryBlock(
             addr=0x8000,
-            data=b'\xcd\xd4\x04')])  # CALL 0x04d4
+            data=b'\xcd\xd4\x04')]))  # CALL 0x04d4
 
     playback = UnifiedPlayback(
         segments=[UnifiedPlaybackSegment(

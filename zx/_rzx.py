@@ -15,6 +15,7 @@ from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
 from ._data import ByteData
+from ._data import CoreSnapshot
 from ._data import DataRecord
 from ._data import HexData
 from ._data import Latin1Data
@@ -333,7 +334,9 @@ class RZXFile(MachinePlayback, format_name='RZX'):
                 if not segments:
                     segments.append(UnifiedPlaybackSegment())
                 s = segments[-1]
-                s.snapshot.ticks_since_int = chunk.first_tick
+                if s.snapshot.core is None:
+                    s.snapshot.core = CoreSnapshot()
+                s.snapshot.core.ticks_since_int = chunk.first_tick
                 s.frames.extend(
                     UnifiedPlaybackFrame(num_fetches=f.num_fetches,
                                          port_samples=f.samples.data)

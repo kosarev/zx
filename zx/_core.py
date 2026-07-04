@@ -16,6 +16,7 @@ import typing
 import numpy
 
 from ._corebase import _CoreBase
+from ._data import CoreSnapshot
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import Spectrum48
@@ -446,7 +447,7 @@ class CoreState(Z80State):
     def to_snapshot(self) -> UnifiedSnapshot:
         # TODO: Store all fields.
         assert self.model is Spectrum48  # TODO: Support 128K.
-        return UnifiedSnapshot(
+        return UnifiedSnapshot(core=CoreSnapshot(
             af=self.af, bc=self.bc, de=self.de, hl=self.hl,
             ix=self.ix, iy=self.iy,
             alt_af=self.alt_af, alt_bc=self.alt_bc,
@@ -458,10 +459,16 @@ class CoreState(Z80State):
             memory_blocks=[MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
                                        data=self.__memory[0x4000:0x10000])],
             ticks_since_int=self.ticks_since_int,
-            border_colour=self.border_colour)
+            border_colour=self.border_colour))
 
     def install_snapshot(self, snapshot: MachineSnapshot) -> None:
-        for field, value in snapshot.to_unified_snapshot():
+        # An absent slice means the device is at its canonical
+        # reset state.
+        core = snapshot.to_unified_snapshot().core
+        if core is None:
+            return
+
+        for field, value in core:
             if field == 'memory_blocks':
                 for block in value:
                     self.write(block.addr, block.data.data,

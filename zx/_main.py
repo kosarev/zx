@@ -89,7 +89,13 @@ def run(args: list[str]) -> None:
         if filename:
             app._load_file(filename)
         elif session_snapshot.exists():
-            app._load_file(str(session_snapshot))
+            try:
+                app._load_file(str(session_snapshot))
+            except Exception as e:
+                raise Error(
+                    f"Cannot load the session file '{session_snapshot}': "
+                    f'{e} If it was saved by an older version of zx, '
+                    f'delete it.') from e
         with contextlib.suppress(EmulationExit):
             app.run()
         app._save_snapshot_file(UnifiedSnapshot, str(session_snapshot))

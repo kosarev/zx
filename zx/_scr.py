@@ -12,6 +12,7 @@ import typing
 
 from ._binary import BinaryParser
 from ._binary import Bytes
+from ._data import CoreSnapshot
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import UnifiedSnapshot
@@ -38,12 +39,12 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
             addr=LOOP_ADDR, rom_page=ROM_PAGE, ram_page=RAM_PAGE,
             data=loop_instr))
 
-        return UnifiedSnapshot(
+        return UnifiedSnapshot(core=CoreSnapshot(
             pc=LOOP_ADDR,
             iff1=0,
             iff2=0,
             border_colour=0,
-            memory_blocks=memory_blocks)
+            memory_blocks=memory_blocks))
 
     # TODO: Refine.
     def x_encode(self) -> bytes:

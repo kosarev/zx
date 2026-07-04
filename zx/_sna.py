@@ -13,6 +13,7 @@ from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
 from ._data import ByteData
+from ._data import CoreSnapshot
 from ._data import HexData
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
@@ -72,8 +73,9 @@ class SNASnapshot(MachineSnapshot, format_name='SNA'):
 
         iff = int(bool(self.iff & 0x04))
 
-        return UnifiedSnapshot(
+        return UnifiedSnapshot(core=CoreSnapshot(
             af=self.af, bc=self.bc, de=self.de, hl=self.hl,
+
             ix=self.ix, iy=self.iy,
             alt_af=self.alt_af, alt_bc=self.alt_bc,
             alt_de=self.alt_de, alt_hl=self.alt_hl,
@@ -83,43 +85,45 @@ class SNASnapshot(MachineSnapshot, format_name='SNA'):
             int_mode=self.int_mode,
             border_colour=self.border_colour,
             memory_blocks=[MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
-                                       data=self.memory.data)])
+                                       data=self.memory.data)]))
 
     @classmethod
     def from_snapshot(cls, snapshot: MachineSnapshot) -> 'SNASnapshot':
-        unified = snapshot.to_unified_snapshot()
+        core = snapshot.to_unified_snapshot().core
+        if core is None:
+            core = CoreSnapshot()
 
         memory = bytearray(0x10000)
-        for block in (unified.memory_blocks or []):
+        for block in (core.memory_blocks or []):
             memory[block.addr:block.end_addr] = block.data.data
 
-        sp = unified.sp or 0
-        pc = unified.pc or 0
+        sp = core.sp or 0
+        pc = core.pc or 0
 
         # Push PC onto the stack to match the SNA format convention.
         sp = (sp - 2) & 0xFFFF
         memory[sp] = pc & 0xFF
         memory[sp + 1] = (pc >> 8) & 0xFF
 
-        ir = unified.ir or 0
+        ir = core.ir or 0
 
         return SNASnapshot(
             i=(ir >> 8) & 0xFF,
-            alt_hl=unified.alt_hl or 0,
-            alt_de=unified.alt_de or 0,
-            alt_bc=unified.alt_bc or 0,
-            alt_af=unified.alt_af or 0,
-            hl=unified.hl or 0,
-            de=unified.de or 0,
-            bc=unified.bc or 0,
-            iy=unified.iy or 0,
-            ix=unified.ix or 0,
-            iff=(unified.iff1 or 0) << 2,
+            alt_hl=core.alt_hl or 0,
+            alt_de=core.alt_de or 0,
+            alt_bc=core.alt_bc or 0,
+            alt_af=core.alt_af or 0,
+            hl=core.hl or 0,
+            de=core.de or 0,
+            bc=core.bc or 0,
+            iy=core.iy or 0,
+            ix=core.ix or 0,
+            iff=(core.iff1 or 0) << 2,
             r=ir & 0xFF,
-            af=unified.af or 0,
+            af=core.af or 0,
             sp=sp,
-            int_mode=unified.int_mode or 0,
-            border_colour=unified.border_colour or 0,
+            int_mode=core.int_mode or 0,
+            border_colour=core.border_colour or 0,
             memory=memory[0x4000:0x10000])
 
     @classmethod
