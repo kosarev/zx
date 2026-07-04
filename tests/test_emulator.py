@@ -11,12 +11,12 @@
 #   Published under the MIT license.
 
 import zx
+from zx._core import RunEvents
 from zx._device import DestroyEmulator
 from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import InitEmulator
-from zx._spectrum import RunEvents
 
 
 def test_basic() -> None:

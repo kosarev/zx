@@ -126,7 +126,7 @@ jobs:
         SO=$(python -c "
         import sysconfig, glob, os
         sp = sysconfig.get_path('platlib')
-        print(glob.glob(os.path.join(sp, 'zx', '_spectrumbase*'))[0])
+        print(glob.glob(os.path.join(sp, 'zx', '_corebase*'))[0])
         ")
         SDL2=$(ldconfig -p | awk '/libSDL2-2\.0\.so\.0/{print $NF}' | head -1)
         SDL2_TTF=$(ldconfig -p | awk '/libSDL2_ttf-2\.0\.so\.0/{print $NF}' | head -1)
@@ -134,7 +134,7 @@ jobs:
         pyinstaller --onedir --name zx \
           --collect-data zx \
           --collect-all sdl2 \
-          --hidden-import zx._spectrumbase \
+          --hidden-import zx._corebase \
           --add-binary "$SO:zx" \
           --add-binary "$SDL2:." \
           --add-binary "$SDL2_TTF:." \
@@ -149,13 +149,13 @@ jobs:
         $SO = python -c @"
         import sysconfig, glob, os
         sp = sysconfig.get_path('platlib')
-        print(glob.glob(os.path.join(sp, 'zx', '_spectrumbase*'))[0])
+        print(glob.glob(os.path.join(sp, 'zx', '_corebase*'))[0])
         "@
         pyinstaller --onedir --name zx `
           --collect-data zx `
           --collect-all sdl2 `
           --collect-all sdl2dll `
-          --hidden-import zx._spectrumbase `
+          --hidden-import zx._corebase `
           "--add-binary=${SO}:zx" `
           _entry.py
 

@@ -19,6 +19,8 @@ import typing
 import platformdirs
 
 from ._binary import Bytes
+from ._core import Profile
+from ._core import Spectrum
 from ._data import DataRecord
 from ._data import MachinePlayback
 from ._data import MachineSnapshot
@@ -42,8 +44,6 @@ from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._rzx import RZXFile
 from ._settings import GlobalSettingsManager
-from ._spectrum import Profile
-from ._spectrum import Spectrum
 from ._zx import ZXFile
 
 

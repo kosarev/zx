@@ -38,9 +38,9 @@ else:
                      '-O3', '-UNDEBUG']  # TODO: -UNDEBUG
 
 zx_emulatorbase_module = Extension(
-    name='zx._spectrumbase',
+    name='zx._corebase',
     extra_compile_args=_compile_args,
-    sources=['zx/_spectrumbase.cpp'],
+    sources=['zx/_corebase.cpp'],
     language='c++')
 
 

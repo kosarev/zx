@@ -54,6 +54,8 @@ import types
 import typing
 
 from ._beeper import Beeper
+from ._core import Profile
+from ._core import Spectrum
 from ._data import MachinePlayback
 from ._data import MachineSnapshot
 from ._data import SoundFile
@@ -87,8 +89,6 @@ from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._screen import ScreenWindow
 from ._sound import SDLSound
-from ._spectrum import Profile
-from ._spectrum import Spectrum
 from ._tape import TapePlayer
 from ._time import Time
 from ._z80snapshot import Z80Snapshot

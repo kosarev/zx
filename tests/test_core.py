@@ -13,11 +13,11 @@
 import pytest
 
 import zx
+from zx._core import RunEvents
 from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import ReadPort
-from zx._spectrum import RunEvents
 
 
 def test_on_input_propagates_exception() -> None:

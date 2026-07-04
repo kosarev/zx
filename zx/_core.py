@@ -15,6 +15,7 @@ import typing
 
 import numpy
 
+from ._corebase import _SpectrumBase
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import Spectrum48
@@ -49,7 +50,6 @@ from ._keyboard import KEYS
 from ._playback import PlaybackPlayer
 from ._rom import load_rom_image
 from ._rzx import make_rzx
-from ._spectrumbase import _SpectrumBase
 from ._time import Time
 from ._z80snapshot import Z80Snapshot
 
