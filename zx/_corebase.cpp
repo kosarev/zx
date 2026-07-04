@@ -39,7 +39,7 @@ private:
     PyObject *object;
 };
 
-namespace Spectrum {
+namespace Core {
 
 #if defined(_MSC_VER)
 #pragma pack(push, 1)
@@ -189,8 +189,8 @@ public:
     }
 
 protected:
-    Spectrum::processor_state get_processor_state() {
-        Spectrum::processor_state state;
+    Core::processor_state get_processor_state() {
+        Core::processor_state state;
 
         state.bc = get_bc();
         state.de = get_de();
@@ -217,7 +217,7 @@ protected:
         return state;
     }
 
-    void set_processor_state(const Spectrum::processor_state &state) {
+    void set_processor_state(const Core::processor_state &state) {
         set_bc(state.bc);
         set_de(state.de);
         set_hl(state.hl);
@@ -457,7 +457,7 @@ PyMethodDef methods[] = {
 };
 
 PyObject *object_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
-    if(!PyArg_ParseTuple(args, ":_SpectrumBase.__new__"))
+    if(!PyArg_ParseTuple(args, ":_CoreBase.__new__"))
         return nullptr;
 
     auto *self = cast_object(type->tp_alloc(type, /* nitems= */ 0));
@@ -477,7 +477,7 @@ void object_dealloc(PyObject *self) {
 
 static PyTypeObject type_object = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
-    "zx._corebase._SpectrumBase",
+    "zx._corebase._CoreBase",
                                 // tp_name
     sizeof(object_instance),    // tp_basicsize
     0,                          // tp_itemsize
@@ -528,7 +528,7 @@ static PyTypeObject type_object = {
     0,                          // tp_finalize
 };
 
-}  // namespace Spectrum
+}  // namespace Core
 
 static PyModuleDef module = {
     PyModuleDef_HEAD_INIT,      // m_base
@@ -550,12 +550,12 @@ extern "C" PyMODINIT_FUNC PyInit__corebase(void) {
     if(!m)
         return nullptr;
 
-    if(PyType_Ready(&Spectrum::type_object) < 0)
+    if(PyType_Ready(&Core::type_object) < 0)
         return nullptr;
-    Py_INCREF(&Spectrum::type_object);
+    Py_INCREF(&Core::type_object);
 
     // TODO: Check the returning value.
-    PyModule_AddObject(m, "_SpectrumBase",
-                       &Spectrum::type_object.ob_base.ob_base);
+    PyModule_AddObject(m, "_CoreBase",
+                       &Core::type_object.ob_base.ob_base);
     return m;
 }

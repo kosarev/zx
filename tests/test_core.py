@@ -33,7 +33,7 @@ def test_on_input_propagates_exception() -> None:
             if isinstance(event, ReadPort):
                 raise _PortError()
 
-    mach = zx.Spectrum()
+    mach = zx.Core()
     dispatcher = Dispatcher([mach, _Raiser()])
 
     mach.write(0x8000, b'\xdb\xfe')  # IN A, (0xfe)
@@ -59,7 +59,7 @@ def test_on_output_propagates_exception() -> None:
     def raise_on_output(addr: int, value: int) -> None:
         raise _PortError()
 
-    mach = zx.Spectrum()
+    mach = zx.Core()
     dispatcher = Dispatcher([mach])
     mach.set_on_output_callback(raise_on_output)
 
@@ -91,7 +91,7 @@ def test_deferred_input() -> None:
                 else:
                     event.value = None
 
-    mach = zx.Spectrum()
+    mach = zx.Core()
     port = _Port()
     dispatcher = Dispatcher([mach, port])
 

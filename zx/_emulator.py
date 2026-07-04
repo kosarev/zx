@@ -54,8 +54,8 @@ import types
 import typing
 
 from ._beeper import Beeper
+from ._core import Core
 from ._core import Profile
-from ._core import Spectrum
 from ._data import MachinePlayback
 from ._data import MachineSnapshot
 from ._data import SoundFile
@@ -120,7 +120,7 @@ class Emulator:
 
     def __init__(self, *,
                  model: type[SpectrumModel] | None = None,
-                 core: Spectrum | None = None,
+                 core: Core | None = None,
                  screen: Device | None = None,
                  keyboard: Device | None = None,
                  beeper: Device | None = None,
@@ -133,7 +133,7 @@ class Emulator:
                  profile: Profile | None = None):
         if devices is None:
             if core is None:
-                core = Spectrum(model=model, profile=profile)
+                core = Core(model=model, profile=profile)
 
             if keyboard is None:
                 keyboard = Keyboard()
@@ -160,7 +160,7 @@ class Emulator:
             if extra_devices is not None:
                 devices.extend(extra_devices)
         elif core is None:
-            core = next((d for d in devices if isinstance(d, Spectrum)), None)
+            core = next((d for d in devices if isinstance(d, Core)), None)
 
         self.__core = core
         self.devices = list(devices)
@@ -170,7 +170,7 @@ class Emulator:
 
     # The orchestration drives a single core (the common case); a device
     # set without one cannot be run or loaded into.
-    def __require_core(self) -> Spectrum:
+    def __require_core(self) -> Core:
         assert self.__core is not None, (
             'this device set has no core to run or load into')
         return self.__core

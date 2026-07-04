@@ -19,8 +19,8 @@ import typing
 import platformdirs
 
 from ._binary import Bytes
+from ._core import Core
 from ._core import Profile
-from ._core import Spectrum
 from ._data import DataRecord
 from ._data import MachinePlayback
 from ._data import MachineSnapshot
@@ -274,7 +274,7 @@ def test(args: list[str]) -> None:
 # TODO: Wire on-the-fly recovery into _load_input_recording() so
 # non-conforming recordings (e.g., SPIN v0.5 ones) are corrected
 # before they reach the player.
-class _PlaybackRecoverer(Spectrum):
+class _PlaybackRecoverer(Core):
     def __init__(self, *,
                  playback_player: PlaybackPlayer | None = None) -> None:
         self._player = playback_player or PlaybackPlayer()

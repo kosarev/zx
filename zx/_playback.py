@@ -29,7 +29,7 @@ fully conform to the format (e.g. some recordings produced by SPIN
 v0.5), any deviation must be corrected during conversion or as a
 separate recovery operation — not patched at playback time. The
 proper recovery procedure is: detect the non-conforming recording,
-run it through a private headless Spectrum to determine the correct
+run it through a private headless core to determine the correct
 frames, and emit a corrected UnifiedPlayback. The player then
 receives correct input and needs no format-specific knowledge.
 

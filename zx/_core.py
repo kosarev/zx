@@ -15,7 +15,7 @@ import typing
 
 import numpy
 
-from ._corebase import _SpectrumBase
+from ._corebase import _CoreBase
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import Spectrum48
@@ -282,7 +282,7 @@ class Z80State:
         self.__iregp_kind[0] = n
 
 
-class SpectrumState(Z80State):
+class CoreState(Z80State):
     __PAGE_SIZE = 0x4000
 
     __ROM_PAGE_IMAGE_OFFSETS: typing.ClassVar[dict[int, int]] = {
@@ -486,12 +486,11 @@ class Profile:
             yield addr, self._annots[addr]
 
 
-class Spectrum(_SpectrumBase, SpectrumState, Device):
-    """The ZX Spectrum core: one emulated machine as a device.
+class Core(_CoreBase, CoreState, Device):
+    """The CPU, memory and ULA of an emulated machine, as one device.
 
-    Holds the CPU, memory and screen state and steps the emulation. It is
-    the core device an Emulator drives; construct it directly only for
-    low-level use, otherwise let Emulator create it.
+    Holds their state and steps the emulation. Construct it directly
+    only for low-level use, otherwise let Emulator create it.
     """
 
     # Memory marks.
@@ -506,7 +505,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
     def __init__(self, *,
                  model: type[SpectrumModel] | None = None,
                  profile: Profile | None = None):
-        SpectrumState.__init__(self, self._get_state_view())
+        CoreState.__init__(self, self._get_state_view())
         Device.__init__(self)
 
         self.model = model if model is not None else Spectrum48
@@ -548,7 +547,7 @@ class Spectrum(_SpectrumBase, SpectrumState, Device):
             self.__port_reads.append(v)
         return v
 
-    def __save_crash_rzx(self, player: PlaybackPlayer, state: SpectrumState,
+    def __save_crash_rzx(self, player: PlaybackPlayer, state: CoreState,
                          chunk_i: int, frame_i: int) -> None:
         snapshot = Z80Snapshot.from_snapshot(state.to_snapshot()).encode()
 

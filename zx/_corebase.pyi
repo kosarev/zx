@@ -3,7 +3,7 @@ import typing
 
 from ._device import Dispatcher
 
-class _SpectrumBase:
+class _CoreBase:
     def _get_state_view(self) -> memoryview:
         ...
 

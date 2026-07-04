@@ -31,7 +31,7 @@ def test_ticks_limit() -> None:
     # the basis of sub-frame quanta. This also guards the packed-state
     # field alignment that exposes ticks_to_stop. A bare core suffices:
     # the tick limit is a core concern, no device set or container.
-    mach = zx.Spectrum()
+    mach = zx.Core()
     dispatcher = Dispatcher([mach])
     frame_ticks = 69888
 
