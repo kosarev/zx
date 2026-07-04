@@ -378,10 +378,9 @@ def fast_forward(args: list[str]) -> None:
 
 
 def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
-                              src_format: type[DataRecord],
                               dest_filename: str,
                               dest_format: type[DataRecord]) -> None:
-    assert issubclass(src_format, SoundFile), src_format
+    assert isinstance(src, SoundFile)
     assert issubclass(dest_format, MachineSnapshot), dest_format
 
     with Emulator(headless=True) as app:
@@ -390,18 +389,15 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
 
 
 def _convert_tape_to_tape(src: DataRecord, src_filename: str,
-                          src_format: type[DataRecord],
                           dest_filename: str,
                           dest_format: type[DataRecord]) -> None:
     assert isinstance(src, SoundFile)
-    assert issubclass(src_format, SoundFile), src_format
     assert issubclass(dest_format, SoundFile), dest_format
     dest_format.save_from_pulses(dest_filename, src.get_pulses())
 
 
 def _convert_any_to_zx(src: DataRecord,
                        src_filename: str,
-                       src_format: type[DataRecord],
                        dest_filename: str,
                        dest_format: type[DataRecord]) -> None:
     with pathlib.Path(dest_filename).open('wb') as f:
@@ -411,7 +407,6 @@ def _convert_any_to_zx(src: DataRecord,
 
 def _convert_snapshot_to_snapshot(src: DataRecord,
                                   src_filename: str,
-                                  src_format: type[DataRecord],
                                   dest_filename: str,
                                   dest_format: type[DataRecord]) -> None:
     assert isinstance(src, MachineSnapshot)
@@ -434,7 +429,7 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
 
     CONVERTERS: list[tuple[
             type[DataRecord], type[DataRecord],
-            typing.Callable[[DataRecord, str, type[DataRecord],
+            typing.Callable[[DataRecord, str,
                              str, type[DataRecord]], None]]] = [
         (SoundFile, SoundFile,
          _convert_tape_to_tape),
@@ -447,7 +442,7 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
 
     for sf, df, conv in CONVERTERS:
         if issubclass(src_format, sf) and issubclass(dest_format, df):
-            conv(src, src_filename, src_format, dest_filename, dest_format)
+            conv(src, src_filename, dest_filename, dest_format)
             return
 
     raise Error(
