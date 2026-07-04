@@ -6,6 +6,48 @@
 #
 #   Published under the MIT license.
 
+"""An emulator is a flat set of devices exchanging events on one bus.
+
+Devices are independent peers. No device calls another; a device
+reacts to events and radiates facts. Every fact carries what it needs
+to be understood on its own -- its time, its resolution, its source.
+
+Devices have one of two roles. A guest device is part of the emulated
+content: it lives on the exact emulated-time axis, its behaviour is
+deterministic and reproducible, and it is reconstructed from saved
+state on load. A host device is a channel of the hosting environment:
+it lives on the wallclock, holds host preferences, and is carried
+over across loads.
+
+A machine is a named group of guest devices sharing one bus scope --
+one address space, one set of port lines. Gather events (a port read)
+are answered within their machine; the event space stays flat, so a
+device may observe across machines (a lock-step comparator), and one
+emulator may hold several machines (#38).
+
+Devices radiate streams -- video, sound, tape signal, presentable
+state. Host channels connect streams to the environment: presenting
+or consuming them (a window, the sound output) or originating them
+from it (a tape signal captured from line-in). Which channel serves
+which stream, and how, is host configuration. A second window is a
+new channel, not a new machine.
+
+Time is one shared axis of exact points. Devices advance in rounds
+toward an absolute time limit, each by its own decision, stopping at
+its own natural boundaries; the floor -- the time every device has
+crossed -- is the only global clock fact. Wallclock never mixes with
+emulated time; pacing lives in the channels.
+
+State is three artefacts: a machine's state (the content, as
+differences from the canonical reset state), the host configuration
+(channels, subscriptions, preferences), and the session -- their
+composition, plus history. Loading a machine state rebuilds its guest
+devices under an untouched host (#40).
+
+The Emulator is the composition root: it owns the set, runs the round
+loop, and answers questions about the whole -- nothing else. It is
+not a device, and it never nests.
+"""
 
 import pathlib
 import types
