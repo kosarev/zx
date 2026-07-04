@@ -98,7 +98,6 @@ from ._sound import SDLSound
 from ._tape import TapePlayer
 from ._time import Time
 from ._z80snapshot import Z80Snapshot
-from ._zxb import ZXBasicCompilerProgram
 
 
 # A Dispatcher that also passes every event to the Emulator, after
@@ -345,19 +344,6 @@ class Emulator:
     def _load_input_recording(self, file: MachinePlayback) -> None:
         self.notify(StartPlayback(file.to_unified_playback()))
 
-    def __load_zx_basic_compiler_program(
-            self, file: ZXBasicCompilerProgram) -> None:
-        self.reset_and_wait()
-
-        # CLEAR <entry_point>
-        entry_point = file.entry_point
-        self.generate_key_strokes('X', entry_point, 'ENTER')
-
-        self.__require_core().write(entry_point, file.program_bytes)
-
-        # RANDOMIZE USR <entry_point>
-        self.generate_key_strokes('T', 'CS+SS', 'L', entry_point, 'ENTER')
-
     # Builds machine devices from a machine snapshot: one device per
     # slice, plus a default device of every machine member type the
     # snapshot does not mention -- at its canonical reset state, per
@@ -396,8 +382,6 @@ class Emulator:
             self._load_input_recording(file)
         elif isinstance(file, SoundFile):
             self.__load_tape_to_player(file)
-        elif isinstance(file, ZXBasicCompilerProgram):
-            self.__load_zx_basic_compiler_program(file)
         else:
             raise Error(f"Don't know how to load file {filename!r}.")
 
