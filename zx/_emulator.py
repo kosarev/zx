@@ -108,8 +108,8 @@ class _EmulatorDispatcher(Dispatcher):
 
 
 class Emulator:
-    """Owns a set of devices and runs them. It is a context manager that
-    releases its resources on exit.
+    """Owns the guest and host devices and runs them. It is a context
+    manager that releases its resources on exit.
 
     The devices are independent peers, unaware of the Emulator or each
     other, and communicate only by sending events to a Dispatcher, which
@@ -125,13 +125,14 @@ class Emulator:
                  keyboard: Device | None = None,
                  beeper: Device | None = None,
                  sound_device: Device | None = None,
-                 headless: bool = False,
-                 devices: list[Device] | None = None,
                  playback_player: PlaybackPlayer | None = None,
                  playback_recorder: PlaybackRecorder | None = None,
-                 extra_devices: list[Device] | None = None,
-                 profile: Profile | None = None):
-        if devices is None:
+                 profile: Profile | None = None,
+                 headless: bool = False,
+                 guests: list[Device] | None = None,
+                 hosts: list[Device] | None = None,
+                 extra_hosts: list[Device] | None = None):
+        if guests is None:
             if core is None:
                 core = Core(model=model, profile=profile)
 
@@ -140,33 +141,42 @@ class Emulator:
             if beeper is None:
                 beeper = Beeper()
 
-            devices = [core, TapePlayer(), keyboard, beeper,
-                       playback_player or PlaybackPlayer(),
-                       playback_recorder or PlaybackRecorder()]
+            guests = [core, TapePlayer(), keyboard, beeper,
+                      playback_player or PlaybackPlayer(),
+                      playback_recorder or PlaybackRecorder()]
+        elif core is None:
+            core = next((d for d in guests if isinstance(d, Core)), None)
 
+        if hosts is None:
+            hosts = []
             if not headless:
                 if screen is None:
-                    screen = ScreenWindow(core.FRAME_SIZE)
+                    screen = ScreenWindow(Core.FRAME_SIZE)
                 if sound_device is None:
                     sound_device = SDLSound()
 
-                devices.extend([screen, sound_device])
+                hosts = [screen, sound_device]
 
-            # The caller's extra devices come last -- typically the
-            # end-user tool layer adding environment-coupling agents
-            # (e.g. a settings-persistence manager), kept out of the
-            # default set so an API- or test-built emulator stays
-            # hermetic.
-            if extra_devices is not None:
-                devices.extend(extra_devices)
-        elif core is None:
-            core = next((d for d in devices if isinstance(d, Core)), None)
+        # The caller's extra hosts come last -- typically the
+        # end-user tool layer adding environment-coupling agents
+        # (e.g. a settings-persistence manager), kept out of the
+        # default set so an API- or test-built emulator stays
+        # hermetic.
+        hosts = list(hosts)
+        if extra_hosts is not None:
+            hosts.extend(extra_hosts)
 
         self.__core = core
-        self.devices = list(devices)
+        self.guests = list(guests)
+        self.hosts = hosts
 
         # The time all devices have advanced to.
         self.__advanced_floor = Time(0, ticks_per_second=1)
+
+    # All the devices, guests first, as one dispatch audience.
+    @property
+    def devices(self) -> list[Device]:
+        return self.guests + self.hosts
 
     # The orchestration drives a single core (the common case); a device
     # set without one cannot be run or loaded into.
