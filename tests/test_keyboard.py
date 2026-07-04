@@ -7,8 +7,12 @@
 #   Published under the MIT license.
 
 
+from zx._device import Dispatcher
+from zx._device import ReadPort
 from zx._keyboard import KEYS
 from zx._keyboard import Keyboard
+from zx._keyboard import KeyStroke
+from zx._time import Time
 
 # The documented port map: address line -> keys, lowest bit first.
 PORT_MAP = {
@@ -37,14 +41,47 @@ def test_aliases() -> None:
     assert KEYS['SPACE'] is KEYS['BREAK SPACE']
 
 
+def at(tenths: int) -> Time:
+    return Time(tenths, ticks_per_second=10)
+
+
+def read(devices: Dispatcher, addr: int, tenths: int) -> int | None:
+    port_read = ReadPort(addr, at(tenths))
+    devices.notify(port_read)
+    return port_read.value
+
+
+# The port address selecting the key's half-row.
+def halfrow_addr(key_id: str) -> int:
+    return 0xfffe ^ (1 << KEYS[key_id].address_line)
+
+
+# The value read from the key's half-row while the key is pressed.
+def pressed_value(key_id: str) -> int:
+    return 0xff ^ (1 << KEYS[key_id].port_bit)
+
+
 def test_port_reads() -> None:
     keyboard = Keyboard()
+    devices = Dispatcher([keyboard])
 
-    # J sits on address line 14, bit 3; reading with A14 low
-    # selects its half-row, any other line leaves it invisible.
-    keyboard.handle_key_stroke(KEYS['J'], pressed=True)
-    assert keyboard.read_port(0xbffe) == 0xff ^ (1 << 3)
-    assert keyboard.read_port(0x7ffe) == 0xff
+    devices.notify(KeyStroke(KEYS['J'], pressed=True, time=at(2)))
+    devices.notify(KeyStroke(KEYS['J'], pressed=False, time=at(4)))
 
-    keyboard.handle_key_stroke(KEYS['J'], pressed=False)
-    assert keyboard.read_port(0xbffe) == 0xff
+    assert read(devices, halfrow_addr('J'), 1) == 0xff
+    assert read(devices, halfrow_addr('J'), 2) == pressed_value('J')
+    assert read(devices, halfrow_addr('J'), 3) == pressed_value('J')
+    assert read(devices, halfrow_addr('A'), 3) == 0xff
+    assert read(devices, halfrow_addr('J'), 4) == 0xff
+
+
+def test_live_strokes() -> None:
+    keyboard = Keyboard()
+    devices = Dispatcher([keyboard])
+
+    assert read(devices, halfrow_addr('J'), 1) == 0xff
+
+    # A live stroke takes effect at the next read, even at the same
+    # time.
+    devices.notify(KeyStroke(KEYS['J'], pressed=True, time=None))
+    assert read(devices, halfrow_addr('J'), 1) == pressed_value('J')

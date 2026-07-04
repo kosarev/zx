@@ -282,16 +282,30 @@ class Emulator:
                 yield key
 
     def generate_key_strokes(self, *keys: int | str) -> None:
+        # The whole sequence is scheduled upfront and then simply
+        # run past: transitions at 0.1-second steps, starting one
+        # step past the floor so they are clear of everything the
+        # machine has sampled running ahead of it.
+        step = Time(1, ticks_per_second=10)
+        time = self.__advanced_floor
+
+        strokes = []
         for key in self.__translate_key_strokes(keys):
-            strokes = key.split('+')
+            ids = key.split('+')
 
-            for id in strokes:
-                self.notify(KeyStroke(KEYS[id], pressed=True))
-                self.run(duration=0.1, fast_forward=True)
+            for id in ids:
+                time = time + step
+                strokes.append(KeyStroke(KEYS[id], pressed=True, time=time))
 
-            for id in reversed(strokes):
-                self.notify(KeyStroke(KEYS[id], pressed=False))
-                self.run(duration=0.1, fast_forward=True)
+            for id in reversed(ids):
+                time = time + step
+                strokes.append(KeyStroke(KEYS[id], pressed=False, time=time))
+
+        for stroke in strokes:
+            self.notify(stroke)
+
+        # One extra step for the machine to scan the last release.
+        self.run(duration=(len(strokes) + 1) / 10, fast_forward=True)
 
     def _is_tape_paused(self) -> bool:
         tape_state = IsTapePlayerPaused()

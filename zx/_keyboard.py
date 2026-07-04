@@ -11,6 +11,7 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import ReadPort
+from ._time import Time
 
 
 # A key of the Spectrum's keyboard matrix: the port address line
@@ -47,50 +48,68 @@ for alias, id in _ALIASES.items():
     KEYS[alias] = KEYS[id]
 
 
-# A transition of an emulated Spectrum key.
+# A transition of an emulated Spectrum key. An explicit time
+# schedules the transition for that exact moment. None means as
+# soon as possible: the transition takes effect at the next port
+# read -- the exact time of live input is inherently the host's
+# non-determinism.
 class KeyStroke(DeviceEvent):
-    def __init__(self, key: Key, pressed: bool):
+    def __init__(self, key: Key, pressed: bool, time: Time | None):
         self.key = key
         self.pressed = pressed
+        self.time = time
 
 
 class Keyboard(Device):
+    """The keyboard matrix as a function of time.
 
-    _state = [0xff] * 8
+    A port read at time T returns the matrix state at T: all
+    transitions at or before T applied. Reads come in time order,
+    and a scheduled transition must be later than the last read,
+    which would otherwise have sampled differently.
+    """
 
-    def read_port(self, addr: int) -> int:
-        n = 0xff
-        addr ^= 0xffff
+    def __init__(self) -> None:
+        self.__state = [0xff] * 8
+        self.__last_read_time = Time(0, ticks_per_second=1)
 
-        if addr & (1 << 8):
-            n &= self._state[0]
-        if addr & (1 << 9):
-            n &= self._state[1]
-        if addr & (1 << 10):
-            n &= self._state[2]
-        if addr & (1 << 11):
-            n &= self._state[3]
-        if addr & (1 << 12):
-            n &= self._state[4]
-        if addr & (1 << 13):
-            n &= self._state[5]
-        if addr & (1 << 14):
-            n &= self._state[6]
-        if addr & (1 << 15):
-            n &= self._state[7]
+        # Strokes not yet in effect, in time order.
+        self.__pending: list[KeyStroke] = []
 
-        return n
-
-    def handle_key_stroke(self, key: Key, pressed: bool) -> None:
+    def __apply(self, key: Key, pressed: bool) -> None:
         mask = 1 << key.port_bit
 
         if pressed:
-            self._state[key.address_line - 8] &= mask ^ 0xff
+            self.__state[key.address_line - 8] &= mask ^ 0xff
         else:
-            self._state[key.address_line - 8] |= mask
+            self.__state[key.address_line - 8] |= mask
+
+    def read_port(self, addr: int, time: Time) -> int:
+        assert not (time < self.__last_read_time)
+        self.__last_read_time = time
+
+        i = 0
+        for stroke in self.__pending:
+            if stroke.time is not None and time < stroke.time:
+                break
+            self.__apply(stroke.key, stroke.pressed)
+            i += 1
+        del self.__pending[:i]
+
+        n = 0xff
+        addr ^= 0xffff
+        for line in range(8):
+            if addr & (1 << (8 + line)):
+                n &= self.__state[line]
+
+        return n
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, KeyStroke):
-            self.handle_key_stroke(event.key, event.pressed)
+            if event.time is not None:
+                assert self.__last_read_time < event.time
+                assert (not self.__pending or self.__pending[-1].time is None
+                        or not (event.time < self.__pending[-1].time))
+            self.__pending.append(event)
         elif isinstance(event, ReadPort):
-            event.supply(self.read_port(event.addr))
+            event.supply(self.read_port(event.addr, event.time))

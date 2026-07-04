@@ -1891,7 +1891,7 @@ class ScreenWindow(Device):
             zx_key = KEYS.get(
                 self.__SDL_KEYS_TO_ZX_KEYS.get(event.id, event.id))
             if zx_key is not None:
-                devices.notify(KeyStroke(zx_key, event.pressed))
+                devices.notify(KeyStroke(zx_key, event.pressed, time=None))
 
     def __on_sdl_click(self, event: typing.Any) -> bool:
         TYPES = {
@@ -1952,7 +1952,8 @@ class ScreenWindow(Device):
             button_key = BUTTONS_TO_ZX_KEYS.get(event.jbutton.button)
             if button_key:
                 pressed = event.jbutton.state == sdl2.SDL_PRESSED
-                dispatcher.notify(KeyStroke(KEYS[button_key], pressed))
+                dispatcher.notify(
+                    KeyStroke(KEYS[button_key], pressed, time=None))
 
     def __on_exception(self, event: DeviceEvent,
                        devices: Dispatcher) -> None:
