@@ -407,6 +407,8 @@ class Device:
     __device_types_by_snapshot_type: typing.ClassVar[
         dict[type[DeviceSnapshot], type[Device]]] = {}
 
+    __snapshot_type: typing.ClassVar[type[DeviceSnapshot] | None] = None
+
     def __init_subclass__(
             cls, *,
             snapshot_type: type[DeviceSnapshot] | None = None) -> None:
@@ -414,12 +416,20 @@ class Device:
             types = Device.__device_types_by_snapshot_type
             assert snapshot_type not in types
             types[snapshot_type] = cls
+            cls.__snapshot_type = snapshot_type
 
     @classmethod
     def from_snapshot(cls, snapshot: DeviceSnapshot) -> Device:
         device_type = Device.__device_types_by_snapshot_type[type(snapshot)]
         assert device_type is not cls
         return device_type.from_snapshot(snapshot)
+
+    # Captures the device's state. The default says the device holds
+    # nothing beyond its canonical reset state.
+    def to_snapshot(self) -> DeviceSnapshot:
+        snapshot_type = self.__snapshot_type
+        assert snapshot_type is not None
+        return snapshot_type()
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         pass

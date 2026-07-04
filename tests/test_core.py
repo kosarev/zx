@@ -14,7 +14,6 @@ import pytest
 
 import zx
 from zx._core import Core
-from zx._core import CoreSnapshot
 from zx._core import RunEvents
 from zx._device import Device
 from zx._device import DeviceEvent
@@ -140,8 +139,7 @@ def test_from_snapshot() -> None:
     mach = zx.Core()
     mach.pc = 0x1234
     mach.hl = 0xbeef
-    core_slice = next(d for _, d in mach.to_snapshot()
-                      if isinstance(d, CoreSnapshot))
+    core_slice = mach.to_snapshot()
 
     clone = Core.from_snapshot(core_slice)
     assert (clone.pc, clone.hl) == (0x1234, 0xbeef)

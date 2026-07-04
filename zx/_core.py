@@ -23,7 +23,6 @@ from ._data import MemoryBlock
 from ._data import Spectrum48
 from ._data import SpectrumModel
 from ._data import UnifiedPlayback
-from ._data import UnifiedSnapshot
 from ._device import BreakpointHit
 from ._device import Device
 from ._device import DeviceEvent
@@ -506,10 +505,10 @@ class CoreState(Z80State):
     def read16(self, addr: int) -> int:
         return int.from_bytes(self.read(addr, 2), 'little')
 
-    def to_snapshot(self) -> UnifiedSnapshot:
+    def to_snapshot(self) -> CoreSnapshot:
         # TODO: Store all fields.
         assert self.model is Spectrum48  # TODO: Support 128K.
-        return UnifiedSnapshot(core=CoreSnapshot(
+        return CoreSnapshot(
             af=self.af, bc=self.bc, de=self.de, hl=self.hl,
             ix=self.ix, iy=self.iy,
             alt_af=self.alt_af, alt_bc=self.alt_bc,
@@ -521,7 +520,7 @@ class CoreState(Z80State):
             memory_blocks=[MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
                                        data=self.__memory[0x4000:0x10000])],
             ticks_since_int=self.ticks_since_int,
-            border_colour=self.border_colour))
+            border_colour=self.border_colour)
 
     def install_core_snapshot(self, snapshot: CoreSnapshot) -> None:
         for field, value in snapshot:

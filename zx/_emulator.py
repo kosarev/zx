@@ -67,6 +67,7 @@ from ._data import MachinePlayback
 from ._data import MachineSnapshot
 from ._data import SoundFile
 from ._data import SpectrumModel
+from ._data import UnifiedSnapshot
 from ._device import DestroyEmulator
 from ._device import Device
 from ._device import DeviceEvent
@@ -376,11 +377,17 @@ class Emulator:
         self._load_file(filename)
         self.run(fast_forward=fast_forward)
 
+    # The machine's state: a complete snapshot, one slice per machine
+    # device, keyed by device id -- the type name in lower case.
+    def __make_machine_snapshot(self) -> UnifiedSnapshot:
+        return UnifiedSnapshot(**{type(d).__name__.lower(): d.to_snapshot()
+                                  for d in self.machine})
+
     def _save_snapshot_file(self, format: type[MachineSnapshot],
                             filename: str) -> None:
         with pathlib.Path(filename).open('wb') as f:
             f.write(format.from_snapshot(
-                self.__require_core().to_snapshot()).encode())
+                self.__make_machine_snapshot()).encode())
 
     def notify(self, event: DeviceEvent) -> None:
         dispatcher = _EmulatorDispatcher(self.devices, self)
