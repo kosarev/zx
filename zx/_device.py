@@ -15,6 +15,7 @@ if typing.TYPE_CHECKING:
     import numpy
 
     from ._binary import Bytes
+    from ._data import DeviceSnapshot
     from ._data import SoundFile
     from ._data import SoundPulses
     from ._data import UnifiedPlayback
@@ -400,6 +401,26 @@ class NewSoundPulses(DeviceEvent):
 
 
 class Device:
+    # Maps snapshot types to the device types declaring them, so a
+    # device can be created from any snapshot: Device.from_snapshot()
+    # resolves the device type and delegates to its override.
+    __device_types_by_snapshot_type: typing.ClassVar[
+        dict[type[DeviceSnapshot], type[Device]]] = {}
+
+    def __init_subclass__(
+            cls, *,
+            snapshot_type: type[DeviceSnapshot] | None = None) -> None:
+        if snapshot_type is not None:
+            types = Device.__device_types_by_snapshot_type
+            assert snapshot_type not in types
+            types[snapshot_type] = cls
+
+    @classmethod
+    def from_snapshot(cls, snapshot: DeviceSnapshot) -> Device:
+        device_type = Device.__device_types_by_snapshot_type[type(snapshot)]
+        assert device_type is not cls
+        return device_type.from_snapshot(snapshot)
+
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         pass
 

@@ -13,6 +13,8 @@
 import pytest
 
 import zx
+from zx._core import Core
+from zx._core import CoreSnapshot
 from zx._core import RunEvents
 from zx._device import Device
 from zx._device import DeviceEvent
@@ -132,3 +134,20 @@ def test_deferred_input() -> None:
     assert mach.ticks_since_int == 11
     assert mach.r == 1
     assert mach.a == 0x5a
+
+
+def test_from_snapshot() -> None:
+    mach = zx.Core()
+    mach.pc = 0x1234
+    mach.hl = 0xbeef
+    core_slice = next(d for _, d in mach.to_snapshot()
+                      if isinstance(d, CoreSnapshot))
+
+    clone = Core.from_snapshot(core_slice)
+    assert (clone.pc, clone.hl) == (0x1234, 0xbeef)
+
+    # The generic entry resolves the device type by the snapshot
+    # type.
+    device = Device.from_snapshot(core_slice)
+    assert isinstance(device, Core)
+    assert device.pc == 0x1234

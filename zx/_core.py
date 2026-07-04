@@ -8,6 +8,8 @@
 #
 #   Published under the MIT license.
 
+from __future__ import annotations
+
 # TODO: Remove unused imports.
 import enum
 import typing
@@ -521,6 +523,16 @@ class CoreState(Z80State):
             ticks_since_int=self.ticks_since_int,
             border_colour=self.border_colour))
 
+    def install_core_snapshot(self, snapshot: CoreSnapshot) -> None:
+        for field, value in snapshot:
+            if field == 'memory_blocks':
+                for block in value:
+                    self.write(block.addr, block.data.data,
+                               rom_page=block.rom_page,
+                               ram_page=block.ram_page)
+            else:
+                setattr(self, field, value)
+
     def install_snapshot(self, snapshot: MachineSnapshot) -> None:
         # A device absent from the composition is at its canonical
         # reset state.
@@ -530,14 +542,7 @@ class CoreState(Z80State):
         if core is None:
             return
 
-        for field, value in core:
-            if field == 'memory_blocks':
-                for block in value:
-                    self.write(block.addr, block.data.data,
-                               rom_page=block.rom_page,
-                               ram_page=block.ram_page)
-            else:
-                setattr(self, field, value)
+        self.install_core_snapshot(core)
 
 
 # Stores information about the running code.
@@ -555,12 +560,19 @@ class Profile:
             yield addr, self._annots[addr]
 
 
-class Core(_CoreBase, CoreState, Device):
+class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
     """The CPU, memory and ULA of an emulated machine, as one device.
 
     Holds their state and steps the emulation. Construct it directly
     only for low-level use, otherwise let Emulator create it.
     """
+
+    @classmethod
+    def from_snapshot(cls, snapshot: DeviceSnapshot) -> Core:
+        assert isinstance(snapshot, CoreSnapshot)
+        core = cls()
+        core.install_core_snapshot(snapshot)
+        return core
 
     # Memory marks.
     __NO_MARKS = 0
