@@ -76,7 +76,6 @@ from ._device import GetHoldState
 from ._device import GetQuantumTimeLimit
 from ._device import InitEmulator
 from ._device import IsTapePlayerPaused
-from ._device import IsTapePlayerStopped
 from ._device import LoadFile
 from ._device import LoadTape
 from ._device import PauseUnpauseTape
@@ -279,10 +278,6 @@ class Emulator:
     def reset(self) -> None:
         self.notify(ResetEmulator())
 
-    def reset_and_wait(self) -> None:
-        self.__require_core().pc = 0x0000
-        self.run(duration=1.8, fast_forward=True)
-
     def generate_key_strokes(self, *keys: int | str) -> None:
         # The sequence starts at the earliest time no device has
         # reached yet, then the machine runs past its end.
@@ -301,45 +296,12 @@ class Emulator:
     def __pause_tape(self, is_paused: bool = True) -> None:
         self.notify(PauseUnpauseTape(is_paused))
 
-    def __unpause_tape(self) -> None:
-        self.__pause_tape(is_paused=False)
-
     def _toggle_tape_pause(self) -> None:
         self.__pause_tape(not self._is_tape_paused())
 
     def __load_tape_to_player(self, file: SoundFile) -> None:
         self.notify(LoadTape(file))
         self.__pause_tape()
-
-    def __is_end_of_tape(self) -> bool:
-        tape_state = IsTapePlayerStopped()
-        self.notify(tape_state)
-        return tape_state.stopped
-
-    def load_tape(self, filename: str) -> None:
-        tape = parse_file(filename)
-        if not isinstance(tape, SoundFile):
-            raise Error(f'{filename!r} does not seem to be a tape file.')
-
-        # Let the initialization complete.
-        self.reset_and_wait()
-
-        # Type in 'LOAD ""'.
-        self.generate_key_strokes('J', 'SS+P', 'SS+P', 'ENTER')
-
-        # Load and run the tape.
-        self.__load_tape_to_player(tape)
-        self.__unpause_tape()
-
-        # Run until the player reports the tape finished; the player
-        # raises StopQuantum at the exact end, so each quantum stops
-        # there and this check sees it promptly.
-        self.notify(SetFastForward(True))
-        try:
-            while not self.__is_end_of_tape():
-                self.__run_quantum()
-        finally:
-            self.notify(SetFastForward(False))
 
     def _load_input_recording(self, file: MachinePlayback) -> None:
         self.notify(StartPlayback(file.to_unified_playback()))

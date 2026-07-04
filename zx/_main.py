@@ -21,6 +21,7 @@ import platformdirs
 from ._binary import Bytes
 from ._core import Core
 from ._core import Profile
+from ._core import RunEvents
 from ._data import DataRecord
 from ._data import MachinePlayback
 from ._data import MachineSnapshot
@@ -32,6 +33,9 @@ from ._device import BreakpointHit
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import FetchesLimitHit
+from ._device import IsTapePlayerStopped
+from ._device import LoadTape
+from ._device import PauseUnpauseTape
 from ._emulator import Emulator
 from ._error import USER_ERRORS
 from ._error import Error
@@ -40,10 +44,14 @@ from ._except import EmulationExit
 from ._file import detect_file_format
 from ._file import parse_file
 from ._file import parse_file_image
+from ._keyboard import Keyboard
+from ._keyboard import make_key_strokes
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._rzx import RZXFile
 from ._settings import GlobalSettingsManager
+from ._tape import TapePlayer
+from ._time import Time
 from ._zx import ZXFile
 
 
@@ -377,15 +385,50 @@ def fast_forward(args: list[str]) -> None:
             app._run_file(filename, fast_forward=True)
 
 
+# Runs a private machine through the ROM's own loading process --
+# boot, type LOAD "", play the tape to its end -- and saves the
+# machine that results.
 def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
                               dest_filename: str,
                               dest_format: type[DataRecord]) -> None:
     assert isinstance(src, SoundFile)
     assert issubclass(dest_format, MachineSnapshot), dest_format
 
-    with Emulator(headless=True) as app:
-        app.load_tape(src_filename)
-        app._save_snapshot_file(dest_format, dest_filename)
+    core = Core()
+    devices = Dispatcher([core, Keyboard(), TapePlayer()])
+
+    def current_time() -> Time:
+        return Time(core.tick_count,
+                    ticks_per_second=core.model._TICKS_PER_FRAME * 50)
+
+    # Boot to the BASIC prompt.
+    frames = 0
+    while frames < 90:
+        if RunEvents.END_OF_FRAME in RunEvents(core._run(devices)):
+            frames += 1
+
+    # LOAD ""
+    strokes = make_key_strokes('J', 'SS+P', 'SS+P', 'ENTER',
+                               start=current_time())
+    for stroke in strokes:
+        devices.notify(stroke)
+    while current_time() < strokes[-1].time:
+        core._run(devices)
+
+    devices.notify(LoadTape(src))
+    devices.notify(PauseUnpauseTape(False))
+
+    while True:
+        core._run(devices)
+
+        stopped = IsTapePlayerStopped()
+        devices.notify(stopped)
+        if stopped.stopped:
+            break
+
+    snapshot = UnifiedSnapshot(core=core.to_snapshot())
+    with pathlib.Path(dest_filename).open('wb') as f:
+        f.write(dest_format.from_snapshot(snapshot).encode())
 
 
 def _convert_tape_to_tape(src: DataRecord, src_filename: str,
