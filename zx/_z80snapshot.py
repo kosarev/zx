@@ -13,7 +13,6 @@ import typing
 
 import numpy
 
-from ._beeper import BeeperSnapshot
 from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
@@ -25,7 +24,6 @@ from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import UnifiedSnapshot
 from ._error import Error
-from ._keyboard import KeyboardSnapshot
 from ._utils import get_high8
 from ._utils import get_low8
 from ._utils import make16
@@ -437,9 +435,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             int_mode=int_mode,
             ticks_since_int=ticks_since_int,
             border_colour=(flags1 >> 1) & 0x7,
-            memory_blocks=memory_blocks),
-            keyboard=KeyboardSnapshot(),
-            beeper=BeeperSnapshot())
+            memory_blocks=memory_blocks))
 
     __V1_HEADER: typing.ClassVar[list[str]] = [
         'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',

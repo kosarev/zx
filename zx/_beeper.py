@@ -13,7 +13,6 @@ import typing
 
 import numpy
 
-from ._data import DeviceSnapshot
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
@@ -27,15 +26,7 @@ if typing.TYPE_CHECKING:
     from ._time import Time
 
 
-class BeeperSnapshot(DeviceSnapshot, format_name=None):
-    pass
-
-
-class Beeper(Device, snapshot_type=BeeperSnapshot):
-    @classmethod
-    def from_snapshot(cls, snapshot: DeviceSnapshot) -> Beeper:
-        assert isinstance(snapshot, BeeperSnapshot)
-        return cls()
+class Beeper(Device):
 
     def __init__(self) -> None:
         self.__stream = PulseStream()

@@ -357,12 +357,19 @@ class Emulator:
         # RANDOMIZE USR <entry_point>
         self.generate_key_strokes('T', 'CS+SS', 'L', entry_point, 'ENTER')
 
-    # Builds the machine devices a machine snapshot describes: one
-    # device per slice. The snapshot is complete -- it names every
-    # machine device.
+    # Builds machine devices from a machine snapshot: one device per
+    # slice, plus a default device of every machine member type the
+    # snapshot does not mention -- at its canonical reset state, per
+    # the reset-delta principle.
     def __make_machine(self, snapshot: MachineSnapshot) -> list[Device]:
-        return [Device.from_snapshot(device_snapshot)
-                for _, device_snapshot in snapshot.to_unified_snapshot()]
+        devices = [Device.from_snapshot(device_snapshot)
+                   for _, device_snapshot in snapshot.to_unified_snapshot()]
+
+        for member in Core, Keyboard, Beeper:
+            if not any(isinstance(d, member) for d in devices):
+                devices.append(member())
+
+        return devices
 
     # Loading a machine state recreates the machine devices; the
     # environment persists. The new machine starts its own timeline.
@@ -396,11 +403,13 @@ class Emulator:
         self._load_file(filename)
         self.run(fast_forward=fast_forward)
 
-    # The machine's state: a complete snapshot, one slice per machine
-    # device, keyed by device id -- the type name in lower case.
+    # The machine's state: a slice per machine device that has state
+    # to capture, keyed by device id -- the type name in lower case.
     def __make_machine_snapshot(self) -> UnifiedSnapshot:
-        return UnifiedSnapshot(**{type(d).__name__.lower(): d.to_snapshot()
-                                  for d in self.machine})
+        return UnifiedSnapshot(**{
+            type(d).__name__.lower(): snapshot
+            for d in self.machine
+            if (snapshot := d.to_snapshot()) is not None})
 
     def _save_snapshot_file(self, format: type[MachineSnapshot],
                             filename: str) -> None:

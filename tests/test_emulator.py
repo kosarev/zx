@@ -11,7 +11,6 @@
 #   Published under the MIT license.
 
 import zx
-from zx._beeper import BeeperSnapshot
 from zx._core import CoreSnapshot
 from zx._core import RunEvents
 from zx._data import UnifiedSnapshot
@@ -20,7 +19,6 @@ from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import InitEmulator
-from zx._keyboard import KeyboardSnapshot
 
 
 def test_basic() -> None:
@@ -81,9 +79,7 @@ def test_init_and_destroy_emulator_dispatched() -> None:
 
 
 def test_load_recreates_machine() -> None:
-    snapshot = UnifiedSnapshot(core=CoreSnapshot(pc=0x1234),
-                               keyboard=KeyboardSnapshot(),
-                               beeper=BeeperSnapshot())
+    snapshot = UnifiedSnapshot(core=CoreSnapshot(pc=0x1234))
 
     # Loading recreates the machine devices; the environment
     # persists.

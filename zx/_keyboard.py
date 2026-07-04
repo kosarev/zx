@@ -7,9 +7,6 @@
 #   Published under the MIT license.
 
 
-from __future__ import annotations
-
-from ._data import DeviceSnapshot
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
@@ -53,15 +50,7 @@ for index, ids in enumerate(_KEY_IDS):
         KEYS[i] = info
 
 
-class KeyboardSnapshot(DeviceSnapshot, format_name=None):
-    pass
-
-
-class Keyboard(Device, snapshot_type=KeyboardSnapshot):
-    @classmethod
-    def from_snapshot(cls, snapshot: DeviceSnapshot) -> Keyboard:
-        assert isinstance(snapshot, KeyboardSnapshot)
-        return cls()
+class Keyboard(Device):
 
     _state = [0xff] * 8
 
