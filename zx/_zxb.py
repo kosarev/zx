@@ -6,13 +6,17 @@
 #
 #   Published under the MIT license.
 
+from __future__ import annotations
+
 import pathlib
 import tempfile
 import typing
 
-from ._binary import Bytes
 from ._data import DataRecord
 from ._error import Error
+
+if typing.TYPE_CHECKING:
+    from ._binary import Bytes
 
 
 class ZXBasicCompilerProgram(DataRecord, format_name='ZXB'):
@@ -20,8 +24,8 @@ class ZXBasicCompilerProgram(DataRecord, format_name='ZXB'):
     program_bytes: bytes
 
     @classmethod
-    def parse(cls, filename: str,
-              image: Bytes) -> 'ZXBasicCompilerProgram':
+    def decode(cls, filename: str,
+               image: Bytes) -> ZXBasicCompilerProgram:
         try:
             # The ZX Basic compiler is optional and untyped; mypy is told
             # to treat src.zxbc as Any in .mypy.ini, so no per-line ignore
