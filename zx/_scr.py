@@ -10,12 +10,14 @@
 import collections
 import typing
 
+from ._beeper import BeeperSnapshot
 from ._binary import BinaryParser
 from ._binary import Bytes
 from ._core import CoreSnapshot
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import UnifiedSnapshot
+from ._keyboard import KeyboardSnapshot
 
 
 class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
@@ -44,7 +46,9 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
             iff1=0,
             iff2=0,
             border_colour=0,
-            memory_blocks=memory_blocks))
+            memory_blocks=memory_blocks),
+            keyboard=KeyboardSnapshot(),
+            beeper=BeeperSnapshot())
 
     # TODO: Refine.
     def x_encode(self) -> bytes:

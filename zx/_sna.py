@@ -9,6 +9,7 @@
 
 import typing
 
+from ._beeper import BeeperSnapshot
 from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
@@ -19,6 +20,7 @@ from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import UnifiedSnapshot
 from ._error import Error
+from ._keyboard import KeyboardSnapshot
 
 
 class SNASnapshot(MachineSnapshot, format_name='SNA'):
@@ -85,7 +87,9 @@ class SNASnapshot(MachineSnapshot, format_name='SNA'):
             int_mode=self.int_mode,
             border_colour=self.border_colour,
             memory_blocks=[MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
-                                       data=self.memory.data)]))
+                                       data=self.memory.data)]),
+            keyboard=KeyboardSnapshot(),
+            beeper=BeeperSnapshot())
 
     @classmethod
     def from_snapshot(cls, snapshot: MachineSnapshot) -> 'SNASnapshot':

@@ -357,14 +357,33 @@ class Emulator:
         # RANDOMIZE USR <entry_point>
         self.generate_key_strokes('T', 'CS+SS', 'L', entry_point, 'ENTER')
 
+    # Builds the machine devices a machine snapshot describes: one
+    # device per slice. The snapshot is complete -- it names every
+    # machine device.
+    def __make_machine(self, snapshot: MachineSnapshot) -> list[Device]:
+        return [Device.from_snapshot(device_snapshot)
+                for _, device_snapshot in snapshot.to_unified_snapshot()]
+
+    # Loading a machine state recreates the machine devices; the
+    # environment persists. The new machine starts its own timeline.
+    def _load_snapshot(self, snapshot: MachineSnapshot) -> None:
+        self.notify(ResetEmulator())
+
+        self.machine = self.__make_machine(snapshot)
+        self.__core = next(
+            (d for d in self.machine if isinstance(d, Core)), None)
+        self.__advanced_floor = Time(0, ticks_per_second=1)
+
     def _load_file(self, filename: str) -> None:
         file = parse_file(filename)
 
+        if isinstance(file, MachineSnapshot):
+            self._load_snapshot(file)
+            return
+
         self.notify(ResetEmulator())
 
-        if isinstance(file, MachineSnapshot):
-            self.__require_core().install_snapshot(file)
-        elif isinstance(file, MachinePlayback):
+        if isinstance(file, MachinePlayback):
             self._load_input_recording(file)
         elif isinstance(file, SoundFile):
             self.__load_tape_to_player(file)

@@ -11,12 +11,16 @@
 #   Published under the MIT license.
 
 import zx
+from zx._beeper import BeeperSnapshot
+from zx._core import CoreSnapshot
 from zx._core import RunEvents
+from zx._data import UnifiedSnapshot
 from zx._device import DestroyEmulator
 from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import InitEmulator
+from zx._keyboard import KeyboardSnapshot
 
 
 def test_basic() -> None:
@@ -74,3 +78,23 @@ def test_init_and_destroy_emulator_dispatched() -> None:
         assert recorder.inited
         assert not recorder.destroyed
     assert recorder.destroyed
+
+
+def test_load_recreates_machine() -> None:
+    snapshot = UnifiedSnapshot(core=CoreSnapshot(pc=0x1234),
+                               keyboard=KeyboardSnapshot(),
+                               beeper=BeeperSnapshot())
+
+    # Loading recreates the machine devices; the environment
+    # persists.
+    with zx.Emulator(headless=True) as app:
+        old_machine = list(app.machine)
+        old_environment = list(app.environment)
+        app._load_snapshot(snapshot)
+
+        assert all(new is not old
+                   for new in app.machine for old in old_machine)
+        assert app.environment == old_environment
+
+        new_core = next(d for d in app.machine if isinstance(d, zx.Core))
+        assert new_core.pc == 0x1234
