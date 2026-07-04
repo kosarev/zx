@@ -84,7 +84,7 @@ def run(args: list[str]) -> None:
     session_snapshot = get_config_dir() / 'session.zx'
     settings_file = get_config_dir() / 'settings.json'
 
-    with Emulator(model=model, extra_hosts=[
+    with Emulator(model=model, extra_environment=[
             GlobalSettingsManager(settings_file)]) as app:
         if filename:
             app._load_file(filename)

@@ -47,10 +47,10 @@ def test_ticks_limit() -> None:
     assert mach.ticks_since_int >= frame_ticks
 
 
-def test_extra_hosts() -> None:
+def test_extra_environment() -> None:
     # Devices the caller attaches are added to the device set.
     extra = Device()
-    with zx.Emulator(headless=True, extra_hosts=[extra]) as mach:
+    with zx.Emulator(headless=True, extra_environment=[extra]) as mach:
         assert extra in mach.devices
 
 
@@ -70,7 +70,7 @@ def test_init_and_destroy_emulator_dispatched() -> None:
                 self.destroyed = True
 
     recorder = _Recorder()
-    with zx.Emulator(headless=True, extra_hosts=[recorder]):
+    with zx.Emulator(headless=True, extra_environment=[recorder]):
         assert recorder.inited
         assert not recorder.destroyed
     assert recorder.destroyed

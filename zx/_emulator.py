@@ -12,25 +12,29 @@ Devices are independent peers. No device calls another; a device
 reacts to events and radiates facts. Every fact carries what it needs
 to be understood on its own -- its time, its resolution, its source.
 
-Devices have one of two roles. A guest device is part of the emulated
-content: it lives on the exact emulated-time axis, its behaviour is
-deterministic and reproducible, and it is reconstructed from saved
-state on load. A host device is a channel of the hosting environment:
-it lives on the wallclock, holds host preferences, and is carried
-over across loads.
+Devices have one of two roles. A machine device is a constituent of
+an emulated machine -- the box itself -- and is reconstructed from
+the machine's saved state on load. An environment device is part of
+the machine's surroundings: emulated equipment on the desk (a tape
+player, an input recorder) or a channel of the real host (a window,
+the sound output). Environment devices are carried over across
+loads. The sides differ in membership and lifecycle, not in
+emulatedness: emulated environment equipment lives on the exact
+time axis just as the machine does.
 
-A machine is a named group of guest devices sharing one bus scope --
-one address space, one set of port lines. Gather events (a port read)
-are answered within their machine; the event space stays flat, so a
-device may observe across machines (a lock-step comparator), and one
-emulator may hold several machines (#38).
+A machine is a named group of machine devices sharing one bus scope
+-- one address space, one set of port lines. Gather events (a port
+read) are answered within their machine; the event space stays
+flat, so a device may observe across machines (a lock-step
+comparator), and one emulator may hold several machines (#38).
 
 Devices radiate streams -- video, sound, tape signal, presentable
-state. Host channels connect streams to the environment: presenting
-or consuming them (a window, the sound output) or originating them
-from it (a tape signal captured from line-in). Which channel serves
-which stream, and how, is host configuration. A second window is a
-new channel, not a new machine.
+state. Environment devices connect streams to the machines and the
+real host: presenting or consuming them (a window, the sound
+output) or originating them (a tape player feeding the tape signal,
+a line-in capture). Which device serves which stream, and how, is
+environment configuration. A second window is a new channel, not a
+new machine.
 
 Time is one shared axis of exact points. Devices advance in rounds
 toward an absolute time limit, each by its own decision, stopping at
@@ -39,10 +43,13 @@ crossed -- is the only global clock fact. Wallclock never mixes with
 emulated time; pacing lives in the channels.
 
 State is three artefacts: a machine's state (the content, as
-differences from the canonical reset state), the host configuration
-(channels, subscriptions, preferences), and the session -- their
-composition, plus history. Loading a machine state rebuilds its guest
-devices under an untouched host (#40).
+differences from the canonical reset state), the environment
+configuration (equipment, channels, subscriptions, preferences),
+and the session -- their composition, plus history. Loading a
+machine state rebuilds its machine devices under an untouched
+environment (#40). Machine state reproduces the machine; with the
+environment configuration it reproduces the whole session;
+non-determinism enters only through live channels of the real host.
 
 The Emulator is the composition root: it owns the set, runs the round
 loop, and answers questions about the whole -- nothing else. It is
@@ -108,8 +115,8 @@ class _EmulatorDispatcher(Dispatcher):
 
 
 class Emulator:
-    """Owns the guest and host devices and runs them. It is a context
-    manager that releases its resources on exit.
+    """Owns the machine and environment devices and runs them. It is a
+    context manager that releases its resources on exit.
 
     The devices are independent peers, unaware of the Emulator or each
     other, and communicate only by sending events to a Dispatcher, which
@@ -129,10 +136,10 @@ class Emulator:
                  playback_recorder: PlaybackRecorder | None = None,
                  profile: Profile | None = None,
                  headless: bool = False,
-                 guests: list[Device] | None = None,
-                 hosts: list[Device] | None = None,
-                 extra_hosts: list[Device] | None = None):
-        if guests is None:
+                 machine: list[Device] | None = None,
+                 environment: list[Device] | None = None,
+                 extra_environment: list[Device] | None = None):
+        if machine is None:
             if core is None:
                 core = Core(model=model, profile=profile)
 
@@ -141,42 +148,42 @@ class Emulator:
             if beeper is None:
                 beeper = Beeper()
 
-            guests = [core, TapePlayer(), keyboard, beeper,
-                      playback_player or PlaybackPlayer(),
-                      playback_recorder or PlaybackRecorder()]
+            machine = [core, keyboard, beeper]
         elif core is None:
-            core = next((d for d in guests if isinstance(d, Core)), None)
+            core = next((d for d in machine if isinstance(d, Core)), None)
 
-        if hosts is None:
-            hosts = []
+        if environment is None:
+            environment = [TapePlayer(),
+                           playback_player or PlaybackPlayer(),
+                           playback_recorder or PlaybackRecorder()]
             if not headless:
                 if screen is None:
                     screen = ScreenWindow(Core.FRAME_SIZE)
                 if sound_device is None:
                     sound_device = SDLSound()
 
-                hosts = [screen, sound_device]
+                environment.extend([screen, sound_device])
 
-        # The caller's extra hosts come last -- typically the
-        # end-user tool layer adding environment-coupling agents
-        # (e.g. a settings-persistence manager), kept out of the
-        # default set so an API- or test-built emulator stays
+        # The caller's extra environment devices come last --
+        # typically the end-user tool layer adding host-coupling
+        # agents (e.g. a settings-persistence manager), kept out of
+        # the default set so an API- or test-built emulator stays
         # hermetic.
-        hosts = list(hosts)
-        if extra_hosts is not None:
-            hosts.extend(extra_hosts)
+        environment = list(environment)
+        if extra_environment is not None:
+            environment.extend(extra_environment)
 
         self.__core = core
-        self.guests = list(guests)
-        self.hosts = hosts
+        self.machine = list(machine)
+        self.environment = environment
 
         # The time all devices have advanced to.
         self.__advanced_floor = Time(0, ticks_per_second=1)
 
-    # All the devices, guests first, as one dispatch audience.
+    # All the devices, the machine first, as one dispatch audience.
     @property
     def devices(self) -> list[Device]:
-        return self.guests + self.hosts
+        return self.machine + self.environment
 
     # The orchestration drives a single core (the common case); a device
     # set without one cannot be run or loaded into.
