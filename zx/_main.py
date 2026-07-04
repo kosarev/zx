@@ -414,11 +414,11 @@ def _convert_snapshot_to_snapshot(src: DataRecord,
                                   src_format: type[DataRecord],
                                   dest_filename: str,
                                   dest_format: type[DataRecord]) -> None:
-    assert issubclass(src_format, MachineSnapshot), src_format
+    assert isinstance(src, MachineSnapshot)
     assert issubclass(dest_format, MachineSnapshot), dest_format
 
     with Emulator(headless=True) as app:
-        app._load_file(src_filename)
+        app._load_snapshot(src)
         app._save_snapshot_file(dest_format, dest_filename)
 
 
