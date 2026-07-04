@@ -12,8 +12,8 @@ import typing
 from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
+from ._core import CoreSnapshot
 from ._data import ByteData
-from ._data import CoreSnapshot
 from ._data import HexData
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
@@ -89,7 +89,9 @@ class SNASnapshot(MachineSnapshot, format_name='SNA'):
 
     @classmethod
     def from_snapshot(cls, snapshot: MachineSnapshot) -> 'SNASnapshot':
-        core = snapshot.to_unified_snapshot().core
+        core = next(
+            (d for _, d in snapshot.to_unified_snapshot()
+             if isinstance(d, CoreSnapshot)), None)
         if core is None:
             core = CoreSnapshot()
 

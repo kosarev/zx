@@ -7,7 +7,7 @@
 #   Published under the MIT license.
 
 
-from zx._data import CoreSnapshot
+from zx._core import CoreSnapshot
 from zx._data import UnifiedSnapshot
 from zx._device import Dispatcher
 from zx._device import InstallSnapshot

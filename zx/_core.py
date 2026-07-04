@@ -10,13 +10,12 @@
 
 # TODO: Remove unused imports.
 import enum
-import pathlib
 import typing
 
 import numpy
 
 from ._corebase import _CoreBase
-from ._data import CoreSnapshot
+from ._data import DeviceSnapshot
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import Spectrum48
@@ -48,11 +47,8 @@ from ._device import StopQuantum
 from ._device import ToggleEmulationPause
 from ._except import EmulationExit
 from ._keyboard import KEYS
-from ._playback import PlaybackPlayer
 from ._rom import load_rom_image
-from ._rzx import make_rzx
 from ._time import Time
-from ._z80snapshot import Z80Snapshot
 
 
 # Mirrors events_mask in zx.h.
@@ -63,6 +59,70 @@ class RunEvents(enum.IntFlag):
     RETRY_INPUT = 1 << 3
     FETCHES_LIMIT_HIT = 1 << 4
     STOP_REQUESTED = 1 << 5
+
+
+# The core device's slice of a machine snapshot. Null fields mean
+# the canonical reset values.
+class CoreSnapshot(DeviceSnapshot, format_name=None):
+    af: int | None
+    bc: int | None
+    de: int | None
+    hl: int | None
+    ix: int | None
+    iy: int | None
+    alt_af: int | None
+    alt_bc: int | None
+    alt_de: int | None
+    alt_hl: int | None
+    pc: int | None
+    sp: int | None
+    ir: int | None
+    wz: int | None
+    iregp_kind: str | None
+    iff1: int | None
+    iff2: int | None
+    int_mode: int | None
+    ticks_since_int: int | None
+    border_colour: int | None
+    memory_blocks: list[MemoryBlock] | None
+
+    def __init__(
+            self,
+            af: int | None = None,
+            bc: int | None = None,
+            de: int | None = None,
+            hl: int | None = None,
+            ix: int | None = None,
+            iy: int | None = None,
+            alt_af: int | None = None,
+            alt_bc: int | None = None,
+            alt_de: int | None = None,
+            alt_hl: int | None = None,
+            pc: int | None = None,
+            sp: int | None = None,
+            ir: int | None = None,
+            wz: int | None = None,
+            iregp_kind: str | None = None,
+            iff1: int | None = None,
+            iff2: int | None = None,
+            int_mode: int | None = None,
+            ticks_since_int: int | None = None,
+            border_colour: int | None = None,
+            memory_blocks: typing.Sequence[MemoryBlock] | None = None):
+        if memory_blocks is None:
+            blocks = None
+        else:
+            blocks = sorted(memory_blocks, key=lambda b: b.addr)
+
+        super().__init__(
+            af=af, bc=bc, de=de, hl=hl, ix=ix, iy=iy,
+            alt_af=alt_af, alt_bc=alt_bc,
+            alt_de=alt_de, alt_hl=alt_hl,
+            pc=pc, sp=sp, ir=ir, wz=wz, iregp_kind=iregp_kind,
+            iff1=iff1, iff2=iff2, int_mode=int_mode,
+            ticks_since_int=ticks_since_int,
+            border_colour=border_colour,
+            memory_blocks=blocks)
 
 
 class StateParser:
@@ -462,9 +522,11 @@ class CoreState(Z80State):
             border_colour=self.border_colour))
 
     def install_snapshot(self, snapshot: MachineSnapshot) -> None:
-        # An absent slice means the device is at its canonical
+        # A device absent from the composition is at its canonical
         # reset state.
-        core = snapshot.to_unified_snapshot().core
+        unified = snapshot.to_unified_snapshot()
+        core = next((d for _, d in unified
+                     if isinstance(d, CoreSnapshot)), None)
         if core is None:
             return
 
@@ -554,33 +616,36 @@ class Core(_CoreBase, CoreState, Device):
             self.__port_reads.append(v)
         return v
 
-    def __save_crash_rzx(self, player: PlaybackPlayer, state: CoreState,
-                         chunk_i: int, frame_i: int) -> None:
-        snapshot = Z80Snapshot.from_snapshot(state.to_snapshot()).encode()
-
-        assert 0  # TODO
-        crash_recording = {
-            'chunks': [
-                player.find_recording_info_chunk(),
-                {
-                    'id': 'snapshot',
-                    'image': snapshot,
-                },
-                {
-                    'id': 'port_samples',
-                    'first_tick': 0,
-                    # TODO
-                    # 'frames':
-                    # recording['chunks'][chunk_i]['frames'][frame_i:],
-                },
-            ],
-        }
-
-        with pathlib.Path('__crash.z80').open('wb') as f:
-            f.write(snapshot)
-
-        with pathlib.Path('__crash.rzx').open('wb') as f:
-            f.write(make_rzx(crash_recording))
+    # TODO: Brush up and re-enable. A content device must not
+    # write files or know file formats; this belongs to a
+    # recoverer or the tool layer.
+    # def __save_crash_rzx(self, player: PlaybackPlayer, state: CoreState,
+    #                      chunk_i: int, frame_i: int) -> None:
+    #     snapshot = Z80Snapshot.from_snapshot(state.to_snapshot()).encode()
+    #
+    #     assert 0  # TODO
+    #     crash_recording = {
+    #         'chunks': [
+    #             player.find_recording_info_chunk(),
+    #             {
+    #                 'id': 'snapshot',
+    #                 'image': snapshot,
+    #             },
+    #             {
+    #                 'id': 'port_samples',
+    #                 'first_tick': 0,
+    #                 # TODO
+    #                 # 'frames':
+    #                 # recording['chunks'][chunk_i]['frames'][frame_i:],
+    #             },
+    #         ],
+    #     }
+    #
+    #     with pathlib.Path('__crash.z80').open('wb') as f:
+    #         f.write(snapshot)
+    #
+    #     with pathlib.Path('__crash.rzx').open('wb') as f:
+    #         f.write(make_rzx(crash_recording))
 
     def __on_end_of_frame(self, devices: Dispatcher) -> None:
         # TODO: Can we translate the screen chunks into pixels

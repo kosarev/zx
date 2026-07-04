@@ -10,7 +10,7 @@
 import pytest
 
 import zx
-from zx._data import CoreSnapshot
+from zx._core import CoreSnapshot
 from zx._data import MemoryBlock
 from zx._data import UnifiedPlayback
 from zx._data import UnifiedPlaybackFrame

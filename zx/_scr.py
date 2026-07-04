@@ -12,7 +12,7 @@ import typing
 
 from ._binary import BinaryParser
 from ._binary import Bytes
-from ._data import CoreSnapshot
+from ._core import CoreSnapshot
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import UnifiedSnapshot

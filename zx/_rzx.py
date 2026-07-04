@@ -14,8 +14,8 @@ import typing
 from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
+from ._core import CoreSnapshot
 from ._data import ByteData
-from ._data import CoreSnapshot
 from ._data import DataRecord
 from ._data import HexData
 from ._data import Latin1Data
@@ -24,6 +24,7 @@ from ._data import MachineSnapshot
 from ._data import UnifiedPlayback
 from ._data import UnifiedPlaybackFrame
 from ._data import UnifiedPlaybackSegment
+from ._data import UnifiedSnapshot
 from ._data import _InlineJSONDict
 from ._error import Error
 from ._z80snapshot import Z80Snapshot
@@ -334,9 +335,12 @@ class RZXFile(MachinePlayback, format_name='RZX'):
                 if not segments:
                     segments.append(UnifiedPlaybackSegment())
                 s = segments[-1]
-                if s.snapshot.core is None:
-                    s.snapshot.core = CoreSnapshot()
-                s.snapshot.core.ticks_since_int = chunk.first_tick
+                core = next((d for _, d in s.snapshot
+                             if isinstance(d, CoreSnapshot)), None)
+                if core is None:
+                    core = CoreSnapshot()
+                    s.snapshot = UnifiedSnapshot(core=core)
+                core.ticks_since_int = chunk.first_tick
                 s.frames.extend(
                     UnifiedPlaybackFrame(num_fetches=f.num_fetches,
                                          port_samples=f.samples.data)

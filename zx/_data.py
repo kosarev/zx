@@ -307,78 +307,18 @@ class MachineSnapshot(DataRecord, format_name=None):
         raise NotImplementedError
 
 
-# The core device's slice of a machine snapshot. Null fields mean
-# the canonical reset values.
-class CoreSnapshot(DataRecord, format_name=None):
-    af: int | None
-    bc: int | None
-    de: int | None
-    hl: int | None
-    ix: int | None
-    iy: int | None
-    alt_af: int | None
-    alt_bc: int | None
-    alt_de: int | None
-    alt_hl: int | None
-    pc: int | None
-    sp: int | None
-    ir: int | None
-    wz: int | None
-    iregp_kind: str | None
-    iff1: int | None
-    iff2: int | None
-    int_mode: int | None
-    ticks_since_int: int | None
-    border_colour: int | None
-    memory_blocks: list[MemoryBlock] | None
-
-    def __init__(
-            self,
-            af: int | None = None,
-            bc: int | None = None,
-            de: int | None = None,
-            hl: int | None = None,
-            ix: int | None = None,
-            iy: int | None = None,
-            alt_af: int | None = None,
-            alt_bc: int | None = None,
-            alt_de: int | None = None,
-            alt_hl: int | None = None,
-            pc: int | None = None,
-            sp: int | None = None,
-            ir: int | None = None,
-            wz: int | None = None,
-            iregp_kind: str | None = None,
-            iff1: int | None = None,
-            iff2: int | None = None,
-            int_mode: int | None = None,
-            ticks_since_int: int | None = None,
-            border_colour: int | None = None,
-            memory_blocks: typing.Sequence[MemoryBlock] | None = None):
-        if memory_blocks is None:
-            blocks = None
-        else:
-            blocks = sorted(memory_blocks, key=lambda b: b.addr)
-
-        super().__init__(
-            af=af, bc=bc, de=de, hl=hl, ix=ix, iy=iy,
-            alt_af=alt_af, alt_bc=alt_bc,
-            alt_de=alt_de, alt_hl=alt_hl,
-            pc=pc, sp=sp, ir=ir, wz=wz, iregp_kind=iregp_kind,
-            iff1=iff1, iff2=iff2, int_mode=int_mode,
-            ticks_since_int=ticks_since_int,
-            border_colour=border_colour,
-            memory_blocks=blocks)
+# A device's captured state: what a machine snapshot is composed
+# of. Each device type defines its own snapshot type.
+class DeviceSnapshot(DataRecord, format_name=None):
+    pass
 
 
 # The native machine snapshot: a composition of per-device
-# snapshots. An absent device snapshot means that device is at its
-# canonical reset state.
+# snapshots, keyed by device id. A device absent from the
+# composition is at its canonical reset state.
 class UnifiedSnapshot(MachineSnapshot, format_name=None):
-    core: CoreSnapshot | None
-
-    def __init__(self, *, core: CoreSnapshot | None = None):
-        super().__init__(core=core)
+    def __init__(self, **devices: DeviceSnapshot):
+        super().__init__(**devices)
 
     @classmethod
     def from_snapshot(cls, snapshot: MachineSnapshot) -> UnifiedSnapshot:

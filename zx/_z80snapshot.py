@@ -16,8 +16,8 @@ import numpy
 from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
+from ._core import CoreSnapshot
 from ._data import ByteData
-from ._data import CoreSnapshot
 from ._data import DataRecord
 from ._data import HexData
 from ._data import MachineSnapshot
@@ -245,7 +245,9 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
 
     @classmethod
     def from_snapshot(cls, snapshot: MachineSnapshot) -> Z80Snapshot:
-        core = snapshot.to_unified_snapshot().core
+        core = next(
+            (d for _, d in snapshot.to_unified_snapshot()
+             if isinstance(d, CoreSnapshot)), None)
         if core is None:
             core = CoreSnapshot()
 
