@@ -10,7 +10,6 @@
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
-from ._device import KeyStroke
 from ._device import ReadPort
 from ._utils import tupilise
 
@@ -48,6 +47,13 @@ for index, ids in enumerate(_KEY_IDS):
     info = Key(id, index)
     for i in ids:
         KEYS[i] = info
+
+
+# A transition of an emulated Spectrum key.
+class KeyStroke(DeviceEvent):
+    def __init__(self, key: Key, pressed: bool):
+        self.key = key
+        self.pressed = pressed
 
 
 class Keyboard(Device):
@@ -89,6 +95,6 @@ class Keyboard(Device):
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, KeyStroke):
-            self.handle_key_stroke(KEYS[event.id], event.pressed)
+            self.handle_key_stroke(event.key, event.pressed)
         elif isinstance(event, ReadPort):
             event.supply(self.read_port(event.addr))

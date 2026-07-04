@@ -271,14 +271,6 @@ class LoadTape(DeviceEvent):
         self.file = file
 
 
-# A transition of an emulated Spectrum key, such as 'A' or
-# 'CAPS SHIFT'.
-class KeyStroke(DeviceEvent):
-    def __init__(self, id: str, pressed: bool):
-        self.id = id
-        self.pressed = pressed
-
-
 class LoadFile(DeviceEvent):
     def __init__(self, filename: str):
         self.filename = filename

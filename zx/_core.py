@@ -33,7 +33,6 @@ from ._device import GetEmulationPauseState
 from ._device import GetFramePixels
 from ._device import GetHoldState
 from ._device import InstallSnapshot
-from ._device import KeyStroke
 from ._device import NewPortWrites
 from ._device import OutputFrame
 from ._device import PauseStateUpdated
@@ -47,6 +46,7 @@ from ._device import StopPlayback
 from ._device import StopQuantum
 from ._device import ToggleEmulationPause
 from ._except import EmulationExit
+from ._keyboard import KeyStroke
 from ._rom import load_rom_image
 from ._time import Time
 

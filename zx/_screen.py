@@ -24,7 +24,6 @@ from ._device import GetMainMenuItems
 from ._device import GetSettings
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
-from ._device import KeyStroke
 from ._device import LoadFile
 from ._device import MenuItemDescriptor
 from ._device import MenuItemHit
@@ -45,6 +44,7 @@ from ._error import USER_ERRORS
 from ._error import verbalize_error
 from ._except import EmulationExit
 from ._keyboard import KEYS
+from ._keyboard import KeyStroke
 from ._time import Time
 from ._time import get_elapsed_time
 from ._time import get_timestamp
@@ -1883,9 +1883,10 @@ class ScreenWindow(Device):
 
         # Only keys of the emulated machine become key strokes.
         if not self.__panel_active:
-            zx_key_id = self.__SDL_KEYS_TO_ZX_KEYS.get(event.id, event.id)
-            if zx_key_id in KEYS:
-                devices.notify(KeyStroke(zx_key_id, event.pressed))
+            zx_key = KEYS.get(
+                self.__SDL_KEYS_TO_ZX_KEYS.get(event.id, event.id))
+            if zx_key is not None:
+                devices.notify(KeyStroke(zx_key, event.pressed))
 
     def __on_sdl_click(self, event: typing.Any) -> bool:
         TYPES = {
@@ -1946,7 +1947,7 @@ class ScreenWindow(Device):
             button_key = BUTTONS_TO_ZX_KEYS.get(event.jbutton.button)
             if button_key:
                 pressed = event.jbutton.state == sdl2.SDL_PRESSED
-                dispatcher.notify(KeyStroke(button_key, pressed))
+                dispatcher.notify(KeyStroke(KEYS[button_key], pressed))
 
     def __on_exception(self, event: DeviceEvent,
                        devices: Dispatcher) -> None:

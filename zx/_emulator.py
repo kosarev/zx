@@ -78,7 +78,6 @@ from ._device import GetQuantumTimeLimit
 from ._device import InitEmulator
 from ._device import IsTapePlayerPaused
 from ._device import IsTapePlayerStopped
-from ._device import KeyStroke
 from ._device import LoadFile
 from ._device import LoadTape
 from ._device import PauseUnpauseTape
@@ -93,6 +92,7 @@ from ._error import Error
 from ._file import parse_file
 from ._keyboard import KEYS
 from ._keyboard import Keyboard
+from ._keyboard import KeyStroke
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._screen import ScreenWindow
@@ -286,11 +286,11 @@ class Emulator:
             strokes = key.split('+')
 
             for id in strokes:
-                self.notify(KeyStroke(KEYS[id].ID, pressed=True))
+                self.notify(KeyStroke(KEYS[id], pressed=True))
                 self.run(duration=0.1, fast_forward=True)
 
             for id in reversed(strokes):
-                self.notify(KeyStroke(KEYS[id].ID, pressed=False))
+                self.notify(KeyStroke(KEYS[id], pressed=False))
                 self.run(duration=0.1, fast_forward=True)
 
     def _is_tape_paused(self) -> bool:
