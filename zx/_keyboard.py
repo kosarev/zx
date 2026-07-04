@@ -60,6 +60,36 @@ class KeyStroke(DeviceEvent):
         self.time = time
 
 
+# Builds the strokes typing the given keys: each key pressed and
+# released in turn, combos like 'CS+SS' held together, integers
+# typed as their digits. The transitions land at 0.1-second steps,
+# the first one step after the given start time.
+def make_key_strokes(*keys: int | str, start: Time) -> list[KeyStroke]:
+    ids: list[str] = []
+    for key in keys:
+        if isinstance(key, int):
+            ids.extend(str(key))
+        else:
+            ids.append(key)
+
+    step = Time(1, ticks_per_second=10)
+    time = start
+
+    strokes = []
+    for id in ids:
+        combo = id.split('+')
+
+        for i in combo:
+            time = time + step
+            strokes.append(KeyStroke(KEYS[i], pressed=True, time=time))
+
+        for i in reversed(combo):
+            time = time + step
+            strokes.append(KeyStroke(KEYS[i], pressed=False, time=time))
+
+    return strokes
+
+
 class Keyboard(Device):
     """The keyboard matrix as a function of time.
 

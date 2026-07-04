@@ -58,7 +58,6 @@ not a device, and it never nests.
 
 import pathlib
 import types
-import typing
 
 from ._beeper import Beeper
 from ._core import Core
@@ -90,9 +89,8 @@ from ._device import TimeAdvanced
 from ._device import ToggleTapePause
 from ._error import Error
 from ._file import parse_file
-from ._keyboard import KEYS
 from ._keyboard import Keyboard
-from ._keyboard import KeyStroke
+from ._keyboard import make_key_strokes
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._screen import ScreenWindow
@@ -273,34 +271,10 @@ class Emulator:
         self.__require_core().pc = 0x0000
         self.run(duration=1.8, fast_forward=True)
 
-    def __translate_key_strokes(self, keys: typing.Iterable[int | str]) -> (
-            typing.Iterator[str]):
-        for key in keys:
-            if isinstance(key, int):
-                yield from str(key)
-            else:
-                yield key
-
     def generate_key_strokes(self, *keys: int | str) -> None:
-        # The whole sequence is scheduled upfront and then simply
-        # run past: transitions at 0.1-second steps, starting one
-        # step past the floor so they are clear of everything the
+        # The sequence starts at the floor, clear of everything the
         # machine has sampled running ahead of it.
-        step = Time(1, ticks_per_second=10)
-        time = self.__advanced_floor
-
-        strokes = []
-        for key in self.__translate_key_strokes(keys):
-            ids = key.split('+')
-
-            for id in ids:
-                time = time + step
-                strokes.append(KeyStroke(KEYS[id], pressed=True, time=time))
-
-            for id in reversed(ids):
-                time = time + step
-                strokes.append(KeyStroke(KEYS[id], pressed=False, time=time))
-
+        strokes = make_key_strokes(*keys, start=self.__advanced_floor)
         for stroke in strokes:
             self.notify(stroke)
 
