@@ -146,8 +146,6 @@ class Emulator:
                 beeper = Beeper()
 
             machine = [core, keyboard, beeper]
-        elif core is None:
-            core = next((d for d in machine if isinstance(d, Core)), None)
 
         if environment is None:
             environment = [TapePlayer(),
@@ -170,7 +168,6 @@ class Emulator:
         if extra_environment is not None:
             environment.extend(extra_environment)
 
-        self.__core = core
         self.machine = list(machine)
         self.environment = environment
 
@@ -183,13 +180,6 @@ class Emulator:
     @property
     def devices(self) -> list[Device]:
         return self.machine + self.environment
-
-    # The orchestration drives a single core (the common case); a device
-    # set without one cannot be run or loaded into.
-    def __require_core(self) -> Core:
-        assert self.__core is not None, (
-            'this device set has no core to run or load into')
-        return self.__core
 
     def __enter__(self) -> 'Emulator':
         self.notify(InitEmulator())
@@ -326,8 +316,6 @@ class Emulator:
         self.notify(ResetEmulator())
 
         self.machine = self.__make_machine(snapshot)
-        self.__core = next(
-            (d for d in self.machine if isinstance(d, Core)), None)
         self.__advanced_floor = Time(0, ticks_per_second=1)
         self.__advanced_ceiling = Time(0, ticks_per_second=1)
 
