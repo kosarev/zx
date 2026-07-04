@@ -48,13 +48,10 @@ for alias, id in _ALIASES.items():
     KEYS[alias] = KEYS[id]
 
 
-# A transition of an emulated Spectrum key. An explicit time
-# schedules the transition for that exact moment. None means as
-# soon as possible: the transition takes effect at the next port
-# read -- the exact time of live input is inherently the host's
-# non-determinism.
+# A transition of an emulated Spectrum key at exactly the given
+# time.
 class KeyStroke(DeviceEvent):
-    def __init__(self, key: Key, pressed: bool, time: Time | None):
+    def __init__(self, key: Key, pressed: bool, time: Time):
         self.key = key
         self.pressed = pressed
         self.time = time
@@ -101,7 +98,9 @@ class Keyboard(Device):
 
     def __init__(self) -> None:
         self.__state = [0xff] * 8
-        self.__last_read_time = Time(0, ticks_per_second=1)
+
+        # The time of the latest read; None before the first one.
+        self.__last_read_time: Time | None = None
 
         # Strokes not yet in effect, in time order.
         self.__pending: list[KeyStroke] = []
@@ -115,12 +114,13 @@ class Keyboard(Device):
             self.__state[key.address_line - 8] |= mask
 
     def read_port(self, addr: int, time: Time) -> int:
-        assert not (time < self.__last_read_time)
+        assert (self.__last_read_time is None or
+                not (time < self.__last_read_time))
         self.__last_read_time = time
 
         i = 0
         for stroke in self.__pending:
-            if stroke.time is not None and time < stroke.time:
+            if time < stroke.time:
                 break
             self.__apply(stroke.key, stroke.pressed)
             i += 1
@@ -136,10 +136,10 @@ class Keyboard(Device):
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, KeyStroke):
-            if event.time is not None:
-                assert self.__last_read_time < event.time
-                assert (not self.__pending or self.__pending[-1].time is None
-                        or not (event.time < self.__pending[-1].time))
+            assert (self.__last_read_time is None or
+                    self.__last_read_time < event.time)
+            assert (not self.__pending or
+                    not (event.time < self.__pending[-1].time))
             self.__pending.append(event)
         elif isinstance(event, ReadPort):
             event.supply(self.read_port(event.addr, event.time))

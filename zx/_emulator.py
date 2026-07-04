@@ -176,8 +176,10 @@ class Emulator:
         self.machine = list(machine)
         self.environment = environment
 
-        # The time all devices have advanced to.
+        # The time all devices have advanced to, and the earliest
+        # time none has reached yet.
         self.__advanced_floor = Time(0, ticks_per_second=1)
+        self.__advanced_ceiling = Time(0, ticks_per_second=1)
 
     # All the devices, the machine first, as one dispatch audience.
     @property
@@ -200,8 +202,13 @@ class Emulator:
                  traceback: None | types.TracebackType) -> None:
         self.notify(DestroyEmulator())
 
+    # Runs for the given duration in emulated seconds, or until the
+    # floor reaches the given time, or indefinitely.
     def run(self, duration: None | float = None,
-            fast_forward: bool = False) -> None:
+            fast_forward: bool = False,
+            until: None | Time = None) -> None:
+        assert duration is None or until is None
+
         end_time = None
         if duration is not None:
             end_time = self.__emulation_time() + duration
@@ -209,7 +216,9 @@ class Emulator:
         if fast_forward:
             self.notify(SetFastForward(True))
         try:
-            while end_time is None or self.__emulation_time() < end_time:
+            while ((end_time is None or
+                    self.__emulation_time() < end_time) and
+                   (until is None or self.__advanced_floor < until)):
                 self.__run_quantum()
         finally:
             if fast_forward:
@@ -239,6 +248,8 @@ class Emulator:
         self.notify(run)
         assert run.advanced_floor is not None
         self.__advanced_floor = run.advanced_floor
+        assert run.advanced_ceiling is not None
+        self.__advanced_ceiling = run.advanced_ceiling
 
         # TimeAdvanced goes last: all facts about the elapsed span
         # of time are published by the time its dispatch completes.
@@ -248,9 +259,11 @@ class Emulator:
     # the devices have seen them.
     def _on_event(self, event: DeviceEvent) -> None:
         if isinstance(event, GetEmulationTime):
-            # Reflects the time all devices have advanced to — a
-            # fact about the whole set.
-            event.time = self.__advanced_floor
+            # Reflects facts about the whole set: the time all
+            # devices have advanced to and the earliest time none
+            # has reached yet.
+            event.floor = self.__advanced_floor
+            event.ceiling = self.__advanced_ceiling
         elif isinstance(event, LoadFile):
             self._load_file(event.filename)
         elif isinstance(event, SaveSnapshot):
@@ -261,8 +274,8 @@ class Emulator:
     def __emulation_time(self) -> float:
         event = GetEmulationTime()
         self.notify(event)
-        assert event.time is not None
-        return event.time.to_float_seconds()
+        assert event.floor is not None
+        return event.floor.to_float_seconds()
 
     def reset(self) -> None:
         self.notify(ResetEmulator())
@@ -272,14 +285,14 @@ class Emulator:
         self.run(duration=1.8, fast_forward=True)
 
     def generate_key_strokes(self, *keys: int | str) -> None:
-        # The sequence starts at the floor, clear of everything the
-        # machine has sampled running ahead of it.
-        strokes = make_key_strokes(*keys, start=self.__advanced_floor)
+        # The sequence starts at the earliest time no device has
+        # reached yet, then the machine runs past its end.
+        strokes = make_key_strokes(*keys, start=self.__advanced_ceiling)
         for stroke in strokes:
             self.notify(stroke)
 
-        # One extra step for the machine to scan the last release.
-        self.run(duration=(len(strokes) + 1) / 10, fast_forward=True)
+        if strokes:
+            self.run(until=strokes[-1].time, fast_forward=True)
 
     def _is_tape_paused(self) -> bool:
         tape_state = IsTapePlayerPaused()
@@ -368,6 +381,7 @@ class Emulator:
         self.__core = next(
             (d for d in self.machine if isinstance(d, Core)), None)
         self.__advanced_floor = Time(0, ticks_per_second=1)
+        self.__advanced_ceiling = Time(0, ticks_per_second=1)
 
     def _load_file(self, filename: str) -> None:
         file = parse_file(filename)

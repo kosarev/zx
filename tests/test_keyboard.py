@@ -75,13 +75,11 @@ def test_port_reads() -> None:
     assert read(devices, halfrow_addr('J'), 4) == 0xff
 
 
-def test_live_strokes() -> None:
+def test_stroke_at_time_zero() -> None:
     keyboard = Keyboard()
     devices = Dispatcher([keyboard])
 
-    assert read(devices, halfrow_addr('J'), 1) == 0xff
-
-    # A live stroke takes effect at the next read, even at the same
-    # time.
-    devices.notify(KeyStroke(KEYS['J'], pressed=True, time=None))
-    assert read(devices, halfrow_addr('J'), 1) == pressed_value('J')
+    # Before the first read, any time is schedulable, the very
+    # start of time included.
+    devices.notify(KeyStroke(KEYS['J'], pressed=True, time=at(0)))
+    assert read(devices, halfrow_addr('J'), 0) == pressed_value('J')

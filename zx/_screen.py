@@ -37,6 +37,7 @@ from ._device import SetSettingValue
 from ._device import SettingDescriptor
 from ._device import SettingScope
 from ._device import TapeStateUpdated
+from ._device import TimeAdvanced
 from ._device import ToggleEmulationPause
 from ._device import ToggleFullscreen
 from ._device import ToggleTapePause
@@ -44,6 +45,7 @@ from ._error import USER_ERRORS
 from ._error import verbalize_error
 from ._except import EmulationExit
 from ._keyboard import KEYS
+from ._keyboard import Key
 from ._keyboard import KeyStroke
 from ._time import Time
 from ._time import get_elapsed_time
@@ -1632,6 +1634,10 @@ class ScreenWindow(Device):
 
         self.__events = []
 
+        # Keys pressed or released, to go out as stamped strokes on
+        # the next advance of time.
+        self.__key_strokes: list[tuple[Key, bool]] = []
+
         # TODO: Hide members like this.
         self.frame_width, self.frame_height = frame_size
 
@@ -1687,6 +1693,7 @@ class ScreenWindow(Device):
             _ShowMainMenu: self.__on_show_main_menu,
             PauseStateUpdated: self._on_updated_pause_state,
             RunQuantum: self._on_run_quantum,
+            TimeAdvanced: self.__on_time_advanced,
             TapeStateUpdated: self._on_updated_tape_state,
             _RequestResetMachine: self.__on_request_reset_machine,
             _RequestSettings: self.__on_request_settings,
@@ -1869,6 +1876,19 @@ class ScreenWindow(Device):
         repeat = event.key.repeat != 0
         self.__queue_event(_HostKeyEvent(key_id, pressed, repeat))
 
+    def __on_time_advanced(self, event: DeviceEvent,
+                           devices: Dispatcher) -> None:
+        if not self.__key_strokes:
+            return
+
+        emulation_time = GetEmulationTime()
+        devices.notify(emulation_time)
+        assert emulation_time.ceiling is not None
+
+        for key, pressed in self.__key_strokes:
+            devices.notify(KeyStroke(key, pressed, emulation_time.ceiling))
+        self.__key_strokes.clear()
+
     def __on_key(self, event: DeviceEvent, devices: Dispatcher) -> None:
         assert isinstance(event, _HostKeyEvent)
         if event.pressed:
@@ -1891,7 +1911,7 @@ class ScreenWindow(Device):
             zx_key = KEYS.get(
                 self.__SDL_KEYS_TO_ZX_KEYS.get(event.id, event.id))
             if zx_key is not None:
-                devices.notify(KeyStroke(zx_key, event.pressed, time=None))
+                self.__key_strokes.append((zx_key, event.pressed))
 
     def __on_sdl_click(self, event: typing.Any) -> bool:
         TYPES = {
@@ -1952,8 +1972,7 @@ class ScreenWindow(Device):
             button_key = BUTTONS_TO_ZX_KEYS.get(event.jbutton.button)
             if button_key:
                 pressed = event.jbutton.state == sdl2.SDL_PRESSED
-                dispatcher.notify(
-                    KeyStroke(KEYS[button_key], pressed, time=None))
+                self.__key_strokes.append((KEYS[button_key], pressed))
 
     def __on_exception(self, event: DeviceEvent,
                        devices: Dispatcher) -> None:
@@ -2022,8 +2041,8 @@ class ScreenWindow(Device):
         if pause_state.paused:
             emulation_time = GetEmulationTime()
             devices.notify(emulation_time)
-            assert emulation_time.time is not None
-            self._notification = PauseNotification(emulation_time.time)
+            assert emulation_time.floor is not None
+            self._notification = PauseNotification(emulation_time.floor)
         else:
             self._notification = None
 

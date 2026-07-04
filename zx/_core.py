@@ -754,7 +754,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         elif isinstance(event, RunQuantum):
             if not event.held:
                 self.__advance(devices, event.stop_after)
-                event.advanced_through(self.__current_time())
+                event.advanced_to(self.__current_time())
         elif isinstance(event, GetFramePixels):
             # The core has already rendered the screen up to the
             # current tick on returning control, so this is current.

@@ -247,7 +247,11 @@ class GetEmulationPauseState(DeviceEvent):
 
 class GetEmulationTime(DeviceEvent):
     def __init__(self) -> None:
-        self.time: Time | None = None
+        # The time all devices have advanced to, and the earliest
+        # time none has reached yet -- where new facts, such as key
+        # strokes, may land.
+        self.floor: Time | None = None
+        self.ceiling: Time | None = None
 
 
 # TODO: Combine these into Get/SetState kind of events.
@@ -302,15 +306,20 @@ class RunQuantum(DeviceEvent):
         # budget from their own positions in time.
         self.stop_after = stop_after
 
-        # The earliest time reported, so the time every advancing
-        # device has crossed once the dispatch completes.
+        # The devices' positions once the dispatch completes. A
+        # position is the device's first uncommitted moment:
+        # everything strictly before it has happened. The floor is
+        # the earliest position, the ceiling the latest.
         self.advanced_floor: None | Time = None
+        self.advanced_ceiling: None | Time = None
 
-    # Devices advancing on this event report the time they have
-    # advanced through.
-    def advanced_through(self, time: Time) -> None:
+    # Devices advancing on this event report the position they have
+    # advanced to.
+    def advanced_to(self, time: Time) -> None:
         if self.advanced_floor is None or time < self.advanced_floor:
             self.advanced_floor = time
+        if self.advanced_ceiling is None or self.advanced_ceiling < time:
+            self.advanced_ceiling = time
 
 
 # Raised by a device to ask that the current quantum end now (e.g. the
