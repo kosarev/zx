@@ -44,6 +44,7 @@ from ._device import ToggleTapePause
 from ._error import USER_ERRORS
 from ._error import verbalize_error
 from ._except import EmulationExit
+from ._keyboard import KEYS
 from ._time import Time
 from ._time import get_elapsed_time
 from ._time import get_timestamp
@@ -813,7 +814,7 @@ class _Menu(_Control):
         surface.clear_clip_rect()
 
 
-class _KeyEvent(DeviceEvent):
+class _HostKeyEvent(DeviceEvent):
     def __init__(self, id: str, pressed: bool) -> None:
         self.id = id
         self.pressed = pressed
@@ -925,7 +926,7 @@ class _Panel:
             self._dialog.on_event(event, dispatcher)
             return
 
-        if (isinstance(event, _KeyEvent) and event.pressed and
+        if (isinstance(event, _HostKeyEvent) and event.pressed and
                 event.id == 'TAB' and self._controls):
             idx = (self._controls.index(self._selected_control)
                    if self._selected_control in self._controls else -1)
@@ -1040,7 +1041,7 @@ class _MainMenuPanel(_Panel):
         elif isinstance(event, _ScrollEvent):
             if self.__menu.scroll(event.delta):
                 self.invalidate()
-        elif isinstance(event, _KeyEvent):
+        elif isinstance(event, _HostKeyEvent):
             self.__on_key(event.id, event.pressed, dispatcher)
         elif isinstance(event, _ClickEvent):
             self.__on_click(event, dispatcher)
@@ -1329,7 +1330,7 @@ class _FileBrowserPanel(_Panel):
         elif isinstance(event, _ScrollEvent):
             if self.__menu.scroll(event.delta):
                 self.invalidate()
-        elif isinstance(event, _KeyEvent):
+        elif isinstance(event, _HostKeyEvent):
             self.__on_key(event.id, event.pressed, dispatcher)
         elif isinstance(event, _ClickEvent):
             self.__on_click(event, dispatcher)
@@ -1450,7 +1451,7 @@ class _SettingsPanel(_Panel):
         super().on_event(event, dispatcher)
         if dialog is not None:
             return
-        if isinstance(event, _KeyEvent):
+        if isinstance(event, _HostKeyEvent):
             self.__on_key(event.id, event.pressed, dispatcher)
 
     def draw(self, renderer: _Renderer, dispatcher: Dispatcher) -> None:
@@ -1567,7 +1568,7 @@ class _MessageDialog(_Panel):
                     and self._selected_control is not None):
                 assert isinstance(self._selected_control, _Button)
                 self.__activate(self._selected_control, dispatcher)
-        elif isinstance(event, _KeyEvent) and event.pressed:
+        elif isinstance(event, _HostKeyEvent) and event.pressed:
             if event.id in ('RETURN', 'SPACE'):
                 if self._selected_control is not None:
                     assert isinstance(self._selected_control, _Button)
@@ -1680,7 +1681,7 @@ class ScreenWindow(Device):
             MenuItemHit: self.__on_menu_item_hit,
             _ClickEvent: self.__on_click,
             _ExceptionEvent: self.__on_exception,
-            _KeyEvent: self.__on_key,
+            _HostKeyEvent: self.__on_key,
             _TogglePanel: self.__on_toggle_panel,
             _ShowMainMenu: self.__on_show_main_menu,
             PauseStateUpdated: self._on_updated_pause_state,
@@ -1864,10 +1865,10 @@ class ScreenWindow(Device):
         key_id = sdl2.SDL_GetKeyName(
             event.key.keysym.sym).decode('utf-8').upper()
         pressed = event.type == sdl2.SDL_KEYDOWN
-        self.__queue_event(_KeyEvent(key_id, pressed))
+        self.__queue_event(_HostKeyEvent(key_id, pressed))
 
     def __on_key(self, event: DeviceEvent, devices: Dispatcher) -> None:
-        assert isinstance(event, _KeyEvent)
+        assert isinstance(event, _HostKeyEvent)
         if event.pressed:
             if event.id in ('ESCAPE', 'F1'):
                 if not self.__panel_active:
@@ -1880,9 +1881,11 @@ class ScreenWindow(Device):
                 if item.hotkey == event.id:
                     devices.notify(MenuItemHit(item))
 
+        # Only keys of the emulated machine become key strokes.
         if not self.__panel_active:
             zx_key_id = self.__SDL_KEYS_TO_ZX_KEYS.get(event.id, event.id)
-            devices.notify(KeyStroke(zx_key_id, event.pressed))
+            if zx_key_id in KEYS:
+                devices.notify(KeyStroke(zx_key_id, event.pressed))
 
     def __on_sdl_click(self, event: typing.Any) -> bool:
         TYPES = {
@@ -1932,7 +1935,7 @@ class ScreenWindow(Device):
 
         if event.type in (sdl2.SDL_CONTROLLERBUTTONUP,
                           sdl2.SDL_CONTROLLERBUTTONDOWN):
-            KEYS = {
+            BUTTONS_TO_ZX_KEYS = {
                 sdl2.SDL_CONTROLLER_BUTTON_DPAD_LEFT: '5',
                 sdl2.SDL_CONTROLLER_BUTTON_DPAD_RIGHT: '8',
                 sdl2.SDL_CONTROLLER_BUTTON_DPAD_UP: '7',
@@ -1940,7 +1943,7 @@ class ScreenWindow(Device):
                 sdl2.SDL_CONTROLLER_BUTTON_X: '0',  # Fire.
             }
 
-            button_key = KEYS.get(event.jbutton.button)
+            button_key = BUTTONS_TO_ZX_KEYS.get(event.jbutton.button)
             if button_key:
                 pressed = event.jbutton.state == sdl2.SDL_PRESSED
                 dispatcher.notify(KeyStroke(button_key, pressed))

@@ -47,7 +47,6 @@ from ._device import StopPlayback
 from ._device import StopQuantum
 from ._device import ToggleEmulationPause
 from ._except import EmulationExit
-from ._keyboard import KEYS
 from ._rom import load_rom_image
 from ._time import Time
 
@@ -761,10 +760,8 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
             # current tick on returning control, so this is current.
             event.pixels = self.get_frame_pixels()
         elif isinstance(event, KeyStroke):
-            key = KEYS.get(event.id, None)
-            if key:
-                self.__set_paused(False, devices)
-                devices.notify(StopPlayback())
+            self.__set_paused(False, devices)
+            devices.notify(StopPlayback())
         elif isinstance(event, EndOfFrame):
             self.__on_end_of_frame(devices)
         elif isinstance(event, SetBreakpoint):
