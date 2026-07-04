@@ -815,9 +815,10 @@ class _Menu(_Control):
 
 
 class _HostKeyEvent(DeviceEvent):
-    def __init__(self, id: str, pressed: bool) -> None:
+    def __init__(self, id: str, pressed: bool, repeat: bool) -> None:
         self.id = id
         self.pressed = pressed
+        self.repeat = repeat
 
 
 class _ClickType(enum.Enum):
@@ -1865,7 +1866,8 @@ class ScreenWindow(Device):
         key_id = sdl2.SDL_GetKeyName(
             event.key.keysym.sym).decode('utf-8').upper()
         pressed = event.type == sdl2.SDL_KEYDOWN
-        self.__queue_event(_HostKeyEvent(key_id, pressed))
+        repeat = event.key.repeat != 0
+        self.__queue_event(_HostKeyEvent(key_id, pressed, repeat))
 
     def __on_key(self, event: DeviceEvent, devices: Dispatcher) -> None:
         assert isinstance(event, _HostKeyEvent)
@@ -1881,8 +1883,11 @@ class ScreenWindow(Device):
                 if item.hotkey == event.id:
                     devices.notify(MenuItemHit(item))
 
-        # Only keys of the emulated machine become key strokes.
-        if not self.__panel_active:
+        # Only keys of the emulated machine become key strokes, and
+        # only actual transitions: host autorepeats do not reach the
+        # machine -- the ROM does its own autorepeat by rescanning
+        # the matrix.
+        if not self.__panel_active and not event.repeat:
             zx_key = KEYS.get(
                 self.__SDL_KEYS_TO_ZX_KEYS.get(event.id, event.id))
             if zx_key is not None:
