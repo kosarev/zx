@@ -51,12 +51,14 @@ from ._rom import load_rom_image
 from ._time import Time
 
 
-# Mirrors events_mask in zx.h.
+# Mirrors the composed events mask of the machine in zx.h: the z80
+# library's executor claims the low bits, our extension follows.
 class RunEvents(enum.IntFlag):
     NO_EVENTS = 0
-    END_OF_FRAME = 1 << 0
-    BREAKPOINT_HIT = 1 << 1
-    RETRY_INPUT = 1 << 3
+    BREAKPOINT_HIT = 1 << 0
+    RETRY_INPUT = 1 << 1
+    END_OF_FRAME = 1 << 2
+    TICKS_LIMIT_HIT = 1 << 3
     FETCHES_LIMIT_HIT = 1 << 4
     STOP_REQUESTED = 1 << 5
 

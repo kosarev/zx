@@ -52,17 +52,6 @@ constexpr bool round_up(T a, T b) {
     return div_ceil(a, b) * b;
 }
 
-// The events the machine reports.
-class events_mask : public z80::events_mask {
-public:
-    using base = z80::events_mask;
-
-    static const type fetches_limit_hit = type(1) << (base::unused_bit + 0);
-    static const type stop_requested = type(1) << (base::unused_bit + 1);
-
-    static const unsigned unused_bit = base::unused_bit + 2;
-};
-
 typedef fast_u8 memory_marks;
 const memory_marks no_marks           = 0;
 const memory_marks breakpoint_mark    = 1u << 0;
@@ -202,15 +191,33 @@ public:
     typedef z80::z80_cpu<D> base;
     typedef fast_u32 ticks_type;
 
+    // The events this module's logic raises.
+    class events_mask : public base::events_mask {
+    public:
+        using typename base::events_mask::type;
+
+        static const type end_of_frame =
+            type(1) << (base::events_mask::unused_bit + 0);
+        static const type ticks_limit_hit =
+            type(1) << (base::events_mask::unused_bit + 1);
+        static const type fetches_limit_hit =
+            type(1) << (base::events_mask::unused_bit + 2);
+        static const type stop_requested =
+            type(1) << (base::events_mask::unused_bit + 3);
+
+        static const unsigned unused_bit = base::events_mask::unused_bit + 4;
+    };
+
     spectrum() {
         on_reset();
     }
 
-    events_mask::type get_events() const { return events; }
+    typename events_mask::type get_events() const { return events; }
 
     // The z80 library reads and raises its events on the same word.
-    events_mask::type on_get_events() const { return events; }
-    void on_set_events(events_mask::type new_events) { events = new_events; }
+    typename events_mask::type on_get_events() const { return events; }
+    void on_set_events(typename events_mask::type new_events) {
+        events = new_events; }
 
     void on_tick(unsigned t) {
         ticks_since_int += t;
@@ -876,7 +883,7 @@ public:
         }
     }
 
-    events_mask::type run() {
+    typename events_mask::type run() {
         // Normalize the ticks-since-int counter.
         ticks_type ticks_per_frame = get_ticks_per_frame();
         if (ticks_since_int >= ticks_per_frame)
@@ -896,6 +903,11 @@ public:
                 if(previous_tick < ticks_per_active_int)
                     on_handle_active_int();
             }
+
+            // Events raised during the interrupt handling quit the
+            // loop immediately; the step would clear them.
+            if(events)
+                break;
 
             on_step();
         }
@@ -960,10 +972,10 @@ public:
         std::fflush(trace);
     }
 
-    void on_step() {
+    typename events_mask::type on_step() {
         trace_state();
         mark_addr(self().get_pc(), visited_instr_mark);
-        base::on_step();
+        return base::on_step();
     }
 
     bool on_handle_active_int() {
@@ -995,7 +1007,7 @@ protected:
         return static_cast<pixel_type>(r);
     }
 
-    events_mask::type events = 0;
+    typename events_mask::type events = 0;
 
     ticks_type ticks_since_int = 0;
 

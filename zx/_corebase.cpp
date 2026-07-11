@@ -21,7 +21,6 @@ using zx::fast_u16;
 using zx::least_u8;
 using zx::least_u16;
 using zx::unreachable;
-using zx::events_mask;
 
 typedef uint_least32_t least_u32;
 
@@ -409,7 +408,7 @@ PyObject *run(PyObject *self, PyObject *args) {
     PyObject *dispatcher;
     if(!PyArg_ParseTuple(args, "O", &dispatcher))
         return nullptr;
-    events_mask::type events = emulator.run(dispatcher);
+    machine_emulator::events_mask::type events = emulator.run(dispatcher);
     if(PyErr_Occurred())
         return nullptr;
     return Py_BuildValue("i", events);
