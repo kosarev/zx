@@ -71,7 +71,7 @@ chunk of 16 pixels is displayed on the screen.
 
 ## Expected output
 
-![Expected output](https://raw.githubusercontent.com/kosarev/zx/master/tests/screen_timing/screenshot.png "Expected ouput")
+![Expected output](https://raw.githubusercontent.com/kosarev/zx/master/tests/screen_timing/expected_output.png "Expected output")
 
 
 ## References
