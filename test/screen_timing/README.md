@@ -1,1 +1,0 @@
-SCREEN_TIMING.md

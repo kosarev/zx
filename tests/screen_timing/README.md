@@ -65,13 +65,13 @@ chunk of 16 pixels is displayed on the screen.
 
 ## Tests
 
-* [TAP file](https://github.com/kosarev/zx/blob/master/test/screen_timing/screen_timing_early.tap), for early timing machines
-* [TAP file](https://github.com/kosarev/zx/blob/master/test/screen_timing/screen_timing_late.tap), for late timing machines
-* The [script](https://github.com/kosarev/zx/blob/master/test/screen_timing/generate_drawing.py) used to generate the test source code.
+* [TAP file](https://github.com/kosarev/zx/blob/master/tests/screen_timing/screen_timing_early.tap), for early timing machines
+* [TAP file](https://github.com/kosarev/zx/blob/master/tests/screen_timing/screen_timing_late.tap), for late timing machines
+* The [script](https://github.com/kosarev/zx/blob/master/tests/screen_timing/generate_drawing.py) used to generate the test source code.
 
 ## Expected output
 
-![Expected output](https://raw.githubusercontent.com/kosarev/zx/master/test/screen_timing/screenshot.png "Expected ouput")
+![Expected output](https://raw.githubusercontent.com/kosarev/zx/master/tests/screen_timing/screenshot.png "Expected ouput")
 
 
 ## References

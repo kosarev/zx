@@ -31,7 +31,7 @@ ZX Spectrum emulation framework in Python and C++
 * General status: working pre-alpha.
 * Supported machines: 48K only for now.
 * Display: multi-colour effects,
-  [accurate timings](https://github.com/kosarev/zx/blob/master/test/screen_timing).
+  [accurate timings](https://github.com/kosarev/zx/blob/master/tests/screen_timing).
 * Sound: EAR beeper and tape output supported.
 * Tape: TAP and TZX formats supported as well as conversion to WAV.
 * Snapshots: Z80.
@@ -86,4 +86,4 @@ $ zx https://www.worldofspectrum.org/pub/sinclair/games/e/EricTheFloaters.tzx.zi
 
 ### Reference papers
 
-* [Screen timings](https://github.com/kosarev/zx/blob/master/test/screen_timing/SCREEN_TIMING.md)
+* [Screen timings](https://github.com/kosarev/zx/blob/master/tests/screen_timing)
