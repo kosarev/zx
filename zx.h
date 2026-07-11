@@ -354,21 +354,23 @@ public:
         handle_contention_tick();
     }
 
+    // Ticks the port access cycle up to, not including, its final
+    // tick, during which the data crosses the bus.
     void handle_port_contention(fast_u16 addr) {
         if(addr < 0x4000 || addr >= 0x8000) {
             if((addr & 1) == 0) {
                 on_tick(1);
                 handle_contention();
-                on_tick(3);
+                on_tick(2);
             } else {
-                on_tick(4);
+                on_tick(3);
             }
         } else {
             if((addr & 1) == 0) {
                 handle_contention();
                 on_tick(1);
                 handle_contention();
-                on_tick(3);
+                on_tick(2);
             } else {
                 handle_contention();
                 on_tick(1);
@@ -377,7 +379,6 @@ public:
                 handle_contention();
                 on_tick(1);
                 handle_contention();
-                on_tick(1);
             }
         }
     }
@@ -400,6 +401,7 @@ public:
             std::fflush(trace);
         }
 
+        on_tick(1);
         return n;
     }
 
@@ -449,6 +451,8 @@ public:
     }
 
     void on_output_cycle(fast_u16 addr, fast_u8 n) {
+        handle_port_contention(addr);
+
         if(FILE *trace = get_trace_file()) {
             std::fprintf(trace, "write_port %04x %02x\n",
                          static_cast<unsigned>(addr),
@@ -505,7 +509,7 @@ public:
             port_writes[num_port_writes++] = v;
         }
 
-        handle_port_contention(addr);
+        on_tick(1);
     }
 
     void on_set_addr_bus(fast_u16 addr) {
