@@ -706,15 +706,21 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
 
         events = RunEvents(self._run(devices))
 
+        # The run traps at a marked instruction without executing it,
+        # so running again would just trap there anew. Report the
+        # breakpoint and step over, unless a handler moved PC away.
+        if RunEvents.BREAKPOINT_HIT in events:
+            pc = self.pc
+            self.on_breakpoint(devices)
+            if self.pc == pc:
+                events |= RunEvents(self._step_over_breakpoint(devices))
+
         now = self.__current_time()
 
         writes = numpy.frombuffer(self.drain_port_writes(),
                                   dtype=numpy.uint64)
         if len(writes):
             devices.notify(NewPortWrites(now, writes))
-
-        if RunEvents.BREAKPOINT_HIT in events:
-            self.on_breakpoint(devices)
 
         if self.__playback is not None:
             if RunEvents.FETCHES_LIMIT_HIT in events:

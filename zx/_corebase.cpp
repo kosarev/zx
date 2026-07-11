@@ -168,6 +168,20 @@ public:
         return events;
     }
 
+    // Executes the instruction a breakpoint trapped at, following the
+    // same conventions as run().
+    events_mask::type step_over_breakpoint(PyObject *dispatcher) {
+        run_dispatcher = dispatcher;
+
+        install_state();
+        events_mask::type events = base::on_step_over_breakpoint();
+        render_screen_to_tick(get_ticks());
+        retrieve_state();
+
+        run_dispatcher = nullptr;
+        return events;
+    }
+
     bool on_handle_active_int() {
         install_state();
         bool int_initiated = base::on_handle_active_int();
@@ -414,6 +428,18 @@ PyObject *run(PyObject *self, PyObject *args) {
     return Py_BuildValue("i", events);
 }
 
+PyObject *step_over_breakpoint(PyObject *self, PyObject *args) {
+    auto &emulator = cast_emulator(self);
+    PyObject *dispatcher;
+    if(!PyArg_ParseTuple(args, "O", &dispatcher))
+        return nullptr;
+    machine_emulator::events_mask::type events =
+        emulator.step_over_breakpoint(dispatcher);
+    if(PyErr_Occurred())
+        return nullptr;
+    return Py_BuildValue("i", events);
+}
+
 PyObject *on_handle_active_int(PyObject *self, PyObject *args) {
     bool int_initiated = cast_emulator(self).on_handle_active_int();
     return PyBool_FromLong(int_initiated);
@@ -448,6 +474,8 @@ PyMethodDef methods[] = {
      "Set a callback function handling writing to ports."},
     {"_run", run, METH_VARARGS,
      "Run emulator until one or several events are signalled."},
+    {"_step_over_breakpoint", step_over_breakpoint, METH_VARARGS,
+     "Execute the instruction a breakpoint trapped at."},
     {"on_handle_active_int", on_handle_active_int, METH_NOARGS,
      "Attempts to initiate a masked interrupt."},
     {"on_reset", on_reset, METH_NOARGS,

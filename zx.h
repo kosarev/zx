@@ -439,12 +439,8 @@ public:
             mark_addr(addr + i, marks);
     }
 
-    void on_set_pc(fast_u16 pc) {
-        // Catch breakpoints.
-        if(is_breakpoint_addr(pc))
-            events |= events_mask::breakpoint_hit;
-
-        base::on_set_pc(pc);
+    bool on_is_breakpoint_addr(fast_u16 addr) const {
+        return is_breakpoint_addr(addr);
     }
 
     fast_u8 on_input(fast_u16 addr) {
@@ -909,7 +905,7 @@ public:
             if(events)
                 break;
 
-            on_step();
+            self().on_step();
         }
 
         // Signal end-of-frame, if it's the case.
@@ -972,10 +968,12 @@ public:
         std::fflush(trace);
     }
 
-    typename events_mask::type on_step() {
+    // A step trapped at a breakpoint executes nothing, so trace and
+    // mark instructions here, on the executing path.
+    typename events_mask::type on_step_over_breakpoint() {
         trace_state();
         mark_addr(self().get_pc(), visited_instr_mark);
-        return base::on_step();
+        return base::on_step_over_breakpoint();
     }
 
     bool on_handle_active_int() {

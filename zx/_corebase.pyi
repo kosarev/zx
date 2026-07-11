@@ -34,6 +34,9 @@ class _CoreBase:
     def _run(self, devices: Dispatcher) -> int:
         ...
 
+    def _step_over_breakpoint(self, devices: Dispatcher) -> int:
+        ...
+
     def on_handle_active_int(self) -> None:
         ...
 
