@@ -7,8 +7,10 @@
 #   Published under the MIT license.
 
 
+import zx
 from zx._device import Dispatcher
 from zx._device import ReadPort
+from zx._device import RunQuantum
 from zx._keyboard import KEYS
 from zx._keyboard import Keyboard
 from zx._keyboard import KeyStroke
@@ -83,3 +85,29 @@ def test_stroke_at_time_zero() -> None:
     # start of time included.
     devices.notify(KeyStroke(KEYS['J'], pressed=True, time=at(0)))
     assert read(devices, halfrow_addr('J'), 0) == pressed_value('J')
+
+
+def test_stroke_at_quantum_ceiling() -> None:
+    # A quantum's ceiling is the first moment uncommitted everywhere,
+    # so a stroke stamped there must always be admissible — including
+    # when the quantum ends on the very instruction that reads the
+    # keyboard, which happens when the tick budget expires inside it.
+    core = zx.Core()
+    keyboard = Keyboard()
+    devices = Dispatcher([core, keyboard])
+
+    # IN A,(0xFE); JR $-2 -- an endless keyboard read loop.
+    core.pc = 0x8000
+    core.write(0x8000, b'\xdb\xfe\x18\xfc')
+
+    ticks_per_second = core.model._TICKS_PER_FRAME * 50
+
+    # A budget expiring inside the 11-tick IN stops the quantum right
+    # at its boundary, with the port read as the last thing committed.
+    quantum = RunQuantum(stop_after=Time(core.tick_count + 5,
+                                         ticks_per_second=ticks_per_second))
+    devices.notify(quantum)
+    assert quantum.advanced_ceiling is not None
+
+    devices.notify(KeyStroke(KEYS['SPACE'], pressed=True,
+                             time=quantum.advanced_ceiling))

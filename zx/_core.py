@@ -621,7 +621,12 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
                     ticks_per_second=self.model._TICKS_PER_FRAME * 50)
 
     def __on_input(self, addr: int, devices: Dispatcher) -> int | None:
-        read_port = ReadPort(addr, self.__current_time())
+        # tick_count is the 0-based number of the tick currently
+        # being executed.
+        sample_tick = self.tick_count - 1
+        time = Time(sample_tick,
+                    ticks_per_second=self.model._TICKS_PER_FRAME * 50)
+        read_port = ReadPort(addr, time)
         devices.notify(read_port)
         v = read_port.value
         if v is not None:
