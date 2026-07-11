@@ -6,7 +6,6 @@ zx/build
 zx/__pycache__
 zx/_corebase.cpython-*
 zx/*.pyd
-test/__pycache__
 tests/__pycache__
 /*.z80
 /*.rzx
