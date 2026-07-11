@@ -464,12 +464,11 @@ public:
 
         ticks_type t = get_ticks();
         if((addr & 0xff) == 0xfe) {
-            // TODO: Render to (current_tick + 1) and then update
-            // the border colour as the new value is sampled at
-            // the 2nd tick of the output cycle.
-            // TODO: The "+ 1" thing is still wrong as there may
-            // be contentions in the middle.
-            render_screen_to_tick(t + 1);
+            // The ULA samples the border value at the second tick
+            // of the output cycle; we output during the fourth.
+            // TODO: Contention delays between those ticks would
+            // shift the sample moment.
+            render_screen_to_tick(t - 2);
             border_colour = n & 0x7;
         }
 
