@@ -200,7 +200,7 @@ class SoundDevice(Device):
     # value is enough for a cap.
     __ASSUMED_REFRESH_FPS = 50
 
-    def __init__(self) -> None:
+    def __init__(self, *, latency_ms: int = 50) -> None:
         self.__chunks: list[SoundPulses] = []
 
         # The stamp of the last TimeAdvanced notification, not yet
@@ -219,9 +219,10 @@ class SoundDevice(Device):
 
         # The target amount of queued-but-unplayed audio, in
         # milliseconds: at once the underrun margin, the output latency
-        # and the AV-skew bound. 50ms is imperceptible and absorbs
-        # worst-case stalls (e.g. tape loading) on slower hosts.
-        self.__latency_ms = 50
+        # and the AV-skew bound. The 50ms default is imperceptible and
+        # absorbs worst-case stalls (e.g. tape loading) on slower
+        # hosts.
+        self.__latency_ms = latency_ms
 
         self._open()
 
@@ -434,6 +435,18 @@ class SoundDevice(Device):
 # The audio hardware, backed by SDL. It only implements the device
 # operations; all sound logic lives in the base SoundDevice.
 class SDLSound(SoundDevice):
+    # The device buffer adds a fixed delay below the queued-audio
+    # target, so the interactive GUI wants it small. An idle process,
+    # e.g. a music player, wants it large instead: its late
+    # audio-thread wakeups under pull-based backends otherwise cause
+    # sporadic dropouts.
+    def __init__(self, *, num_buffer_samples: None | int = None,
+                 latency_ms: int = 50) -> None:
+        if num_buffer_samples is None:
+            num_buffer_samples = self._OUTPUT_FREQ // 50
+        self.__num_buffer_samples = num_buffer_samples
+        super().__init__(latency_ms=latency_ms)
+
     def _open(self) -> None:
         # TODO: Don't use SDL until we know we are actually
         # outputting sound via it. (The user may want to do something
@@ -446,7 +459,7 @@ class SDLSound(SoundDevice):
             freq=self._OUTPUT_FREQ,
             aformat=sdl2.audio.AUDIO_F32,
             channels=1,
-            samples=(self._OUTPUT_FREQ // 50),  # TODO
+            samples=self.__num_buffer_samples,
             )
 
         self.__device = sdl2.audio.SDL_OpenAudioDevice(None, 0, spec, None, 0)

@@ -100,9 +100,15 @@ class _HoldWaiter(Device):
 # by the stream player, with no Spectrum machine involved.
 def _play_ay_stream(stream: UnifiedAYStream) -> None:
     player = AYPlayer(stream)
+
+    # A large device buffer rides out the late audio-thread wakeups
+    # of an idle process; the queued-audio target must exceed the
+    # buffer, or every pull of the audio thread drains the queue dry.
+    # A player has no latency concern anyway.
+    sound = SDLSound(num_buffer_samples=4096, latency_ms=200)
+
     with Emulator(machine=[AY()],
-                  environment=[player, _HoldWaiter(),
-                               SDLSound()]) as app:
+                  environment=[player, _HoldWaiter(), sound]) as app:
         # Give the last notes a second to ring out.
         tail = Time(stream.ticks_per_second,
                     ticks_per_second=stream.ticks_per_second)
