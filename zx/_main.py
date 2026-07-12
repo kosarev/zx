@@ -527,6 +527,17 @@ def _convert_any_to_zx(src: DataRecord,
         f.write((src.dumps() + '\n').encode('utf-8'))
 
 
+def _convert_ay_music(src: DataRecord,
+                      src_filename: str,
+                      dest_filename: str,
+                      dest_format: type[DataRecord]) -> None:
+    assert isinstance(src, AYMusic)
+    assert issubclass(dest_format, AYMusic), dest_format
+
+    with pathlib.Path(dest_filename).open('wb') as f:
+        f.write(dest_format.from_ay_music(src).encode())
+
+
 def _convert_snapshot_to_snapshot(src: DataRecord,
                                   src_filename: str,
                                   dest_filename: str,
@@ -559,6 +570,7 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
          _convert_tape_to_snapshot),
         (MachineSnapshot, MachineSnapshot,
          _convert_snapshot_to_snapshot),
+        (AYMusic, AYMusic, _convert_ay_music),
         (DataRecord, ZXFile, _convert_any_to_zx),
     ]
 
