@@ -218,31 +218,48 @@ class SoundPulses:
         self.num_ticks = num_ticks
 
 
-# A single AY register write within a stream, stamped in the ticks
-# of the stream's timeline.
+# A single AY register write. The tick is the write's position
+# within its frame; a null tick means the frame start, which is all
+# frame-granular sources know.
 class AYWrite(DataRecord, format_name=None):
-    tick: int
+    tick: int | None
     reg: int
     value: int
 
-    def __init__(self, *, tick: int, reg: int, value: int) -> None:
+    def __init__(self, *, tick: int | None = None, reg: int,
+                 value: int) -> None:
         super().__init__(tick=tick, reg=reg, value=value)
 
     def to_json(self) -> _InlineJSONDict:
-        return _InlineJSONDict(tick=self.tick, reg=self.reg,
-                               value=self.value)
+        return _InlineJSONDict(super().to_json())
 
 
-# The canonical semantic form of AY music: a timed sequence of
-# register writes. All AY-music formats convert to and from it.
-class UnifiedAYStream(DataRecord, format_name=None):
-    ticks_per_second: int
+# The register writes of the frame with the given number. Frames
+# carry their numbers, so skipped frames need no representation.
+class AYFrame(DataRecord, format_name=None):
+    frame: int
     writes: list[AYWrite]
 
-    def __init__(self, *, ticks_per_second: int,
+    def __init__(self, *, frame: int,
                  writes: list[AYWrite] | None = None) -> None:
-        super().__init__(ticks_per_second=ticks_per_second,
+        super().__init__(frame=frame,
                          writes=writes if writes is not None else [])
+
+
+# The canonical semantic form of AY music: frames of register
+# writes. A write of frame k happens at tick k * ticks_per_frame
+# plus the write's own within-frame tick. All AY-music formats
+# convert to and from this form.
+class UnifiedAYStream(DataRecord, format_name=None):
+    ticks_per_second: int
+    ticks_per_frame: int
+    frames: list[AYFrame]
+
+    def __init__(self, *, ticks_per_second: int, ticks_per_frame: int,
+                 frames: list[AYFrame] | None = None) -> None:
+        super().__init__(ticks_per_second=ticks_per_second,
+                         ticks_per_frame=ticks_per_frame,
+                         frames=frames if frames is not None else [])
 
 
 class SoundFile(DataRecord, format_name=None):

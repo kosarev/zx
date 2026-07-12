@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import typing
 
+from ._data import AYFrame
 from ._data import AYWrite
 from ._data import ByteData
 from ._data import DataRecord
@@ -183,7 +184,7 @@ class PSGFile(DataRecord, format_name='PSG'):
                     id='bad_psg_frequency')
             ticks_per_frame = _TICKS_PER_SECOND // self.frequency
 
-        writes = []
+        frames: list[AYFrame] = []
         frame = 0
         for command in self.commands:
             if isinstance(command, PSGNextFrame):
@@ -191,11 +192,13 @@ class PSGFile(DataRecord, format_name='PSG'):
             elif isinstance(command, PSGSkipFrames):
                 frame += command.num_frames
             elif isinstance(command, PSGWrite):
-                writes.append(AYWrite(tick=frame * ticks_per_frame,
-                                      reg=command.reg,
-                                      value=command.value))
+                if not frames or frames[-1].frame != frame:
+                    frames.append(AYFrame(frame=frame))
+                frames[-1].writes.append(AYWrite(reg=command.reg,
+                                                 value=command.value))
             elif isinstance(command, PSGEnd):
                 break
 
         return UnifiedAYStream(ticks_per_second=_TICKS_PER_SECOND,
-                               writes=writes)
+                               ticks_per_frame=ticks_per_frame,
+                               frames=frames)

@@ -75,15 +75,15 @@ def test_construct_from_commands() -> None:
 def test_to_unified_ay_stream() -> None:
     stream = PSGFile.decode('x.psg', IMAGE).to_unified_ay_stream()
     assert stream.ticks_per_second == 3546900
+    assert stream.ticks_per_frame == TICKS_PER_FRAME
 
     # Each next-frame command opens the next frame; the skip command
     # skips four times its count.
-    assert [(w.tick // TICKS_PER_FRAME, w.reg, w.value)
-            for w in stream.writes] == [
-        (1, 0, 0x5c),
-        (1, 1, 0x04),
-        (3, 8, 0x0f),
-        (11, 7, 0x38)]
+    assert [(f.frame, [(w.reg, w.value) for w in f.writes])
+            for f in stream.frames] == [
+        (1, [(0, 0x5c), (1, 0x04)]),
+        (3, [(8, 0x0f)]),
+        (11, [(7, 0x38)])]
 
 
 def test_declared_frequency() -> None:
@@ -95,8 +95,9 @@ def test_declared_frequency() -> None:
 
     # 3,546,900 / 60 = 59,115 ticks per frame, exactly.
     stream = psg.to_unified_ay_stream()
-    assert [(w.tick, w.reg, w.value) for w in stream.writes] == [
-        (59115, 0, 1)]
+    assert stream.ticks_per_frame == 59115
+    assert [(f.frame, [(w.reg, w.value) for w in f.writes])
+            for f in stream.frames] == [(1, [(0, 1)])]
 
 
 def test_trailing_bytes() -> None:
