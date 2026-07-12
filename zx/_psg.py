@@ -153,6 +153,42 @@ class PSGFile(AYMusic, format_name='PSG'):
             else None)
 
     @classmethod
+    def from_ay_music(cls, music: AYMusic) -> PSGFile:
+        stream = music.to_unified_ay_stream()
+        if stream.ticks_per_second != _TICKS_PER_SECOND:
+            raise Error('Cannot represent the AY stream as PSG: '
+                        f'unsupported rate {stream.ticks_per_second}.',
+                        id='bad_psg_rate')
+        if stream.ticks_per_frame == _TICKS_PER_FRAME:
+            frequency = 0
+        elif _TICKS_PER_SECOND % stream.ticks_per_frame == 0:
+            frequency = _TICKS_PER_SECOND // stream.ticks_per_frame
+        else:
+            raise Error('Cannot represent the AY stream as PSG: '
+                        f'unsupported frame of {stream.ticks_per_frame} '
+                        f'ticks.', id='bad_psg_rate')
+
+        commands: list[PSGCommand] = []
+        frame = 0
+        for f in stream.frames:
+            gap = f.frame - frame
+            while gap >= 4:
+                count = min(gap // 4, 0xff)
+                commands.append(PSGSkipFrames(count=count))
+                gap -= count * 4
+            commands.extend(PSGNextFrame() for _ in range(gap))
+            frame = f.frame
+
+            # PSG is frame-granular: within-frame write positions
+            # are not representable and quantise to the frame start.
+            commands.extend(PSGWrite(reg=w.reg, value=w.value)
+                            for w in f.writes)
+        commands.append(PSGEnd())
+
+        return cls(version=10 if frequency else 0, frequency=frequency,
+                   commands=commands)
+
+    @classmethod
     def decode(cls, filename: str, image: Bytes) -> PSGFile:
         if image[:len(_SIGNATURE)] != _SIGNATURE:
             raise Error(f'{filename!r} is not a PSG file.',

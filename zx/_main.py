@@ -307,6 +307,12 @@ def test_file(filename: str, batch_mode: bool,
             unified = file.to_unified_snapshot()
             unified2 = type(file).from_snapshot(unified).to_unified_snapshot()
             match(unified, unified2)
+        elif isinstance(file, AYMusic):
+            match(image, file.encode())
+
+            stream = file.to_unified_ay_stream()
+            stream2 = type(file).from_ay_music(stream).to_unified_ay_stream()
+            match(stream, stream2)
         elif isinstance(file, RZXFile):
             with Emulator(headless=True) as app:
                 app._run_file(filename)

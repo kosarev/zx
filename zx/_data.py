@@ -248,6 +248,10 @@ class AYFrame(DataRecord, format_name=None):
 
 # A representation of AY music, format-specific or unified.
 class AYMusic(DataRecord, format_name=None):
+    @classmethod
+    def from_ay_music(cls, music: AYMusic) -> AYMusic:
+        raise NotImplementedError
+
     def to_unified_ay_stream(self) -> UnifiedAYStream:
         raise NotImplementedError
 
@@ -266,6 +270,10 @@ class UnifiedAYStream(AYMusic, format_name=None):
         super().__init__(ticks_per_second=ticks_per_second,
                          ticks_per_frame=ticks_per_frame,
                          frames=frames if frames is not None else [])
+
+    @classmethod
+    def from_ay_music(cls, music: AYMusic) -> UnifiedAYStream:
+        return music.to_unified_ay_stream()
 
     def to_unified_ay_stream(self) -> UnifiedAYStream:
         return self

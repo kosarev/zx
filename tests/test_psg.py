@@ -135,3 +135,14 @@ def test_unify_to_zx(tmp_path: pathlib.Path) -> None:
     text = dest.read_text()
     assert 'UnifiedAYStream' in text
     assert 'AYWrite' in text
+
+
+def test_unified_roundtrip() -> None:
+    psg = PSGFile.decode('x.psg', IMAGE)
+    stream = psg.to_unified_ay_stream()
+
+    # Re-encoding is canonical -- the eight-frame gap becomes one
+    # skip command -- but the unified content survives unchanged.
+    again = PSGFile.from_ay_music(stream)
+    assert PSGSkipFrames(count=2) in again.commands
+    assert again.to_unified_ay_stream() == stream
