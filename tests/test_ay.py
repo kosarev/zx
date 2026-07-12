@@ -16,13 +16,19 @@ import typing
 
 import numpy
 
+import zx
 from zx._ay import AY
+from zx._ay import AYPlayer
 from zx._ay import AYRegisterWrite
+from zx._data import AYFrame
+from zx._data import AYWrite
+from zx._data import UnifiedAYStream
 from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import NewSoundPulses
 from zx._device import TimeAdvanced
+from zx._sound import SoundDevice
 from zx._time import Time
 
 if typing.TYPE_CHECKING:
@@ -141,3 +147,38 @@ def test_write_takes_effect_at_step_boundary() -> None:
     assert list(chunk.ticks) == [0, 4 * TICKS_PER_STEP]
     assert chunk.levels[0] == 0.0
     assert abs(chunk.levels[1] - 1 / 2) < 1e-9
+
+
+def test_stream_player() -> None:
+    # A tone on channel A, with the pitch changed mid-way through
+    # the second frame.
+    stream = UnifiedAYStream(
+        ticks_per_second=RATE, ticks_per_frame=70908,
+        frames=[
+            AYFrame(frame=0, writes=[
+                AYWrite(reg=7, value=0b00111110),
+                AYWrite(reg=8, value=15),
+                AYWrite(reg=0, value=100)]),
+            AYFrame(frame=2, writes=[
+                AYWrite(tick=100, reg=0, value=50)])])
+
+    class _CapturingSound(SoundDevice):
+        def __init__(self) -> None:
+            self.samples: list[numpy.typing.NDArray[numpy.float32]] = []
+            super().__init__()
+
+        def _output(self,
+                    samples: numpy.typing.NDArray[numpy.float32]) -> None:
+            self.samples.append(samples)
+
+    # The player is the session's runner; no core is present.
+    player = AYPlayer(stream)
+    sound = _CapturingSound()
+    with zx.Emulator(machine=[AY()],
+                     environment=[player, sound]) as app:
+        app.run(until=player.get_end_time() +
+                Time(RATE // 10, ticks_per_second=RATE))
+
+    samples = numpy.concatenate(sound.samples)
+    assert len(samples) >= 44100 // 10
+    assert numpy.abs(samples).max() > 0.0

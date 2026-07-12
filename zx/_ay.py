@@ -19,10 +19,12 @@ from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import NewSoundPulses
 from ._device import ResetEmulator
+from ._device import RunQuantum
 from ._device import TimeAdvanced
+from ._time import Time
 
 if typing.TYPE_CHECKING:
-    from ._time import Time
+    from ._data import UnifiedAYStream
 
 
 # The AY-3-8912 register write as a stamped fact: the chip vocabulary,
@@ -232,8 +234,12 @@ class AY(Device):
         published_up_to = self.__published_up_to
         self.__published_up_to = stamp
 
-        # Resynchronise after construction or reset.
+        # Resynchronise after construction or reset: no sound is
+        # rendered for the span, but the writes still shape the
+        # register state.
         if published_up_to is None:
+            for write in self.__pending:
+                self.__apply_write(write)
             self.__pending.clear()
             return
 
@@ -312,3 +318,62 @@ class AY(Device):
             self.__pending.append(event)
         elif isinstance(event, TimeAdvanced):
             self.__publish(event.time, dispatcher)
+
+
+class AYPlayer(Device):
+    """Plays a unified AY stream: desk equipment that walks the
+    frames and emits their writes as stamped AYRegisterWrite events.
+
+    With no core present it is also the round loop's runner: it
+    advances towards the requested stop time by its own decision and
+    reports the position reached.
+    """
+
+    def __init__(self, stream: UnifiedAYStream) -> None:
+        self.__rate = stream.ticks_per_second
+
+        # The stream flattened to stamped writes, in time order.
+        self.__writes: list[tuple[int, int, int]] = []
+        for frame in stream.frames:
+            for write in frame.writes:
+                tick = (frame.frame * stream.ticks_per_frame +
+                        (write.tick if write.tick is not None else 0))
+                assert (not self.__writes or
+                        tick >= self.__writes[-1][0])
+                self.__writes.append((tick, write.reg, write.value))
+        self.__num_emitted = 0
+
+        # The first uncommitted tick.
+        self.__position = 0
+
+        # How far to advance per round when no stop time is asked.
+        self.__ticks_per_quantum = self.__rate // 50
+
+    # The moment right after the last write.
+    def get_end_time(self) -> Time:
+        end = self.__writes[-1][0] + 1 if self.__writes else 0
+        return Time(end, ticks_per_second=self.__rate)
+
+    def __advance(self, stop_after: None | Time,
+                  devices: Dispatcher) -> Time:
+        if stop_after is None:
+            target = self.__position + self.__ticks_per_quantum
+        else:
+            # The first own tick at or after the requested time.
+            target = max(-(-stop_after.count * self.__rate //
+                           stop_after.ticks_per_second),
+                         self.__position)
+
+        while (self.__num_emitted < len(self.__writes) and
+               self.__writes[self.__num_emitted][0] < target):
+            tick, reg, value = self.__writes[self.__num_emitted]
+            devices.notify(AYRegisterWrite(
+                reg, value, Time(tick, ticks_per_second=self.__rate)))
+            self.__num_emitted += 1
+
+        self.__position = target
+        return Time(target, ticks_per_second=self.__rate)
+
+    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
+        if isinstance(event, RunQuantum) and not event.held:
+            event.advanced_to(self.__advance(event.stop_after, devices))

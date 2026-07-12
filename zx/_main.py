@@ -18,6 +18,8 @@ import typing
 
 import platformdirs
 
+from ._ay import AY
+from ._ay import AYPlayer
 from ._binary import Bytes
 from ._core import Core
 from ._core import Profile
@@ -27,6 +29,7 @@ from ._data import MachinePlayback
 from ._data import MachineSnapshot
 from ._data import SoundFile
 from ._data import Spectrum128
+from ._data import UnifiedAYStream
 from ._data import UnifiedPlayback
 from ._data import UnifiedSnapshot
 from ._device import BreakpointHit
@@ -51,6 +54,7 @@ from ._playback import PlaybackRecorder
 from ._psg import PSGFile
 from ._rzx import RZXFile
 from ._settings import GlobalSettingsManager
+from ._sound import SDLSound
 from ._tape import TapePlayer
 from ._time import Time
 from ._zx import ZXFile
@@ -80,6 +84,19 @@ def handle_extra_arguments(args: list[str]) -> None:
         raise Error(f'Extra argument {args[0]!r}.')
 
 
+# Plays an AY music stream: a session of the AY chip alone, driven
+# by the stream player, with no Spectrum machine involved.
+def _play_ay_stream(stream: UnifiedAYStream) -> None:
+    player = AYPlayer(stream)
+    with Emulator(machine=[AY()],
+                  environment=[player, SDLSound()]) as app:
+        # Give the last notes a second to ring out.
+        tail = Time(stream.ticks_per_second,
+                    ticks_per_second=stream.ticks_per_second)
+        with contextlib.suppress(EmulationExit):
+            app.run(until=player.get_end_time() + tail)
+
+
 def run(args: list[str]) -> None:
     model = None
     if pop_option(args, '--128'):
@@ -89,6 +106,14 @@ def run(args: list[str]) -> None:
     if args:
         filename = args.pop(0)
         handle_extra_arguments(args)
+
+    if filename:
+        ext = pathlib.Path(filename).suffix
+        if detect_file_format(None, ext) is PSGFile:
+            file = parse_file(filename)
+            assert isinstance(file, PSGFile)
+            _play_ay_stream(file.to_unified_ay_stream())
+            return
 
     session_snapshot = get_config_dir() / 'session.zx'
     settings_file = get_config_dir() / 'settings.json'
