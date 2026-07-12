@@ -242,6 +242,12 @@ public:
 
     void on_reset(bool soft = false) {
         base::on_reset(soft);
+
+        // The border latch returns to its power-on state on a hard
+        // reset only.
+        if(!soft)
+            border_colour = 0;
+
         ticks_since_int = 0;
         num_port_writes = 0;
         start_new_frame();

@@ -447,6 +447,7 @@ PyObject *on_handle_active_int(PyObject *self, PyObject *args) {
 
 PyObject *on_reset(PyObject *self, PyObject *args) {
     auto &emulator = cast_emulator(self);
+    emulator.install_state();
     emulator.on_reset();
     emulator.retrieve_state();
     Py_RETURN_NONE;
