@@ -412,10 +412,10 @@ class UnifiedPlaybackSegment(DataRecord, format_name=None):
     snapshot: UnifiedSnapshot
     frames: list[UnifiedPlaybackFrame]
 
-    def __init__(self, *, snapshot: UnifiedSnapshot | None = None,
+    def __init__(self, *, snapshot: UnifiedSnapshot,
                  frames: list[UnifiedPlaybackFrame] | None = None) -> None:
         super().__init__(
-            snapshot=snapshot if snapshot is not None else UnifiedSnapshot(),
+            snapshot=snapshot,
             frames=frames if frames is not None else [])
 
 

@@ -332,9 +332,19 @@ class RZXFile(MachinePlayback, format_name='RZX'):
                 segments.append(UnifiedPlaybackSegment(
                     snapshot=chunk.snapshot.to_unified_snapshot()))
             elif isinstance(chunk, RZXInputRecording):
+                # The format permits an input recording before any
+                # snapshot (playing against whatever state the machine
+                # has) and several recordings per snapshot, but no
+                # playable real-world file does either.
                 if not segments:
-                    segments.append(UnifiedPlaybackSegment())
+                    raise Error(
+                        'Input recording with no preceding snapshot.',
+                        id='input_recording_without_snapshot')
                 s = segments[-1]
+                if s.frames:
+                    raise Error(
+                        'Several input recordings per snapshot.',
+                        id='consecutive_input_recordings')
                 core = next((d for _, d in s.snapshot
                              if isinstance(d, CoreSnapshot)), None)
                 if core is None:

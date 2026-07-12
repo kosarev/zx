@@ -7,7 +7,10 @@
 #   Published under the MIT license.
 
 
+import pytest
+
 import zx
+from zx._error import Error
 
 
 def test_basic() -> None:
@@ -55,3 +58,30 @@ def test_basic() -> None:
             0xfe, zx._time.Time(0, ticks_per_second=rate))
         player.on_event(read_port, dispatcher)
         assert read_port.value == expected
+
+
+def test_input_recording_without_snapshot() -> None:
+    # An input recording before any snapshot would play against an
+    # undefined machine state; no playable real-world file has one.
+    rzx = zx._rzx.RZXFile(chunks=[
+        zx._rzx.RZXInputRecording(first_tick=0, frames=[])])
+
+    with pytest.raises(Error) as exc_info:
+        rzx.to_unified_playback()
+    assert exc_info.value.id == 'input_recording_without_snapshot'
+
+
+def test_consecutive_input_recordings() -> None:
+    # Several input recordings per snapshot would each rebase the tick
+    # counter mid-segment; no playable real-world file has them.
+    rzx = zx._rzx.RZXFile(chunks=[
+        zx._rzx.RZXSnapshot(format=b'Z80\x00',
+                            snapshot=zx._data.UnifiedSnapshot()),
+        zx._rzx.RZXInputRecording(
+            first_tick=0,
+            frames=[zx._rzx.RZXFrame(num_fetches=1, samples=b'')]),
+        zx._rzx.RZXInputRecording(first_tick=0, frames=[])])
+
+    with pytest.raises(Error) as exc_info:
+        rzx.to_unified_playback()
+    assert exc_info.value.id == 'consecutive_input_recordings'
