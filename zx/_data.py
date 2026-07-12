@@ -218,6 +218,33 @@ class SoundPulses:
         self.num_ticks = num_ticks
 
 
+# A single AY register write within a stream, stamped in the ticks
+# of the stream's timeline.
+class AYWrite(DataRecord, format_name=None):
+    tick: int
+    reg: int
+    value: int
+
+    def __init__(self, *, tick: int, reg: int, value: int) -> None:
+        super().__init__(tick=tick, reg=reg, value=value)
+
+    def to_json(self) -> _InlineJSONDict:
+        return _InlineJSONDict(tick=self.tick, reg=self.reg,
+                               value=self.value)
+
+
+# The canonical semantic form of AY music: a timed sequence of
+# register writes. All AY-music formats convert to and from it.
+class UnifiedAYStream(DataRecord, format_name=None):
+    ticks_per_second: int
+    writes: list[AYWrite]
+
+    def __init__(self, *, ticks_per_second: int,
+                 writes: list[AYWrite] | None = None) -> None:
+        super().__init__(ticks_per_second=ticks_per_second,
+                         writes=writes if writes is not None else [])
+
+
 class SoundFile(DataRecord, format_name=None):
     def get_pulses(self) -> typing.Iterable[tuple[bool, int, tuple[str, ...]]]:
         raise NotImplementedError

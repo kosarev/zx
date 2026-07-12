@@ -13,6 +13,7 @@ from ._binary import Bytes
 from ._data import ArchiveFile
 from ._data import DataRecord
 from ._error import Error
+from ._psg import PSGFile
 from ._rzx import RZXFile
 from ._scr import _SCRSnapshot
 from ._sna import SNASnapshot
@@ -49,6 +50,7 @@ def detect_file_format(image: None | Bytes,
     KNOWN_FORMATS = [
         ('.zx', None, ZXFile),
         ('.zxb', None, ZXBasicCompilerProgram),
+        ('.psg', b'PSG\x1a', PSGFile),
         ('.rzx', b'RZX!', RZXFile),
         ('.scr', None, _SCRSnapshot),
         ('.tap', None, TAPFile),
