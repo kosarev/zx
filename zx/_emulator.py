@@ -62,6 +62,7 @@ import types
 from ._beeper import Beeper
 from ._core import Core
 from ._core import Profile
+from ._data import DataRecord
 from ._data import MachinePlayback
 from ._data import MachineSnapshot
 from ._data import SoundFile
@@ -319,9 +320,7 @@ class Emulator:
         self.__advanced_floor = Time(0, ticks_per_second=1)
         self.__advanced_ceiling = Time(0, ticks_per_second=1)
 
-    def _load_file(self, filename: str) -> None:
-        file = parse_file(filename)
-
+    def _load(self, file: DataRecord) -> None:
         if isinstance(file, MachineSnapshot):
             self._load_snapshot(file)
             return
@@ -333,7 +332,11 @@ class Emulator:
         elif isinstance(file, SoundFile):
             self.__load_tape_to_player(file)
         else:
-            raise Error(f"Don't know how to load file {filename!r}.")
+            raise Error(
+                f"Don't know how to load {type(file).FORMAT_NAME} files.")
+
+    def _load_file(self, filename: str) -> None:
+        self._load(parse_file(filename))
 
     def _run_file(self, filename: str, *, fast_forward: bool = False) -> None:
         self._load_file(filename)

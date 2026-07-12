@@ -246,11 +246,17 @@ class AYFrame(DataRecord, format_name=None):
                          writes=writes if writes is not None else [])
 
 
+# A representation of AY music, format-specific or unified.
+class AYMusic(DataRecord, format_name=None):
+    def to_unified_ay_stream(self) -> UnifiedAYStream:
+        raise NotImplementedError
+
+
 # The canonical semantic form of AY music: frames of register
 # writes. A write of frame k happens at tick k * ticks_per_frame
 # plus the write's own within-frame tick. All AY-music formats
 # convert to and from this form.
-class UnifiedAYStream(DataRecord, format_name=None):
+class UnifiedAYStream(AYMusic, format_name=None):
     ticks_per_second: int
     ticks_per_frame: int
     frames: list[AYFrame]
@@ -260,6 +266,9 @@ class UnifiedAYStream(DataRecord, format_name=None):
         super().__init__(ticks_per_second=ticks_per_second,
                          ticks_per_frame=ticks_per_frame,
                          frames=frames if frames is not None else [])
+
+    def to_unified_ay_stream(self) -> UnifiedAYStream:
+        return self
 
 
 class SoundFile(DataRecord, format_name=None):

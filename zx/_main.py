@@ -25,6 +25,7 @@ from ._binary import Bytes
 from ._core import Core
 from ._core import Profile
 from ._core import RunEvents
+from ._data import AYMusic
 from ._data import DataRecord
 from ._data import MachinePlayback
 from ._data import MachineSnapshot
@@ -54,7 +55,6 @@ from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
-from ._psg import PSGFile
 from ._rzx import RZXFile
 from ._settings import GlobalSettingsManager
 from ._sound import SDLSound
@@ -120,11 +120,10 @@ def run(args: list[str]) -> None:
         filename = args.pop(0)
         handle_extra_arguments(args)
 
+    file = None
     if filename:
-        ext = pathlib.Path(filename).suffix
-        if detect_file_format(None, ext) is PSGFile:
-            file = parse_file(filename)
-            assert isinstance(file, PSGFile)
+        file = parse_file(filename)
+        if isinstance(file, AYMusic):
             _play_ay_stream(file.to_unified_ay_stream())
             return
 
@@ -133,8 +132,8 @@ def run(args: list[str]) -> None:
 
     with Emulator(model=model, extra_environment=[
             GlobalSettingsManager(settings_file)]) as app:
-        if filename:
-            app._load_file(filename)
+        if file is not None:
+            app._load(file)
         elif session_snapshot.exists():
             try:
                 app._load_file(str(session_snapshot))
@@ -195,7 +194,7 @@ def unify(args: list[str]) -> None:
         unified: DataRecord = file.to_unified_snapshot()
     elif isinstance(file, MachinePlayback):
         unified = file.to_unified_playback()
-    elif isinstance(file, PSGFile):
+    elif isinstance(file, AYMusic):
         unified = file.to_unified_ay_stream()
     else:
         raise Error(f"Don't know how to unify {type(file).FORMAT_NAME} "

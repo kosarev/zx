@@ -11,6 +11,7 @@ from __future__ import annotations
 import typing
 
 from ._data import AYFrame
+from ._data import AYMusic
 from ._data import AYWrite
 from ._data import ByteData
 from ._data import DataRecord
@@ -133,7 +134,7 @@ def _parse_commands(image: Bytes) -> list[PSGCommand]:
 # bytes, then the command stream, represented as one record per wire
 # command. Bytes following an end-of-stream command, if any, are
 # kept apart.
-class PSGFile(DataRecord, format_name='PSG'):
+class PSGFile(AYMusic, format_name='PSG'):
     version: int
     frequency: int
     reserved: ByteData
