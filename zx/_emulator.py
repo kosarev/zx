@@ -96,7 +96,7 @@ from ._screen import ScreenWindow
 from ._sound import SDLSound
 from ._tape import TapePlayer
 from ._time import Time
-from ._z80snapshot import Z80Snapshot
+from ._z80 import Z80Snapshot
 
 
 # A Dispatcher that also passes every event to the Emulator, after

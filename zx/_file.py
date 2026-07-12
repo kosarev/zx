@@ -19,7 +19,7 @@ from ._sna import SNASnapshot
 from ._tap import TAPFile
 from ._tzx import TZXFile
 from ._wav import WAVFile
-from ._z80snapshot import Z80Snapshot
+from ._z80 import Z80Snapshot
 from ._zip import ZIPFile
 from ._zx import ZXFile
 from ._zxb import ZXBasicCompilerProgram

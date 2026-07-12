@@ -14,7 +14,7 @@ def test_basic() -> None:
     # Create a simple RZX.
     mach = zx.Core()
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
-    snapshot = zx._z80snapshot.Z80Snapshot.from_snapshot(
+    snapshot = zx._z80.Z80Snapshot.from_snapshot(
         zx._data.UnifiedSnapshot(core=mach.to_snapshot()))
     snapshot_chunk = zx._rzx.RZXSnapshot(format=b'Z80\x00',
                                          snapshot=snapshot)

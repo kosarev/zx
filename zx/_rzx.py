@@ -27,7 +27,7 @@ from ._data import UnifiedPlaybackSegment
 from ._data import UnifiedSnapshot
 from ._data import _InlineJSONDict
 from ._error import Error
-from ._z80snapshot import Z80Snapshot
+from ._z80 import Z80Snapshot
 
 
 class RZXChunk(DataRecord, format_name=None):

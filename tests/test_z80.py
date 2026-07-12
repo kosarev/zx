@@ -17,7 +17,7 @@ def test_basic() -> None:
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
     HL = 0x1234
     mach.hl = HL
-    format = zx._z80snapshot.Z80Snapshot
+    format = zx._z80.Z80Snapshot
     assert format.FORMAT_NAME == 'Z80'
     image = format.from_snapshot(
         UnifiedSnapshot(core=mach.to_snapshot())).encode()
@@ -72,6 +72,6 @@ def test_compressed_v1_roundtrip() -> None:
         return writer.get_image()
 
     image = make_image()
-    snap = zx._z80snapshot.Z80Snapshot.decode('test.z80', image)
+    snap = zx._z80.Z80Snapshot.decode('test.z80', image)
     # This currently fails because encode() doesn't re-compress.
     assert snap.encode() == image, 'Compressed V1 .z80 roundtrip broken'
