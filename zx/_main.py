@@ -48,6 +48,7 @@ from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
+from ._psg import PSGFile
 from ._rzx import RZXFile
 from ._settings import GlobalSettingsManager
 from ._tape import TapePlayer
@@ -136,6 +137,35 @@ def dump(args: list[str]) -> None:
     handle_extra_arguments(args)
 
     print(parse_file(filename).dumps())
+
+
+# Converts the given file to its unified representation and writes
+# it out as a .zx file.
+def unify(args: list[str]) -> None:
+    if not args:
+        raise Error('The file to unify is not specified.')
+    src_filename = args.pop(0)
+
+    if not args:
+        raise Error('The file to write to is not specified.')
+    dest_filename = args.pop(0)
+
+    handle_extra_arguments(args)
+
+    file = parse_file(src_filename)
+    if isinstance(file, MachineSnapshot):
+        unified: DataRecord = file.to_unified_snapshot()
+    elif isinstance(file, MachinePlayback):
+        unified = file.to_unified_playback()
+    elif isinstance(file, PSGFile):
+        unified = file.to_unified_ay_stream()
+    else:
+        raise Error(f"Don't know how to unify {type(file).FORMAT_NAME} "
+                    f'files.', id='not_unifiable')
+
+    with pathlib.Path(dest_filename).open('wb') as f:
+        # Use Unix line endings regardless of platform for consistency.
+        f.write((unified.dumps() + '\n').encode('utf-8'))
 
 
 def looks_like_filename(s: str) -> bool:
@@ -539,6 +569,7 @@ def handle_command_line(args: list[str]) -> None:
         # TODO: Hidden commands for internal use.
         '__test': test,
         '__ff': fast_forward,
+        '__unify': unify,
     }
 
     if command not in COMMANDS:

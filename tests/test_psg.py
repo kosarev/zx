@@ -123,3 +123,14 @@ def test_convert_to_zx(tmp_path: pathlib.Path) -> None:
 
     zx._main.convert_file(str(src), str(dest))
     assert 'PSGFile' in dest.read_text()
+
+
+def test_unify_to_zx(tmp_path: pathlib.Path) -> None:
+    src = tmp_path / 'x.psg'
+    src.write_bytes(IMAGE)
+    dest = tmp_path / 'x.zx'
+
+    zx._main.unify([str(src), str(dest)])
+    text = dest.read_text()
+    assert 'UnifiedAYStream' in text
+    assert 'AYWrite' in text
