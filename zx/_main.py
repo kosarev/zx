@@ -14,6 +14,7 @@ import functools
 import multiprocessing
 import pathlib
 import sys
+import time
 import typing
 
 import platformdirs
@@ -33,12 +34,14 @@ from ._data import UnifiedAYStream
 from ._data import UnifiedPlayback
 from ._data import UnifiedSnapshot
 from ._device import BreakpointHit
+from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import FetchesLimitHit
 from ._device import IsTapePlayerStopped
 from ._device import LoadTape
 from ._device import PauseUnpauseTape
+from ._device import RunQuantum
 from ._emulator import Emulator
 from ._error import USER_ERRORS
 from ._error import Error
@@ -84,12 +87,22 @@ def handle_extra_arguments(args: list[str]) -> None:
         raise Error(f'Extra argument {args[0]!r}.')
 
 
+# Waits out held rounds, keeping the process idle: the player
+# session has no interactive channel to do the waiting the way the
+# screen does it in the GUI.
+class _HoldWaiter(Device):
+    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
+        if isinstance(event, RunQuantum) and event.held:
+            time.sleep(min(event.wake_in or 0.05, 0.05))
+
+
 # Plays an AY music stream: a session of the AY chip alone, driven
 # by the stream player, with no Spectrum machine involved.
 def _play_ay_stream(stream: UnifiedAYStream) -> None:
     player = AYPlayer(stream)
     with Emulator(machine=[AY()],
-                  environment=[player, SDLSound()]) as app:
+                  environment=[player, _HoldWaiter(),
+                               SDLSound()]) as app:
         # Give the last notes a second to ring out.
         tail = Time(stream.ticks_per_second,
                     ticks_per_second=stream.ticks_per_second)
