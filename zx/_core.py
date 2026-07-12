@@ -533,17 +533,6 @@ class CoreState(Z80State):
             else:
                 setattr(self, field, value)
 
-    def install_snapshot(self, snapshot: MachineSnapshot) -> None:
-        # A device absent from the composition is at its canonical
-        # reset state.
-        unified = snapshot.to_unified_snapshot()
-        core = next((d for _, d in unified
-                     if isinstance(d, CoreSnapshot)), None)
-        if core is None:
-            return
-
-        self.install_core_snapshot(core)
-
 
 # Stores information about the running code.
 class Profile:
@@ -615,6 +604,20 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         if len(rom) > PAGE_SIZE:
             assert len(rom) == 2 * PAGE_SIZE
             self.write(0x0000, rom[PAGE_SIZE:], rom_page=1)
+
+    def install_snapshot(self, snapshot: MachineSnapshot) -> None:
+        # A snapshot describes the difference from the canonical reset
+        # state, so installing one resets first: whatever the snapshot
+        # does not mention, including the whole core slice, stays at
+        # reset.
+        self.on_reset()
+        self.__install_rom()
+
+        unified = snapshot.to_unified_snapshot()
+        core = next((d for _, d in unified
+                     if isinstance(d, CoreSnapshot)), None)
+        if core is not None:
+            self.install_core_snapshot(core)
 
     def __current_time(self) -> Time:
         return Time(self.tick_count,

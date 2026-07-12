@@ -94,3 +94,26 @@ def test_load_recreates_machine() -> None:
 
         new_core = next(d for d in app.machine if isinstance(d, zx.Core))
         assert new_core.pc == 0x1234
+
+
+def test_install_snapshot() -> None:
+    # Installing a snapshot brings the machine exactly to the state
+    # the snapshot describes: the canonical reset state amended by
+    # what the snapshot mentions. An empty snapshot means the
+    # canonical reset state itself.
+    mach = zx.Core()
+    canonical = mach.to_snapshot().to_json()
+
+    mach.pc = 0x8000
+    mach.bc = 0x1234
+    mach.border_colour = 5
+    mach.write(0x8000, b'\x01\x02\x03')
+    mach.install_snapshot(UnifiedSnapshot())
+    assert mach.to_snapshot().to_json() == canonical
+
+    mach.bc = 0x1234
+    mach.install_snapshot(UnifiedSnapshot(core=CoreSnapshot(pc=0x8000)))
+    state = mach.to_snapshot().to_json()
+    assert state['pc'] == 0x8000
+    state['pc'] = canonical['pc']
+    assert state == canonical
