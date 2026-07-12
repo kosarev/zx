@@ -49,14 +49,14 @@ assert SPEED > 0
 class PulseStream:
     def __init__(self) -> None:
         # The last set sound level.
-        self.__current_level = numpy.uint32(0)
+        self.__current_level = numpy.float64(0)
 
     def reset(self) -> None:
-        self.__current_level = numpy.uint32(0)
+        self.__current_level = numpy.float64(0)
 
     # The rate is that of the tick timeline the ticks count, in
     # ticks per second.
-    def stream_chunk(self, levels: numpy.typing.NDArray[numpy.uint32],
+    def stream_chunk(self, levels: numpy.typing.NDArray[numpy.float64],
                      ticks: numpy.typing.NDArray[numpy.uint32],
                      num_ticks: int, *, rate: int) -> SoundPulses:
         assert num_ticks > 0

@@ -37,7 +37,7 @@ class Beeper(Device):
 
         # EAR transitions collected since then, with their
         # free-running tick stamps.
-        self.__levels: list[numpy.typing.NDArray[numpy.uint32]] = []
+        self.__levels: list[numpy.typing.NDArray[numpy.float64]] = []
         self.__ticks: list[numpy.typing.NDArray[numpy.uint32]] = []
 
     def __collect(self, writes: numpy.typing.NDArray[numpy.uint64]) -> None:
@@ -50,7 +50,7 @@ class Beeper(Device):
         EAR_BIT_POS = 16 + 4
         self.__levels.append(
             ((writes >> numpy.uint64(EAR_BIT_POS)) &
-             numpy.uint64(1)).astype(numpy.uint32))
+             numpy.uint64(1)).astype(numpy.float64))
         self.__ticks.append(
             (writes >> numpy.uint64(32)).astype(numpy.uint32))
 
@@ -82,7 +82,7 @@ class Beeper(Device):
             # wraps.
             ticks = ticks - numpy.uint32(published_up_to.count & 0xffffffff)
         else:
-            levels = numpy.zeros(0, dtype=numpy.uint32)
+            levels = numpy.zeros(0, dtype=numpy.float64)
             ticks = numpy.zeros(0, dtype=numpy.uint32)
 
         pulses = self.__stream.stream_chunk(levels, ticks, span,

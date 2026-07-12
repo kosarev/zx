@@ -208,11 +208,9 @@ class SoundPulses:
     # A chunk of a pulse stream covering num_ticks ticks, with level
     # transitions at the given offsets within that span. A chunk with
     # no transitions still represents that much sustained level.
-    # Levels are on a common 0..1 scale across all emitters; binary
-    # emitters use integer 0/1 levels.
+    # Levels are on a common 0..1 scale across all emitters.
     def __init__(self, rate: int,
-                 levels: (numpy.typing.NDArray[numpy.uint32] |
-                          numpy.typing.NDArray[numpy.float64]),
+                 levels: numpy.typing.NDArray[numpy.float64],
                  ticks: numpy.typing.NDArray[numpy.uint32],
                  num_ticks: int) -> None:
         assert len(levels) == len(ticks)

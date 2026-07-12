@@ -38,7 +38,7 @@ class _RecordingSound(SoundDevice):
 
 # A chunk holding a single level over its whole span.
 def _level_chunk(rate: int, level: int, num_ticks: int) -> SoundPulses:
-    levels = numpy.array([level], dtype=numpy.uint32)
+    levels = numpy.array([level], dtype=numpy.float64)
     ticks = numpy.array([0], dtype=numpy.uint32)
     return SoundPulses(rate, levels, ticks, num_ticks=num_ticks)
 
