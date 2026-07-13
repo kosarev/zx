@@ -18,10 +18,10 @@ import numpy
 
 from ._corebase import _CoreBase
 from ._data import DeviceSnapshot
+from ._data import MachinePlayback
 from ._data import MemoryBlock
 from ._data import Spectrum48
 from ._data import SpectrumModel
-from ._data import UnifiedPlayback
 from ._device import BreakpointHit
 from ._device import Device
 from ._device import DeviceEvent
@@ -545,7 +545,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
     FRAME_SIZE = 48 + 256 + 48, 48 + 192 + 40
 
     __profile: None | Profile
-    __playback: UnifiedPlayback | None
+    __playback: MachinePlayback | None
 
     def __init__(self, *,
                  active: bool = False,
@@ -564,7 +564,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
 
         self.__port_reads = bytearray()
 
-        self.__playback: UnifiedPlayback | None = None
+        self.__playback: MachinePlayback | None = None
 
         self.__profile = profile
         if self.__profile:
@@ -677,7 +677,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
 
         self.frame_count += 1
 
-    def __enter_playback_mode(self, playback: UnifiedPlayback) -> None:
+    def __enter_playback_mode(self, playback: MachinePlayback) -> None:
         self.__playback = playback
         # Interrupts are supposed to be controlled by the recording.
         self.suppress_interrupts = True

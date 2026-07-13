@@ -9,7 +9,7 @@
 """
 This module implements the playback player for input recordings.
 
-All recording formats (.rzx, etc.) translate into UnifiedPlayback for
+All recording formats (.rzx, etc.) translate into MachinePlayback for
 internal use. Format-specific types (RZXFile, etc.) remain as literal
 representations for binary-exact roundtripping.
 
@@ -22,15 +22,15 @@ for a correct emulator to reproduce a recorded execution. It must not
 reach into live machine state to compensate for quirks of particular
 recording tools.
 
-UnifiedPlayback is the canonical, correct execution-reproduction
+MachinePlayback is the canonical, correct execution-reproduction
 material. Conversion from a format-specific type (e.g. RZXFile) must
-produce a correct UnifiedPlayback. If the source recording does not
+produce a correct MachinePlayback. If the source recording does not
 fully conform to the format (e.g. some recordings produced by SPIN
 v0.5), any deviation must be corrected during conversion or as a
 separate recovery operation — not patched at playback time. The
 proper recovery procedure is: detect the non-conforming recording,
 run it through a private headless core to determine the correct
-frames, and emit a corrected UnifiedPlayback. The player then
+frames, and emit a corrected MachinePlayback. The player then
 receives correct input and needs no format-specific knowledge.
 
 
@@ -103,14 +103,14 @@ Initial simplified design
 A playback consists of segments, each starting from a known machine
 state (key frame) followed by a sequence of frames:
 
-  class UnifiedPlaybackSegment:
+  class MachinePlaybackSegment:
       key_frame: MachineSnapshot  # full machine state; ticks_since_int
                                   # serves as first_tick — no separate
                                   # field needed
       frames: list[UnifiedFrame]  # num_fetches + port_samples per frame
 
-  class UnifiedPlayback:
-      segments: list[UnifiedPlaybackSegment]
+  class MachinePlayback:
+      segments: list[MachinePlaybackSegment]
 
 Key frames are critical for fast rollback: stepping back one frame from
 30 minutes of recorded time requires replaying from the nearest key
@@ -119,9 +119,9 @@ frame. Key frame spacing is a critical design parameter.
 
 import typing
 
-from ._data import UnifiedPlayback
-from ._data import UnifiedPlaybackFrame
-from ._data import UnifiedPlaybackSegment
+from ._data import MachinePlayback
+from ._data import MachinePlaybackFrame
+from ._data import MachinePlaybackSegment
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
@@ -140,9 +140,9 @@ from ._except import EmulationExit
 class PlaybackPlayer(Device):
     def __init__(self) -> None:
         super().__init__()
-        self.__playback: UnifiedPlayback | None = None
-        self.__segments: typing.Iterator[UnifiedPlaybackSegment] = iter(())
-        self.__frames: typing.Iterator[UnifiedPlaybackFrame] = iter(())
+        self.__playback: MachinePlayback | None = None
+        self.__segments: typing.Iterator[MachinePlaybackSegment] = iter(())
+        self.__frames: typing.Iterator[MachinePlaybackFrame] = iter(())
         self.__sample_values: bytes = b''
         self.__sample_count = 0
 
@@ -174,7 +174,7 @@ class PlaybackPlayer(Device):
         self.__sample_values = frame.port_samples.data
         self.__sample_count = 0
 
-    def __load(self, playback: UnifiedPlayback, devices: Dispatcher) -> None:
+    def __load(self, playback: MachinePlayback, devices: Dispatcher) -> None:
         self.__playback = playback
         self.__segments = iter(playback.segments)
         self.__frames = iter(())
@@ -219,10 +219,10 @@ class PlaybackPlayer(Device):
 class PlaybackRecorder(Device):
     def __init__(self, *, active: bool = False) -> None:
         super().__init__(active=active)
-        self.__segments: list[UnifiedPlaybackSegment] = []
+        self.__segments: list[MachinePlaybackSegment] = []
 
-    def make_playback(self) -> UnifiedPlayback:
-        return UnifiedPlayback(segments=self.__segments)
+    def make_playback(self) -> MachinePlayback:
+        return MachinePlayback(segments=self.__segments)
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if not self.active:
@@ -230,7 +230,7 @@ class PlaybackRecorder(Device):
 
         if isinstance(event, InstallSnapshot):
             self.__segments.append(
-                UnifiedPlaybackSegment(snapshot=event.snapshot))
+                MachinePlaybackSegment(snapshot=event.snapshot))
 
         # TODO: Collect frames from OutputFrame events once the C core
         # exposes port_reads and num_fetches.

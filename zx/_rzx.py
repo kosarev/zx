@@ -20,11 +20,11 @@ from ._data import DataRecord
 from ._data import HexData
 from ._data import Latin1Data
 from ._data import MachinePlayback
+from ._data import MachinePlaybackFrame
+from ._data import MachinePlaybackSegment
 from ._data import MachineSnapshot
+from ._data import PlaybackFile
 from ._data import SnapshotFile
-from ._data import UnifiedPlayback
-from ._data import UnifiedPlaybackFrame
-from ._data import UnifiedPlaybackSegment
 from ._data import _InlineJSONDict
 from ._error import Error
 from ._z80 import Z80Snapshot
@@ -304,13 +304,13 @@ def make_rzx(chunks: list[RZXChunk]) -> Bytes:
     return writer.get_image()
 
 
-class RZXFile(MachinePlayback, format_name='RZX'):
+class RZXFile(PlaybackFile, format_name='RZX'):
     chunks: list[RZXChunk]
 
     def __init__(self, *, chunks: list[RZXChunk]) -> None:
         super().__init__(chunks=chunks)
 
-    def to_unified_playback(self) -> UnifiedPlayback:
+    def to_machine_playback(self) -> MachinePlayback:
         creator = None
         creator_major_version = None
         creator_minor_version = None
@@ -329,7 +329,7 @@ class RZXFile(MachinePlayback, format_name='RZX'):
                 creator_major_version = chunk.creator_major_version
                 creator_minor_version = chunk.creator_minor_version
             elif isinstance(chunk, RZXSnapshot):
-                segments.append(UnifiedPlaybackSegment(
+                segments.append(MachinePlaybackSegment(
                     snapshot=chunk.snapshot.to_machine_snapshot()))
             elif isinstance(chunk, RZXInputRecording):
                 # The format permits an input recording before any
@@ -352,13 +352,13 @@ class RZXFile(MachinePlayback, format_name='RZX'):
                     s.snapshot = MachineSnapshot(core=core)
                 core.ticks_since_int = chunk.first_tick
                 s.frames.extend(
-                    UnifiedPlaybackFrame(num_fetches=f.num_fetches,
+                    MachinePlaybackFrame(num_fetches=f.num_fetches,
                                          port_samples=f.samples.data)
                     for f in chunk.frames)
             else:
                 raise Error(f'Unknown RZX chunk: {chunk!r}.',
                             id='unknown_rzx_chunk')
-        return UnifiedPlayback(segments=segments, creator=creator,
+        return MachinePlayback(segments=segments, creator=creator,
                                creator_major_version=creator_major_version,
                                creator_minor_version=creator_minor_version)
 

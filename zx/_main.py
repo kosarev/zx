@@ -29,11 +29,11 @@ from ._data import AYMusic
 from ._data import DataRecord
 from ._data import MachinePlayback
 from ._data import MachineSnapshot
+from ._data import PlaybackFile
 from ._data import SnapshotFile
 from ._data import SoundFile
 from ._data import Spectrum128
 from ._data import UnifiedAYStream
-from ._data import UnifiedPlayback
 from ._device import BreakpointHit
 from ._device import Device
 from ._device import DeviceEvent
@@ -200,8 +200,8 @@ def unify(args: list[str]) -> None:
     file = parse_file(src_filename)
     if isinstance(file, SnapshotFile):
         unified: DataRecord = file.to_machine_snapshot()
-    elif isinstance(file, MachinePlayback):
-        unified = file.to_unified_playback()
+    elif isinstance(file, PlaybackFile):
+        unified = file.to_machine_playback()
     elif isinstance(file, AYMusic):
         unified = file.to_unified_ay_stream()
     else:
@@ -429,8 +429,8 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
         super().on_event(event, devices)
 
 
-def recover_playback(playback: MachinePlayback) -> UnifiedPlayback:
-    unified = playback.to_unified_playback()
+def recover_playback(playback: PlaybackFile) -> MachinePlayback:
+    unified = playback.to_machine_playback()
     recoverer: _PlaybackRecoverer = (
         _SPINPlaybackRecoverer() if unified.is_spin_v05
         else _PlaybackRecoverer())
@@ -447,7 +447,7 @@ def recover_playback(playback: MachinePlayback) -> UnifiedPlayback:
 
 def recover_file(filename: str) -> None:
     file = parse_file(filename)
-    if not isinstance(file, MachinePlayback):
+    if not isinstance(file, PlaybackFile):
         raise Error(f"Don't know how to recover {file.FORMAT_NAME}; "
                     f'a playback is expected.',
                     id='not_recoverable')

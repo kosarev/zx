@@ -63,8 +63,8 @@ from ._beeper import Beeper
 from ._core import Core
 from ._core import Profile
 from ._data import DataRecord
-from ._data import MachinePlayback
 from ._data import MachineSnapshot
+from ._data import PlaybackFile
 from ._data import SnapshotFile
 from ._data import SoundFile
 from ._data import SpectrumModel
@@ -345,8 +345,8 @@ class Emulator:
         self.notify(LoadTape(file))
         self.__pause_tape()
 
-    def _load_input_recording(self, file: MachinePlayback) -> None:
-        self.notify(StartPlayback(file.to_unified_playback()))
+    def _load_input_recording(self, file: PlaybackFile) -> None:
+        self.notify(StartPlayback(file.to_machine_playback()))
 
     # Loading a machine state installs it into the persistent device
     # set: the set is the machine definition's fact, never the
@@ -361,7 +361,7 @@ class Emulator:
 
         self.notify(ResetEmulator())
 
-        if isinstance(file, MachinePlayback):
+        if isinstance(file, PlaybackFile):
             self._load_input_recording(file)
         elif isinstance(file, SoundFile):
             self.__load_tape_to_player(file)

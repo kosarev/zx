@@ -11,17 +11,17 @@ import pytest
 
 import zx
 from zx._core import CoreSnapshot
+from zx._data import MachinePlayback
+from zx._data import MachinePlaybackFrame
+from zx._data import MachinePlaybackSegment
 from zx._data import MachineSnapshot
 from zx._data import MemoryBlock
-from zx._data import UnifiedPlayback
-from zx._data import UnifiedPlaybackFrame
-from zx._data import UnifiedPlaybackSegment
 from zx._error import Error
 from zx._except import EmulationExit
 from zx._main import recover_playback
 
 
-def assert_plays_ok(playback: UnifiedPlayback) -> None:
+def assert_plays_ok(playback: MachinePlayback) -> None:
     with zx.Emulator(headless=True) as machine:
         try:
             machine._load_input_recording(playback)
@@ -30,7 +30,7 @@ def assert_plays_ok(playback: UnifiedPlayback) -> None:
             pass
 
 
-def assert_play_fails(playback: UnifiedPlayback, error_id: str) -> None:
+def assert_play_fails(playback: MachinePlayback, error_id: str) -> None:
     with (pytest.raises(Error) as exc_info,
           zx.Emulator(headless=True) as machine):
         machine._load_input_recording(playback)
@@ -48,10 +48,10 @@ def test_iregp_mid_instruction() -> None:
             addr=0x8000,
             data=b'\xdd\x21\x00\x00')]))  # LD IX, 0x0000
 
-    playback = UnifiedPlayback(
-        segments=[UnifiedPlaybackSegment(
+    playback = MachinePlayback(
+        segments=[MachinePlaybackSegment(
             snapshot=snapshot,
-            frames=[UnifiedPlaybackFrame(
+            frames=[MachinePlaybackFrame(
                 num_fetches=1, port_samples=b'')])])
 
     assert_plays_ok(recover_playback(playback))
@@ -67,10 +67,10 @@ def test_spin_v05_trailing_in_sample() -> None:
             addr=0x8000,
             data=b'\xdb\xfe\xdb\xfe')]))  # IN A,(0xfe) x2
 
-    playback = UnifiedPlayback(
-        segments=[UnifiedPlaybackSegment(
+    playback = MachinePlayback(
+        segments=[MachinePlaybackSegment(
             snapshot=snapshot,
-            frames=[UnifiedPlaybackFrame(
+            frames=[MachinePlaybackFrame(
                 num_fetches=1, port_samples=b'\xff\xff')])],
         creator='SPIN 0.5',
         creator_major_version=0,
@@ -92,10 +92,10 @@ def test_spin_v05_bytes_saving_trap() -> None:
             addr=0x8000,
             data=b'\xcd\xd4\x04')]))  # CALL 0x04d4
 
-    playback = UnifiedPlayback(
-        segments=[UnifiedPlaybackSegment(
+    playback = MachinePlayback(
+        segments=[MachinePlaybackSegment(
             snapshot=snapshot,
-            frames=[UnifiedPlaybackFrame(
+            frames=[MachinePlaybackFrame(
                 num_fetches=1, port_samples=b'')])],
         creator='SPIN 0.5',
         creator_major_version=0,

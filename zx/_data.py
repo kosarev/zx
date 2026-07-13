@@ -409,12 +409,12 @@ class MachineSnapshot(SnapshotFile, format_name=None):
         return self
 
 
-class MachinePlayback(DataRecord, format_name=None):
-    def to_unified_playback(self) -> UnifiedPlayback:
+class PlaybackFile(DataRecord, format_name=None):
+    def to_machine_playback(self) -> MachinePlayback:
         raise NotImplementedError
 
 
-class UnifiedPlaybackFrame(DataRecord, format_name=None):
+class MachinePlaybackFrame(DataRecord, format_name=None):
     num_fetches: int
     port_samples: ByteData
 
@@ -424,25 +424,25 @@ class UnifiedPlaybackFrame(DataRecord, format_name=None):
                          port_samples=HexData.wrap(port_samples))
 
 
-class UnifiedPlaybackSegment(DataRecord, format_name=None):
+class MachinePlaybackSegment(DataRecord, format_name=None):
     snapshot: MachineSnapshot
-    frames: list[UnifiedPlaybackFrame]
+    frames: list[MachinePlaybackFrame]
 
     def __init__(self, *, snapshot: MachineSnapshot,
-                 frames: list[UnifiedPlaybackFrame] | None = None) -> None:
+                 frames: list[MachinePlaybackFrame] | None = None) -> None:
         super().__init__(
             snapshot=snapshot,
             frames=frames if frames is not None else [])
 
 
-class UnifiedPlayback(MachinePlayback, format_name=None):
-    segments: list[UnifiedPlaybackSegment]
+class MachinePlayback(PlaybackFile, format_name=None):
+    segments: list[MachinePlaybackSegment]
     creator: str | None
     creator_major_version: int | None
     creator_minor_version: int | None
 
     def __init__(self, *,
-                 segments: list[UnifiedPlaybackSegment] | None = None,
+                 segments: list[MachinePlaybackSegment] | None = None,
                  creator: str | None = None,
                  creator_major_version: int | None = None,
                  creator_minor_version: int | None = None) -> None:
@@ -457,5 +457,5 @@ class UnifiedPlayback(MachinePlayback, format_name=None):
                 self.creator_major_version == 0 and
                 self.creator_minor_version == 5)
 
-    def to_unified_playback(self) -> UnifiedPlayback:
+    def to_machine_playback(self) -> MachinePlayback:
         return self

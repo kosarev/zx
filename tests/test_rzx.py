@@ -42,8 +42,8 @@ def test_basic() -> None:
     # Dump.
     assert 'RZXFile' in rzx.dumps()
 
-    # Verify creator info is carried into the unified playback.
-    playback = rzx.to_unified_playback()
+    # Verify creator info is carried into the machine playback.
+    playback = rzx.to_machine_playback()
     assert playback.creator == '<creator>'
     assert not playback.is_spin_v05
 
@@ -67,7 +67,7 @@ def test_input_recording_without_snapshot() -> None:
         zx._rzx.RZXInputRecording(first_tick=0, frames=[])])
 
     with pytest.raises(Error) as exc_info:
-        rzx.to_unified_playback()
+        rzx.to_machine_playback()
     assert exc_info.value.id == 'input_recording_without_snapshot'
 
 
@@ -83,5 +83,5 @@ def test_consecutive_input_recordings() -> None:
         zx._rzx.RZXInputRecording(first_tick=0, frames=[])])
 
     with pytest.raises(Error) as exc_info:
-        rzx.to_unified_playback()
+        rzx.to_machine_playback()
     assert exc_info.value.id == 'consecutive_input_recordings'

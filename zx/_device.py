@@ -16,10 +16,10 @@ if typing.TYPE_CHECKING:
 
     from ._binary import Bytes
     from ._data import DeviceSnapshot
+    from ._data import MachinePlayback
     from ._data import MachineSnapshot
     from ._data import SoundFile
     from ._data import SoundPulses
-    from ._data import UnifiedPlayback
     from ._time import Time
 
 
@@ -153,7 +153,7 @@ class InstallDeviceSnapshot(DeviceEvent):
 
 
 class StartPlayback(DeviceEvent):
-    def __init__(self, playback: UnifiedPlayback) -> None:
+    def __init__(self, playback: MachinePlayback) -> None:
         self.playback = playback
 
 
