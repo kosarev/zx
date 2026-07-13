@@ -10,11 +10,10 @@
 from __future__ import annotations
 
 from ._data import DeviceSnapshot
-from ._data import UnifiedSnapshot
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
-from ._device import InstallSnapshot
+from ._device import InstallDeviceSnapshot
 from ._device import ReadPort
 from ._time import Time
 
@@ -160,19 +159,19 @@ class Keyboard(Device, snapshot_type=KeyboardSnapshot):
 
         return n
 
-    def __install_snapshot(self, snapshot: UnifiedSnapshot) -> None:
+    def __install_snapshot(self, s: DeviceSnapshot) -> None:
+        assert isinstance(s, KeyboardSnapshot)
+
         # Whatever the snapshot does not mention is at reset.
         self.__state = [0xff] * 8
         self.__last_read_time = None
         self.__pending.clear()
 
-        s = next((d for _, d in snapshot.to_unified_snapshot()
-                  if isinstance(d, KeyboardSnapshot)), None)
         # Unmentioned activity means the reset state: inactive.
-        self.active = s is not None and s.active is True
+        self.active = s.active is True
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
-        if isinstance(event, InstallSnapshot):
+        if isinstance(event, InstallDeviceSnapshot):
             self.__install_snapshot(event.snapshot)
             return
 

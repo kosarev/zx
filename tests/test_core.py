@@ -16,7 +16,6 @@ import zx
 from zx._core import Core
 from zx._core import CoreSnapshot
 from zx._core import RunEvents
-from zx._data import UnifiedSnapshot
 from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
@@ -181,8 +180,31 @@ def test_core_activity_in_snapshots() -> None:
     core.active = True
     assert core.to_snapshot().to_json()['active'] is True
 
-    core.install_snapshot(UnifiedSnapshot())
+    core.install_snapshot(CoreSnapshot())
     assert not core.active
 
-    core.install_snapshot(UnifiedSnapshot(core=CoreSnapshot(active=True)))
+    core.install_snapshot(CoreSnapshot(active=True))
     assert core.active
+
+
+def test_install_snapshot() -> None:
+    # Installing a snapshot brings the core exactly to the state the
+    # snapshot describes: the canonical reset state amended by what
+    # the snapshot mentions. An empty snapshot means the canonical
+    # reset state itself.
+    mach = zx.Core()
+    canonical = mach.to_snapshot().to_json()
+
+    mach.pc = 0x8000
+    mach.bc = 0x1234
+    mach.border_colour = 5
+    mach.write(0x8000, b'\x01\x02\x03')
+    mach.install_snapshot(CoreSnapshot())
+    assert mach.to_snapshot().to_json() == canonical
+
+    mach.bc = 0x1234
+    mach.install_snapshot(CoreSnapshot(pc=0x8000))
+    state = mach.to_snapshot().to_json()
+    assert state['pc'] == 0x8000
+    state['pc'] = canonical['pc']
+    assert state == canonical

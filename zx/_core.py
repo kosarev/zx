@@ -18,7 +18,6 @@ import numpy
 
 from ._corebase import _CoreBase
 from ._data import DeviceSnapshot
-from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import Spectrum48
 from ._data import SpectrumModel
@@ -32,7 +31,7 @@ from ._device import FetchesLimitHit
 from ._device import GetEmulationPauseState
 from ._device import GetFramePixels
 from ._device import GetHoldState
-from ._device import InstallSnapshot
+from ._device import InstallDeviceSnapshot
 from ._device import NewPortWrites
 from ._device import OutputFrame
 from ._device import PauseStateUpdated
@@ -509,16 +508,6 @@ class CoreState(Z80State):
     def read16(self, addr: int) -> int:
         return int.from_bytes(self.read(addr, 2), 'little')
 
-    def install_core_snapshot(self, snapshot: CoreSnapshot) -> None:
-        for field, value in snapshot:
-            if field == 'memory_blocks':
-                for block in value:
-                    self.write(block.addr, block.data.data,
-                               rom_page=block.rom_page,
-                               ram_page=block.ram_page)
-            else:
-                setattr(self, field, value)
-
 
 # Stores information about the running code.
 class Profile:
@@ -546,7 +535,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
     def from_snapshot(cls, snapshot: DeviceSnapshot) -> Core:
         assert isinstance(snapshot, CoreSnapshot)
         core = cls()
-        core.install_core_snapshot(snapshot)
+        core.install_snapshot(snapshot)
         return core
 
     # Memory marks.
@@ -610,20 +599,22 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
             ticks_since_int=self.ticks_since_int,
             border_colour=self.border_colour)
 
-    def install_snapshot(self, snapshot: MachineSnapshot) -> None:
+    def install_snapshot(self, snapshot: CoreSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset
         # state, so installing one resets first: whatever the snapshot
-        # does not mention, including the core as a whole, stays at
-        # reset.
+        # does not mention stays at reset.
         self.on_reset()
         self.__install_rom()
         self.active = False
 
-        unified = snapshot.to_unified_snapshot()
-        core = next((d for _, d in unified
-                     if isinstance(d, CoreSnapshot)), None)
-        if core is not None:
-            self.install_core_snapshot(core)
+        for field, value in snapshot:
+            if field == 'memory_blocks':
+                for block in value:
+                    self.write(block.addr, block.data.data,
+                               rom_page=block.rom_page,
+                               ram_page=block.ram_page)
+            else:
+                setattr(self, field, value)
 
     def __current_time(self) -> Time:
         return Time(self.tick_count,
@@ -764,8 +755,10 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         devices.notify(BreakpointHit())
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
-        if isinstance(event, InstallSnapshot):
-            self.install_snapshot(event.snapshot)
+        if isinstance(event, InstallDeviceSnapshot):
+            snapshot = event.snapshot
+            assert isinstance(snapshot, CoreSnapshot)
+            self.install_snapshot(snapshot)
             return
 
         # An inactive core is indistinguishable from an absent one:

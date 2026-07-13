@@ -54,7 +54,7 @@ def at(tick: int) -> Time:
 
 
 def make_ay() -> tuple[AY, _Collector, Dispatcher]:
-    ay = AY()
+    ay = AY(active=True)
     collector = _Collector()
     devices = Dispatcher([ay, collector])
 
@@ -175,7 +175,7 @@ def test_stream_player() -> None:
     # The player is the session's runner; no core is present.
     player = AYPlayer(stream)
     sound = _CapturingSound()
-    with zx.Emulator(machine=Machine(ay=AY()),
+    with zx.Emulator(machine=Machine(ay=AY(active=True)),
                      environment=[player, sound]) as app:
         app.run(until=player.get_end_time() +
                 Time(RATE // 10, ticks_per_second=RATE))

@@ -76,6 +76,7 @@ from ._device import GetEmulationTime
 from ._device import GetHoldState
 from ._device import GetQuantumTimeLimit
 from ._device import InitEmulator
+from ._device import InstallDeviceSnapshot
 from ._device import InstallSnapshot
 from ._device import IsTapePlayerPaused
 from ._device import LoadFile
@@ -161,6 +162,12 @@ class Emulator:
 
             machine = Machine(core=core, keyboard=keyboard, beeper=beeper)
 
+            # The default machine's state defaults to the stock 48K
+            # snapshot. A caller-defined machine is defined by the
+            # code that builds it: only a specified snapshot installs.
+            if snapshot is None:
+                snapshot = get_spectrum_48k_snapshot()
+
         if environment is None:
             environment = [TapePlayer(),
                            playback_player or PlaybackPlayer(),
@@ -190,11 +197,8 @@ class Emulator:
         self.__advanced_floor = Time(0, ticks_per_second=1)
         self.__advanced_ceiling = Time(0, ticks_per_second=1)
 
-        # The machine's state: the specified snapshot, or the stock
-        # 48K one -- defaulted like the device set itself.
-        self.notify(InstallSnapshot(
-            (snapshot if snapshot is not None
-             else get_spectrum_48k_snapshot()).to_unified_snapshot()))
+        if snapshot is not None:
+            self.notify(InstallSnapshot(snapshot.to_unified_snapshot()))
 
     # All the devices, the machine first, as one dispatch audience.
     @property
@@ -263,6 +267,32 @@ class Emulator:
         # of time are published by the time its dispatch completes.
         self.notify(TimeAdvanced(run.advanced_floor))
 
+    # Installing a machine snapshot means every machine device
+    # assumes exactly the state the snapshot describes. A device
+    # snapshot addressing no machine device is an error.
+    def __install_machine_snapshot(self, snapshot: MachineSnapshot) -> None:
+        device_snapshots = dict(snapshot.to_unified_snapshot())
+
+        for id in device_snapshots:
+            if id not in self.machine.devices:
+                raise Error(
+                    f"The snapshot addresses a device '{id}' that is "
+                    f'not in the machine.',
+                    id='unknown_device_in_snapshot')
+
+        for id, device in self.machine.devices.items():
+            device_snapshot = device_snapshots.get(id)
+            if device_snapshot is None:
+                # Every machine device carries at least its activity.
+                snapshot_type = type(device).SNAPSHOT_TYPE
+                assert snapshot_type is not None
+
+                # A device the snapshot does not mention is at its
+                # reset state: inactive.
+                device_snapshot = snapshot_type(active=False)
+
+            self.notify(InstallDeviceSnapshot(device_snapshot), device=id)
+
     # Handles the events that concern the Emulator itself, after all
     # the devices have seen them.
     def _on_event(self, event: DeviceEvent) -> None:
@@ -272,6 +302,8 @@ class Emulator:
             # has reached yet.
             event.floor = self.__advanced_floor
             event.ceiling = self.__advanced_ceiling
+        elif isinstance(event, InstallSnapshot):
+            self.__install_machine_snapshot(event.snapshot)
         elif isinstance(event, LoadFile):
             self._load_file(event.filename)
         elif isinstance(event, SaveSnapshot):

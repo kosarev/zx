@@ -13,10 +13,12 @@ import typing
 
 import numpy
 
+from ._data import DeviceSnapshot
 from ._data import SoundPulses
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
+from ._device import InstallDeviceSnapshot
 from ._device import NewSoundPulses
 from ._device import ResetEmulator
 from ._device import RunQuantum
@@ -58,7 +60,14 @@ _DAC = numpy.array([
     0.42906, 0.50441, 0.72940, 1.0])
 
 
-class AY(Device):
+class AYSnapshot(DeviceSnapshot, format_name=None):
+    active: bool | None
+
+    def __init__(self, *, active: bool | None = None) -> None:
+        super().__init__(active=active)
+
+
+class AY(Device, snapshot_type=AYSnapshot):
     """The AY-3-8912 sound generator as a pure function of a stamped
     register-write stream.
 
@@ -83,13 +92,27 @@ class AY(Device):
     _noise_bits: typing.ClassVar[
         numpy.typing.NDArray[numpy.uint8] | None] = None
 
-    def __init__(self) -> None:
+    def __init__(self, *, active: bool = False) -> None:
+        super().__init__(active=active)
+
         if AY._noise_bits is None:
             AY._noise_bits = _make_noise_bits()
 
         self.__published_up_to: None | Time = None
         self.__pending: list[AYRegisterWrite] = []
         self.__reset_state()
+
+    @classmethod
+    def from_snapshot(cls, snapshot: DeviceSnapshot) -> AY:
+        assert isinstance(snapshot, AYSnapshot)
+        return cls(active=snapshot.active is True)
+
+    def to_snapshot(self) -> AYSnapshot | None:
+        # Only the difference from the reset state is captured.
+        if not self.active:
+            return None
+
+        return AYSnapshot(active=True)
 
     def __reset_state(self) -> None:
         self.__regs = [0] * 16
@@ -307,7 +330,27 @@ class AY(Device):
                                  transition_levels, ticks, num_ticks=span)
             dispatcher.notify(NewSoundPulses(pulses))
 
+    def __install_snapshot(self, s: DeviceSnapshot) -> None:
+        assert isinstance(s, AYSnapshot)
+
+        # Whatever the snapshot does not mention is at reset.
+        self.__published_up_to = None
+        self.__pending.clear()
+        self.__reset_state()
+
+        # Unmentioned activity means the reset state: inactive.
+        self.active = s.active is True
+
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
+        if isinstance(event, InstallDeviceSnapshot):
+            self.__install_snapshot(event.snapshot)
+            return
+
+        # An inactive AY is indistinguishable from an absent one: it
+        # publishes no sound.
+        if not self.active:
+            return
+
         if isinstance(event, ResetEmulator):
             self.__published_up_to = None
             self.__pending.clear()

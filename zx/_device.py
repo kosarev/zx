@@ -136,8 +136,19 @@ class SetFetchesLimit(DeviceEvent):
         self.num_fetches = num_fetches
 
 
+# The machine-level install, spoken by the environment and handled at
+# the Emulator level, which splits it into per-device installs.
+# Devices never handle this event.
 class InstallSnapshot(DeviceEvent):
     def __init__(self, snapshot: UnifiedSnapshot) -> None:
+        self.snapshot = snapshot
+
+
+# The device-level install, always dispatched targeted: the addressed
+# device assumes exactly the state the device snapshot describes --
+# reset first, then apply what the snapshot mentions.
+class InstallDeviceSnapshot(DeviceEvent):
+    def __init__(self, snapshot: DeviceSnapshot) -> None:
         self.snapshot = snapshot
 
 
@@ -410,11 +421,15 @@ class Device:
     __device_types_by_snapshot_type: typing.ClassVar[
         dict[type[DeviceSnapshot], type[Device]]] = {}
 
+    # The type of the device's snapshots; None where the device has
+    # no state to describe.
+    SNAPSHOT_TYPE: typing.ClassVar[type[DeviceSnapshot] | None] = None
+
     # Whether the device participates in the machine's operation. An
     # inactive device is indistinguishable from an absent one to the
     # emulated machine, but still receives the events that can
-    # reconfigure it, such as InstallSnapshot. The class-level default
-    # covers devices that do not call the initialiser.
+    # reconfigure it, such as InstallDeviceSnapshot. The class-level
+    # default covers devices that do not call the initialiser.
     active: bool = False
 
     def __init__(self, *, active: bool = False) -> None:
@@ -424,6 +439,8 @@ class Device:
             cls, *,
             snapshot_type: type[DeviceSnapshot] | None = None) -> None:
         if snapshot_type is not None:
+            cls.SNAPSHOT_TYPE = snapshot_type
+
             types = Device.__device_types_by_snapshot_type
             assert snapshot_type not in types
             types[snapshot_type] = cls

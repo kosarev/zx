@@ -10,6 +10,8 @@
 #
 #   Published under the MIT license.
 
+import pytest
+
 import zx
 from zx._core import CoreSnapshot
 from zx._core import RunEvents
@@ -19,6 +21,7 @@ from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import InitEmulator
+from zx._error import Error
 
 
 def test_basic() -> None:
@@ -108,24 +111,10 @@ def test_construction_installs_snapshot() -> None:
         assert app.machine.devices['keyboard'].active
 
 
-def test_install_snapshot() -> None:
-    # Installing a snapshot brings the machine exactly to the state
-    # the snapshot describes: the canonical reset state amended by
-    # what the snapshot mentions. An empty snapshot means the
-    # canonical reset state itself.
-    mach = zx.Core()
-    canonical = mach.to_snapshot().to_json()
-
-    mach.pc = 0x8000
-    mach.bc = 0x1234
-    mach.border_colour = 5
-    mach.write(0x8000, b'\x01\x02\x03')
-    mach.install_snapshot(UnifiedSnapshot())
-    assert mach.to_snapshot().to_json() == canonical
-
-    mach.bc = 0x1234
-    mach.install_snapshot(UnifiedSnapshot(core=CoreSnapshot(pc=0x8000)))
-    state = mach.to_snapshot().to_json()
-    assert state['pc'] == 0x8000
-    state['pc'] = canonical['pc']
-    assert state == canonical
+def test_snapshot_addressing() -> None:
+    # A machine snapshot addressing a device that is not in the
+    # machine is a load error.
+    with zx.Emulator(headless=True) as app:
+        with pytest.raises(Error) as exc_info:
+            app._load_snapshot(UnifiedSnapshot(core2=CoreSnapshot()))
+        assert exc_info.value.id == 'unknown_device_in_snapshot'

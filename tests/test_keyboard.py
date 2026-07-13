@@ -8,9 +8,8 @@
 
 
 import zx
-from zx._data import UnifiedSnapshot
 from zx._device import Dispatcher
-from zx._device import InstallSnapshot
+from zx._device import InstallDeviceSnapshot
 from zx._device import ReadPort
 from zx._device import RunQuantum
 from zx._keyboard import KEYS
@@ -138,20 +137,21 @@ def test_keyboard_snapshot() -> None:
 
     # Installing a snapshot brings the keyboard to the state the
     # snapshot describes; a pressed key does not survive it.
-    devices = Dispatcher([keyboard])
+    devices = Dispatcher([keyboard], devices_by_id={'keyboard': keyboard})
     devices.notify(KeyStroke(KEYS['J'], pressed=True, time=at(2)))
     assert read(devices, halfrow_addr('J'), 3) == pressed_value('J')
 
-    devices.notify(InstallSnapshot(
-        UnifiedSnapshot(keyboard=KeyboardSnapshot(active=True))))
+    devices.notify(InstallDeviceSnapshot(KeyboardSnapshot(active=True)),
+                   device='keyboard')
     assert read(devices, halfrow_addr('J'), 1) == 0xff
 
-    devices.notify(InstallSnapshot(
-        UnifiedSnapshot(keyboard=KeyboardSnapshot(active=False))))
+    devices.notify(InstallDeviceSnapshot(KeyboardSnapshot(active=False)),
+                   device='keyboard')
     assert not keyboard.active
 
-    # A snapshot that does not mention the keyboard means it is at
-    # reset: inactive.
+    # A device snapshot that does not mention the activity means the
+    # reset state: inactive.
     keyboard.active = True
-    devices.notify(InstallSnapshot(UnifiedSnapshot()))
+    devices.notify(InstallDeviceSnapshot(KeyboardSnapshot()),
+                   device='keyboard')
     assert not keyboard.active

@@ -109,7 +109,7 @@ def _play_ay_stream(stream: UnifiedAYStream) -> None:
     # A player has no latency concern anyway.
     sound = SDLSound(num_buffer_samples=4096, latency_ms=200)
 
-    with Emulator(machine=Machine(ay=AY()),
+    with Emulator(machine=Machine(ay=AY(active=True)),
                   environment=[player, _HoldWaiter(), sound]) as app:
         # Give the last notes a second to ring out.
         tail = Time(stream.ticks_per_second,

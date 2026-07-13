@@ -9,11 +9,10 @@
 
 from zx._beeper import Beeper
 from zx._beeper import BeeperSnapshot
-from zx._data import UnifiedSnapshot
 from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
-from zx._device import InstallSnapshot
+from zx._device import InstallDeviceSnapshot
 from zx._device import NewSoundPulses
 from zx._device import TimeAdvanced
 from zx._time import Time
@@ -59,16 +58,17 @@ def test_beeper_snapshot() -> None:
     assert snapshot is not None
     assert snapshot.active
 
-    devices = Dispatcher([beeper])
-    devices.notify(InstallSnapshot(
-        UnifiedSnapshot(beeper=BeeperSnapshot(active=False))))
+    devices = Dispatcher([beeper], devices_by_id={'beeper': beeper})
+    devices.notify(InstallDeviceSnapshot(BeeperSnapshot(active=False)),
+                   device='beeper')
     assert not beeper.active
 
-    devices.notify(InstallSnapshot(
-        UnifiedSnapshot(beeper=BeeperSnapshot(active=True))))
+    devices.notify(InstallDeviceSnapshot(BeeperSnapshot(active=True)),
+                   device='beeper')
     assert beeper.active
 
-    # A snapshot that does not mention the beeper means it is at
-    # reset: inactive.
-    devices.notify(InstallSnapshot(UnifiedSnapshot()))
+    # A device snapshot that does not mention the activity means the
+    # reset state: inactive.
+    devices.notify(InstallDeviceSnapshot(BeeperSnapshot()),
+                   device='beeper')
     assert not beeper.active
