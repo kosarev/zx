@@ -218,15 +218,14 @@ class PlaybackPlayer(Device):
 
 class PlaybackRecorder(Device):
     def __init__(self, *, active: bool = False) -> None:
-        super().__init__()
-        self.__active = active
+        super().__init__(active=active)
         self.__segments: list[UnifiedPlaybackSegment] = []
 
     def make_playback(self) -> UnifiedPlayback:
         return UnifiedPlayback(segments=self.__segments)
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
-        if not self.__active:
+        if not self.active:
             return
 
         if isinstance(event, InstallSnapshot):

@@ -410,6 +410,16 @@ class Device:
     __device_types_by_snapshot_type: typing.ClassVar[
         dict[type[DeviceSnapshot], type[Device]]] = {}
 
+    # Whether the device participates in the machine's operation. An
+    # inactive device is indistinguishable from an absent one to the
+    # emulated machine, but still receives the events that can
+    # reconfigure it, such as InstallSnapshot. The class-level default
+    # covers devices that do not call the initialiser.
+    active: bool = False
+
+    def __init__(self, *, active: bool = False) -> None:
+        self.active = active
+
     def __init_subclass__(
             cls, *,
             snapshot_type: type[DeviceSnapshot] | None = None) -> None:
