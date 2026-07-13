@@ -93,9 +93,9 @@ def make_key_strokes(*keys: int | str, start: Time) -> list[KeyStroke]:
 
 
 class KeyboardSnapshot(DeviceSnapshot, format_name=None):
-    active: bool
+    active: bool | None
 
-    def __init__(self, *, active: bool = False) -> None:
+    def __init__(self, *, active: bool | None = None) -> None:
         super().__init__(active=active)
 
 
@@ -122,7 +122,7 @@ class Keyboard(Device, snapshot_type=KeyboardSnapshot):
     @classmethod
     def from_snapshot(cls, snapshot: DeviceSnapshot) -> Keyboard:
         assert isinstance(snapshot, KeyboardSnapshot)
-        return cls(active=snapshot.active)
+        return cls(active=snapshot.active is True)
 
     def to_snapshot(self) -> KeyboardSnapshot | None:
         # Only the difference from the reset state is captured.
@@ -168,7 +168,8 @@ class Keyboard(Device, snapshot_type=KeyboardSnapshot):
 
         s = next((d for _, d in snapshot.to_unified_snapshot()
                   if isinstance(d, KeyboardSnapshot)), None)
-        self.active = s is not None and s.active
+        # Unmentioned activity means the reset state: inactive.
+        self.active = s is not None and s.active is True
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, InstallSnapshot):

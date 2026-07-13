@@ -30,9 +30,9 @@ if typing.TYPE_CHECKING:
 
 
 class BeeperSnapshot(DeviceSnapshot, format_name=None):
-    active: bool
+    active: bool | None
 
-    def __init__(self, *, active: bool = False) -> None:
+    def __init__(self, *, active: bool | None = None) -> None:
         super().__init__(active=active)
 
 
@@ -55,7 +55,7 @@ class Beeper(Device, snapshot_type=BeeperSnapshot):
     @classmethod
     def from_snapshot(cls, snapshot: DeviceSnapshot) -> Beeper:
         assert isinstance(snapshot, BeeperSnapshot)
-        return cls(active=snapshot.active)
+        return cls(active=snapshot.active is True)
 
     def to_snapshot(self) -> BeeperSnapshot | None:
         # Only the difference from the reset state is captured.
@@ -125,7 +125,8 @@ class Beeper(Device, snapshot_type=BeeperSnapshot):
 
         s = next((d for _, d in snapshot.to_unified_snapshot()
                   if isinstance(d, BeeperSnapshot)), None)
-        self.active = s is not None and s.active
+        # Unmentioned activity means the reset state: inactive.
+        self.active = s is not None and s.active is True
 
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
         if isinstance(event, InstallSnapshot):
