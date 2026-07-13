@@ -44,6 +44,7 @@ from ._device import LoadTape
 from ._device import PauseUnpauseTape
 from ._device import RunQuantum
 from ._emulator import Emulator
+from ._emulator import Machine
 from ._error import USER_ERRORS
 from ._error import Error
 from ._error import verbalize_error
@@ -108,7 +109,7 @@ def _play_ay_stream(stream: UnifiedAYStream) -> None:
     # A player has no latency concern anyway.
     sound = SDLSound(num_buffer_samples=4096, latency_ms=200)
 
-    with Emulator(machine=[AY()],
+    with Emulator(machine=Machine(ay=AY()),
                   environment=[player, _HoldWaiter(), sound]) as app:
         # Give the last notes a second to ring out.
         tail = Time(stream.ticks_per_second,

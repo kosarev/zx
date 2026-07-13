@@ -102,6 +102,13 @@ from ._time import Time
 from ._z80 import Z80Snapshot
 
 
+# The machine's devices, keyed by their ids -- the same ids that key
+# the device snapshots of machine snapshot compositions.
+class Machine:
+    def __init__(self, **devices: Device) -> None:
+        self.devices = devices
+
+
 # A Dispatcher that also passes every event to the Emulator, after
 # all the devices have seen it.
 class _EmulatorDispatcher(Dispatcher):
@@ -137,7 +144,7 @@ class Emulator:
                  playback_recorder: PlaybackRecorder | None = None,
                  profile: Profile | None = None,
                  headless: bool = False,
-                 machine: list[Device] | None = None,
+                 machine: Machine | None = None,
                  environment: list[Device] | None = None,
                  extra_environment: list[Device] | None = None):
         if machine is None:
@@ -149,7 +156,7 @@ class Emulator:
             if beeper is None:
                 beeper = Beeper()
 
-            machine = [core, keyboard, beeper]
+            machine = Machine(core=core, keyboard=keyboard, beeper=beeper)
 
         if environment is None:
             environment = [TapePlayer(),
@@ -172,7 +179,7 @@ class Emulator:
         if extra_environment is not None:
             environment.extend(extra_environment)
 
-        self.machine = list(machine)
+        self.machine = machine
         self.environment = environment
 
         # The time all devices have advanced to, and the earliest
@@ -189,7 +196,7 @@ class Emulator:
     # All the devices, the machine first, as one dispatch audience.
     @property
     def devices(self) -> list[Device]:
-        return self.machine + self.environment
+        return list(self.machine.devices.values()) + self.environment
 
     def __enter__(self) -> 'Emulator':
         self.notify(InitEmulator())
@@ -334,12 +341,12 @@ class Emulator:
         self._load_file(filename)
         self.run(fast_forward=fast_forward)
 
-    # The machine's state: a slice per machine device that has state
-    # to capture, keyed by device id -- the type name in lower case.
+    # The machine's state: a device snapshot per machine device that
+    # has state to capture, keyed by device id.
     def __make_machine_snapshot(self) -> UnifiedSnapshot:
         return UnifiedSnapshot(**{
-            type(d).__name__.lower(): snapshot
-            for d in self.machine
+            id: snapshot
+            for id, d in self.machine.devices.items()
             if (snapshot := d.to_snapshot()) is not None})
 
     def _save_snapshot_file(self, format: type[MachineSnapshot],

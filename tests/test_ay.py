@@ -28,6 +28,7 @@ from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import NewSoundPulses
 from zx._device import TimeAdvanced
+from zx._emulator import Machine
 from zx._sound import SoundDevice
 from zx._time import Time
 
@@ -174,7 +175,7 @@ def test_stream_player() -> None:
     # The player is the session's runner; no core is present.
     player = AYPlayer(stream)
     sound = _CapturingSound()
-    with zx.Emulator(machine=[AY()],
+    with zx.Emulator(machine=Machine(ay=AY()),
                      environment=[player, sound]) as app:
         app.run(until=player.get_end_time() +
                 Time(RATE // 10, ticks_per_second=RATE))
