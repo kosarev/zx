@@ -18,7 +18,7 @@ def test_basic() -> None:
     mach = zx.Core()
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
     snapshot = zx._z80.Z80Snapshot.from_snapshot(
-        zx._data.UnifiedSnapshot(core=mach.to_snapshot()))
+        zx._data.MachineSnapshot(core=mach.to_snapshot()))
     snapshot_chunk = zx._rzx.RZXSnapshot(format=b'Z80\x00',
                                          snapshot=snapshot)
 
@@ -76,7 +76,7 @@ def test_consecutive_input_recordings() -> None:
     # counter mid-segment; no playable real-world file has them.
     rzx = zx._rzx.RZXFile(chunks=[
         zx._rzx.RZXSnapshot(format=b'Z80\x00',
-                            snapshot=zx._data.UnifiedSnapshot()),
+                            snapshot=zx._data.MachineSnapshot()),
         zx._rzx.RZXInputRecording(
             first_tick=0,
             frames=[zx._rzx.RZXFrame(num_fetches=1, samples=b'')]),

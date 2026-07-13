@@ -15,7 +15,7 @@ import pytest
 import zx
 from zx._core import CoreSnapshot
 from zx._core import RunEvents
-from zx._data import UnifiedSnapshot
+from zx._data import MachineSnapshot
 from zx._device import DestroyEmulator
 from zx._device import Device
 from zx._device import DeviceEvent
@@ -82,7 +82,7 @@ def test_init_and_destroy_emulator_dispatched() -> None:
 
 
 def test_load_installs_snapshot() -> None:
-    snapshot = UnifiedSnapshot(core=CoreSnapshot(pc=0x1234))
+    snapshot = MachineSnapshot(core=CoreSnapshot(pc=0x1234))
 
     # Loading installs the state into the persistent device set: the
     # set is the machine definition's fact, never the snapshot's.
@@ -116,5 +116,5 @@ def test_snapshot_addressing() -> None:
     # machine is a load error.
     with zx.Emulator(headless=True) as app:
         with pytest.raises(Error) as exc_info:
-            app._load_snapshot(UnifiedSnapshot(core2=CoreSnapshot()))
+            app._load_snapshot(MachineSnapshot(core2=CoreSnapshot()))
         assert exc_info.value.id == 'unknown_device_in_snapshot'

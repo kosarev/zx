@@ -11,11 +11,11 @@ import pytest
 
 import zx
 from zx._core import CoreSnapshot
+from zx._data import MachineSnapshot
 from zx._data import MemoryBlock
 from zx._data import UnifiedPlayback
 from zx._data import UnifiedPlaybackFrame
 from zx._data import UnifiedPlaybackSegment
-from zx._data import UnifiedSnapshot
 from zx._error import Error
 from zx._except import EmulationExit
 from zx._main import recover_playback
@@ -41,7 +41,7 @@ def assert_play_fails(playback: UnifiedPlayback, error_id: str) -> None:
 def test_iregp_mid_instruction() -> None:
     # One frame ending after just the 0xdd prefix byte, leaving the machine
     # mid-IX instruction at the frame boundary.
-    snapshot = UnifiedSnapshot(core=CoreSnapshot(
+    snapshot = MachineSnapshot(core=CoreSnapshot(
         active=True,
         pc=0x8000,
         memory_blocks=[MemoryBlock(
@@ -60,7 +60,7 @@ def test_iregp_mid_instruction() -> None:
 def test_spin_v05_trailing_in_sample() -> None:
     # SPIN v0.5 records num_fetches=1 (first IN's M1 cycle only), leaving
     # the second IN's sample unconsumed at the frame boundary.
-    snapshot = UnifiedSnapshot(core=CoreSnapshot(
+    snapshot = MachineSnapshot(core=CoreSnapshot(
         active=True,
         pc=0x8000,
         memory_blocks=[MemoryBlock(
@@ -84,7 +84,7 @@ def test_spin_v05_trailing_in_sample() -> None:
 def test_spin_v05_bytes_saving_trap() -> None:
     # SPIN v0.5 in fast save mode calls the bytes-saving ROM procedure at
     # 0x04d4 but expects it to be skipped (returning to the caller).
-    snapshot = UnifiedSnapshot(core=CoreSnapshot(
+    snapshot = MachineSnapshot(core=CoreSnapshot(
         active=True,
         pc=0x8000,
         sp=0xc000,

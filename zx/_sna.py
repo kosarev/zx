@@ -17,12 +17,12 @@ from ._data import ByteData
 from ._data import HexData
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
-from ._data import UnifiedSnapshot
+from ._data import SnapshotFile
 from ._error import Error
 from ._machines import get_spectrum_48k_snapshot
 
 
-class SNASnapshot(MachineSnapshot, format_name='SNA'):
+class SNASnapshot(SnapshotFile, format_name='SNA'):
     _HEADER: typing.ClassVar[list[str]] = [
         'B:i', '<H:alt_hl', '<H:alt_de', '<H:alt_bc', '<H:alt_af',
         '<H:hl', '<H:de', '<H:bc', '<H:iy', '<H:ix',
@@ -59,7 +59,7 @@ class SNASnapshot(MachineSnapshot, format_name='SNA'):
                          border_colour=border_colour,
                          memory=HexData.wrap(memory))
 
-    def to_unified_snapshot(self) -> UnifiedSnapshot:
+    def to_machine_snapshot(self) -> MachineSnapshot:
         sp = self.sp
 
         # PC was pushed onto the stack when the snapshot was taken; retrieve
@@ -74,7 +74,7 @@ class SNASnapshot(MachineSnapshot, format_name='SNA'):
 
         iff = int(bool(self.iff & 0x04))
 
-        snapshot = UnifiedSnapshot(core=CoreSnapshot(
+        snapshot = MachineSnapshot(core=CoreSnapshot(
             af=self.af, bc=self.bc, de=self.de, hl=self.hl,
 
             ix=self.ix, iy=self.iy,
@@ -93,9 +93,9 @@ class SNASnapshot(MachineSnapshot, format_name='SNA'):
         return get_spectrum_48k_snapshot().amended_with(snapshot)
 
     @classmethod
-    def from_snapshot(cls, snapshot: MachineSnapshot) -> 'SNASnapshot':
+    def from_snapshot(cls, snapshot: SnapshotFile) -> 'SNASnapshot':
         core = next(
-            (d for _, d in snapshot.to_unified_snapshot()
+            (d for _, d in snapshot.to_machine_snapshot()
              if isinstance(d, CoreSnapshot)), None)
         if core is None:
             core = CoreSnapshot()

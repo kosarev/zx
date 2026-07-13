@@ -15,7 +15,7 @@ import typing
 from ._core import Core
 from ._core import RunEvents
 from ._data import MachineSnapshot
-from ._data import UnifiedSnapshot
+from ._data import SnapshotFile
 from ._device import Dispatcher
 from ._error import Error
 from ._keyboard import Keyboard
@@ -28,8 +28,8 @@ if typing.TYPE_CHECKING:
 
 
 # A compiled program denotes a machine poised to execute it, so this
-# is a machine snapshot.
-class ZXBasicCompilerProgram(MachineSnapshot, format_name='ZXB'):
+# file converts to a machine snapshot.
+class ZXBasicCompilerProgram(SnapshotFile, format_name='ZXB'):
     entry_point: int
     program_bytes: bytes
 
@@ -77,7 +77,7 @@ class ZXBasicCompilerProgram(MachineSnapshot, format_name='ZXB'):
     # the snapshot carries the genuine context a compiled program
     # may assume: the system variables, the interrupt mode, the USR
     # call frame.
-    def to_unified_snapshot(self) -> UnifiedSnapshot:
+    def to_machine_snapshot(self) -> MachineSnapshot:
         core = Core()
         keyboard = Keyboard(active=True)
         devices = Dispatcher([core, keyboard])
@@ -126,5 +126,5 @@ class ZXBasicCompilerProgram(MachineSnapshot, format_name='ZXB'):
             raise Error('The compiled program did not start.')
 
         assert core.pc == self.entry_point
-        snapshot = UnifiedSnapshot(core=core.to_snapshot())
+        snapshot = MachineSnapshot(core=core.to_snapshot())
         return get_spectrum_48k_snapshot().amended_with(snapshot)

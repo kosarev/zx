@@ -24,8 +24,8 @@ def test_basic() -> None:
     assert 'DataRecord' in rec.dumps()
 
     # Create a snapshot.
-    assert list(zx._data.MachineSnapshot()) == []
+    assert list(zx._data.SnapshotFile()) == []
 
-    # Unified snapshots convert to themselves.
-    uni = zx._data.UnifiedSnapshot()
-    assert uni.to_unified_snapshot() is uni
+    # Machine snapshots convert to themselves.
+    snapshot = zx._data.MachineSnapshot()
+    assert snapshot.to_machine_snapshot() is snapshot

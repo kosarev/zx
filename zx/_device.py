@@ -16,10 +16,10 @@ if typing.TYPE_CHECKING:
 
     from ._binary import Bytes
     from ._data import DeviceSnapshot
+    from ._data import MachineSnapshot
     from ._data import SoundFile
     from ._data import SoundPulses
     from ._data import UnifiedPlayback
-    from ._data import UnifiedSnapshot
     from ._time import Time
 
 
@@ -140,7 +140,7 @@ class SetFetchesLimit(DeviceEvent):
 # the Emulator level, which splits it into per-device installs.
 # Devices never handle this event.
 class InstallSnapshot(DeviceEvent):
-    def __init__(self, snapshot: UnifiedSnapshot) -> None:
+    def __init__(self, snapshot: MachineSnapshot) -> None:
         self.snapshot = snapshot
 
 

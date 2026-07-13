@@ -22,7 +22,7 @@ from ._data import DataRecord
 from ._data import HexData
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
-from ._data import UnifiedSnapshot
+from ._data import SnapshotFile
 from ._error import Error
 from ._machines import get_spectrum_48k_snapshot
 from ._utils import get_high8
@@ -184,7 +184,7 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
             self.v3_header.write(writer)
 
 
-class Z80Snapshot(MachineSnapshot, format_name='Z80'):
+class Z80Snapshot(SnapshotFile, format_name='Z80'):
     # Some snapshots contain zero pages as well.
     __MEMORY_PAGE_ADDRS: typing.ClassVar[dict[int, int]] = {
         0: 0x0000, 4: 0x8000, 5: 0xc000, 8: 0x4000}
@@ -245,9 +245,9 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             memory_blocks=memory_blocks)
 
     @classmethod
-    def from_snapshot(cls, snapshot: MachineSnapshot) -> Z80Snapshot:
+    def from_snapshot(cls, snapshot: SnapshotFile) -> Z80Snapshot:
         core = next(
-            (d for _, d in snapshot.to_unified_snapshot()
+            (d for _, d in snapshot.to_machine_snapshot()
              if isinstance(d, CoreSnapshot)), None)
         if core is None:
             core = CoreSnapshot()
@@ -340,7 +340,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                     v3_extra_header=Z80SnapshotV3ExtraHeader())),
             memory_blocks=memory_blocks)
 
-    def to_unified_snapshot(self) -> UnifiedSnapshot:
+    def to_machine_snapshot(self) -> MachineSnapshot:
         flags1 = 0x01 if self.flags1 == 0xff else self.flags1
 
         int_mode = self.flags2 & 0x3
@@ -416,7 +416,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                     addr=self.__MEMORY_PAGE_ADDRS[block.page_no],
                     rom_page=0, ram_page=0, data=image))
 
-        snapshot = UnifiedSnapshot(core=CoreSnapshot(
+        snapshot = MachineSnapshot(core=CoreSnapshot(
             af=make16(self.a, self.f),
             bc=self.bc,
             de=self.de,

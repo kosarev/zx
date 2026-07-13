@@ -21,10 +21,10 @@ from ._data import HexData
 from ._data import Latin1Data
 from ._data import MachinePlayback
 from ._data import MachineSnapshot
+from ._data import SnapshotFile
 from ._data import UnifiedPlayback
 from ._data import UnifiedPlaybackFrame
 from ._data import UnifiedPlaybackSegment
-from ._data import UnifiedSnapshot
 from ._data import _InlineJSONDict
 from ._error import Error
 from ._z80 import Z80Snapshot
@@ -89,10 +89,10 @@ class RZXInputRecording(RZXChunk, format_name=None):
 class RZXSnapshot(RZXChunk, format_name=None):
     flags: int
     format: ByteData
-    snapshot: MachineSnapshot
+    snapshot: SnapshotFile
 
     def __init__(self, *, flags: int = 0, format: Bytes | ByteData,
-                 snapshot: MachineSnapshot) -> None:
+                 snapshot: SnapshotFile) -> None:
         super().__init__(flags=flags, format=Latin1Data.wrap(format),
                          snapshot=snapshot)
 
@@ -330,7 +330,7 @@ class RZXFile(MachinePlayback, format_name='RZX'):
                 creator_minor_version = chunk.creator_minor_version
             elif isinstance(chunk, RZXSnapshot):
                 segments.append(UnifiedPlaybackSegment(
-                    snapshot=chunk.snapshot.to_unified_snapshot()))
+                    snapshot=chunk.snapshot.to_machine_snapshot()))
             elif isinstance(chunk, RZXInputRecording):
                 # The format permits an input recording before any
                 # snapshot (playing against whatever state the machine
@@ -349,7 +349,7 @@ class RZXFile(MachinePlayback, format_name='RZX'):
                              if isinstance(d, CoreSnapshot)), None)
                 if core is None:
                     core = CoreSnapshot()
-                    s.snapshot = UnifiedSnapshot(core=core)
+                    s.snapshot = MachineSnapshot(core=core)
                 core.ticks_since_int = chunk.first_tick
                 s.frames.extend(
                     UnifiedPlaybackFrame(num_fetches=f.num_fetches,

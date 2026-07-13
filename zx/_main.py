@@ -29,11 +29,11 @@ from ._data import AYMusic
 from ._data import DataRecord
 from ._data import MachinePlayback
 from ._data import MachineSnapshot
+from ._data import SnapshotFile
 from ._data import SoundFile
 from ._data import Spectrum128
 from ._data import UnifiedAYStream
 from ._data import UnifiedPlayback
-from ._data import UnifiedSnapshot
 from ._device import BreakpointHit
 from ._device import Device
 from ._device import DeviceEvent
@@ -152,7 +152,7 @@ def run(args: list[str]) -> None:
                     f'delete it.') from e
         with contextlib.suppress(EmulationExit):
             app.run()
-        app._save_snapshot_file(UnifiedSnapshot, str(session_snapshot))
+        app._save_snapshot_file(MachineSnapshot, str(session_snapshot))
 
 
 def profile(args: list[str]) -> None:
@@ -198,8 +198,8 @@ def unify(args: list[str]) -> None:
     handle_extra_arguments(args)
 
     file = parse_file(src_filename)
-    if isinstance(file, MachineSnapshot):
-        unified: DataRecord = file.to_unified_snapshot()
+    if isinstance(file, SnapshotFile):
+        unified: DataRecord = file.to_machine_snapshot()
     elif isinstance(file, MachinePlayback):
         unified = file.to_unified_playback()
     elif isinstance(file, AYMusic):
@@ -303,11 +303,11 @@ def test_file(filename: str, batch_mode: bool,
             image = f.read()
         file = parse_file_image(filename, image)
 
-        if isinstance(file, MachineSnapshot):
+        if isinstance(file, SnapshotFile):
             match(image, file.encode())
 
-            unified = file.to_unified_snapshot()
-            unified2 = type(file).from_snapshot(unified).to_unified_snapshot()
+            unified = file.to_machine_snapshot()
+            unified2 = type(file).from_snapshot(unified).to_machine_snapshot()
             match(unified, unified2)
         elif isinstance(file, AYMusic):
             match(image, file.encode())
@@ -473,7 +473,7 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
                               dest_filename: str,
                               dest_format: type[DataRecord]) -> None:
     assert isinstance(src, SoundFile)
-    assert issubclass(dest_format, MachineSnapshot), dest_format
+    assert issubclass(dest_format, SnapshotFile), dest_format
 
     core = Core()
     devices = Dispatcher([core, Keyboard(active=True), TapePlayer()])
@@ -507,7 +507,7 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
         if stopped.stopped:
             break
 
-    snapshot = UnifiedSnapshot(core=core.to_snapshot())
+    snapshot = MachineSnapshot(core=core.to_snapshot())
     snapshot = get_spectrum_48k_snapshot().amended_with(snapshot)
     with pathlib.Path(dest_filename).open('wb') as f:
         f.write(dest_format.from_snapshot(snapshot).encode())
@@ -545,8 +545,8 @@ def _convert_snapshot_to_snapshot(src: DataRecord,
                                   src_filename: str,
                                   dest_filename: str,
                                   dest_format: type[DataRecord]) -> None:
-    assert isinstance(src, MachineSnapshot)
-    assert issubclass(dest_format, MachineSnapshot), dest_format
+    assert isinstance(src, SnapshotFile)
+    assert issubclass(dest_format, SnapshotFile), dest_format
 
     with Emulator(headless=True) as app:
         app._load_snapshot(src)
@@ -569,9 +569,9 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
                              str, type[DataRecord]], None]]] = [
         (SoundFile, SoundFile,
          _convert_tape_to_tape),
-        (SoundFile, MachineSnapshot,
+        (SoundFile, SnapshotFile,
          _convert_tape_to_snapshot),
-        (MachineSnapshot, MachineSnapshot,
+        (SnapshotFile, SnapshotFile,
          _convert_snapshot_to_snapshot),
         (AYMusic, AYMusic, _convert_ay_music),
         (DataRecord, ZXFile, _convert_any_to_zx),

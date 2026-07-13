@@ -8,7 +8,7 @@
 
 
 import zx
-from zx._data import UnifiedSnapshot
+from zx._data import MachineSnapshot
 
 
 def test_basic() -> None:
@@ -20,7 +20,7 @@ def test_basic() -> None:
     format = zx._z80.Z80Snapshot
     assert format.FORMAT_NAME == 'Z80'
     image = format.from_snapshot(
-        UnifiedSnapshot(core=mach.to_snapshot())).encode()
+        MachineSnapshot(core=mach.to_snapshot())).encode()
     assert len(image) == 49248
     assert image[4:6] == HL.to_bytes(2, 'little')
 
@@ -31,14 +31,14 @@ def test_basic() -> None:
     # Dump the parsed snapshot.
     assert 'Z80Snapshot' in snap.dumps()
 
-    # Produce and dump unified snapshot.
-    uni = snap.to_unified_snapshot()
-    assert 'UnifiedSnapshot' in uni.dumps()
+    # Produce and dump the machine snapshot.
+    uni = snap.to_machine_snapshot()
+    assert 'MachineSnapshot' in uni.dumps()
 
 
 # Z80Snapshot stores compressed memory literally -- decode() never
 # decompresses, it just preserves the original bytes. encode() writes
-# them back unchanged. Only to_unified_snapshot() decompresses, for
+# them back unchanged. Only to_machine_snapshot() decompresses, for
 # semantic use. This confirms binary-exact roundtripping works even for
 # compressed snapshots, without any re-compression logic.
 def test_compressed_v1_roundtrip() -> None:

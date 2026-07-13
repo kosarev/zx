@@ -104,7 +104,7 @@ A playback consists of segments, each starting from a known machine
 state (key frame) followed by a sequence of frames:
 
   class UnifiedPlaybackSegment:
-      key_frame: UnifiedSnapshot  # full machine state; ticks_since_int
+      key_frame: MachineSnapshot  # full machine state; ticks_since_int
                                   # serves as first_tick — no separate
                                   # field needed
       frames: list[UnifiedFrame]  # num_fetches + port_samples per frame

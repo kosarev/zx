@@ -376,12 +376,12 @@ class MemoryBlock(DataRecord, format_name=None):
                          ram_page=ram_page, data=HexData.wrap(data))
 
 
-class MachineSnapshot(DataRecord, format_name=None):
+class SnapshotFile(DataRecord, format_name=None):
     @classmethod
-    def from_snapshot(cls, snapshot: MachineSnapshot) -> MachineSnapshot:
+    def from_snapshot(cls, snapshot: SnapshotFile) -> SnapshotFile:
         raise NotImplementedError
 
-    def to_unified_snapshot(self) -> UnifiedSnapshot:
+    def to_machine_snapshot(self) -> MachineSnapshot:
         raise NotImplementedError
 
 
@@ -394,18 +394,18 @@ class DeviceSnapshot(DataRecord, format_name=None):
 # The native machine snapshot: a composition of per-device
 # snapshots, keyed by device id. A device absent from the
 # composition is at its canonical reset state.
-class UnifiedSnapshot(MachineSnapshot, format_name=None):
+class MachineSnapshot(SnapshotFile, format_name=None):
     def __init__(self, **devices: DeviceSnapshot):
         super().__init__(**devices)
 
     @classmethod
-    def from_snapshot(cls, snapshot: MachineSnapshot) -> UnifiedSnapshot:
-        return snapshot.to_unified_snapshot()
+    def from_snapshot(cls, snapshot: SnapshotFile) -> MachineSnapshot:
+        return snapshot.to_machine_snapshot()
 
     def encode(self) -> bytes:
         return (self.dumps() + '\n').encode('utf-8')
 
-    def to_unified_snapshot(self) -> UnifiedSnapshot:
+    def to_machine_snapshot(self) -> MachineSnapshot:
         return self
 
 
@@ -425,10 +425,10 @@ class UnifiedPlaybackFrame(DataRecord, format_name=None):
 
 
 class UnifiedPlaybackSegment(DataRecord, format_name=None):
-    snapshot: UnifiedSnapshot
+    snapshot: MachineSnapshot
     frames: list[UnifiedPlaybackFrame]
 
-    def __init__(self, *, snapshot: UnifiedSnapshot,
+    def __init__(self, *, snapshot: MachineSnapshot,
                  frames: list[UnifiedPlaybackFrame] | None = None) -> None:
         super().__init__(
             snapshot=snapshot,

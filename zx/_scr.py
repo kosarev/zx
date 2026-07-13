@@ -15,15 +15,15 @@ from ._binary import Bytes
 from ._core import CoreSnapshot
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
-from ._data import UnifiedSnapshot
+from ._data import SnapshotFile
 from ._machines import get_spectrum_48k_snapshot
 
 
-class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
+class _SCRSnapshot(SnapshotFile, format_name='SCR'):
     dot_patterns: bytes
     colour_attrs: bytes
 
-    def to_unified_snapshot(self) -> UnifiedSnapshot:
+    def to_machine_snapshot(self) -> MachineSnapshot:
         # The address of the endless loop.
         memory_blocks = []
         ROM_PAGE, RAM_PAGE = 0, 0
@@ -40,7 +40,7 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
             addr=LOOP_ADDR, rom_page=ROM_PAGE, ram_page=RAM_PAGE,
             data=loop_instr))
 
-        snapshot = UnifiedSnapshot(core=CoreSnapshot(
+        snapshot = MachineSnapshot(core=CoreSnapshot(
             pc=LOOP_ADDR,
             iff1=0,
             iff2=0,

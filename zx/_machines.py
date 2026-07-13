@@ -16,12 +16,12 @@ the machine their format declares.
 
 from ._beeper import BeeperSnapshot
 from ._core import CoreSnapshot
-from ._data import UnifiedSnapshot
+from ._data import MachineSnapshot
 from ._keyboard import KeyboardSnapshot
 
 
-def get_spectrum_48k_snapshot() -> UnifiedSnapshot:
-    return UnifiedSnapshot(
+def get_spectrum_48k_snapshot() -> MachineSnapshot:
+    return MachineSnapshot(
         core=CoreSnapshot(active=True),
         beeper=BeeperSnapshot(active=True),
         keyboard=KeyboardSnapshot(active=True))

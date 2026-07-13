@@ -23,6 +23,6 @@ def test_basic() -> None:
     # Dump.
     # TODO: assert '_SCRSnapshot' in scr.dumps()
 
-    # Produce and dump unified snapshot.
-    # TODO: uni = scr.to_unified_snapshot()
-    # TODO: assert 'UnifiedSnapshot' in uni.dumps()
+    # Produce and dump the machine snapshot.
+    # TODO: uni = scr.to_machine_snapshot()
+    # TODO: assert 'MachineSnapshot' in uni.dumps()
