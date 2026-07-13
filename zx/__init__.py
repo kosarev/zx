@@ -8,6 +8,8 @@
 
 
 from ._core import Core
+from ._device import Device
+from ._device import NewPortWrites
 from ._emulator import Emulator
 from ._except import EmulationExit
 from ._except import EmulatorException
@@ -17,8 +19,10 @@ __version__ = '0.13.15'
 
 __all__ = [
     'Core',
+    'Device',
     'EmulationExit',
     'Emulator',
     'EmulatorException',
+    'NewPortWrites',
     'main',
 ]

@@ -11,6 +11,8 @@
 # A simple program that creates an instance of the emulator, initiates
 # saving a Basic program and measures and decodes generated tape impulses.
 
+import numpy
+
 import zx
 
 # Change to see the emulator screen.
@@ -35,36 +37,47 @@ class DurationSet:
         return self.__sum / self.count if self.count > 0 else 0
 
 
-class MySpectrum48(zx.Spectrum):
+# A device watching the machine's port writes: the MIC bit drives the
+# tape output, and the per-write tick stamps measure the impulses
+# exactly.
+class TapeInterfaceMeter(zx.Device):
     def __init__(self):
-        super().__init__(headless=HEADLESS)
-        self.set_on_output_callback(self.__on_output)
+        super().__init__()
+        self.reporting = False
 
-        self.__report = False
-        self.__last_ear_level = 1
-        self.__last_ear_level_tick = 0
+        self.__last_level = 1
+        self.__last_level_tick = 0
         self.__last_half_period_level = 1
         self.__last_half_period_durations = DurationSet()
 
         self.__bits = []
 
-    def __on_output(self, addr, value):
-        if addr & 0xff != 0xfe:
+    def on_event(self, event, devices):
+        if isinstance(event, zx.NewPortWrites):
+            self.__on_port_writes(event.writes)
+
+    def __on_port_writes(self, writes):
+        # Filter writes to the 0xfe port. Each write packs the port
+        # address, the written value and the write's tick stamp.
+        writes = writes[writes & numpy.uint64(0xff) == numpy.uint64(0xfe)]
+        for write in writes:
+            value = int(write >> numpy.uint64(16)) & 0xff
+            tick = int(write >> numpy.uint64(32))
+            self.__on_output(value, tick)
+
+    def __on_output(self, value, tick):
+        level = (value >> 3) & 1
+        if self.__last_level == level:
             return
 
-        ear_level = (value >> 3) & 1
-        if self.__last_ear_level == ear_level:
-            return
-
-        TICKS_PER_FRAME = 69888  # TODO
-        tick = self.frame_count * TICKS_PER_FRAME + self.ticks_since_int
-        duration = tick - self.__last_ear_level_tick
+        # The stamps are 32-bit and wrap.
+        duration = (tick - self.__last_level_tick) & 0xffffffff
 
         half_period_count = self.__last_half_period_durations.count
         average_duration = self.__last_half_period_durations.average
         DURATION_TOLERANCE = 10
         if abs(average_duration - duration) > DURATION_TOLERANCE:
-            if self.__report:
+            if self.reporting:
                 if half_period_count == 1:
                     print(f'Beginning level {self.__last_half_period_level}, '
                           f'{half_period_count} half-period '
@@ -78,48 +91,48 @@ class MySpectrum48(zx.Spectrum):
                           f'ticks each.')
 
                     if abs(average_duration - 855) < DURATION_TOLERANCE:
-                        self.bits.extend([0] * (half_period_count // 2))
+                        self.__bits.extend([0] * (half_period_count // 2))
                     elif abs(average_duration - 1710) < DURATION_TOLERANCE:
-                        self.bits.extend([1] * (half_period_count // 2))
+                        self.__bits.extend([1] * (half_period_count // 2))
                     else:
-                        self.bits = []
+                        self.__bits = []
 
-                    while len(self.bits) >= 8:
-                        byte = int(''.join(str(b) for b in self.bits[:8]), 2)
-                        value = f'{byte:08b} = {byte:#04x}'
+                    while len(self.__bits) >= 8:
+                        byte = int(''.join(str(b) for b in self.__bits[:8]), 2)
+                        text = f'{byte:08b} = {byte:#04x}'
                         if 0x20 <= byte < 0x80:
-                            value += f" '{chr(byte)}'"
-                        print(value)
-                        self.bits[:8] = []
+                            text += f" '{chr(byte)}'"
+                        print(text)
+                        self.__bits[:8] = []
 
-            self.__last_half_period_level = ear_level
+            self.__last_half_period_level = level
             self.__last_half_period_durations = DurationSet()
 
         self.__last_half_period_durations.add(duration)
 
-        self.__last_ear_level = ear_level
-        self.__last_ear_level_tick = tick
+        self.__last_level = level
+        self.__last_level_tick = tick
 
-    def measure_tape_interface_parameters(self):
-        self.reset_and_wait()
+
+def main():
+    meter = TapeInterfaceMeter()
+    with zx.Emulator(headless=HEADLESS,
+                     extra_environment=[meter]) as app:
+        # Boot to the BASIC prompt.
+        app.run(duration=3)
 
         # 10 SAVE "x"
         # RUN
-        self.generate_key_strokes(
+        app.generate_key_strokes(
             10, 'S', 'SS+P', *'BASIC', 'SS+P', 'ENTER',
             'R', 'ENTER')
 
         # <ENTER key stroke to start tape>
-        self.__report = True
-        self.generate_key_strokes('ENTER')
+        meter.reporting = True
+        app.generate_key_strokes('ENTER')
 
-        # Run for 5 seconds and report some tape half-periods.
-        super().run(duration=10)
-
-
-def main():
-    with MySpectrum48() as app:
-        app.measure_tape_interface_parameters()
+        # Run for a while and report some tape half-periods.
+        app.run(duration=10)
 
 
 if __name__ == '__main__':
