@@ -20,8 +20,19 @@ from ._data import MachineSnapshot
 from ._keyboard import KeyboardSnapshot
 
 
-def get_spectrum_48k_snapshot() -> MachineSnapshot:
-    return MachineSnapshot(
+class Spectrum48Snapshot(MachineSnapshot, format_name=None):
+    core: CoreSnapshot
+    keyboard: KeyboardSnapshot
+    beeper: BeeperSnapshot
+
+    def __init__(self, *, core: CoreSnapshot,
+                 keyboard: KeyboardSnapshot,
+                 beeper: BeeperSnapshot) -> None:
+        super().__init__(core=core, keyboard=keyboard, beeper=beeper)
+
+
+def get_spectrum_48k_snapshot() -> Spectrum48Snapshot:
+    return Spectrum48Snapshot(
         core=CoreSnapshot(active=True),
         beeper=BeeperSnapshot(active=True),
         keyboard=KeyboardSnapshot(active=True))

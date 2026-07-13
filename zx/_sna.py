@@ -74,7 +74,11 @@ class SNASnapshot(SnapshotFile, format_name='SNA'):
 
         iff = int(bool(self.iff & 0x04))
 
-        snapshot = MachineSnapshot(core=CoreSnapshot(
+        stock = get_spectrum_48k_snapshot()
+
+        # The file describes a 48K machine, so its facts update the
+        # stock 48K snapshot.
+        return stock.updated(core=stock.core.updated(
             af=self.af, bc=self.bc, de=self.de, hl=self.hl,
 
             ix=self.ix, iy=self.iy,
@@ -87,10 +91,6 @@ class SNASnapshot(SnapshotFile, format_name='SNA'):
             border_colour=self.border_colour,
             memory_blocks=[MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
                                        data=self.memory.data)]))
-
-        # The file describes a 48K machine, so its facts amend the
-        # stock 48K snapshot.
-        return get_spectrum_48k_snapshot().amended_with(snapshot)
 
     @classmethod
     def from_snapshot(cls, snapshot: SnapshotFile) -> 'SNASnapshot':

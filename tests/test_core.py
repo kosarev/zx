@@ -154,6 +154,16 @@ def test_from_snapshot() -> None:
     assert device.pc == 0x1234
 
 
+def test_updated() -> None:
+    # Field values the snapshot type does not declare are rejected.
+    snapshot = CoreSnapshot(pc=1, sp=2)
+    updated = snapshot.updated(sp=3)
+    assert (updated.pc, updated.sp) == (1, 3)
+
+    with pytest.raises(TypeError):
+        snapshot.updated(nonsense=1)
+
+
 def test_inactive_core() -> None:
     # An inactive core is indistinguishable from an absent one: it
     # runs no quanta.

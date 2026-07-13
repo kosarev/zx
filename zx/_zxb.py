@@ -126,5 +126,6 @@ class ZXBasicCompilerProgram(SnapshotFile, format_name='ZXB'):
             raise Error('The compiled program did not start.')
 
         assert core.pc == self.entry_point
-        snapshot = MachineSnapshot(core=core.to_snapshot())
-        return get_spectrum_48k_snapshot().amended_with(snapshot)
+        stock = get_spectrum_48k_snapshot()
+        return stock.updated(
+            core=stock.core.updated(**dict(core.to_snapshot())))

@@ -90,21 +90,11 @@ class DataRecord:
             if value is not None:
                 yield id, value
 
-    # A copy amended with a record of the same type: the other
-    # record's fields override this record's, and where both are
-    # records of one type themselves, they amend the same way, field
-    # by field.
-    def amended_with(self, other: typing.Self) -> typing.Self:
-        assert type(other) is type(self)
-
-        fields = dict(self)
-        for id, value in other:
-            base = fields.get(id)
-            if isinstance(base, DataRecord) and type(base) is type(value):
-                value = base.amended_with(value)
-            fields[id] = value
-
-        return type(self)(**fields)
+    # A copy with the given field values replacing this record's.
+    def updated(self, **fields: typing.Any) -> typing.Self:
+        updated = dict(self)
+        updated.update(fields)
+        return type(self)(**updated)
 
     def to_json(self) -> typing.Any:
         def convert(v: typing.Any) -> typing.Any:
@@ -398,6 +388,14 @@ class DeviceSnapshot(DataRecord, format_name=None):
 class MachineSnapshot(SnapshotFile, format_name=None):
     def __init__(self, **devices: DeviceSnapshot):
         super().__init__(**devices)
+
+    # The composition is open: an update may add devices a declared
+    # machine snapshot type does not know, so the result is a plain
+    # MachineSnapshot.
+    def updated(self, **devices: DeviceSnapshot) -> MachineSnapshot:
+        fields = dict(self)
+        fields.update(devices)
+        return MachineSnapshot(**fields)
 
     @classmethod
     def from_snapshot(cls, snapshot: SnapshotFile) -> MachineSnapshot:
