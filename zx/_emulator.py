@@ -112,12 +112,15 @@ class Machine:
 # A Dispatcher that also passes every event to the Emulator, after
 # all the devices have seen it.
 class _EmulatorDispatcher(Dispatcher):
-    def __init__(self, devices: list[Device], emulator: 'Emulator') -> None:
-        super().__init__(devices)
+    def __init__(self, devices: list[Device],
+                 devices_by_id: dict[str, Device],
+                 emulator: 'Emulator') -> None:
+        super().__init__(devices, devices_by_id=devices_by_id)
         self.__emulator = emulator
 
-    def notify(self, event: DeviceEvent) -> None:
-        super().notify(event)
+    def notify(self, event: DeviceEvent, *,
+               device: None | str = None) -> None:
+        super().notify(event, device=device)
         self.__emulator._on_event(event)
 
 
@@ -355,6 +358,8 @@ class Emulator:
             f.write(format.from_snapshot(
                 self.__make_machine_snapshot()).encode())
 
-    def notify(self, event: DeviceEvent) -> None:
-        dispatcher = _EmulatorDispatcher(self.devices, self)
-        dispatcher.notify(event)
+    def notify(self, event: DeviceEvent, *,
+               device: None | str = None) -> None:
+        dispatcher = _EmulatorDispatcher(self.devices, self.machine.devices,
+                                         self)
+        dispatcher.notify(event, device=device)

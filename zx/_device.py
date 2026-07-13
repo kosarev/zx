@@ -444,14 +444,22 @@ class Device:
         pass
 
 
-# Broadcasts events to the devices.
+# Passes events to the devices: to all of them, or, given a device
+# id, to the addressed device only.
 class Dispatcher:
-    def __init__(self, devices: None | list[Device] = None) -> None:
+    def __init__(self, devices: None | list[Device] = None, *,
+                 devices_by_id: None | dict[str, Device] = None) -> None:
         if devices is None:
             devices = []
 
         self.__devices = list(devices)
+        self.__devices_by_id = devices_by_id if devices_by_id else {}
 
-    def notify(self, event: DeviceEvent) -> None:
-        for device in self.__devices:
-            device.on_event(event, self)
+    def notify(self, event: DeviceEvent, *,
+               device: None | str = None) -> None:
+        if device is not None:
+            self.__devices_by_id[device].on_event(event, self)
+            return
+
+        for d in self.__devices:
+            d.on_event(event, self)
