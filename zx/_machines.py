@@ -15,12 +15,13 @@ the machine their format declares.
 """
 
 from ._beeper import BeeperSnapshot
+from ._core import CoreSnapshot
 from ._data import UnifiedSnapshot
 from ._keyboard import KeyboardSnapshot
 
 
 def get_spectrum_48k_snapshot() -> UnifiedSnapshot:
-    # TODO: Activate the core once it gates on its activity.
     return UnifiedSnapshot(
+        core=CoreSnapshot(active=True),
         beeper=BeeperSnapshot(active=True),
         keyboard=KeyboardSnapshot(active=True))

@@ -103,8 +103,11 @@ def test_load_installs_snapshot() -> None:
 
 def test_construction_installs_snapshot() -> None:
     # Construction installs the given snapshot, the stock 48K one by
-    # default -- which is what activates the keyboard.
+    # default -- which is what activates the machine's members.
     with zx.Emulator(headless=True) as app:
+        core = next(d for d in app.machine if isinstance(d, zx.Core))
+        assert core.active
+
         keyboard = next(d for d in app.machine if isinstance(d, Keyboard))
         assert keyboard.active
 

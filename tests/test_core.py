@@ -14,11 +14,15 @@ import pytest
 
 import zx
 from zx._core import Core
+from zx._core import CoreSnapshot
 from zx._core import RunEvents
+from zx._data import UnifiedSnapshot
 from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import ReadPort
+from zx._device import RunQuantum
+from zx._time import Time
 
 
 def test_on_input_propagates_exception() -> None:
@@ -139,13 +143,46 @@ def test_from_snapshot() -> None:
     mach = zx.Core()
     mach.pc = 0x1234
     mach.hl = 0xbeef
-    core_slice = mach.to_snapshot()
+    core_snapshot = mach.to_snapshot()
 
-    clone = Core.from_snapshot(core_slice)
+    clone = Core.from_snapshot(core_snapshot)
     assert (clone.pc, clone.hl) == (0x1234, 0xbeef)
 
     # The generic entry resolves the device type by the snapshot
     # type.
-    device = Device.from_snapshot(core_slice)
+    device = Device.from_snapshot(core_snapshot)
     assert isinstance(device, Core)
     assert device.pc == 0x1234
+
+
+def test_inactive_core() -> None:
+    # An inactive core is indistinguishable from an absent one: it
+    # runs no quanta.
+    core = zx.Core()
+    devices = Dispatcher([core])
+    rate = core.model._TICKS_PER_FRAME * 50
+
+    quantum = RunQuantum(stop_after=Time(1000, ticks_per_second=rate))
+    devices.notify(quantum)
+    assert quantum.advanced_ceiling is None
+
+    core.active = True
+    quantum = RunQuantum(stop_after=Time(1000, ticks_per_second=rate))
+    devices.notify(quantum)
+    assert quantum.advanced_ceiling is not None
+
+
+def test_core_activity_in_snapshots() -> None:
+    # Activity is captured as the difference from the reset state and
+    # applied by snapshot installs.
+    core = zx.Core()
+    assert 'active' not in core.to_snapshot().to_json()
+
+    core.active = True
+    assert core.to_snapshot().to_json()['active'] is True
+
+    core.install_snapshot(UnifiedSnapshot())
+    assert not core.active
+
+    core.install_snapshot(UnifiedSnapshot(core=CoreSnapshot(active=True)))
+    assert core.active

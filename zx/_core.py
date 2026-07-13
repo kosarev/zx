@@ -66,6 +66,7 @@ class RunEvents(enum.IntFlag):
 # The core device's slice of a machine snapshot. Null fields mean
 # the canonical reset values.
 class CoreSnapshot(DeviceSnapshot, format_name=None):
+    active: bool | None
     af: int | None
     bc: int | None
     de: int | None
@@ -90,6 +91,7 @@ class CoreSnapshot(DeviceSnapshot, format_name=None):
 
     def __init__(
             self,
+            active: bool | None = None,
             af: int | None = None,
             bc: int | None = None,
             de: int | None = None,
@@ -117,6 +119,7 @@ class CoreSnapshot(DeviceSnapshot, format_name=None):
             blocks = sorted(memory_blocks, key=lambda b: b.addr)
 
         super().__init__(
+            active=active,
             af=af, bc=bc, de=de, hl=hl, ix=ix, iy=iy,
             alt_af=alt_af, alt_bc=alt_bc,
             alt_de=alt_de, alt_hl=alt_hl,
@@ -506,23 +509,6 @@ class CoreState(Z80State):
     def read16(self, addr: int) -> int:
         return int.from_bytes(self.read(addr, 2), 'little')
 
-    def to_snapshot(self) -> CoreSnapshot:
-        # TODO: Store all fields.
-        assert self.model is Spectrum48  # TODO: Support 128K.
-        return CoreSnapshot(
-            af=self.af, bc=self.bc, de=self.de, hl=self.hl,
-            ix=self.ix, iy=self.iy,
-            alt_af=self.alt_af, alt_bc=self.alt_bc,
-            alt_de=self.alt_de, alt_hl=self.alt_hl,
-            pc=self.pc, sp=self.sp, ir=self.ir,
-            # TODO: wz=self.wz,
-            iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
-            iregp_kind=self.iregp_kind,
-            memory_blocks=[MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
-                                       data=self.__memory[0x4000:0x10000])],
-            ticks_since_int=self.ticks_since_int,
-            border_colour=self.border_colour)
-
     def install_core_snapshot(self, snapshot: CoreSnapshot) -> None:
         for field, value in snapshot:
             if field == 'memory_blocks':
@@ -573,10 +559,11 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
     __playback: UnifiedPlayback | None
 
     def __init__(self, *,
+                 active: bool = False,
                  model: type[SpectrumModel] | None = None,
                  profile: Profile | None = None):
         CoreState.__init__(self, self._get_state_view())
-        Device.__init__(self)
+        Device.__init__(self, active=active)
 
         self.model = model if model is not None else Spectrum48
 
@@ -605,6 +592,24 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
             assert len(rom) == 2 * PAGE_SIZE
             self.write(0x0000, rom[PAGE_SIZE:], rom_page=1)
 
+    def to_snapshot(self) -> CoreSnapshot:
+        # TODO: Store all fields.
+        assert self.model is Spectrum48  # TODO: Support 128K.
+        return CoreSnapshot(
+            active=True if self.active else None,
+            af=self.af, bc=self.bc, de=self.de, hl=self.hl,
+            ix=self.ix, iy=self.iy,
+            alt_af=self.alt_af, alt_bc=self.alt_bc,
+            alt_de=self.alt_de, alt_hl=self.alt_hl,
+            pc=self.pc, sp=self.sp, ir=self.ir,
+            # TODO: wz=self.wz,
+            iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
+            iregp_kind=self.iregp_kind,
+            memory_blocks=[MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
+                                       data=self.read(0x4000, 0xc000))],
+            ticks_since_int=self.ticks_since_int,
+            border_colour=self.border_colour)
+
     def install_snapshot(self, snapshot: MachineSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset
         # state, so installing one resets first: whatever the snapshot
@@ -612,6 +617,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         # reset.
         self.on_reset()
         self.__install_rom()
+        self.active = False
 
         unified = snapshot.to_unified_snapshot()
         core = next((d for _, d in unified
@@ -758,6 +764,15 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         devices.notify(BreakpointHit())
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
+        if isinstance(event, InstallSnapshot):
+            self.install_snapshot(event.snapshot)
+            return
+
+        # An inactive core is indistinguishable from an absent one:
+        # it runs no quanta and answers no queries.
+        if not self.active:
+            return
+
         if isinstance(event, GetEmulationPauseState):
             event.paused |= self.paused
         elif isinstance(event, GetHoldState):
@@ -780,8 +795,6 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
             self.__on_end_of_frame(devices)
         elif isinstance(event, SetBreakpoint):
             self.set_breakpoint(event.addr)
-        elif isinstance(event, InstallSnapshot):
-            self.install_snapshot(event.snapshot)
         elif isinstance(event, SetFetchesLimit):
             self.m1_fetches_to_stop = event.num_fetches
         elif isinstance(event, StopQuantum):

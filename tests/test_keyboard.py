@@ -95,7 +95,7 @@ def test_stroke_at_quantum_ceiling() -> None:
     # so a stroke stamped there must always be admissible — including
     # when the quantum ends on the very instruction that reads the
     # keyboard, which happens when the tick budget expires inside it.
-    core = zx.Core()
+    core = zx.Core(active=True)
     keyboard = Keyboard(active=True)
     devices = Dispatcher([core, keyboard])
 
