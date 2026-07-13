@@ -16,6 +16,7 @@ from ._core import CoreSnapshot
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import UnifiedSnapshot
+from ._machines import get_spectrum_48k_snapshot
 
 
 class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
@@ -39,12 +40,14 @@ class _SCRSnapshot(MachineSnapshot, format_name='SCR'):
             addr=LOOP_ADDR, rom_page=ROM_PAGE, ram_page=RAM_PAGE,
             data=loop_instr))
 
-        return UnifiedSnapshot(core=CoreSnapshot(
+        snapshot = UnifiedSnapshot(core=CoreSnapshot(
             pc=LOOP_ADDR,
             iff1=0,
             iff2=0,
             border_colour=0,
             memory_blocks=memory_blocks))
+
+        return get_spectrum_48k_snapshot().amended_with(snapshot)
 
     # TODO: Refine.
     def x_encode(self) -> bytes:

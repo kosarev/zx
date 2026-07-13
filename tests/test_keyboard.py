@@ -8,11 +8,14 @@
 
 
 import zx
+from zx._data import UnifiedSnapshot
 from zx._device import Dispatcher
+from zx._device import InstallSnapshot
 from zx._device import ReadPort
 from zx._device import RunQuantum
 from zx._keyboard import KEYS
 from zx._keyboard import Keyboard
+from zx._keyboard import KeyboardSnapshot
 from zx._keyboard import KeyStroke
 from zx._time import Time
 
@@ -64,7 +67,7 @@ def pressed_value(key_id: str) -> int:
 
 
 def test_port_reads() -> None:
-    keyboard = Keyboard()
+    keyboard = Keyboard(active=True)
     devices = Dispatcher([keyboard])
 
     devices.notify(KeyStroke(KEYS['J'], pressed=True, time=at(2)))
@@ -78,7 +81,7 @@ def test_port_reads() -> None:
 
 
 def test_stroke_at_time_zero() -> None:
-    keyboard = Keyboard()
+    keyboard = Keyboard(active=True)
     devices = Dispatcher([keyboard])
 
     # Before the first read, any time is schedulable, the very
@@ -93,7 +96,7 @@ def test_stroke_at_quantum_ceiling() -> None:
     # when the quantum ends on the very instruction that reads the
     # keyboard, which happens when the tick budget expires inside it.
     core = zx.Core()
-    keyboard = Keyboard()
+    keyboard = Keyboard(active=True)
     devices = Dispatcher([core, keyboard])
 
     # IN A,(0xFE); JR $-2 -- an endless keyboard read loop.
@@ -111,3 +114,44 @@ def test_stroke_at_quantum_ceiling() -> None:
 
     devices.notify(KeyStroke(KEYS['SPACE'], pressed=True,
                              time=quantum.advanced_ceiling))
+
+
+def test_inactive_keyboard() -> None:
+    # An inactive keyboard is indistinguishable from an absent one:
+    # it does not drive the input lines.
+    keyboard = Keyboard()
+    devices = Dispatcher([keyboard])
+
+    devices.notify(KeyStroke(KEYS['J'], pressed=True, time=at(2)))
+    assert read(devices, halfrow_addr('J'), 3) == 0xff
+
+
+def test_keyboard_snapshot() -> None:
+    # Activity is captured as the difference from the reset state and
+    # applied by snapshot installs.
+    assert Keyboard().to_snapshot() is None
+
+    keyboard = Keyboard(active=True)
+    snapshot = keyboard.to_snapshot()
+    assert snapshot is not None
+    assert snapshot.active
+
+    # Installing a snapshot brings the keyboard to the state the
+    # snapshot describes; a pressed key does not survive it.
+    devices = Dispatcher([keyboard])
+    devices.notify(KeyStroke(KEYS['J'], pressed=True, time=at(2)))
+    assert read(devices, halfrow_addr('J'), 3) == pressed_value('J')
+
+    devices.notify(InstallSnapshot(
+        UnifiedSnapshot(keyboard=KeyboardSnapshot(active=True))))
+    assert read(devices, halfrow_addr('J'), 1) == 0xff
+
+    devices.notify(InstallSnapshot(
+        UnifiedSnapshot(keyboard=KeyboardSnapshot(active=False))))
+    assert not keyboard.active
+
+    # A snapshot that does not mention the keyboard means it is at
+    # reset: inactive.
+    keyboard.active = True
+    devices.notify(InstallSnapshot(UnifiedSnapshot()))
+    assert not keyboard.active

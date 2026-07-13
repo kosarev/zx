@@ -24,6 +24,7 @@ from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import UnifiedSnapshot
 from ._error import Error
+from ._machines import get_spectrum_48k_snapshot
 from ._utils import get_high8
 from ._utils import get_low8
 from ._utils import make16
@@ -415,7 +416,7 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
                     addr=self.__MEMORY_PAGE_ADDRS[block.page_no],
                     rom_page=0, ram_page=0, data=image))
 
-        return UnifiedSnapshot(core=CoreSnapshot(
+        snapshot = UnifiedSnapshot(core=CoreSnapshot(
             af=make16(self.a, self.f),
             bc=self.bc,
             de=self.de,
@@ -436,6 +437,11 @@ class Z80Snapshot(MachineSnapshot, format_name='Z80'):
             ticks_since_int=ticks_since_int,
             border_colour=(flags1 >> 1) & 0x7,
             memory_blocks=memory_blocks))
+
+        # The file describes a machine, so its facts amend that
+        # machine's stock snapshot. TODO: 128K per the v2/v3 hardware
+        # mode.
+        return get_spectrum_48k_snapshot().amended_with(snapshot)
 
     __V1_HEADER: typing.ClassVar[list[str]] = [
         'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',

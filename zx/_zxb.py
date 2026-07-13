@@ -20,6 +20,7 @@ from ._device import Dispatcher
 from ._error import Error
 from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
+from ._machines import get_spectrum_48k_snapshot
 from ._time import Time
 
 if typing.TYPE_CHECKING:
@@ -78,7 +79,7 @@ class ZXBasicCompilerProgram(MachineSnapshot, format_name='ZXB'):
     # call frame.
     def to_unified_snapshot(self) -> UnifiedSnapshot:
         core = Core()
-        keyboard = Keyboard()
+        keyboard = Keyboard(active=True)
         devices = Dispatcher([core, keyboard])
 
         hit_entry_point = False
@@ -125,4 +126,5 @@ class ZXBasicCompilerProgram(MachineSnapshot, format_name='ZXB'):
             raise Error('The compiled program did not start.')
 
         assert core.pc == self.entry_point
-        return UnifiedSnapshot(core=core.to_snapshot())
+        snapshot = UnifiedSnapshot(core=core.to_snapshot())
+        return get_spectrum_48k_snapshot().amended_with(snapshot)

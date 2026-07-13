@@ -19,6 +19,7 @@ from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import UnifiedSnapshot
 from ._error import Error
+from ._machines import get_spectrum_48k_snapshot
 
 
 class SNASnapshot(MachineSnapshot, format_name='SNA'):
@@ -73,7 +74,7 @@ class SNASnapshot(MachineSnapshot, format_name='SNA'):
 
         iff = int(bool(self.iff & 0x04))
 
-        return UnifiedSnapshot(core=CoreSnapshot(
+        snapshot = UnifiedSnapshot(core=CoreSnapshot(
             af=self.af, bc=self.bc, de=self.de, hl=self.hl,
 
             ix=self.ix, iy=self.iy,
@@ -86,6 +87,10 @@ class SNASnapshot(MachineSnapshot, format_name='SNA'):
             border_colour=self.border_colour,
             memory_blocks=[MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
                                        data=self.memory.data)]))
+
+        # The file describes a 48K machine, so its facts amend the
+        # stock 48K snapshot.
+        return get_spectrum_48k_snapshot().amended_with(snapshot)
 
     @classmethod
     def from_snapshot(cls, snapshot: MachineSnapshot) -> 'SNASnapshot':

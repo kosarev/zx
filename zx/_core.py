@@ -608,7 +608,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
     def install_snapshot(self, snapshot: MachineSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset
         # state, so installing one resets first: whatever the snapshot
-        # does not mention, including the whole core slice, stays at
+        # does not mention, including the core as a whole, stays at
         # reset.
         self.on_reset()
         self.__install_rom()

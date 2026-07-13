@@ -19,6 +19,7 @@ from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import InitEmulator
+from zx._keyboard import Keyboard
 
 
 def test_basic() -> None:
@@ -78,22 +79,34 @@ def test_init_and_destroy_emulator_dispatched() -> None:
     assert recorder.destroyed
 
 
-def test_load_recreates_machine() -> None:
+def test_load_installs_snapshot() -> None:
     snapshot = UnifiedSnapshot(core=CoreSnapshot(pc=0x1234))
 
-    # Loading recreates the machine devices; the environment
-    # persists.
+    # Loading installs the state into the persistent device set: the
+    # set is the machine definition's fact, never the snapshot's.
     with zx.Emulator(headless=True) as app:
         old_machine = list(app.machine)
         old_environment = list(app.environment)
         app._load_snapshot(snapshot)
 
-        assert all(new is not old
-                   for new in app.machine for old in old_machine)
+        assert app.machine == old_machine
         assert app.environment == old_environment
 
-        new_core = next(d for d in app.machine if isinstance(d, zx.Core))
-        assert new_core.pc == 0x1234
+        core = next(d for d in app.machine if isinstance(d, zx.Core))
+        assert core.pc == 0x1234
+
+        # This snapshot activates nothing, so the keyboard is at
+        # reset: inactive.
+        keyboard = next(d for d in app.machine if isinstance(d, Keyboard))
+        assert not keyboard.active
+
+
+def test_construction_installs_snapshot() -> None:
+    # Construction installs the given snapshot, the stock 48K one by
+    # default -- which is what activates the keyboard.
+    with zx.Emulator(headless=True) as app:
+        keyboard = next(d for d in app.machine if isinstance(d, Keyboard))
+        assert keyboard.active
 
 
 def test_install_snapshot() -> None:

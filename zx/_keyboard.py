@@ -7,9 +7,14 @@
 #   Published under the MIT license.
 
 
+from __future__ import annotations
+
+from ._data import DeviceSnapshot
+from ._data import UnifiedSnapshot
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
+from ._device import InstallSnapshot
 from ._device import ReadPort
 from ._time import Time
 
@@ -87,7 +92,14 @@ def make_key_strokes(*keys: int | str, start: Time) -> list[KeyStroke]:
     return strokes
 
 
-class Keyboard(Device):
+class KeyboardSnapshot(DeviceSnapshot, format_name=None):
+    active: bool
+
+    def __init__(self, *, active: bool = False) -> None:
+        super().__init__(active=active)
+
+
+class Keyboard(Device, snapshot_type=KeyboardSnapshot):
     """The keyboard matrix as a function of time.
 
     A port read at time T returns the matrix state at T: all
@@ -96,7 +108,9 @@ class Keyboard(Device):
     which would otherwise have sampled differently.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, active: bool = False) -> None:
+        super().__init__(active=active)
+
         self.__state = [0xff] * 8
 
         # The time of the latest read; None before the first one.
@@ -104,6 +118,18 @@ class Keyboard(Device):
 
         # Strokes not yet in effect, in time order.
         self.__pending: list[KeyStroke] = []
+
+    @classmethod
+    def from_snapshot(cls, snapshot: DeviceSnapshot) -> Keyboard:
+        assert isinstance(snapshot, KeyboardSnapshot)
+        return cls(active=snapshot.active)
+
+    def to_snapshot(self) -> KeyboardSnapshot | None:
+        # Only the difference from the reset state is captured.
+        if not self.active:
+            return None
+
+        return KeyboardSnapshot(active=True)
 
     def __apply(self, key: Key, pressed: bool) -> None:
         mask = 1 << key.port_bit
@@ -134,7 +160,26 @@ class Keyboard(Device):
 
         return n
 
+    def __install_snapshot(self, snapshot: UnifiedSnapshot) -> None:
+        # Whatever the snapshot does not mention is at reset.
+        self.__state = [0xff] * 8
+        self.__last_read_time = None
+        self.__pending.clear()
+
+        s = next((d for _, d in snapshot.to_unified_snapshot()
+                  if isinstance(d, KeyboardSnapshot)), None)
+        self.active = s is not None and s.active
+
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
+        if isinstance(event, InstallSnapshot):
+            self.__install_snapshot(event.snapshot)
+            return
+
+        # An inactive keyboard is indistinguishable from an absent
+        # one: it drives no input lines and consumes no strokes.
+        if not self.active:
+            return
+
         if isinstance(event, KeyStroke):
             assert (self.__last_read_time is None or
                     self.__last_read_time < event.time)

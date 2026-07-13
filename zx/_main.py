@@ -53,6 +53,7 @@ from ._file import parse_file
 from ._file import parse_file_image
 from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
+from ._machines import get_spectrum_48k_snapshot
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._rzx import RZXFile
@@ -474,7 +475,7 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
     assert issubclass(dest_format, MachineSnapshot), dest_format
 
     core = Core()
-    devices = Dispatcher([core, Keyboard(), TapePlayer()])
+    devices = Dispatcher([core, Keyboard(active=True), TapePlayer()])
 
     def current_time() -> Time:
         return Time(core.tick_count,
@@ -506,6 +507,7 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
             break
 
     snapshot = UnifiedSnapshot(core=core.to_snapshot())
+    snapshot = get_spectrum_48k_snapshot().amended_with(snapshot)
     with pathlib.Path(dest_filename).open('wb') as f:
         f.write(dest_format.from_snapshot(snapshot).encode())
 

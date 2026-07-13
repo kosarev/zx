@@ -90,6 +90,22 @@ class DataRecord:
             if value is not None:
                 yield id, value
 
+    # A copy amended with a record of the same type: the other
+    # record's fields override this record's, and where both are
+    # records of one type themselves, they amend the same way, field
+    # by field.
+    def amended_with(self, other: typing.Self) -> typing.Self:
+        assert type(other) is type(self)
+
+        fields = dict(self)
+        for id, value in other:
+            base = fields.get(id)
+            if isinstance(base, DataRecord) and type(base) is type(value):
+                value = base.amended_with(value)
+            fields[id] = value
+
+        return type(self)(**fields)
+
     def to_json(self) -> typing.Any:
         def convert(v: typing.Any) -> typing.Any:
             if isinstance(v, (int, str)):

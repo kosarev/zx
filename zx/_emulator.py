@@ -76,6 +76,7 @@ from ._device import GetEmulationTime
 from ._device import GetHoldState
 from ._device import GetQuantumTimeLimit
 from ._device import InitEmulator
+from ._device import InstallSnapshot
 from ._device import IsTapePlayerPaused
 from ._device import LoadFile
 from ._device import LoadTape
@@ -91,6 +92,7 @@ from ._error import Error
 from ._file import parse_file
 from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
+from ._machines import get_spectrum_48k_snapshot
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._screen import ScreenWindow
@@ -125,6 +127,7 @@ class Emulator:
 
     def __init__(self, *,
                  model: type[SpectrumModel] | None = None,
+                 snapshot: MachineSnapshot | None = None,
                  core: Core | None = None,
                  screen: Device | None = None,
                  keyboard: Device | None = None,
@@ -176,6 +179,12 @@ class Emulator:
         # time none has reached yet.
         self.__advanced_floor = Time(0, ticks_per_second=1)
         self.__advanced_ceiling = Time(0, ticks_per_second=1)
+
+        # The machine's state: the specified snapshot, or the stock
+        # 48K one -- defaulted like the device set itself.
+        self.notify(InstallSnapshot(
+            (snapshot if snapshot is not None
+             else get_spectrum_48k_snapshot()).to_unified_snapshot()))
 
     # All the devices, the machine first, as one dispatch audience.
     @property
@@ -297,28 +306,11 @@ class Emulator:
     def _load_input_recording(self, file: MachinePlayback) -> None:
         self.notify(StartPlayback(file.to_unified_playback()))
 
-    # Builds machine devices from a machine snapshot: one device per
-    # slice, plus a default device of every machine member type the
-    # snapshot does not mention -- at its canonical reset state, per
-    # the reset-delta principle.
-    def __make_machine(self, snapshot: MachineSnapshot) -> list[Device]:
-        devices = [Device.from_snapshot(device_snapshot)
-                   for _, device_snapshot in snapshot.to_unified_snapshot()]
-
-        for member in Core, Keyboard, Beeper:
-            if not any(isinstance(d, member) for d in devices):
-                devices.append(member())
-
-        return devices
-
-    # Loading a machine state recreates the machine devices; the
-    # environment persists. The new machine starts its own timeline.
+    # Loading a machine state installs it into the persistent device
+    # set: the set is the machine definition's fact, never the
+    # snapshot's.
     def _load_snapshot(self, snapshot: MachineSnapshot) -> None:
-        self.notify(ResetEmulator())
-
-        self.machine = self.__make_machine(snapshot)
-        self.__advanced_floor = Time(0, ticks_per_second=1)
-        self.__advanced_ceiling = Time(0, ticks_per_second=1)
+        self.notify(InstallSnapshot(snapshot.to_unified_snapshot()))
 
     def _load(self, file: DataRecord) -> None:
         if isinstance(file, MachineSnapshot):
