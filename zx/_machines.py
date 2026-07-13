@@ -14,12 +14,13 @@ members. Converters compose their output over the stock snapshot of
 the machine their format declares.
 """
 
+from ._beeper import BeeperSnapshot
 from ._data import UnifiedSnapshot
 from ._keyboard import KeyboardSnapshot
 
 
 def get_spectrum_48k_snapshot() -> UnifiedSnapshot:
-    # TODO: Activate the core and the beeper once they gate on their
-    # activity.
+    # TODO: Activate the core once it gates on its activity.
     return UnifiedSnapshot(
+        beeper=BeeperSnapshot(active=True),
         keyboard=KeyboardSnapshot(active=True))

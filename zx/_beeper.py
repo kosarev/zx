@@ -13,9 +13,12 @@ import typing
 
 import numpy
 
+from ._data import DeviceSnapshot
+from ._data import UnifiedSnapshot
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
+from ._device import InstallSnapshot
 from ._device import NewPortWrites
 from ._device import NewSoundPulses
 from ._device import ResetEmulator
@@ -26,9 +29,18 @@ if typing.TYPE_CHECKING:
     from ._time import Time
 
 
-class Beeper(Device):
+class BeeperSnapshot(DeviceSnapshot, format_name=None):
+    active: bool
 
-    def __init__(self) -> None:
+    def __init__(self, *, active: bool = False) -> None:
+        super().__init__(active=active)
+
+
+class Beeper(Device, snapshot_type=BeeperSnapshot):
+
+    def __init__(self, *, active: bool = False) -> None:
+        super().__init__(active=active)
+
         self.__stream = PulseStream()
 
         # The time up to which the beeper's sound has been
@@ -39,6 +51,18 @@ class Beeper(Device):
         # free-running tick stamps.
         self.__levels: list[numpy.typing.NDArray[numpy.float64]] = []
         self.__ticks: list[numpy.typing.NDArray[numpy.uint32]] = []
+
+    @classmethod
+    def from_snapshot(cls, snapshot: DeviceSnapshot) -> Beeper:
+        assert isinstance(snapshot, BeeperSnapshot)
+        return cls(active=snapshot.active)
+
+    def to_snapshot(self) -> BeeperSnapshot | None:
+        # Only the difference from the reset state is captured.
+        if not self.active:
+            return None
+
+        return BeeperSnapshot(active=True)
 
     def __collect(self, writes: numpy.typing.NDArray[numpy.uint64]) -> None:
         # Filter writes to the 0xfe port.
@@ -89,12 +113,32 @@ class Beeper(Device):
                                             rate=stamp.ticks_per_second)
         dispatcher.notify(NewSoundPulses(pulses))
 
+    def __reset(self) -> None:
+        self.__stream.reset()
+        self.__published_up_to = None
+        self.__levels.clear()
+        self.__ticks.clear()
+
+    def __install_snapshot(self, snapshot: UnifiedSnapshot) -> None:
+        # Whatever the snapshot does not mention is at reset.
+        self.__reset()
+
+        s = next((d for _, d in snapshot.to_unified_snapshot()
+                  if isinstance(d, BeeperSnapshot)), None)
+        self.active = s is not None and s.active
+
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
+        if isinstance(event, InstallSnapshot):
+            self.__install_snapshot(event.snapshot)
+            return
+
+        # An inactive beeper is indistinguishable from an absent
+        # one: it publishes no sound.
+        if not self.active:
+            return
+
         if isinstance(event, ResetEmulator):
-            self.__stream.reset()
-            self.__published_up_to = None
-            self.__levels.clear()
-            self.__ticks.clear()
+            self.__reset()
         elif isinstance(event, NewPortWrites):
             self.__collect(event.writes)
         elif isinstance(event, TimeAdvanced):
