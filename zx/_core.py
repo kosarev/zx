@@ -797,7 +797,8 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         elif isinstance(event, StopPlayback):
             self._quit_playback_mode()
         elif isinstance(event, ResetEmulator):
+            # The reset does not touch the ROMs: whatever is in the
+            # socket stays, a snapshot-installed image included.
             self.on_reset()
-            self.__install_rom()
         elif isinstance(event, ToggleEmulationPause):
             self.__set_paused(not self.paused, devices)

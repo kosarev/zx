@@ -85,13 +85,19 @@ public:
         ram7,
     };
 
-    memory_image() {}
+    // The power-up state is the same deterministic pattern
+    // everywhere, the ROM pages included.
+    memory_image() {
+        for(unsigned p = 0; p != num_pages; ++p)
+            randomise_page(p);
+    }
 
+    // Re-randomises the RAM pages, deterministically. The ROMs are
+    // not reset's responsibility.
     void reset() {
-        uint_fast32_t rnd = 0xde347a01;
-        for(auto &b : bytes) {
-            b = static_cast<least_u8>(rnd);
-            rnd = (rnd * 0x74392cef) ^ (rnd >> 16);
+        for(unsigned p = 0; p != num_pages; ++p) {
+            if(p != rom0 && p != rom1)
+                randomise_page(p);
         }
     }
 
@@ -136,6 +142,15 @@ private:
             return addr;
 
         return ram * page_size + addr % page_size;
+    }
+
+    // Fills the page with a deterministic random-looking pattern.
+    void randomise_page(unsigned p) {
+        uint_fast32_t rnd = 0xde347a01 + p;
+        for(fast_u32 i = 0; i != page_size; ++i) {
+            bytes[p * page_size + i] = static_cast<least_u8>(rnd);
+            rnd = (rnd * 0x74392cef) ^ (rnd >> 16);
+        }
     }
 
     least_u8 bytes[image_size];
