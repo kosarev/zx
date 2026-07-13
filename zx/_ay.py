@@ -26,7 +26,7 @@ from ._device import TimeAdvanced
 from ._time import Time
 
 if typing.TYPE_CHECKING:
-    from ._data import UnifiedAYStream
+    from ._data import AYStream
 
 
 # The AY-3-8912 register write as a stamped fact: the chip vocabulary,
@@ -364,7 +364,7 @@ class AY(Device, snapshot_type=AYSnapshot):
 
 
 class AYPlayer(Device):
-    """Plays a unified AY stream: desk equipment that walks the
+    """Plays an AY stream: desk equipment that walks the
     frames and emits their writes as stamped AYRegisterWrite events.
 
     With no core present it is also the round loop's runner: it
@@ -372,7 +372,7 @@ class AYPlayer(Device):
     reports the position reached.
     """
 
-    def __init__(self, stream: UnifiedAYStream) -> None:
+    def __init__(self, stream: AYStream) -> None:
         self.__rate = stream.ticks_per_second
 
         # The stream flattened to stamped writes, in time order.

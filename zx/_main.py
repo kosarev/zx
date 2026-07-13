@@ -25,7 +25,8 @@ from ._binary import Bytes
 from ._core import Core
 from ._core import Profile
 from ._core import RunEvents
-from ._data import AYMusic
+from ._data import AYMusicFile
+from ._data import AYStream
 from ._data import DataRecord
 from ._data import MachinePlayback
 from ._data import MachineSnapshot
@@ -33,7 +34,6 @@ from ._data import PlaybackFile
 from ._data import SnapshotFile
 from ._data import SoundFile
 from ._data import Spectrum128
-from ._data import UnifiedAYStream
 from ._device import BreakpointHit
 from ._device import Device
 from ._device import DeviceEvent
@@ -100,7 +100,7 @@ class _HoldWaiter(Device):
 
 # Plays an AY music stream: a session of the AY chip alone, driven
 # by the stream player, with no Spectrum machine involved.
-def _play_ay_stream(stream: UnifiedAYStream) -> None:
+def _play_ay_stream(stream: AYStream) -> None:
     player = AYPlayer(stream)
 
     # A large device buffer rides out the late audio-thread wakeups
@@ -131,8 +131,8 @@ def run(args: list[str]) -> None:
     file = None
     if filename:
         file = parse_file(filename)
-        if isinstance(file, AYMusic):
-            _play_ay_stream(file.to_unified_ay_stream())
+        if isinstance(file, AYMusicFile):
+            _play_ay_stream(file.to_ay_stream())
             return
 
     session_snapshot = get_config_dir() / 'session.zx'
@@ -202,8 +202,8 @@ def unify(args: list[str]) -> None:
         unified: DataRecord = file.to_machine_snapshot()
     elif isinstance(file, PlaybackFile):
         unified = file.to_machine_playback()
-    elif isinstance(file, AYMusic):
-        unified = file.to_unified_ay_stream()
+    elif isinstance(file, AYMusicFile):
+        unified = file.to_ay_stream()
     else:
         raise Error(f"Don't know how to unify {type(file).FORMAT_NAME} "
                     f'files.', id='not_unifiable')
@@ -309,11 +309,11 @@ def test_file(filename: str, batch_mode: bool,
             unified = file.to_machine_snapshot()
             unified2 = type(file).from_snapshot(unified).to_machine_snapshot()
             match(unified, unified2)
-        elif isinstance(file, AYMusic):
+        elif isinstance(file, AYMusicFile):
             match(image, file.encode())
 
-            stream = file.to_unified_ay_stream()
-            stream2 = type(file).from_ay_music(stream).to_unified_ay_stream()
+            stream = file.to_ay_stream()
+            stream2 = type(file).from_ay_music(stream).to_ay_stream()
             match(stream, stream2)
         elif isinstance(file, RZXFile):
             with Emulator(headless=True) as app:
@@ -534,8 +534,8 @@ def _convert_ay_music(src: DataRecord,
                       src_filename: str,
                       dest_filename: str,
                       dest_format: type[DataRecord]) -> None:
-    assert isinstance(src, AYMusic)
-    assert issubclass(dest_format, AYMusic), dest_format
+    assert isinstance(src, AYMusicFile)
+    assert issubclass(dest_format, AYMusicFile), dest_format
 
     with pathlib.Path(dest_filename).open('wb') as f:
         f.write(dest_format.from_ay_music(src).encode())
@@ -573,7 +573,7 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
          _convert_tape_to_snapshot),
         (SnapshotFile, SnapshotFile,
          _convert_snapshot_to_snapshot),
-        (AYMusic, AYMusic, _convert_ay_music),
+        (AYMusicFile, AYMusicFile, _convert_ay_music),
         (DataRecord, ZXFile, _convert_any_to_zx),
     ]
 

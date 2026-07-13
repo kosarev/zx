@@ -72,8 +72,8 @@ def test_construct_from_commands() -> None:
                                    0x00, 0x01, 0xfd]))
 
 
-def test_to_unified_ay_stream() -> None:
-    stream = PSGFile.decode('x.psg', IMAGE).to_unified_ay_stream()
+def test_to_ay_stream() -> None:
+    stream = PSGFile.decode('x.psg', IMAGE).to_ay_stream()
     assert stream.ticks_per_second == 3546900
     assert stream.ticks_per_frame == TICKS_PER_FRAME
 
@@ -94,7 +94,7 @@ def test_declared_frequency() -> None:
     assert psg.encode() == image
 
     # 3,546,900 / 60 = 59,115 ticks per frame, exactly.
-    stream = psg.to_unified_ay_stream()
+    stream = psg.to_ay_stream()
     assert stream.ticks_per_frame == 59115
     assert [(f.frame, [(w.reg, w.value) for w in f.writes])
             for f in stream.frames] == [(1, [(0, 1)])]
@@ -133,16 +133,16 @@ def test_unify_to_zx(tmp_path: pathlib.Path) -> None:
 
     zx._main.unify([str(src), str(dest)])
     text = dest.read_text()
-    assert 'UnifiedAYStream' in text
+    assert 'AYStream' in text
     assert 'AYWrite' in text
 
 
-def test_unified_roundtrip() -> None:
+def test_stream_roundtrip() -> None:
     psg = PSGFile.decode('x.psg', IMAGE)
-    stream = psg.to_unified_ay_stream()
+    stream = psg.to_ay_stream()
 
     # Re-encoding is canonical -- the eight-frame gap becomes one
-    # skip command -- but the unified content survives unchanged.
+    # skip command -- but the stream content survives unchanged.
     again = PSGFile.from_ay_music(stream)
     assert PSGSkipFrames(count=2) in again.commands
-    assert again.to_unified_ay_stream() == stream
+    assert again.to_ay_stream() == stream

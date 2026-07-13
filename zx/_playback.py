@@ -107,7 +107,7 @@ state (key frame) followed by a sequence of frames:
       key_frame: MachineSnapshot  # full machine state; ticks_since_int
                                   # serves as first_tick — no separate
                                   # field needed
-      frames: list[UnifiedFrame]  # num_fetches + port_samples per frame
+      frames: list[MachinePlaybackFrame]  # num_fetches + port_samples
 
   class MachinePlayback:
       segments: list[MachinePlaybackSegment]

@@ -21,8 +21,8 @@ from zx._ay import AY
 from zx._ay import AYPlayer
 from zx._ay import AYRegisterWrite
 from zx._data import AYFrame
+from zx._data import AYStream
 from zx._data import AYWrite
-from zx._data import UnifiedAYStream
 from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
@@ -153,7 +153,7 @@ def test_write_takes_effect_at_step_boundary() -> None:
 def test_stream_player() -> None:
     # A tone on channel A, with the pitch changed mid-way through
     # the second frame.
-    stream = UnifiedAYStream(
+    stream = AYStream(
         ticks_per_second=RATE, ticks_per_frame=70908,
         frames=[
             AYFrame(frame=0, writes=[

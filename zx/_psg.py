@@ -11,12 +11,12 @@ from __future__ import annotations
 import typing
 
 from ._data import AYFrame
-from ._data import AYMusic
+from ._data import AYMusicFile
+from ._data import AYStream
 from ._data import AYWrite
 from ._data import ByteData
 from ._data import DataRecord
 from ._data import HexData
-from ._data import UnifiedAYStream
 from ._data import _InlineJSONDict
 from ._error import Error
 
@@ -134,7 +134,7 @@ def _parse_commands(image: Bytes) -> list[PSGCommand]:
 # bytes, then the command stream, represented as one record per wire
 # command. Bytes following an end-of-stream command, if any, are
 # kept apart.
-class PSGFile(AYMusic, format_name='PSG'):
+class PSGFile(AYMusicFile, format_name='PSG'):
     version: int
     frequency: int
     reserved: ByteData
@@ -153,8 +153,8 @@ class PSGFile(AYMusic, format_name='PSG'):
             else None)
 
     @classmethod
-    def from_ay_music(cls, music: AYMusic) -> PSGFile:
-        stream = music.to_unified_ay_stream()
+    def from_ay_music(cls, music: AYMusicFile) -> PSGFile:
+        stream = music.to_ay_stream()
         if stream.ticks_per_second != _TICKS_PER_SECOND:
             raise Error('Cannot represent the AY stream as PSG: '
                         f'unsupported rate {stream.ticks_per_second}.',
@@ -209,7 +209,7 @@ class PSGFile(AYMusic, format_name='PSG'):
                 b''.join(c.encode_command() for c in self.commands) +
                 (self.trailing.data if self.trailing is not None else b''))
 
-    def to_unified_ay_stream(self) -> UnifiedAYStream:
+    def to_ay_stream(self) -> AYStream:
         # A declared frequency gives the exact frame spacing; the
         # default is the 128K machine frame.
         if self.frequency == 0:
@@ -236,6 +236,6 @@ class PSGFile(AYMusic, format_name='PSG'):
             elif isinstance(command, PSGEnd):
                 break
 
-        return UnifiedAYStream(ticks_per_second=_TICKS_PER_SECOND,
-                               ticks_per_frame=ticks_per_frame,
-                               frames=frames)
+        return AYStream(ticks_per_second=_TICKS_PER_SECOND,
+                        ticks_per_frame=ticks_per_frame,
+                        frames=frames)
