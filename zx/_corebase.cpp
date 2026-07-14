@@ -83,6 +83,9 @@ struct __attribute__((packed)) core_config {
 #endif
     // The CPU clock, in Hz.
     least_u32 ticks_per_second = 3500000;
+
+    least_u32 ticks_per_horizontal_retrace = 48;
+    least_u32 lines_per_vertical_retrace = 24;
 };
 #if defined(_MSC_VER)
 #pragma pack(pop)
@@ -275,6 +278,14 @@ protected:
 public:
     zx::spectrum_model on_get_model() const {
         return static_cast<zx::spectrum_model>(state.model);
+    }
+
+    ticks_type on_get_ticks_per_horizontal_retrace() const {
+        return state.config.ticks_per_horizontal_retrace;
+    }
+
+    ticks_type on_get_lines_per_vertical_retrace() const {
+        return state.config.lines_per_vertical_retrace;
     }
 
     zx::memory_image &on_get_memory() {

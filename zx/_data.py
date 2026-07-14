@@ -172,23 +172,17 @@ class SpectrumModel(type):
     _MODELS_BY_CXX_CODES: typing.ClassVar[dict[int, type[SpectrumModel]]] = {}
 
     _CXX_MODEL_CODE: int
-    _TICKS_PER_FRAME: int
 
-    def __init_subclass__(cls, *, cxx_model_code: int,
-                          ticks_per_frame: int):
+    def __init_subclass__(cls, *, cxx_model_code: int):
         cls._CXX_MODEL_CODE = cxx_model_code
         SpectrumModel._MODELS_BY_CXX_CODES[cxx_model_code] = cls
 
-        cls._TICKS_PER_FRAME = ticks_per_frame
 
-
-class Spectrum48(SpectrumModel, cxx_model_code=0,
-                 ticks_per_frame=69888):
+class Spectrum48(SpectrumModel, cxx_model_code=0):
     pass
 
 
-class Spectrum128(SpectrumModel, cxx_model_code=1,
-                  ticks_per_frame=70908):
+class Spectrum128(SpectrumModel, cxx_model_code=1):
     pass
 
 

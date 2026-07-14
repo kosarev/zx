@@ -571,27 +571,22 @@ public:
     static constexpr ticks_type max_ticks_per_frame = 70908;
 
     ticks_type get_ticks_per_frame() const {
-        switch (self().on_get_model()) {
-        case spectrum_model::spectrum_48:
-            static_assert(max_ticks_per_frame >= 69888,
-                          "max_ticks_per_frame too small!");
-            return 69888;
-        case spectrum_model::spectrum_128:
-            static_assert(max_ticks_per_frame >= 70908,
-                          "max_ticks_per_frame too small!");
-            return 70908;
-        }
-        unreachable("Unknown Spectrum model.");
+        ticks_type ticks = get_ticks_per_line() * get_lines_per_frame();
+        assert(ticks <= max_ticks_per_frame);
+        return ticks;
     }
 
+    // The left border, the screen and the right border, in ticks,
+    // plus the horizontal retrace. The first three are constants for
+    // now, to become configurable with machines that vary them.
     ticks_type get_ticks_per_line() const {
-        switch (self().on_get_model()) {
-        case spectrum_model::spectrum_48:
-            return 224;
-        case spectrum_model::spectrum_128:
-            return 228;
-        }
-        unreachable("Unknown Spectrum model.");
+        return 24 + 128 + 24 + self().on_get_ticks_per_horizontal_retrace();
+    }
+
+    // The top border, the screen and the bottom border, in lines,
+    // plus the vertical retrace.
+    ticks_type get_lines_per_frame() const {
+        return 48 + 192 + 48 + self().on_get_lines_per_vertical_retrace();
     }
 
     static const ticks_type ticks_per_active_int = 32;

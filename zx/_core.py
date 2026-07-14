@@ -66,6 +66,8 @@ class RunEvents(enum.IntFlag):
 class CoreSnapshot(DeviceSnapshot, format_name=None):
     active: bool | None
     ticks_per_second: int | None
+    ticks_per_horizontal_retrace: int | None
+    lines_per_vertical_retrace: int | None
     af: int | None
     bc: int | None
     de: int | None
@@ -92,6 +94,8 @@ class CoreSnapshot(DeviceSnapshot, format_name=None):
             self,
             active: bool | None = None,
             ticks_per_second: int | None = None,
+            ticks_per_horizontal_retrace: int | None = None,
+            lines_per_vertical_retrace: int | None = None,
             af: int | None = None,
             bc: int | None = None,
             de: int | None = None,
@@ -121,6 +125,8 @@ class CoreSnapshot(DeviceSnapshot, format_name=None):
         super().__init__(
             active=active,
             ticks_per_second=ticks_per_second,
+            ticks_per_horizontal_retrace=ticks_per_horizontal_retrace,
+            lines_per_vertical_retrace=lines_per_vertical_retrace,
             af=af, bc=bc, de=de, hl=hl, ix=ix, iy=iy,
             alt_af=alt_af, alt_bc=alt_bc,
             alt_de=alt_de, alt_hl=alt_hl,
@@ -388,6 +394,8 @@ class CoreState(Z80State):
         p.parse8()
 
         self.__ticks_per_second = p.parse32()
+        self.__ticks_per_horizontal_retrace = p.parse32()
+        self.__lines_per_vertical_retrace = p.parse32()
 
         self.__memory = p.read_bytes(10 * self.__PAGE_SIZE)
 
@@ -465,6 +473,22 @@ class CoreState(Z80State):
     @ticks_per_second.setter
     def ticks_per_second(self, value: int) -> None:
         self.__ticks_per_second[:] = value.to_bytes(4, 'little')
+
+    @property
+    def ticks_per_horizontal_retrace(self) -> int:
+        return int.from_bytes(self.__ticks_per_horizontal_retrace, 'little')
+
+    @ticks_per_horizontal_retrace.setter
+    def ticks_per_horizontal_retrace(self, value: int) -> None:
+        self.__ticks_per_horizontal_retrace[:] = value.to_bytes(4, 'little')
+
+    @property
+    def lines_per_vertical_retrace(self) -> int:
+        return int.from_bytes(self.__lines_per_vertical_retrace, 'little')
+
+    @lines_per_vertical_retrace.setter
+    def lines_per_vertical_retrace(self, value: int) -> None:
+        self.__lines_per_vertical_retrace[:] = value.to_bytes(4, 'little')
 
     @property
     def border_colour(self) -> int:
@@ -589,6 +613,8 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         return CoreSnapshot(
             active=True if self.active else None,
             ticks_per_second=self.ticks_per_second,
+            ticks_per_horizontal_retrace=self.ticks_per_horizontal_retrace,
+            lines_per_vertical_retrace=self.lines_per_vertical_retrace,
             af=self.af, bc=self.bc, de=self.de, hl=self.hl,
             ix=self.ix, iy=self.iy,
             alt_af=self.alt_af, alt_bc=self.alt_bc,
