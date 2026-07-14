@@ -20,7 +20,7 @@ from ._device import Dispatcher
 from ._error import Error
 from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
-from ._machines import get_spectrum_48k_snapshot
+from ._machines import Spectrum48Snapshot
 from ._time import Time
 
 if typing.TYPE_CHECKING:
@@ -78,7 +78,7 @@ class ZXBasicCompilerProgram(SnapshotFile, format_name='ZXB'):
     # may assume: the system variables, the interrupt mode, the USR
     # call frame.
     def to_machine_snapshot(self) -> MachineSnapshot:
-        stock = get_spectrum_48k_snapshot()
+        stock = Spectrum48Snapshot()
 
         core = Core()
         core.install_snapshot(stock.core)

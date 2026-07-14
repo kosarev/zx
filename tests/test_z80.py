@@ -14,7 +14,7 @@ from zx._data import MachineSnapshot
 def test_basic() -> None:
     # Create a Z80 snapshot of a standard machine.
     mach = zx.Core()
-    mach.install_snapshot(zx._machines.get_spectrum_48k_snapshot().core)
+    mach.install_snapshot(zx._machines.Spectrum48Snapshot().core)
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
     HL = 0x1234
     mach.hl = HL

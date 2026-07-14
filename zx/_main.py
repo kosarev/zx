@@ -54,7 +54,7 @@ from ._file import parse_file
 from ._file import parse_file_image
 from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
-from ._machines import get_spectrum_48k_snapshot
+from ._machines import Spectrum48Snapshot
 from ._machines import get_spectrum_128k_snapshot
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
@@ -478,7 +478,7 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
     assert isinstance(src, SoundFile)
     assert issubclass(dest_format, SnapshotFile), dest_format
 
-    stock = get_spectrum_48k_snapshot()
+    stock = Spectrum48Snapshot()
 
     core = Core()
     core.install_snapshot(stock.core)

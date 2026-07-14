@@ -15,7 +15,7 @@ from ._binary import Bytes
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import SnapshotFile
-from ._machines import get_spectrum_48k_snapshot
+from ._machines import Spectrum48Snapshot
 
 
 class _SCRSnapshot(SnapshotFile, format_name='SCR'):
@@ -39,7 +39,7 @@ class _SCRSnapshot(SnapshotFile, format_name='SCR'):
             addr=LOOP_ADDR, rom_page=ROM_PAGE, ram_page=RAM_PAGE,
             data=loop_instr))
 
-        stock = get_spectrum_48k_snapshot()
+        stock = Spectrum48Snapshot()
 
         # Stock snapshots carry no RAM content, so combining their
         # memory blocks with the file's RAM blocks cannot overlap.

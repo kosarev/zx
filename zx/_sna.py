@@ -19,7 +19,7 @@ from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import SnapshotFile
 from ._error import Error
-from ._machines import get_spectrum_48k_snapshot
+from ._machines import Spectrum48Snapshot
 
 
 class SNASnapshot(SnapshotFile, format_name='SNA'):
@@ -74,7 +74,7 @@ class SNASnapshot(SnapshotFile, format_name='SNA'):
 
         iff = int(bool(self.iff & 0x04))
 
-        stock = get_spectrum_48k_snapshot()
+        stock = Spectrum48Snapshot()
 
         # Stock snapshots carry no RAM content, so combining their
         # memory blocks with the file's RAM blocks cannot overlap.

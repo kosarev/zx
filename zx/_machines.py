@@ -33,21 +33,23 @@ class Spectrum48Snapshot(MachineSnapshot, format_name=None):
     keyboard: KeyboardSnapshot
     beeper: BeeperSnapshot
 
-    def __init__(self, *, core: CoreSnapshot,
-                 keyboard: KeyboardSnapshot,
-                 beeper: BeeperSnapshot) -> None:
+    # Members not specified take their stock values, so constructing
+    # with no arguments gives the stock 48K machine.
+    def __init__(self, *, core: CoreSnapshot | None = None,
+                 keyboard: KeyboardSnapshot | None = None,
+                 beeper: BeeperSnapshot | None = None) -> None:
+        if core is None:
+            core = CoreSnapshot(
+                active=True,
+                memory_blocks=[
+                    MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
+                                data=load_rom_image('Spectrum48.rom'))])
+        if keyboard is None:
+            keyboard = KeyboardSnapshot(active=True)
+        if beeper is None:
+            beeper = BeeperSnapshot(active=True)
+
         super().__init__(core=core, keyboard=keyboard, beeper=beeper)
-
-
-def get_spectrum_48k_snapshot() -> Spectrum48Snapshot:
-    return Spectrum48Snapshot(
-        core=CoreSnapshot(
-            active=True,
-            memory_blocks=[
-                MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
-                            data=load_rom_image('Spectrum48.rom'))]),
-        beeper=BeeperSnapshot(active=True),
-        keyboard=KeyboardSnapshot(active=True))
 
 
 # The remaining 128K facts, the clock and the paging, still ride the
@@ -55,7 +57,7 @@ def get_spectrum_48k_snapshot() -> Spectrum48Snapshot:
 # work proceeds.
 def get_spectrum_128k_snapshot() -> MachineSnapshot:
     rom = load_rom_image('Spectrum128.rom')
-    stock = get_spectrum_48k_snapshot()
+    stock = Spectrum48Snapshot()
     return stock.updated(core=stock.core.updated(memory_blocks=[
         MemoryBlock(addr=0x0000, rom_page=0, ram_page=0, data=rom[:0x4000]),
         MemoryBlock(addr=0x0000, rom_page=1, ram_page=0,

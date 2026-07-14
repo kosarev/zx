@@ -24,7 +24,7 @@ from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import SnapshotFile
 from ._error import Error
-from ._machines import get_spectrum_48k_snapshot
+from ._machines import Spectrum48Snapshot
 from ._utils import get_high8
 from ._utils import get_low8
 from ._utils import make16
@@ -288,7 +288,7 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
                 image[block.addr:block.addr + len(block.data.data)] = (
                     list(block.data.data))
 
-            [stock_rom] = get_spectrum_48k_snapshot().core.memory_blocks or []
+            [stock_rom] = Spectrum48Snapshot().core.memory_blocks or []
 
             PAGE_SIZE = 0x4000
             EMPTY_PAGE = [None] * PAGE_SIZE
@@ -425,7 +425,7 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
                     addr=self.__MEMORY_PAGE_ADDRS[block.page_no],
                     rom_page=0, ram_page=0, data=image))
 
-        stock = get_spectrum_48k_snapshot()
+        stock = Spectrum48Snapshot()
 
         # Stock snapshots carry no RAM content, so combining their
         # memory blocks with the file's RAM blocks cannot overlap.

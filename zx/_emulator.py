@@ -93,7 +93,7 @@ from ._error import Error
 from ._file import parse_file
 from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
-from ._machines import get_spectrum_48k_snapshot
+from ._machines import Spectrum48Snapshot
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._screen import ScreenWindow
@@ -166,7 +166,7 @@ class Emulator:
             # snapshot. A caller-defined machine is defined by the
             # code that builds it: only a specified snapshot installs.
             if snapshot is None:
-                snapshot = get_spectrum_48k_snapshot()
+                snapshot = Spectrum48Snapshot()
 
         if environment is None:
             environment = [TapePlayer(),
