@@ -178,26 +178,22 @@ class SpectrumModel(type):
     _MODELS_BY_CXX_CODES: typing.ClassVar[dict[int, type[SpectrumModel]]] = {}
 
     _CXX_MODEL_CODE: int
-    _ROM_FILE_NAME: str
     _TICKS_PER_FRAME: int
 
-    def __init_subclass__(cls, *, cxx_model_code: int, rom_file_name: str,
+    def __init_subclass__(cls, *, cxx_model_code: int,
                           ticks_per_frame: int):
         cls._CXX_MODEL_CODE = cxx_model_code
         SpectrumModel._MODELS_BY_CXX_CODES[cxx_model_code] = cls
 
-        cls._ROM_FILE_NAME = rom_file_name
         cls._TICKS_PER_FRAME = ticks_per_frame
 
 
 class Spectrum48(SpectrumModel, cxx_model_code=0,
-                 rom_file_name='Spectrum48.rom',
                  ticks_per_frame=69888):
     pass
 
 
 class Spectrum128(SpectrumModel, cxx_model_code=1,
-                  rom_file_name='Spectrum128.rom',
                   ticks_per_frame=70908):
     pass
 

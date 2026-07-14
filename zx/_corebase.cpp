@@ -453,6 +453,13 @@ PyObject *on_reset(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
+PyObject *reset_roms(PyObject *self, PyObject *args) {
+    // The memory image is part of the state shared with the Python
+    // side directly, so no state marshalling is needed.
+    cast_emulator(self).on_get_memory().reset_roms();
+    Py_RETURN_NONE;
+}
+
 PyMethodDef methods[] = {
     {"_get_state_view", get_state_view, METH_NOARGS,
      "Return a MemoryView object that exposes the internal state of the "
@@ -479,8 +486,10 @@ PyMethodDef methods[] = {
      "Execute the instruction a breakpoint trapped at."},
     {"on_handle_active_int", on_handle_active_int, METH_NOARGS,
      "Attempts to initiate a masked interrupt."},
-    {"on_reset", on_reset, METH_NOARGS,
+    {"_reset", on_reset, METH_NOARGS,
      "Perform a hard reset of the emulated machine."},
+    {"_reset_roms", reset_roms, METH_NOARGS,
+     "Return the ROM pages to their power-up state."},
     { nullptr }  // Sentinel.
 };
 

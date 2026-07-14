@@ -288,12 +288,21 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
                 image[block.addr:block.addr + len(block.data.data)] = (
                     list(block.data.data))
 
+            [stock_rom] = get_spectrum_48k_snapshot().core.memory_blocks or []
+
             PAGE_SIZE = 0x4000
             EMPTY_PAGE = [None] * PAGE_SIZE
             for page_no, addr in cls.__MEMORY_PAGE_ADDRS.items():
                 page = image[addr:addr+PAGE_SIZE]
                 if page != EMPTY_PAGE:
                     page_image = bytes(0 if b is None else b for b in page)
+
+                    # The format's canonical machine has the standard
+                    # ROM; the ROM page is stored only when it
+                    # differs.
+                    if addr < 0x4000 and page_image == stock_rom.data.data:
+                        continue
+
                     memory_blocks.append(Z80MemoryBlock(
                         page_no=page_no, compressed_size=0xffff,
                         data=page_image))
@@ -418,6 +427,15 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
 
         stock = get_spectrum_48k_snapshot()
 
+        # Stock snapshots carry no RAM content, so combining their
+        # memory blocks with the file's RAM blocks cannot overlap.
+        stock_blocks = stock.core.memory_blocks or []
+        assert all(b.end_addr <= 0x4000 for b in stock_blocks)
+
+        # A file carrying its own ROM page replaces the stock ROM.
+        if any(b.addr < 0x4000 for b in memory_blocks):
+            stock_blocks = []
+
         # The file describes a machine, so its facts update the
         # machine's stock snapshot. TODO: 128K per the v2/v3 hardware
         # mode.
@@ -441,7 +459,7 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
             int_mode=int_mode,
             ticks_since_int=ticks_since_int,
             border_colour=(flags1 >> 1) & 0x7,
-            memory_blocks=memory_blocks))
+            memory_blocks=stock_blocks + memory_blocks))
 
     __V1_HEADER: typing.ClassVar[list[str]] = [
         'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',

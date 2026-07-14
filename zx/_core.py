@@ -46,7 +46,6 @@ from ._device import StopQuantum
 from ._device import ToggleEmulationPause
 from ._except import EmulationExit
 from ._keyboard import KeyStroke
-from ._rom import load_rom_image
 from ._time import Time
 
 
@@ -556,8 +555,6 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
 
         self.model = model if model is not None else Spectrum48
 
-        self.__install_rom()
-
         self.frame_count = 0
 
         self.set_on_input_callback(self.__on_input)
@@ -572,15 +569,6 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
 
         self.__paused = False
 
-    def __install_rom(self) -> None:
-        PAGE_SIZE = 0x4000
-        rom = load_rom_image(self.model._ROM_FILE_NAME)
-        assert len(rom) >= PAGE_SIZE
-        self.write(0x0000, rom[:PAGE_SIZE], rom_page=0)
-        if len(rom) > PAGE_SIZE:
-            assert len(rom) == 2 * PAGE_SIZE
-            self.write(0x0000, rom[PAGE_SIZE:], rom_page=1)
-
     def to_snapshot(self) -> CoreSnapshot:
         # TODO: Store all fields.
         assert self.model is Spectrum48  # TODO: Support 128K.
@@ -594,7 +582,9 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
             # TODO: wz=self.wz,
             iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
             iregp_kind=self.iregp_kind,
-            memory_blocks=[MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
+            memory_blocks=[MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
+                                       data=self.read(0x0000, 0x4000)),
+                           MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
                                        data=self.read(0x4000, 0xc000))],
             ticks_since_int=self.ticks_since_int,
             border_colour=self.border_colour)
@@ -602,9 +592,9 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
     def install_snapshot(self, snapshot: CoreSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset
         # state, so installing one resets first: whatever the snapshot
-        # does not mention stays at reset.
-        self.on_reset()
-        self.__install_rom()
+        # does not mention, the ROMs included, stays at reset.
+        self._reset()
+        self._reset_roms()
         self.active = False
 
         for field, value in snapshot:
@@ -799,6 +789,6 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         elif isinstance(event, ResetEmulator):
             # The reset does not touch the ROMs: whatever is in the
             # socket stays, a snapshot-installed image included.
-            self.on_reset()
+            self._reset()
         elif isinstance(event, ToggleEmulationPause):
             self.__set_paused(not self.paused, devices)

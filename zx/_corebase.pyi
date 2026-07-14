@@ -40,5 +40,8 @@ class _CoreBase:
     def on_handle_active_int(self) -> None:
         ...
 
-    def on_reset(self) -> None:
+    def _reset(self) -> None:
+        ...
+
+    def _reset_roms(self) -> None:
         ...

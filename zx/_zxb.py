@@ -78,7 +78,10 @@ class ZXBasicCompilerProgram(SnapshotFile, format_name='ZXB'):
     # may assume: the system variables, the interrupt mode, the USR
     # call frame.
     def to_machine_snapshot(self) -> MachineSnapshot:
+        stock = get_spectrum_48k_snapshot()
+
         core = Core()
+        core.install_snapshot(stock.core)
         keyboard = Keyboard(active=True)
         devices = Dispatcher([core, keyboard])
 
@@ -126,6 +129,5 @@ class ZXBasicCompilerProgram(SnapshotFile, format_name='ZXB'):
             raise Error('The compiled program did not start.')
 
         assert core.pc == self.entry_point
-        stock = get_spectrum_48k_snapshot()
         return stock.updated(
             core=stock.core.updated(**dict(core.to_snapshot())))

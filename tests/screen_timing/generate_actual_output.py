@@ -30,6 +30,7 @@ from zx._device import PauseUnpauseTape
 from zx._file import parse_file
 from zx._keyboard import Keyboard
 from zx._keyboard import make_key_strokes
+from zx._machines import get_spectrum_48k_snapshot
 from zx._tape import TapePlayer
 from zx._time import Time
 
@@ -39,7 +40,8 @@ def main() -> None:
                      else 'screen_timing_early.tap')
 
     core = Core()
-    devices = Dispatcher([core, Keyboard(), TapePlayer()])
+    core.install_snapshot(get_spectrum_48k_snapshot().core)
+    devices = Dispatcher([core, Keyboard(active=True), TapePlayer()])
 
     def current_time() -> Time:
         return Time(core.tick_count,

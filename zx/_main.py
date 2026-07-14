@@ -55,6 +55,7 @@ from ._file import parse_file_image
 from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
 from ._machines import get_spectrum_48k_snapshot
+from ._machines import get_spectrum_128k_snapshot
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._rzx import RZXFile
@@ -120,8 +121,10 @@ def _play_ay_stream(stream: AYStream) -> None:
 
 def run(args: list[str]) -> None:
     model = None
+    snapshot = None
     if pop_option(args, '--128'):
         model = Spectrum128
+        snapshot = get_spectrum_128k_snapshot()
 
     filename = None
     if args:
@@ -138,7 +141,7 @@ def run(args: list[str]) -> None:
     session_snapshot = get_config_dir() / 'session.zx'
     settings_file = get_config_dir() / 'settings.json'
 
-    with Emulator(model=model, extra_environment=[
+    with Emulator(model=model, snapshot=snapshot, extra_environment=[
             GlobalSettingsManager(settings_file)]) as app:
         if file is not None:
             app._load(file)
@@ -475,7 +478,10 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
     assert isinstance(src, SoundFile)
     assert issubclass(dest_format, SnapshotFile), dest_format
 
+    stock = get_spectrum_48k_snapshot()
+
     core = Core()
+    core.install_snapshot(stock.core)
     devices = Dispatcher([core, Keyboard(active=True), TapePlayer()])
 
     def current_time() -> Time:
@@ -507,7 +513,6 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
         if stopped.stopped:
             break
 
-    stock = get_spectrum_48k_snapshot()
     snapshot = stock.updated(
         core=stock.core.updated(**dict(core.to_snapshot())))
     with pathlib.Path(dest_filename).open('wb') as f:

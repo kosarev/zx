@@ -101,6 +101,12 @@ public:
         }
     }
 
+    // Returns the ROM pages to their power-up pattern.
+    void reset_roms() {
+        randomise_page(rom0);
+        randomise_page(rom1);
+    }
+
     fast_u8 read(fast_u16 addr, page rom, page ram) const {
         return bytes[get_offset(addr, rom, ram)];
     }
