@@ -56,7 +56,7 @@ from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
 from ._machines import Spectrum48CoreSnapshot
 from ._machines import Spectrum48Snapshot
-from ._machines import get_spectrum_128k_snapshot
+from ._machines import Spectrum128Snapshot
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._rzx import RZXFile
@@ -125,7 +125,7 @@ def run(args: list[str]) -> None:
     snapshot = None
     if pop_option(args, '--128'):
         model = Spectrum128
-        snapshot = get_spectrum_128k_snapshot()
+        snapshot = Spectrum128Snapshot()
 
     filename = None
     if args:

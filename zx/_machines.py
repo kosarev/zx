@@ -66,12 +66,43 @@ class Spectrum48Snapshot(MachineSnapshot, format_name=None):
         super().__init__(core=core, keyboard=keyboard, beeper=beeper)
 
 
-# The remaining 128K facts, the clock and the paging, still ride the
-# core's model parameter; they become core config fields as the 128K
-# work proceeds.
-def get_spectrum_128k_snapshot() -> MachineSnapshot:
-    rom = _load_rom_image('Spectrum128.rom')
-    return Spectrum48Snapshot(core=Spectrum48CoreSnapshot(memory_blocks=[
-        MemoryBlock(addr=0x0000, rom_page=0, ram_page=0, data=rom[:0x4000]),
-        MemoryBlock(addr=0x0000, rom_page=1, ram_page=0,
-                    data=rom[0x4000:])]))
+# The 128K core: fields not specified take their stock values, and
+# the given memory blocks amend the stock ROMs -- blocks carrying ROM
+# content replace them. The remaining 128K facts, the clock and the
+# paging, still ride the core's model parameter; they become core
+# config fields as the 128K work proceeds.
+class Spectrum128CoreSnapshot(CoreSnapshot, format_name=None):
+    def __init__(self, **fields: typing.Any) -> None:
+        fields.setdefault('active', True)
+
+        blocks = list(fields.get('memory_blocks') or [])
+        if not any(b.addr < 0x4000 for b in blocks):
+            rom = _load_rom_image('Spectrum128.rom')
+            blocks = [MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
+                                  data=rom[:0x4000]),
+                      MemoryBlock(addr=0x0000, rom_page=1, ram_page=0,
+                                  data=rom[0x4000:]),
+                      *blocks]
+        fields['memory_blocks'] = blocks
+
+        super().__init__(**fields)
+
+
+class Spectrum128Snapshot(MachineSnapshot, format_name=None):
+    core: CoreSnapshot
+    keyboard: KeyboardSnapshot
+    beeper: BeeperSnapshot
+
+    # Members not specified take their stock values, so constructing
+    # with no arguments gives the stock 128K machine.
+    def __init__(self, *, core: CoreSnapshot | None = None,
+                 keyboard: KeyboardSnapshot | None = None,
+                 beeper: BeeperSnapshot | None = None) -> None:
+        if core is None:
+            core = Spectrum128CoreSnapshot()
+        if keyboard is None:
+            keyboard = KeyboardSnapshot(active=True)
+        if beeper is None:
+            beeper = BeeperSnapshot(active=True)
+
+        super().__init__(core=core, keyboard=keyboard, beeper=beeper)
