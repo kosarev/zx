@@ -15,6 +15,7 @@ from ._binary import Bytes
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import SnapshotFile
+from ._machines import Spectrum48CoreSnapshot
 from ._machines import Spectrum48Snapshot
 
 
@@ -39,19 +40,12 @@ class _SCRSnapshot(SnapshotFile, format_name='SCR'):
             addr=LOOP_ADDR, rom_page=ROM_PAGE, ram_page=RAM_PAGE,
             data=loop_instr))
 
-        stock = Spectrum48Snapshot()
-
-        # Stock snapshots carry no RAM content, so combining their
-        # memory blocks with the file's RAM blocks cannot overlap.
-        stock_blocks = stock.core.memory_blocks or []
-        assert all(b.end_addr <= 0x4000 for b in stock_blocks)
-
-        return stock.updated(core=stock.core.updated(
+        return Spectrum48Snapshot(core=Spectrum48CoreSnapshot(
             pc=LOOP_ADDR,
             iff1=0,
             iff2=0,
             border_colour=0,
-            memory_blocks=stock_blocks + memory_blocks))
+            memory_blocks=memory_blocks))
 
     # TODO: Refine.
     def x_encode(self) -> bytes:

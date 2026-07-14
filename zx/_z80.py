@@ -24,6 +24,7 @@ from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import SnapshotFile
 from ._error import Error
+from ._machines import Spectrum48CoreSnapshot
 from ._machines import Spectrum48Snapshot
 from ._utils import get_high8
 from ._utils import get_low8
@@ -288,7 +289,7 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
                 image[block.addr:block.addr + len(block.data.data)] = (
                     list(block.data.data))
 
-            [stock_rom] = Spectrum48Snapshot().core.memory_blocks or []
+            [stock_rom] = Spectrum48CoreSnapshot().memory_blocks or []
 
             PAGE_SIZE = 0x4000
             EMPTY_PAGE = [None] * PAGE_SIZE
@@ -425,21 +426,9 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
                     addr=self.__MEMORY_PAGE_ADDRS[block.page_no],
                     rom_page=0, ram_page=0, data=image))
 
-        stock = Spectrum48Snapshot()
-
-        # Stock snapshots carry no RAM content, so combining their
-        # memory blocks with the file's RAM blocks cannot overlap.
-        stock_blocks = stock.core.memory_blocks or []
-        assert all(b.end_addr <= 0x4000 for b in stock_blocks)
-
-        # A file carrying its own ROM page replaces the stock ROM.
-        if any(b.addr < 0x4000 for b in memory_blocks):
-            stock_blocks = []
-
-        # The file describes a machine, so its facts update the
-        # machine's stock snapshot. TODO: 128K per the v2/v3 hardware
-        # mode.
-        return stock.updated(core=stock.core.updated(
+        # The file describes a 48K machine. TODO: 128K per the v2/v3
+        # hardware mode.
+        return Spectrum48Snapshot(core=Spectrum48CoreSnapshot(
             af=make16(self.a, self.f),
             bc=self.bc,
             de=self.de,
@@ -459,7 +448,7 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
             int_mode=int_mode,
             ticks_since_int=ticks_since_int,
             border_colour=(flags1 >> 1) & 0x7,
-            memory_blocks=stock_blocks + memory_blocks))
+            memory_blocks=memory_blocks))
 
     __V1_HEADER: typing.ClassVar[list[str]] = [
         'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',

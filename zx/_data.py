@@ -90,12 +90,6 @@ class DataRecord:
             if value is not None:
                 yield id, value
 
-    # A copy with the given field values replacing this record's.
-    def updated(self, **fields: typing.Any) -> typing.Self:
-        updated = dict(self)
-        updated.update(fields)
-        return type(self)(**updated)
-
     def to_json(self) -> typing.Any:
         def convert(v: typing.Any) -> typing.Any:
             if isinstance(v, (int, str)):
@@ -384,14 +378,6 @@ class DeviceSnapshot(DataRecord, format_name=None):
 class MachineSnapshot(SnapshotFile, format_name=None):
     def __init__(self, **devices: DeviceSnapshot):
         super().__init__(**devices)
-
-    # The composition is open: an update may add devices a declared
-    # machine snapshot type does not know, so the result is a plain
-    # MachineSnapshot.
-    def updated(self, **devices: DeviceSnapshot) -> MachineSnapshot:
-        fields = dict(self)
-        fields.update(devices)
-        return MachineSnapshot(**fields)
 
     @classmethod
     def from_snapshot(cls, snapshot: SnapshotFile) -> MachineSnapshot:

@@ -14,7 +14,7 @@ from zx._data import MachineSnapshot
 def test_basic() -> None:
     # Create a Z80 snapshot of a standard machine.
     mach = zx.Core()
-    mach.install_snapshot(zx._machines.Spectrum48Snapshot().core)
+    mach.install_snapshot(zx._machines.Spectrum48CoreSnapshot())
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
     HL = 0x1234
     mach.hl = HL
@@ -34,7 +34,7 @@ def test_basic() -> None:
 
     # Produce and dump the machine snapshot.
     uni = snap.to_machine_snapshot()
-    assert 'MachineSnapshot' in uni.dumps()
+    assert 'Spectrum48Snapshot' in uni.dumps()
 
 
 # Z80Snapshot stores compressed memory literally -- decode() never

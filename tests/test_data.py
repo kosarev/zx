@@ -29,11 +29,3 @@ def test_basic() -> None:
     # Machine snapshots convert to themselves.
     snapshot = zx._data.MachineSnapshot()
     assert snapshot.to_machine_snapshot() is snapshot
-
-
-def test_updated() -> None:
-    # A record is a final state: updated() gives a copy with the
-    # given field values replacing the existing ones.
-    rec = zx._data.DataRecord(a=5, b=7)
-    updated = rec.updated(b=8)
-    assert list(updated) == [('a', 5), ('b', 8)]

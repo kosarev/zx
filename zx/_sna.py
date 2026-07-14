@@ -19,6 +19,7 @@ from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import SnapshotFile
 from ._error import Error
+from ._machines import Spectrum48CoreSnapshot
 from ._machines import Spectrum48Snapshot
 
 
@@ -74,16 +75,8 @@ class SNASnapshot(SnapshotFile, format_name='SNA'):
 
         iff = int(bool(self.iff & 0x04))
 
-        stock = Spectrum48Snapshot()
-
-        # Stock snapshots carry no RAM content, so combining their
-        # memory blocks with the file's RAM blocks cannot overlap.
-        stock_blocks = stock.core.memory_blocks or []
-        assert all(b.end_addr <= 0x4000 for b in stock_blocks)
-
-        # The file describes a 48K machine, so its facts update the
-        # stock 48K snapshot.
-        return stock.updated(core=stock.core.updated(
+        # The file describes a 48K machine.
+        return Spectrum48Snapshot(core=Spectrum48CoreSnapshot(
             af=self.af, bc=self.bc, de=self.de, hl=self.hl,
 
             ix=self.ix, iy=self.iy,
@@ -95,7 +88,6 @@ class SNASnapshot(SnapshotFile, format_name='SNA'):
             int_mode=self.int_mode,
             border_colour=self.border_colour,
             memory_blocks=[
-                *stock_blocks,
                 MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
                             data=self.memory.data)]))
 

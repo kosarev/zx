@@ -15,6 +15,7 @@ the machine their format declares.
 """
 
 import importlib.resources
+import typing
 
 from ._beeper import BeeperSnapshot
 from ._core import CoreSnapshot
@@ -28,6 +29,23 @@ def load_rom_image(filename: str) -> bytes:
     return path.read_bytes()
 
 
+# The 48K core: fields not specified take their stock values, and the
+# given memory blocks amend the stock ROM -- a block carrying ROM
+# content replaces it.
+class Spectrum48CoreSnapshot(CoreSnapshot, format_name=None):
+    def __init__(self, **fields: typing.Any) -> None:
+        fields.setdefault('active', True)
+
+        blocks = list(fields.get('memory_blocks') or [])
+        if not any(b.addr < 0x4000 for b in blocks):
+            blocks = [MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
+                                  data=load_rom_image('Spectrum48.rom')),
+                      *blocks]
+        fields['memory_blocks'] = blocks
+
+        super().__init__(**fields)
+
+
 class Spectrum48Snapshot(MachineSnapshot, format_name=None):
     core: CoreSnapshot
     keyboard: KeyboardSnapshot
@@ -39,11 +57,7 @@ class Spectrum48Snapshot(MachineSnapshot, format_name=None):
                  keyboard: KeyboardSnapshot | None = None,
                  beeper: BeeperSnapshot | None = None) -> None:
         if core is None:
-            core = CoreSnapshot(
-                active=True,
-                memory_blocks=[
-                    MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
-                                data=load_rom_image('Spectrum48.rom'))])
+            core = Spectrum48CoreSnapshot()
         if keyboard is None:
             keyboard = KeyboardSnapshot(active=True)
         if beeper is None:
@@ -57,8 +71,7 @@ class Spectrum48Snapshot(MachineSnapshot, format_name=None):
 # work proceeds.
 def get_spectrum_128k_snapshot() -> MachineSnapshot:
     rom = load_rom_image('Spectrum128.rom')
-    stock = Spectrum48Snapshot()
-    return stock.updated(core=stock.core.updated(memory_blocks=[
+    return Spectrum48Snapshot(core=Spectrum48CoreSnapshot(memory_blocks=[
         MemoryBlock(addr=0x0000, rom_page=0, ram_page=0, data=rom[:0x4000]),
         MemoryBlock(addr=0x0000, rom_page=1, ram_page=0,
                     data=rom[0x4000:])]))

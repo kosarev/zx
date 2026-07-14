@@ -54,6 +54,7 @@ from ._file import parse_file
 from ._file import parse_file_image
 from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
+from ._machines import Spectrum48CoreSnapshot
 from ._machines import Spectrum48Snapshot
 from ._machines import get_spectrum_128k_snapshot
 from ._playback import PlaybackPlayer
@@ -478,10 +479,8 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
     assert isinstance(src, SoundFile)
     assert issubclass(dest_format, SnapshotFile), dest_format
 
-    stock = Spectrum48Snapshot()
-
     core = Core()
-    core.install_snapshot(stock.core)
+    core.install_snapshot(Spectrum48CoreSnapshot())
     devices = Dispatcher([core, Keyboard(active=True), TapePlayer()])
 
     def current_time() -> Time:
@@ -513,8 +512,8 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
         if stopped.stopped:
             break
 
-    snapshot = stock.updated(
-        core=stock.core.updated(**dict(core.to_snapshot())))
+    snapshot = Spectrum48Snapshot(
+        core=Spectrum48CoreSnapshot(**dict(core.to_snapshot())))
     with pathlib.Path(dest_filename).open('wb') as f:
         f.write(dest_format.from_snapshot(snapshot).encode())
 
