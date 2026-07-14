@@ -10,7 +10,6 @@
 import numpy
 
 from zx._data import SoundPulses
-from zx._data import Spectrum48
 from zx._device import Dispatcher
 from zx._device import GetSettings
 from zx._device import NewSoundPulses
@@ -47,8 +46,8 @@ def test_sound_device_produces_samples() -> None:
     dispatcher = Dispatcher()
     device = _RecordingSound()
 
-    rate = Spectrum48._TICKS_PER_FRAME * 50
-    span = Spectrum48._TICKS_PER_FRAME  # One frame's worth of ticks.
+    rate = 3_500_000  # The 48K CPU clock.
+    span = 69888  # One frame's worth of ticks.
 
     device.on_event(ResetEmulator(), dispatcher)
 

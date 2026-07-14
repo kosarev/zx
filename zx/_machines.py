@@ -35,6 +35,7 @@ def _load_rom_image(filename: str) -> bytes:
 class Spectrum48CoreSnapshot(CoreSnapshot, format_name=None):
     def __init__(self, **fields: typing.Any) -> None:
         fields.setdefault('active', True)
+        fields.setdefault('ticks_per_second', 3_500_000)
 
         blocks = list(fields.get('memory_blocks') or [])
         if not any(b.addr < 0x4000 for b in blocks):
@@ -74,6 +75,7 @@ class Spectrum48Snapshot(MachineSnapshot, format_name=None):
 class Spectrum128CoreSnapshot(CoreSnapshot, format_name=None):
     def __init__(self, **fields: typing.Any) -> None:
         fields.setdefault('active', True)
+        fields.setdefault('ticks_per_second', 3_546_900)
 
         blocks = list(fields.get('memory_blocks') or [])
         if not any(b.addr < 0x4000 for b in blocks):

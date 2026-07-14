@@ -65,6 +65,7 @@ class RunEvents(enum.IntFlag):
 # the canonical reset values.
 class CoreSnapshot(DeviceSnapshot, format_name=None):
     active: bool | None
+    ticks_per_second: int | None
     af: int | None
     bc: int | None
     de: int | None
@@ -90,6 +91,7 @@ class CoreSnapshot(DeviceSnapshot, format_name=None):
     def __init__(
             self,
             active: bool | None = None,
+            ticks_per_second: int | None = None,
             af: int | None = None,
             bc: int | None = None,
             de: int | None = None,
@@ -118,6 +120,7 @@ class CoreSnapshot(DeviceSnapshot, format_name=None):
 
         super().__init__(
             active=active,
+            ticks_per_second=ticks_per_second,
             af=af, bc=bc, de=de, hl=hl, ix=ix, iy=iy,
             alt_af=alt_af, alt_bc=alt_bc,
             alt_de=alt_de, alt_hl=alt_hl,
@@ -384,6 +387,8 @@ class CoreState(Z80State):
         p.parse8()
         p.parse8()
 
+        self.__ticks_per_second = p.parse32()
+
         self.__memory = p.read_bytes(10 * self.__PAGE_SIZE)
 
     @property
@@ -451,6 +456,15 @@ class CoreState(Z80State):
     @property
     def tick_count(self) -> int:
         return int.from_bytes(self.__tick_count, 'little')
+
+    # The CPU clock, in Hz.
+    @property
+    def ticks_per_second(self) -> int:
+        return int.from_bytes(self.__ticks_per_second, 'little')
+
+    @ticks_per_second.setter
+    def ticks_per_second(self, value: int) -> None:
+        self.__ticks_per_second[:] = value.to_bytes(4, 'little')
 
     @property
     def border_colour(self) -> int:
@@ -574,6 +588,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         assert self.model is Spectrum48  # TODO: Support 128K.
         return CoreSnapshot(
             active=True if self.active else None,
+            ticks_per_second=self.ticks_per_second,
             af=self.af, bc=self.bc, de=self.de, hl=self.hl,
             ix=self.ix, iy=self.iy,
             alt_af=self.alt_af, alt_bc=self.alt_bc,
@@ -592,9 +607,10 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
     def install_snapshot(self, snapshot: CoreSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset
         # state, so installing one resets first: whatever the snapshot
-        # does not mention, the ROMs included, stays at reset.
+        # does not mention, the configuration and the ROMs included,
+        # stays at reset.
         self._reset()
-        self._reset_roms()
+        self._reset_config()
         self.active = False
 
         for field, value in snapshot:
@@ -608,7 +624,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
 
     def __current_time(self) -> Time:
         return Time(self.tick_count,
-                    ticks_per_second=self.model._TICKS_PER_FRAME * 50)
+                    ticks_per_second=self.ticks_per_second)
 
     def __on_input(self, addr: int, devices: Dispatcher) -> int | None:
         # The core makes port accesses with tick_count reading the

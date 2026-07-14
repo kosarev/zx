@@ -95,7 +95,7 @@ class ZXBasicCompilerProgram(SnapshotFile, format_name='ZXB'):
 
         def current_time() -> Time:
             return Time(core.tick_count,
-                        ticks_per_second=core.model._TICKS_PER_FRAME * 50)
+                        ticks_per_second=core.ticks_per_second)
 
         def type_keys(*keys: int | str) -> None:
             strokes = make_key_strokes(*keys, start=current_time())

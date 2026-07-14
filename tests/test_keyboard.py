@@ -102,7 +102,7 @@ def test_stroke_at_quantum_ceiling() -> None:
     core.pc = 0x8000
     core.write(0x8000, b'\xdb\xfe\x18\xfc')
 
-    ticks_per_second = core.model._TICKS_PER_FRAME * 50
+    ticks_per_second = core.ticks_per_second
 
     # A budget expiring inside the 11-tick IN stops the quantum right
     # at its boundary, with the port read as the last thing committed.

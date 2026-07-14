@@ -159,7 +159,7 @@ def test_inactive_core() -> None:
     # runs no quanta.
     core = zx.Core()
     devices = Dispatcher([core])
-    rate = core.model._TICKS_PER_FRAME * 50
+    rate = core.ticks_per_second
 
     quantum = RunQuantum(stop_after=Time(1000, ticks_per_second=rate))
     devices.notify(quantum)

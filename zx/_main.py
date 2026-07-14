@@ -485,7 +485,7 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
 
     def current_time() -> Time:
         return Time(core.tick_count,
-                    ticks_per_second=core.model._TICKS_PER_FRAME * 50)
+                    ticks_per_second=core.ticks_per_second)
 
     # Boot to the BASIC prompt.
     frames = 0

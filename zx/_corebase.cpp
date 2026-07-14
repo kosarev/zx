@@ -72,6 +72,22 @@ struct __attribute__((packed)) processor_state {
 #pragma pack(pop)
 #endif
 
+// The configuration part of the core state: the facts that survive
+// a plain reset and return to these canonical defaults on
+// _reset_config().
+#if defined(_MSC_VER)
+#pragma pack(push, 1)
+struct core_config {
+#else
+struct __attribute__((packed)) core_config {
+#endif
+    // The CPU clock, in Hz.
+    least_u32 ticks_per_second = 3500000;
+};
+#if defined(_MSC_VER)
+#pragma pack(pop)
+#endif
+
 #if defined(_MSC_VER)
 #pragma pack(push, 1)
 struct machine_state {
@@ -93,6 +109,8 @@ struct __attribute__((packed)) machine_state {
     least_u8 padding1;
     least_u8 padding2;
     least_u8 padding3;
+
+    core_config config;
 
     zx::memory_image memory;
 };
@@ -453,10 +471,15 @@ PyObject *on_reset(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
-PyObject *reset_roms(PyObject *self, PyObject *args) {
-    // The memory image is part of the state shared with the Python
-    // side directly, so no state marshalling is needed.
-    cast_emulator(self).on_get_memory().reset_roms();
+PyObject *reset_config(PyObject *self, PyObject *args) {
+    auto &emulator = cast_emulator(self);
+
+    // The configuration and the memory image are parts of the state
+    // shared with the Python side directly, so no state marshalling
+    // is needed. The ROM pages are configuration too: their content
+    // is snapshot data, not reset's responsibility.
+    emulator.get_machine_state().config = core_config();
+    emulator.on_get_memory().reset_roms();
     Py_RETURN_NONE;
 }
 
@@ -488,8 +511,9 @@ PyMethodDef methods[] = {
      "Attempts to initiate a masked interrupt."},
     {"_reset", on_reset, METH_NOARGS,
      "Perform a hard reset of the emulated machine."},
-    {"_reset_roms", reset_roms, METH_NOARGS,
-     "Return the ROM pages to their power-up state."},
+    {"_reset_config", reset_config, METH_NOARGS,
+     "Return the core configuration, the ROM pages included, to "
+     "the canonical reset defaults."},
     { nullptr }  // Sentinel.
 };
 

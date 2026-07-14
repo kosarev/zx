@@ -45,7 +45,7 @@ def main() -> None:
 
     def current_time() -> Time:
         return Time(core.tick_count,
-                    ticks_per_second=core.model._TICKS_PER_FRAME * 50)
+                    ticks_per_second=core.ticks_per_second)
 
     def run_frames(count: int) -> None:
         frames = 0
