@@ -24,7 +24,7 @@ from ._data import MemoryBlock
 from ._keyboard import KeyboardSnapshot
 
 
-def load_rom_image(filename: str) -> bytes:
+def _load_rom_image(filename: str) -> bytes:
     path = importlib.resources.files('zx').joinpath('roms').joinpath(filename)
     return path.read_bytes()
 
@@ -39,7 +39,7 @@ class Spectrum48CoreSnapshot(CoreSnapshot, format_name=None):
         blocks = list(fields.get('memory_blocks') or [])
         if not any(b.addr < 0x4000 for b in blocks):
             blocks = [MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
-                                  data=load_rom_image('Spectrum48.rom')),
+                                  data=_load_rom_image('Spectrum48.rom')),
                       *blocks]
         fields['memory_blocks'] = blocks
 
@@ -70,7 +70,7 @@ class Spectrum48Snapshot(MachineSnapshot, format_name=None):
 # core's model parameter; they become core config fields as the 128K
 # work proceeds.
 def get_spectrum_128k_snapshot() -> MachineSnapshot:
-    rom = load_rom_image('Spectrum128.rom')
+    rom = _load_rom_image('Spectrum128.rom')
     return Spectrum48Snapshot(core=Spectrum48CoreSnapshot(memory_blocks=[
         MemoryBlock(addr=0x0000, rom_page=0, ram_page=0, data=rom[:0x4000]),
         MemoryBlock(addr=0x0000, rom_page=1, ram_page=0,
