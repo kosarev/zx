@@ -86,6 +86,10 @@ struct __attribute__((packed)) core_config {
 
     least_u32 ticks_per_horizontal_retrace = 48;
     least_u32 lines_per_vertical_retrace = 24;
+
+    // The tick, counted from the start of INT, at which contention
+    // first applies, one tick before the top-left screen pixel.
+    least_u32 contention_base = 14335;
 };
 #if defined(_MSC_VER)
 #pragma pack(pop)
@@ -286,6 +290,10 @@ public:
 
     ticks_type on_get_lines_per_vertical_retrace() const {
         return state.config.lines_per_vertical_retrace;
+    }
+
+    ticks_type on_get_contention_base() const {
+        return state.config.contention_base;
     }
 
     zx::memory_image &on_get_memory() {

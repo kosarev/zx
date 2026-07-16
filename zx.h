@@ -288,13 +288,7 @@ public:
         // TODO: We sample ~INT during the last tick of the
         // previous instruction, so we add 1 to the contention
         // base to compensate that.
-        switch (self().on_get_model()) {
-        case spectrum_model::spectrum_48:
-            return 14335 + 1;
-        case spectrum_model::spectrum_128:
-            return 14361 + 1;  // TODO: Correct?
-        }
-        unreachable("Unknown Spectrum model.");
+        return self().on_get_contention_base() + 1;
     }
 
     void handle_contention() {

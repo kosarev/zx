@@ -68,6 +68,7 @@ class CoreSnapshot(DeviceSnapshot, format_name=None):
     ticks_per_second: int | None
     ticks_per_horizontal_retrace: int | None
     lines_per_vertical_retrace: int | None
+    contention_base: int | None
     af: int | None
     bc: int | None
     de: int | None
@@ -96,6 +97,7 @@ class CoreSnapshot(DeviceSnapshot, format_name=None):
             ticks_per_second: int | None = None,
             ticks_per_horizontal_retrace: int | None = None,
             lines_per_vertical_retrace: int | None = None,
+            contention_base: int | None = None,
             af: int | None = None,
             bc: int | None = None,
             de: int | None = None,
@@ -127,6 +129,7 @@ class CoreSnapshot(DeviceSnapshot, format_name=None):
             ticks_per_second=ticks_per_second,
             ticks_per_horizontal_retrace=ticks_per_horizontal_retrace,
             lines_per_vertical_retrace=lines_per_vertical_retrace,
+            contention_base=contention_base,
             af=af, bc=bc, de=de, hl=hl, ix=ix, iy=iy,
             alt_af=alt_af, alt_bc=alt_bc,
             alt_de=alt_de, alt_hl=alt_hl,
@@ -396,6 +399,7 @@ class CoreState(Z80State):
         self.__ticks_per_second = p.parse32()
         self.__ticks_per_horizontal_retrace = p.parse32()
         self.__lines_per_vertical_retrace = p.parse32()
+        self.__contention_base = p.parse32()
 
         self.__memory = p.read_bytes(10 * self.__PAGE_SIZE)
 
@@ -489,6 +493,16 @@ class CoreState(Z80State):
     @lines_per_vertical_retrace.setter
     def lines_per_vertical_retrace(self, value: int) -> None:
         self.__lines_per_vertical_retrace[:] = value.to_bytes(4, 'little')
+
+    # The tick, counted from the start of INT, at which contention
+    # first applies, one tick before the top-left screen pixel.
+    @property
+    def contention_base(self) -> int:
+        return int.from_bytes(self.__contention_base, 'little')
+
+    @contention_base.setter
+    def contention_base(self, value: int) -> None:
+        self.__contention_base[:] = value.to_bytes(4, 'little')
 
     @property
     def border_colour(self) -> int:
@@ -615,6 +629,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
             ticks_per_second=self.ticks_per_second,
             ticks_per_horizontal_retrace=self.ticks_per_horizontal_retrace,
             lines_per_vertical_retrace=self.lines_per_vertical_retrace,
+            contention_base=self.contention_base,
             af=self.af, bc=self.bc, de=self.de, hl=self.hl,
             ix=self.ix, iy=self.iy,
             alt_af=self.alt_af, alt_bc=self.alt_bc,

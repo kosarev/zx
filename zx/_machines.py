@@ -38,6 +38,7 @@ class Spectrum48CoreSnapshot(CoreSnapshot, format_name=None):
         fields.setdefault('ticks_per_second', 3_500_000)
         fields.setdefault('ticks_per_horizontal_retrace', 48)
         fields.setdefault('lines_per_vertical_retrace', 24)
+        fields.setdefault('contention_base', 14335)
 
         blocks = list(fields.get('memory_blocks') or [])
         if not any(b.addr < 0x4000 for b in blocks):
@@ -80,6 +81,7 @@ class Spectrum128CoreSnapshot(CoreSnapshot, format_name=None):
         fields.setdefault('ticks_per_second', 3_546_900)
         fields.setdefault('ticks_per_horizontal_retrace', 52)
         fields.setdefault('lines_per_vertical_retrace', 23)
+        fields.setdefault('contention_base', 14361)
 
         blocks = list(fields.get('memory_blocks') or [])
         if not any(b.addr < 0x4000 for b in blocks):
