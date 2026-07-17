@@ -31,17 +31,21 @@ def _load_rom_image(filename: str) -> bytes:
     return path.read_bytes()
 
 
-# The 48K ULA. The type states the wiring, so only the volatile
-# fields are parameters.
-class Spectrum48ULASnapshot(ULASnapshot):
+# The 48K ULA. The type fixes the wiring as class keywords, so only
+# the volatile fields are constructor parameters.
+class Spectrum48ULASnapshot(ULASnapshot,
+                            ticks_per_second=3_500_000,
+                            ticks_per_horizontal_retrace=48,
+                            lines_per_vertical_retrace=24,
+                            contention_base=14335):
     def __init__(self, *,
                  ticks_since_int: int | None = None,
                  border_colour: int | None = None) -> None:
         super().__init__(
-            ticks_per_second=3_500_000,
-            ticks_per_horizontal_retrace=48,
-            lines_per_vertical_retrace=24,
-            contention_base=14335,
+            ticks_per_second=self.ticks_per_second,
+            ticks_per_horizontal_retrace=self.ticks_per_horizontal_retrace,
+            lines_per_vertical_retrace=self.lines_per_vertical_retrace,
+            contention_base=self.contention_base,
             ticks_since_int=ticks_since_int,
             border_colour=border_colour)
 
@@ -98,17 +102,21 @@ class Spectrum48Snapshot(MachineSnapshot):
         super().__init__(core=core, keyboard=keyboard, beeper=beeper)
 
 
-# The 128K ULA. The type states the wiring, so only the volatile
-# fields are parameters.
-class Spectrum128ULASnapshot(ULASnapshot):
+# The 128K ULA. The type fixes the wiring as class keywords, so only
+# the volatile fields are constructor parameters.
+class Spectrum128ULASnapshot(ULASnapshot,
+                             ticks_per_second=3_546_900,
+                             ticks_per_horizontal_retrace=52,
+                             lines_per_vertical_retrace=23,
+                             contention_base=14361):
     def __init__(self, *,
                  ticks_since_int: int | None = None,
                  border_colour: int | None = None) -> None:
         super().__init__(
-            ticks_per_second=3_546_900,
-            ticks_per_horizontal_retrace=52,
-            lines_per_vertical_retrace=23,
-            contention_base=14361,
+            ticks_per_second=self.ticks_per_second,
+            ticks_per_horizontal_retrace=self.ticks_per_horizontal_retrace,
+            lines_per_vertical_retrace=self.lines_per_vertical_retrace,
+            contention_base=self.contention_base,
             ticks_since_int=ticks_since_int,
             border_colour=border_colour)
 

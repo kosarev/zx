@@ -112,8 +112,10 @@ class Z80Snapshot(DataRecord):
 
 
 # The ULA chip's state. The ULA divides the crystal into the CPU
-# clock, so the clock is its fact. Null fields mean the canonical
-# reset values.
+# clock, so the clock is its fact. A chip-version subclass fixes the
+# configuration fields as class keywords, which the base records as
+# class attributes; the subclass reads them off itself. Null fields
+# mean the canonical reset values.
 class ULASnapshot(DataRecord):
     ticks_per_second: int | None
     ticks_per_horizontal_retrace: int | None
@@ -121,6 +123,19 @@ class ULASnapshot(DataRecord):
     contention_base: int | None
     ticks_since_int: int | None
     border_colour: int | None
+
+    def __init_subclass__(
+            cls, *,
+            ticks_per_second: int | None = None,
+            ticks_per_horizontal_retrace: int | None = None,
+            lines_per_vertical_retrace: int | None = None,
+            contention_base: int | None = None,
+            **kwargs: typing.Any) -> None:
+        super().__init_subclass__(**kwargs)
+        cls.ticks_per_second = ticks_per_second
+        cls.ticks_per_horizontal_retrace = ticks_per_horizontal_retrace
+        cls.lines_per_vertical_retrace = lines_per_vertical_retrace
+        cls.contention_base = contention_base
 
     def __init__(
             self, *,
