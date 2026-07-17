@@ -15,12 +15,12 @@ the machine their format declares.
 """
 
 import importlib.resources
-import typing
 
 from ._beeper import BeeperSnapshot
 from ._core import CoreSnapshot
 from ._core import MemorySnapshot
 from ._core import ULASnapshot
+from ._core import Z80Snapshot
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._keyboard import KeyboardSnapshot
@@ -46,36 +46,36 @@ class Spectrum48ULASnapshot(ULASnapshot):
             border_colour=border_colour)
 
 
-# The 48K core: fields not specified take their stock values, and the
-# given memory blocks amend the stock ROM -- a block carrying ROM
+# The 48K core: members not specified take their stock values, and
+# the given memory blocks amend the stock ROM -- a block carrying ROM
 # content replaces it.
 class Spectrum48CoreSnapshot(CoreSnapshot):
     ula: Spectrum48ULASnapshot
     memory: MemorySnapshot
 
-    def __init__(self, **fields: typing.Any) -> None:
-        fields.setdefault('active', True)
-
+    def __init__(self, *,
+                 z80: Z80Snapshot | None = None,
+                 ula: ULASnapshot | None = None,
+                 memory: MemorySnapshot | None = None) -> None:
         # Lift the ULA facts to the model's type: nothing a given
         # plain record states may disagree with the stock values.
-        ula = fields.get('ula') or ULASnapshot()
+        if ula is None:
+            ula = ULASnapshot()
         if not isinstance(ula, Spectrum48ULASnapshot):
             lifted = Spectrum48ULASnapshot(
                 ticks_since_int=ula.ticks_since_int,
                 border_colour=ula.border_colour)
             assert all(getattr(lifted, f) == v for f, v in ula)
             ula = lifted
-        fields['ula'] = ula
 
-        memory = fields.get('memory')
         blocks = list(memory.blocks or []) if memory is not None else []
         if not any(b.addr < 0x4000 for b in blocks):
             blocks = [MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
                                   data=_load_rom_image('Spectrum48.rom')),
                       *blocks]
-        fields['memory'] = MemorySnapshot(blocks=blocks)
 
-        super().__init__(**fields)
+        super().__init__(active=True, z80=z80, ula=ula,
+                         memory=MemorySnapshot(blocks=blocks))
 
 
 class Spectrum48Snapshot(MachineSnapshot):
@@ -113,7 +113,7 @@ class Spectrum128ULASnapshot(ULASnapshot):
             border_colour=border_colour)
 
 
-# The 128K core: fields not specified take their stock values, and
+# The 128K core: members not specified take their stock values, and
 # the given memory blocks amend the stock ROMs -- blocks carrying ROM
 # content replace them. The remaining 128K facts, the clock and the
 # paging, still ride the core's model parameter; they become core
@@ -122,21 +122,21 @@ class Spectrum128CoreSnapshot(CoreSnapshot):
     ula: Spectrum128ULASnapshot
     memory: MemorySnapshot
 
-    def __init__(self, **fields: typing.Any) -> None:
-        fields.setdefault('active', True)
-
+    def __init__(self, *,
+                 z80: Z80Snapshot | None = None,
+                 ula: ULASnapshot | None = None,
+                 memory: MemorySnapshot | None = None) -> None:
         # Lift the ULA facts to the model's type: nothing a given
         # plain record states may disagree with the stock values.
-        ula = fields.get('ula') or ULASnapshot()
+        if ula is None:
+            ula = ULASnapshot()
         if not isinstance(ula, Spectrum128ULASnapshot):
             lifted = Spectrum128ULASnapshot(
                 ticks_since_int=ula.ticks_since_int,
                 border_colour=ula.border_colour)
             assert all(getattr(lifted, f) == v for f, v in ula)
             ula = lifted
-        fields['ula'] = ula
 
-        memory = fields.get('memory')
         blocks = list(memory.blocks or []) if memory is not None else []
         if not any(b.addr < 0x4000 for b in blocks):
             rom = _load_rom_image('Spectrum128.rom')
@@ -145,9 +145,9 @@ class Spectrum128CoreSnapshot(CoreSnapshot):
                       MemoryBlock(addr=0x0000, rom_page=1, ram_page=0,
                                   data=rom[0x4000:]),
                       *blocks]
-        fields['memory'] = MemorySnapshot(blocks=blocks)
 
-        super().__init__(**fields)
+        super().__init__(active=True, z80=z80, ula=ula,
+                         memory=MemorySnapshot(blocks=blocks))
 
 
 class Spectrum128Snapshot(MachineSnapshot):

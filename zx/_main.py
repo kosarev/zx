@@ -512,8 +512,10 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
         if stopped.stopped:
             break
 
+    captured = core.to_snapshot()
     snapshot = Spectrum48Snapshot(
-        core=Spectrum48CoreSnapshot(**dict(core.to_snapshot())))
+        core=Spectrum48CoreSnapshot(z80=captured.z80, ula=captured.ula,
+                                    memory=captured.memory))
     with pathlib.Path(dest_filename).open('wb') as f:
         f.write(dest_format.from_snapshot(snapshot).encode())
 

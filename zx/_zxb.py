@@ -128,5 +128,7 @@ class ZXBasicCompilerProgram(SnapshotFile, format_name='ZXB'):
             raise Error('The compiled program did not start.')
 
         assert core.pc == self.entry_point
+        captured = core.to_snapshot()
         return Spectrum48Snapshot(
-            core=Spectrum48CoreSnapshot(**dict(core.to_snapshot())))
+            core=Spectrum48CoreSnapshot(z80=captured.z80, ula=captured.ula,
+                                        memory=captured.memory))
