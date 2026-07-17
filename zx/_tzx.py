@@ -24,11 +24,11 @@ from ._tape import get_end_pulse
 from ._tape import tag_last_pulse
 
 
-class TZXBlock(DataRecord, format_name=None):
+class TZXBlock(DataRecord):
     pass
 
 
-class TZXStandardSpeedDataBlock(TZXBlock, format_name=None):
+class TZXStandardSpeedDataBlock(TZXBlock):
     pause_after_block_in_ms: int
     data: ByteData
 
@@ -38,7 +38,7 @@ class TZXStandardSpeedDataBlock(TZXBlock, format_name=None):
                          data=HexData.wrap(data))
 
 
-class TZXTurboSpeedDataBlock(TZXBlock, format_name=None):
+class TZXTurboSpeedDataBlock(TZXBlock):
     pilot_pulse_len: int
     first_sync_pulse_len: int
     second_sync_pulse_len: int
@@ -66,7 +66,7 @@ class TZXTurboSpeedDataBlock(TZXBlock, format_name=None):
             data=HexData.wrap(data))
 
 
-class TZXPureDataBlock(TZXBlock, format_name=None):
+class TZXPureDataBlock(TZXBlock):
     zero_bit_pulse_len: int
     one_bit_pulse_len: int
     data_size_in_bits: int
@@ -84,25 +84,25 @@ class TZXPureDataBlock(TZXBlock, format_name=None):
             data=HexData.wrap(data))
 
 
-class TZXGroupStart(TZXBlock, format_name=None):
+class TZXGroupStart(TZXBlock):
     name: ByteData
 
     def __init__(self, *, name: Bytes | ByteData) -> None:
         super().__init__(name=HexData.wrap(name))
 
 
-class TZXGroupEnd(TZXBlock, format_name=None):
+class TZXGroupEnd(TZXBlock):
     pass
 
 
-class TZXTextDescription(TZXBlock, format_name=None):
+class TZXTextDescription(TZXBlock):
     text: ByteData
 
     def __init__(self, *, text: Bytes | ByteData) -> None:
         super().__init__(text=HexData.wrap(text))
 
 
-class TZXArchiveInfo(TZXBlock, format_name=None):
+class TZXArchiveInfo(TZXBlock):
     pass
 
 

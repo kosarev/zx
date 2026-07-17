@@ -60,7 +60,7 @@ _DAC = numpy.array([
     0.42906, 0.50441, 0.72940, 1.0])
 
 
-class AYSnapshot(DeviceSnapshot, format_name=None):
+class AYSnapshot(DeviceSnapshot):
     active: bool | None
 
     def __init__(self, *, active: bool | None = None) -> None:

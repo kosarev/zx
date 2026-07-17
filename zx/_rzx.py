@@ -30,11 +30,11 @@ from ._error import Error
 from ._z80 import Z80File
 
 
-class RZXChunk(DataRecord, format_name=None):
+class RZXChunk(DataRecord):
     pass
 
 
-class RZXFrame(RZXChunk, format_name=None):
+class RZXFrame(RZXChunk):
     num_fetches: int
     samples: ByteData
 
@@ -51,7 +51,7 @@ class RZXFrame(RZXChunk, format_name=None):
                    samples=frame.samples.data)
 
 
-class RZXHexFrame(RZXFrame, format_name=None):
+class RZXHexFrame(RZXFrame):
     def __init__(self, *, num_fetches: int,
                  samples: Bytes | str) -> None:
         if isinstance(samples, str):
@@ -63,7 +63,7 @@ class RZXHexFrame(RZXFrame, format_name=None):
                                samples=self.samples.data.hex())
 
 
-class RZXCreatorInfo(RZXChunk, format_name=None):
+class RZXCreatorInfo(RZXChunk):
     creator: ByteData
     creator_major_version: int
     creator_minor_version: int
@@ -76,7 +76,7 @@ class RZXCreatorInfo(RZXChunk, format_name=None):
                          creator_minor_version=creator_minor_version)
 
 
-class RZXInputRecording(RZXChunk, format_name=None):
+class RZXInputRecording(RZXChunk):
     first_tick: int
     frames: list[RZXFrame]
 
@@ -86,7 +86,7 @@ class RZXInputRecording(RZXChunk, format_name=None):
                          frames=[RZXHexFrame.wrap(f) for f in frames])
 
 
-class RZXSnapshot(RZXChunk, format_name=None):
+class RZXSnapshot(RZXChunk):
     flags: int
     format: ByteData
     snapshot: SnapshotFile

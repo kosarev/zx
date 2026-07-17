@@ -34,13 +34,13 @@ _SIGNATURE = b'PSG\x1a'
 
 # A command of a PSG stream, one record per wire token, so the
 # stream is reproduced byte-exactly by construction.
-class PSGCommand(DataRecord, format_name=None):
+class PSGCommand(DataRecord):
     def encode_command(self) -> bytes:
         raise NotImplementedError
 
 
 # A register write within the current frame.
-class PSGWrite(PSGCommand, format_name=None):
+class PSGWrite(PSGCommand):
     reg: int
     value: int
 
@@ -55,7 +55,7 @@ class PSGWrite(PSGCommand, format_name=None):
 
 
 # The 0xff command: the next frame begins.
-class PSGNextFrame(PSGCommand, format_name=None):
+class PSGNextFrame(PSGCommand):
     def __init__(self) -> None:
         super().__init__()
 
@@ -67,7 +67,7 @@ class PSGNextFrame(PSGCommand, format_name=None):
 
 
 # The 0xfe command: skips four times the count of frames.
-class PSGSkipFrames(PSGCommand, format_name=None):
+class PSGSkipFrames(PSGCommand):
     count: int
 
     def __init__(self, *, count: int) -> None:
@@ -85,7 +85,7 @@ class PSGSkipFrames(PSGCommand, format_name=None):
 
 
 # The 0xfd command: the end of the stream.
-class PSGEnd(PSGCommand, format_name=None):
+class PSGEnd(PSGCommand):
     def __init__(self) -> None:
         super().__init__()
 

@@ -63,7 +63,7 @@ class RunEvents(enum.IntFlag):
 
 # The core device's slice of a machine snapshot. Null fields mean
 # the canonical reset values.
-class CoreSnapshot(DeviceSnapshot, format_name=None):
+class CoreSnapshot(DeviceSnapshot):
     active: bool | None
     ticks_per_second: int | None
     ticks_per_horizontal_retrace: int | None

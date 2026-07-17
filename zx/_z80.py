@@ -31,7 +31,7 @@ from ._utils import get_low8
 from ._utils import make16
 
 
-class Z80MemoryBlock(DataRecord, format_name=None):
+class Z80MemoryBlock(DataRecord):
     page_no: int
     compressed_size: int
     data: ByteData
@@ -42,7 +42,7 @@ class Z80MemoryBlock(DataRecord, format_name=None):
                          data=HexData.wrap(data))
 
 
-class Z80FileV3ExtraHeader(DataRecord, format_name=None):
+class Z80FileV3ExtraHeader(DataRecord):
     last_write_to_port_1ffd: int
 
     def __init__(self, *, last_write_to_port_1ffd: int = 0):
@@ -60,7 +60,7 @@ class Z80FileV3ExtraHeader(DataRecord, format_name=None):
         writer.write(self.__V3_EXTRA_HEADER, **dict(self))
 
 
-class Z80FileV3Header(DataRecord, format_name=None):
+class Z80FileV3Header(DataRecord):
     ticks_count_low: int
     ticks_count_high: int
     spectator_flag: int
@@ -133,7 +133,7 @@ class Z80FileV3Header(DataRecord, format_name=None):
             self.v3_extra_header.write(writer)
 
 
-class Z80FileV2Header(DataRecord, format_name=None):
+class Z80FileV2Header(DataRecord):
     extra_header_size: int
     pc: int
     hardware_mode: int

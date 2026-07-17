@@ -66,7 +66,7 @@ def _write_json(obj: typing.Any, depth: int = 0) -> typing.Iterator[str]:
 class DataRecord:
     FORMAT_NAME: None | str
 
-    def __init_subclass__(cls, *, format_name: None | str):
+    def __init_subclass__(cls, *, format_name: None | str = None):
         assert format_name is None or format_name.isupper()
         cls.FORMAT_NAME = format_name
 
@@ -156,7 +156,7 @@ class DataRecord:
         return ''.join(_write_json(d))
 
 
-class Metadata(DataRecord, format_name=None):
+class Metadata(DataRecord):
     creator_tool: str
     created_at: str
 
@@ -186,7 +186,7 @@ class Spectrum128(SpectrumModel, cxx_model_code=1):
     pass
 
 
-class ArchiveFile(DataRecord, format_name=None):
+class ArchiveFile(DataRecord):
     @classmethod
     def read_files(cls, image: Bytes) -> (
             typing.Iterable[tuple[str, Bytes]]):
@@ -211,7 +211,7 @@ class SoundPulses:
 # A single AY register write. The tick is the write's position
 # within its frame; a null tick means the frame start, which is all
 # frame-granular sources know.
-class AYWrite(DataRecord, format_name=None):
+class AYWrite(DataRecord):
     tick: int | None
     reg: int
     value: int
@@ -226,7 +226,7 @@ class AYWrite(DataRecord, format_name=None):
 
 # The register writes of the frame with the given number. Frames
 # carry their numbers, so skipped frames need no representation.
-class AYFrame(DataRecord, format_name=None):
+class AYFrame(DataRecord):
     frame: int
     writes: list[AYWrite]
 
@@ -238,7 +238,7 @@ class AYFrame(DataRecord, format_name=None):
 
 # A representation of AY music, format-specific or the semantic
 # stream.
-class AYMusicFile(DataRecord, format_name=None):
+class AYMusicFile(DataRecord):
     @classmethod
     def from_ay_music(cls, music: AYMusicFile) -> AYMusicFile:
         raise NotImplementedError
@@ -251,7 +251,7 @@ class AYMusicFile(DataRecord, format_name=None):
 # writes. A write of frame k happens at tick k * ticks_per_frame
 # plus the write's own within-frame tick. All AY-music formats
 # convert to and from this form.
-class AYStream(AYMusicFile, format_name=None):
+class AYStream(AYMusicFile):
     ticks_per_second: int
     ticks_per_frame: int
     frames: list[AYFrame]
@@ -270,7 +270,7 @@ class AYStream(AYMusicFile, format_name=None):
         return self
 
 
-class SoundFile(DataRecord, format_name=None):
+class SoundFile(DataRecord):
     def get_pulses(self) -> typing.Iterable[tuple[bool, int, tuple[str, ...]]]:
         raise NotImplementedError
 
@@ -282,7 +282,7 @@ class SoundFile(DataRecord, format_name=None):
         raise NotImplementedError
 
 
-class ByteData(DataRecord, format_name=None):
+class ByteData(DataRecord):
     data: bytes
 
     def __init__(self, data: Bytes):
@@ -302,7 +302,7 @@ class ByteData(DataRecord, format_name=None):
         return data if isinstance(data, ByteData) else cls.from_bytes(data)
 
 
-class HexData(ByteData, format_name=None):
+class HexData(ByteData):
     __CHUNK_SIZE = 32
 
     def __init__(self, data: Bytes | str | list[str]):
@@ -319,7 +319,7 @@ class HexData(ByteData, format_name=None):
         return {'data': chunks[0] if len(chunks) == 1 else chunks}
 
 
-class Latin1Data(ByteData, format_name=None):
+class Latin1Data(ByteData):
     def __init__(self, data: str):
         super().__init__(data.encode('latin-1'))
 
@@ -334,7 +334,7 @@ class Latin1Data(ByteData, format_name=None):
 # addr is the Z80 address where the block lives. rom_page and ram_page
 # select which physical page is mapped there: rom_page applies to
 # 0x0000-0x3FFF, ram_page to 0xC000-0xFFFF; 0x4000-0xBFFF maps directly.
-class MemoryBlock(DataRecord, format_name=None):
+class MemoryBlock(DataRecord):
     addr: int
     rom_page: int | None
     ram_page: int | None
@@ -351,7 +351,7 @@ class MemoryBlock(DataRecord, format_name=None):
                          ram_page=ram_page, data=HexData.wrap(data))
 
 
-class SnapshotFile(DataRecord, format_name=None):
+class SnapshotFile(DataRecord):
     @classmethod
     def from_snapshot(cls, snapshot: SnapshotFile) -> SnapshotFile:
         raise NotImplementedError
@@ -362,14 +362,14 @@ class SnapshotFile(DataRecord, format_name=None):
 
 # A device's captured state: what a machine snapshot is composed
 # of. Each device type defines its own snapshot type.
-class DeviceSnapshot(DataRecord, format_name=None):
+class DeviceSnapshot(DataRecord):
     pass
 
 
 # The native machine snapshot: a composition of per-device
 # snapshots, keyed by device id. A device absent from the
 # composition is at its canonical reset state.
-class MachineSnapshot(SnapshotFile, format_name=None):
+class MachineSnapshot(SnapshotFile):
     def __init__(self, **devices: DeviceSnapshot):
         super().__init__(**devices)
 
@@ -384,12 +384,12 @@ class MachineSnapshot(SnapshotFile, format_name=None):
         return self
 
 
-class PlaybackFile(DataRecord, format_name=None):
+class PlaybackFile(DataRecord):
     def to_machine_playback(self) -> MachinePlayback:
         raise NotImplementedError
 
 
-class MachinePlaybackFrame(DataRecord, format_name=None):
+class MachinePlaybackFrame(DataRecord):
     num_fetches: int
     port_samples: ByteData
 
@@ -399,7 +399,7 @@ class MachinePlaybackFrame(DataRecord, format_name=None):
                          port_samples=HexData.wrap(port_samples))
 
 
-class MachinePlaybackSegment(DataRecord, format_name=None):
+class MachinePlaybackSegment(DataRecord):
     snapshot: MachineSnapshot
     frames: list[MachinePlaybackFrame]
 
@@ -410,7 +410,7 @@ class MachinePlaybackSegment(DataRecord, format_name=None):
             frames=frames if frames is not None else [])
 
 
-class MachinePlayback(PlaybackFile, format_name=None):
+class MachinePlayback(PlaybackFile):
     segments: list[MachinePlaybackSegment]
     creator: str | None
     creator_major_version: int | None

@@ -28,7 +28,7 @@ if typing.TYPE_CHECKING:
     from ._time import Time
 
 
-class BeeperSnapshot(DeviceSnapshot, format_name=None):
+class BeeperSnapshot(DeviceSnapshot):
     active: bool | None
 
     def __init__(self, *, active: bool | None = None) -> None:

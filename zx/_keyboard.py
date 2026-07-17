@@ -91,7 +91,7 @@ def make_key_strokes(*keys: int | str, start: Time) -> list[KeyStroke]:
     return strokes
 
 
-class KeyboardSnapshot(DeviceSnapshot, format_name=None):
+class KeyboardSnapshot(DeviceSnapshot):
     active: bool | None
 
     def __init__(self, *, active: bool | None = None) -> None:

@@ -32,7 +32,7 @@ def _load_rom_image(filename: str) -> bytes:
 # The 48K core: fields not specified take their stock values, and the
 # given memory blocks amend the stock ROM -- a block carrying ROM
 # content replaces it.
-class Spectrum48CoreSnapshot(CoreSnapshot, format_name=None):
+class Spectrum48CoreSnapshot(CoreSnapshot):
     def __init__(self, **fields: typing.Any) -> None:
         fields.setdefault('active', True)
         fields.setdefault('ticks_per_second', 3_500_000)
@@ -50,7 +50,7 @@ class Spectrum48CoreSnapshot(CoreSnapshot, format_name=None):
         super().__init__(**fields)
 
 
-class Spectrum48Snapshot(MachineSnapshot, format_name=None):
+class Spectrum48Snapshot(MachineSnapshot):
     core: CoreSnapshot
     keyboard: KeyboardSnapshot
     beeper: BeeperSnapshot
@@ -75,7 +75,7 @@ class Spectrum48Snapshot(MachineSnapshot, format_name=None):
 # content replace them. The remaining 128K facts, the clock and the
 # paging, still ride the core's model parameter; they become core
 # config fields as the 128K work proceeds.
-class Spectrum128CoreSnapshot(CoreSnapshot, format_name=None):
+class Spectrum128CoreSnapshot(CoreSnapshot):
     def __init__(self, **fields: typing.Any) -> None:
         fields.setdefault('active', True)
         fields.setdefault('ticks_per_second', 3_546_900)
@@ -96,7 +96,7 @@ class Spectrum128CoreSnapshot(CoreSnapshot, format_name=None):
         super().__init__(**fields)
 
 
-class Spectrum128Snapshot(MachineSnapshot, format_name=None):
+class Spectrum128Snapshot(MachineSnapshot):
     core: CoreSnapshot
     keyboard: KeyboardSnapshot
     beeper: BeeperSnapshot
