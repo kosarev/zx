@@ -139,30 +139,36 @@ class ULASnapshot(DataRecord):
             border_colour=border_colour)
 
 
+# The memory chips' state: the ROM and RAM contents as blocks.
+class MemorySnapshot(DataRecord):
+    blocks: list[MemoryBlock] | None
+
+    def __init__(
+            self, blocks: typing.Sequence[MemoryBlock] | None = None):
+        if blocks is not None:
+            blocks = sorted(blocks, key=lambda b: b.addr)
+        super().__init__(blocks=blocks)
+
+
 # The core device's slice of a machine snapshot. Null fields mean
 # the canonical reset values.
 class CoreSnapshot(DeviceSnapshot):
     active: bool | None
     z80: Z80Snapshot | None
     ula: ULASnapshot | None
-    memory_blocks: list[MemoryBlock] | None
+    memory: MemorySnapshot | None
 
     def __init__(
             self,
             active: bool | None = None,
             z80: Z80Snapshot | None = None,
             ula: ULASnapshot | None = None,
-            memory_blocks: typing.Sequence[MemoryBlock] | None = None):
-        if memory_blocks is None:
-            blocks = None
-        else:
-            blocks = sorted(memory_blocks, key=lambda b: b.addr)
-
+            memory: MemorySnapshot | None = None):
         super().__init__(
             active=active,
             z80=z80,
             ula=ula,
-            memory_blocks=blocks)
+            memory=memory)
 
 
 class StateParser:
@@ -668,10 +674,11 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
                 contention_base=self.contention_base,
                 ticks_since_int=self.ticks_since_int,
                 border_colour=self.border_colour),
-            memory_blocks=[MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
-                                       data=self.read(0x0000, 0x4000)),
-                           MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
-                                       data=self.read(0x4000, 0xc000))])
+            memory=MemorySnapshot(blocks=[
+                MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
+                            data=self.read(0x0000, 0x4000)),
+                MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
+                            data=self.read(0x4000, 0xc000))]))
 
     def install_snapshot(self, snapshot: CoreSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset
@@ -686,8 +693,8 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
             if field in ('z80', 'ula'):
                 for chip_field, chip_value in value:
                     setattr(self, chip_field, chip_value)
-            elif field == 'memory_blocks':
-                for block in value:
+            elif field == 'memory':
+                for block in value.blocks or []:
                     self.write(block.addr, block.data.data,
                                rom_page=block.rom_page,
                                ram_page=block.ram_page)

@@ -17,6 +17,7 @@ from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
 from ._core import CoreSnapshot
+from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import ByteData
@@ -284,16 +285,16 @@ class Z80File(SnapshotFile, format_name='Z80'):
         # Build full memory image.
         # TODO: Frobid any data below address 0x4000.
         memory_blocks = []
-        if core.memory_blocks is not None:
+        if core.memory is not None:
             RAM_SIZE = 0x10000
             image: list[None | int] = [None] * RAM_SIZE
-            for block in core.memory_blocks:
+            for block in core.memory.blocks or []:
                 assert block.rom_page == 0  # TODO
                 assert block.ram_page == 0  # TODO
                 image[block.addr:block.addr + len(block.data.data)] = (
                     list(block.data.data))
 
-            [stock_rom] = Spectrum48CoreSnapshot().memory_blocks or []
+            [stock_rom] = Spectrum48CoreSnapshot().memory.blocks or []
 
             PAGE_SIZE = 0x4000
             EMPTY_PAGE = [None] * PAGE_SIZE
@@ -455,7 +456,7 @@ class Z80File(SnapshotFile, format_name='Z80'):
             ula=ULASnapshot(
                 ticks_since_int=ticks_since_int,
                 border_colour=(flags1 >> 1) & 0x7),
-            memory_blocks=memory_blocks))
+            memory=MemorySnapshot(blocks=memory_blocks)))
 
     __V1_HEADER: typing.ClassVar[list[str]] = [
         'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',

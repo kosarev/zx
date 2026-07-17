@@ -19,6 +19,7 @@ import typing
 
 from ._beeper import BeeperSnapshot
 from ._core import CoreSnapshot
+from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
@@ -34,6 +35,9 @@ def _load_rom_image(filename: str) -> bytes:
 # given memory blocks amend the stock ROM -- a block carrying ROM
 # content replaces it.
 class Spectrum48CoreSnapshot(CoreSnapshot):
+    ula: ULASnapshot
+    memory: MemorySnapshot
+
     def __init__(self, **fields: typing.Any) -> None:
         fields.setdefault('active', True)
 
@@ -44,12 +48,13 @@ class Spectrum48CoreSnapshot(CoreSnapshot):
         ula_fields.setdefault('contention_base', 14335)
         fields['ula'] = ULASnapshot(**ula_fields)
 
-        blocks = list(fields.get('memory_blocks') or [])
+        memory = fields.get('memory')
+        blocks = list(memory.blocks or []) if memory is not None else []
         if not any(b.addr < 0x4000 for b in blocks):
             blocks = [MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
                                   data=_load_rom_image('Spectrum48.rom')),
                       *blocks]
-        fields['memory_blocks'] = blocks
+        fields['memory'] = MemorySnapshot(blocks=blocks)
 
         super().__init__(**fields)
 
@@ -80,6 +85,9 @@ class Spectrum48Snapshot(MachineSnapshot):
 # paging, still ride the core's model parameter; they become core
 # config fields as the 128K work proceeds.
 class Spectrum128CoreSnapshot(CoreSnapshot):
+    ula: ULASnapshot
+    memory: MemorySnapshot
+
     def __init__(self, **fields: typing.Any) -> None:
         fields.setdefault('active', True)
 
@@ -90,7 +98,8 @@ class Spectrum128CoreSnapshot(CoreSnapshot):
         ula_fields.setdefault('contention_base', 14361)
         fields['ula'] = ULASnapshot(**ula_fields)
 
-        blocks = list(fields.get('memory_blocks') or [])
+        memory = fields.get('memory')
+        blocks = list(memory.blocks or []) if memory is not None else []
         if not any(b.addr < 0x4000 for b in blocks):
             rom = _load_rom_image('Spectrum128.rom')
             blocks = [MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
@@ -98,7 +107,7 @@ class Spectrum128CoreSnapshot(CoreSnapshot):
                       MemoryBlock(addr=0x0000, rom_page=1, ram_page=0,
                                   data=rom[0x4000:]),
                       *blocks]
-        fields['memory_blocks'] = blocks
+        fields['memory'] = MemorySnapshot(blocks=blocks)
 
         super().__init__(**fields)
 

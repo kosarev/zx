@@ -11,6 +11,7 @@ import pytest
 
 import zx
 from zx._core import CoreSnapshot
+from zx._core import MemorySnapshot
 from zx._core import Z80Snapshot
 from zx._data import MachinePlayback
 from zx._data import MachinePlaybackFrame
@@ -45,9 +46,9 @@ def test_iregp_mid_instruction() -> None:
     snapshot = MachineSnapshot(core=CoreSnapshot(
         active=True,
         z80=Z80Snapshot(pc=0x8000),
-        memory_blocks=[MemoryBlock(
+        memory=MemorySnapshot(blocks=[MemoryBlock(
             addr=0x8000,
-            data=b'\xdd\x21\x00\x00')]))  # LD IX, 0x0000
+            data=b'\xdd\x21\x00\x00')])))  # LD IX, 0x0000
 
     playback = MachinePlayback(
         segments=[MachinePlaybackSegment(
@@ -64,9 +65,9 @@ def test_spin_v05_trailing_in_sample() -> None:
     snapshot = MachineSnapshot(core=CoreSnapshot(
         active=True,
         z80=Z80Snapshot(pc=0x8000),
-        memory_blocks=[MemoryBlock(
+        memory=MemorySnapshot(blocks=[MemoryBlock(
             addr=0x8000,
-            data=b'\xdb\xfe\xdb\xfe')]))  # IN A,(0xfe) x2
+            data=b'\xdb\xfe\xdb\xfe')])))  # IN A,(0xfe) x2
 
     playback = MachinePlayback(
         segments=[MachinePlaybackSegment(
@@ -88,9 +89,9 @@ def test_spin_v05_bytes_saving_trap() -> None:
     snapshot = MachineSnapshot(core=CoreSnapshot(
         active=True,
         z80=Z80Snapshot(pc=0x8000, sp=0xc000),
-        memory_blocks=[MemoryBlock(
+        memory=MemorySnapshot(blocks=[MemoryBlock(
             addr=0x8000,
-            data=b'\xcd\xd4\x04')]))  # CALL 0x04d4
+            data=b'\xcd\xd4\x04')])))  # CALL 0x04d4
 
     playback = MachinePlayback(
         segments=[MachinePlaybackSegment(

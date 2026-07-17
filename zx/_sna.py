@@ -13,6 +13,7 @@ from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
 from ._core import CoreSnapshot
+from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import ByteData
@@ -89,9 +90,9 @@ class SNAFile(SnapshotFile, format_name='SNA'):
                 iff1=iff, iff2=iff,
                 int_mode=self.int_mode),
             ula=ULASnapshot(border_colour=self.border_colour),
-            memory_blocks=[
+            memory=MemorySnapshot(blocks=[
                 MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
-                            data=self.memory.data)]))
+                            data=self.memory.data)])))
 
     @classmethod
     def from_snapshot(cls, snapshot: SnapshotFile) -> 'SNAFile':
@@ -103,8 +104,10 @@ class SNAFile(SnapshotFile, format_name='SNA'):
         z80 = core.z80 or Z80Snapshot()
         ula = core.ula or ULASnapshot()
 
+        blocks = (core.memory or MemorySnapshot()).blocks or []
+
         memory = bytearray(0x10000)
-        for block in (core.memory_blocks or []):
+        for block in blocks:
             memory[block.addr:block.end_addr] = block.data.data
 
         sp = z80.sp or 0
