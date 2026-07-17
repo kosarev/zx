@@ -27,7 +27,7 @@ from ._data import PlaybackFile
 from ._data import SnapshotFile
 from ._data import _InlineJSONDict
 from ._error import Error
-from ._z80 import Z80Snapshot
+from ._z80 import Z80File
 
 
 class RZXChunk(DataRecord, format_name=None):
@@ -133,7 +133,7 @@ def parse_snapshot_block(image: Bytes) -> RZXSnapshot:
         raise Error(f'Unknown RZX snapshot format {filename_extension!r}.',
                     id='unknown_rzx_snapshot_format')
 
-    snapshot = Z80Snapshot.decode('snapshot.z80', snapshot_image)
+    snapshot = Z80File.decode('snapshot.z80', snapshot_image)
     return RZXSnapshot(flags=flags, format=filename_extension,
                        snapshot=snapshot)
 

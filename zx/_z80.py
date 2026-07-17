@@ -42,7 +42,7 @@ class Z80MemoryBlock(DataRecord, format_name=None):
                          data=HexData.wrap(data))
 
 
-class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None):
+class Z80FileV3ExtraHeader(DataRecord, format_name=None):
     last_write_to_port_1ffd: int
 
     def __init__(self, *, last_write_to_port_1ffd: int = 0):
@@ -52,15 +52,15 @@ class Z80SnapshotV3ExtraHeader(DataRecord, format_name=None):
         'B:last_write_to_port_1ffd']
 
     @classmethod
-    def parse_header(cls, parser: BinaryParser) -> Z80SnapshotV3ExtraHeader:
+    def parse_header(cls, parser: BinaryParser) -> Z80FileV3ExtraHeader:
         v3_extra_fields = parser.parse(cls.__V3_EXTRA_HEADER)
-        return Z80SnapshotV3ExtraHeader(**v3_extra_fields)
+        return Z80FileV3ExtraHeader(**v3_extra_fields)
 
     def write(self, writer: BinaryWriter) -> None:
         writer.write(self.__V3_EXTRA_HEADER, **dict(self))
 
 
-class Z80SnapshotV3Header(DataRecord, format_name=None):
+class Z80FileV3Header(DataRecord, format_name=None):
     ticks_count_low: int
     ticks_count_high: int
     spectator_flag: int
@@ -74,7 +74,7 @@ class Z80SnapshotV3Header(DataRecord, format_name=None):
     disciple_inhibit_button_status: int
     disciple_inhibit_flag: int
 
-    v3_extra_header: Z80SnapshotV3ExtraHeader | None
+    v3_extra_header: Z80FileV3ExtraHeader | None
 
     __V3_HEADER: typing.ClassVar[list[str]] = [
         '<H:ticks_count_low', 'B:ticks_count_high', 'B:spectator_flag',
@@ -98,7 +98,7 @@ class Z80SnapshotV3Header(DataRecord, format_name=None):
             mgt_type: int = 0,
             disciple_inhibit_button_status: int = 0,
             disciple_inhibit_flag: int = 0,
-            v3_extra_header: Z80SnapshotV3ExtraHeader | None = None):
+            v3_extra_header: Z80FileV3ExtraHeader | None = None):
         super().__init__(
             ticks_count_low=ticks_count_low,
             ticks_count_high=ticks_count_high,
@@ -115,14 +115,14 @@ class Z80SnapshotV3Header(DataRecord, format_name=None):
             v3_extra_header=v3_extra_header)
 
     @classmethod
-    def parse_header(cls, parser: BinaryParser) -> Z80SnapshotV3Header:
+    def parse_header(cls, parser: BinaryParser) -> Z80FileV3Header:
         v3_fields = parser.parse(cls.__V3_HEADER)
 
         v3_extra_header = None
         if parser:
-            v3_extra_header = Z80SnapshotV3ExtraHeader.parse_header(parser)
+            v3_extra_header = Z80FileV3ExtraHeader.parse_header(parser)
 
-        return Z80SnapshotV3Header(
+        return Z80FileV3Header(
             **v3_fields,
             v3_extra_header=v3_extra_header)
 
@@ -133,7 +133,7 @@ class Z80SnapshotV3Header(DataRecord, format_name=None):
             self.v3_extra_header.write(writer)
 
 
-class Z80SnapshotV2Header(DataRecord, format_name=None):
+class Z80FileV2Header(DataRecord, format_name=None):
     extra_header_size: int
     pc: int
     hardware_mode: int
@@ -143,7 +143,7 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
     port_fffd_value: int
     sound_chip_regs: tuple[int, ...]
 
-    v3_header: Z80SnapshotV3Header | None
+    v3_header: Z80FileV3Header | None
 
     __V2_HEADER: typing.ClassVar[list[str]] = [
         '<H:pc', 'B:hardware_mode', 'B:misc1', 'B:misc2', 'B:flags3',
@@ -158,7 +158,7 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
             flags3: int = 0,
             port_fffd_value: int = 0,
             sound_chip_regs: tuple[int, ...] = (0,) * 16,
-            v3_header: Z80SnapshotV3Header | None = None):
+            v3_header: Z80FileV3Header | None = None):
         super().__init__(
             pc=pc, hardware_mode=hardware_mode,
             misc1=misc1, misc2=misc2, flags3=flags3,
@@ -167,14 +167,14 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
             v3_header=v3_header)
 
     @classmethod
-    def parse_header(cls, parser: BinaryParser) -> Z80SnapshotV2Header:
+    def parse_header(cls, parser: BinaryParser) -> Z80FileV2Header:
         v2_fields = parser.parse(cls.__V2_HEADER)
 
         v3_header = None
         if parser:
-            v3_header = Z80SnapshotV3Header.parse_header(parser)
+            v3_header = Z80FileV3Header.parse_header(parser)
 
-        return Z80SnapshotV2Header(
+        return Z80FileV2Header(
             **v2_fields,
             v3_header=v3_header)
 
@@ -185,7 +185,7 @@ class Z80SnapshotV2Header(DataRecord, format_name=None):
             self.v3_header.write(writer)
 
 
-class Z80Snapshot(SnapshotFile, format_name='Z80'):
+class Z80File(SnapshotFile, format_name='Z80'):
     # Some snapshots contain zero pages as well.
     __MEMORY_PAGE_ADDRS: typing.ClassVar[dict[int, int]] = {
         0: 0x0000, 4: 0x8000, 5: 0xc000, 8: 0x4000}
@@ -211,7 +211,7 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
     iff2: bool
     flags2: int
 
-    v2_header: Z80SnapshotV2Header | None
+    v2_header: Z80FileV2Header | None
 
     memory_image: ByteData
     memory_blocks: typing.Sequence[Z80MemoryBlock]
@@ -227,7 +227,7 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
             iy: int = 0, ix: int = 0,
             iff1: int = 0, iff2: int = 0,
             flags2: int = 0,
-            v2_header: Z80SnapshotV2Header | None = None,
+            v2_header: Z80FileV2Header | None = None,
             memory_image: Bytes | ByteData | None = None,
             memory_blocks: typing.Sequence[Z80MemoryBlock] | None = None):
         if memory_image is not None:
@@ -246,7 +246,7 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
             memory_blocks=memory_blocks)
 
     @classmethod
-    def from_snapshot(cls, snapshot: SnapshotFile) -> Z80Snapshot:
+    def from_snapshot(cls, snapshot: SnapshotFile) -> Z80File:
         core = next(
             (d for _, d in snapshot.to_machine_snapshot()
              if isinstance(d, CoreSnapshot)), None)
@@ -321,7 +321,7 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
         ticks_high = (ticks_since_int // quarter_frame + 3) % 4
         ticks_low = (quarter_frame - 1) - ticks_since_int % quarter_frame
 
-        return Z80Snapshot(
+        return Z80File(
             a=get_high8(core.af or 0),
             f=get_low8(core.af or 0),
             bc=core.bc or 0,
@@ -342,12 +342,12 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
             iff1=core.iff1 or 0,
             iff2=core.iff2 or 0,
             flags2=flags2,
-            v2_header=Z80SnapshotV2Header(
+            v2_header=Z80FileV2Header(
                 pc=core.pc or 0,
-                v3_header=Z80SnapshotV3Header(
+                v3_header=Z80FileV3Header(
                     ticks_count_low=ticks_low,
                     ticks_count_high=ticks_high,
-                    v3_extra_header=Z80SnapshotV3ExtraHeader())),
+                    v3_extra_header=Z80FileV3ExtraHeader())),
             memory_blocks=memory_blocks)
 
     def to_machine_snapshot(self) -> MachineSnapshot:
@@ -548,7 +548,7 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
                               data=image)
 
     @classmethod
-    def decode(cls, filename: str, image: Bytes) -> Z80Snapshot:
+    def decode(cls, filename: str, image: Bytes) -> Z80File:
         # Parse headers.
         parser = BinaryParser(image)
         v1_fields = parser.parse(cls.__V1_HEADER)
@@ -559,7 +559,7 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
             assert isinstance(extra_header_size, int)
             extra_header = parser.read_bytes(extra_header_size)
             extra_parser = BinaryParser(extra_header)
-            v2_header = Z80SnapshotV2Header.parse_header(extra_parser)
+            v2_header = Z80FileV2Header.parse_header(extra_parser)
 
             if extra_parser:
                 raise Error('Z80 snapshot: the extra header is too large.',
@@ -575,10 +575,10 @@ class Z80Snapshot(SnapshotFile, format_name='Z80'):
             while parser:
                 memory_blocks.append(cls.__parse_memory_block(parser))
 
-        return Z80Snapshot(**v1_fields,
-                           v2_header=v2_header,
-                           memory_image=memory_image,
-                           memory_blocks=memory_blocks)
+        return Z80File(**v1_fields,
+                       v2_header=v2_header,
+                       memory_image=memory_image,
+                       memory_blocks=memory_blocks)
 
     def encode(self) -> bytes:
         writer = BinaryWriter()

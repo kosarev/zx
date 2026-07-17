@@ -18,7 +18,7 @@ def test_basic() -> None:
     mach = zx.Core()
     mach.install_snapshot(zx._machines.Spectrum48CoreSnapshot())
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
-    snapshot = zx._z80.Z80Snapshot.from_snapshot(
+    snapshot = zx._z80.Z80File.from_snapshot(
         zx._data.MachineSnapshot(core=mach.to_snapshot()))
     snapshot_chunk = zx._rzx.RZXSnapshot(format=b'Z80\x00',
                                          snapshot=snapshot)

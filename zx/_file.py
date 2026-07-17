@@ -15,12 +15,12 @@ from ._data import DataRecord
 from ._error import Error
 from ._psg import PSGFile
 from ._rzx import RZXFile
-from ._scr import _SCRSnapshot
-from ._sna import SNASnapshot
+from ._scr import _SCRFile
+from ._sna import SNAFile
 from ._tap import TAPFile
 from ._tzx import TZXFile
 from ._wav import WAVFile
-from ._z80 import Z80Snapshot
+from ._z80 import Z80File
 from ._zip import ZIPFile
 from ._zx import ZXFile
 from ._zxb import ZXBasicCompilerProgram
@@ -52,12 +52,12 @@ def detect_file_format(image: None | Bytes,
         ('.zxb', None, ZXBasicCompilerProgram),
         ('.psg', b'PSG\x1a', PSGFile),
         ('.rzx', b'RZX!', RZXFile),
-        ('.scr', None, _SCRSnapshot),
+        ('.scr', None, _SCRFile),
         ('.tap', None, TAPFile),
         ('.tzx', b'ZXTape!', TZXFile),
         ('.wav', b'RIFF', WAVFile),
-        ('.sna', None, SNASnapshot),
-        ('.z80', None, Z80Snapshot),
+        ('.sna', None, SNAFile),
+        ('.z80', None, Z80File),
         ('.zip', b'PK\x03\x04', ZIPFile),
     ]
 

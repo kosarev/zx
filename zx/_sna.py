@@ -23,7 +23,7 @@ from ._machines import Spectrum48CoreSnapshot
 from ._machines import Spectrum48Snapshot
 
 
-class SNASnapshot(SnapshotFile, format_name='SNA'):
+class SNAFile(SnapshotFile, format_name='SNA'):
     _HEADER: typing.ClassVar[list[str]] = [
         'B:i', '<H:alt_hl', '<H:alt_de', '<H:alt_bc', '<H:alt_af',
         '<H:hl', '<H:de', '<H:bc', '<H:iy', '<H:ix',
@@ -92,7 +92,7 @@ class SNASnapshot(SnapshotFile, format_name='SNA'):
                             data=self.memory.data)]))
 
     @classmethod
-    def from_snapshot(cls, snapshot: SnapshotFile) -> 'SNASnapshot':
+    def from_snapshot(cls, snapshot: SnapshotFile) -> 'SNAFile':
         core = next(
             (d for _, d in snapshot.to_machine_snapshot()
              if isinstance(d, CoreSnapshot)), None)
@@ -113,7 +113,7 @@ class SNASnapshot(SnapshotFile, format_name='SNA'):
 
         ir = core.ir or 0
 
-        return SNASnapshot(
+        return SNAFile(
             i=(ir >> 8) & 0xFF,
             alt_hl=core.alt_hl or 0,
             alt_de=core.alt_de or 0,
@@ -133,7 +133,7 @@ class SNASnapshot(SnapshotFile, format_name='SNA'):
             memory=memory[0x4000:0x10000])
 
     @classmethod
-    def decode(cls, filename: str, image: Bytes) -> 'SNASnapshot':
+    def decode(cls, filename: str, image: Bytes) -> 'SNAFile':
         parser = BinaryParser(image)
         fields = parser.parse(cls._HEADER)
         if parser.get_remaining_size() == 131076:
@@ -143,7 +143,7 @@ class SNASnapshot(SnapshotFile, format_name='SNA'):
         if not parser.is_eof():
             raise Error(f"'{filename}': .sna file is too long.",
                         id='sna_file_too_long')
-        return SNASnapshot(**fields, memory=memory)
+        return SNAFile(**fields, memory=memory)
 
     def encode(self) -> bytes:
         writer = BinaryWriter()

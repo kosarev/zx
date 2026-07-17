@@ -683,7 +683,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
     # recoverer or the tool layer.
     # def __save_crash_rzx(self, player: PlaybackPlayer, state: CoreState,
     #                      chunk_i: int, frame_i: int) -> None:
-    #     snapshot = Z80Snapshot.from_snapshot(state.to_snapshot()).encode()
+    #     snapshot = Z80File.from_snapshot(state.to_snapshot()).encode()
     #
     #     assert 0  # TODO
     #     crash_recording = {

@@ -19,7 +19,7 @@ from ._machines import Spectrum48CoreSnapshot
 from ._machines import Spectrum48Snapshot
 
 
-class _SCRSnapshot(SnapshotFile, format_name='SCR'):
+class _SCRFile(SnapshotFile, format_name='SCR'):
     dot_patterns: bytes
     colour_attrs: bytes
 
@@ -55,8 +55,8 @@ class _SCRSnapshot(SnapshotFile, format_name='SCR'):
         '6144s:dot_patterns', '768s:colour_attrs']
 
     @classmethod
-    def decode(cls, filename: str, image: Bytes) -> '_SCRSnapshot':
+    def decode(cls, filename: str, image: Bytes) -> '_SCRFile':
         parser = BinaryParser(image)
         fields = collections.OrderedDict()
         fields.update(parser.parse(cls._FIELDS))
-        return _SCRSnapshot(**fields)
+        return _SCRFile(**fields)

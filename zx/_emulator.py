@@ -100,7 +100,7 @@ from ._screen import ScreenWindow
 from ._sound import SDLSound
 from ._tape import TapePlayer
 from ._time import Time
-from ._z80 import Z80Snapshot
+from ._z80 import Z80File
 
 
 # The machine's devices, keyed by their ids -- the same ids that key
@@ -307,7 +307,7 @@ class Emulator:
         elif isinstance(event, LoadFile):
             self._load_file(event.filename)
         elif isinstance(event, SaveSnapshot):
-            self._save_snapshot_file(Z80Snapshot, event.filename)
+            self._save_snapshot_file(Z80File, event.filename)
         elif isinstance(event, ToggleTapePause):
             self._toggle_tape_pause()
 

@@ -18,7 +18,7 @@ def test_basic() -> None:
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
     HL = 0x1234
     mach.hl = HL
-    format = zx._z80.Z80Snapshot
+    format = zx._z80.Z80File
     assert format.FORMAT_NAME == 'Z80'
     image = format.from_snapshot(
         MachineSnapshot(core=mach.to_snapshot())).encode()
@@ -30,14 +30,14 @@ def test_basic() -> None:
     assert snap.hl == HL
 
     # Dump the parsed snapshot.
-    assert 'Z80Snapshot' in snap.dumps()
+    assert 'Z80File' in snap.dumps()
 
     # Produce and dump the machine snapshot.
     uni = snap.to_machine_snapshot()
     assert 'Spectrum48Snapshot' in uni.dumps()
 
 
-# Z80Snapshot stores compressed memory literally -- decode() never
+# Z80File stores compressed memory literally -- decode() never
 # decompresses, it just preserves the original bytes. encode() writes
 # them back unchanged. Only to_machine_snapshot() decompresses, for
 # semantic use. This confirms binary-exact roundtripping works even for
@@ -73,6 +73,6 @@ def test_compressed_v1_roundtrip() -> None:
         return writer.get_image()
 
     image = make_image()
-    snap = zx._z80.Z80Snapshot.decode('test.z80', image)
+    snap = zx._z80.Z80File.decode('test.z80', image)
     # This currently fails because encode() doesn't re-compress.
     assert snap.encode() == image, 'Compressed V1 .z80 roundtrip broken'

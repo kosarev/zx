@@ -16,12 +16,12 @@ import zx
 
 def test_basic() -> None:
     # Create a SCR snapshot.
-    format = zx._scr._SCRSnapshot
+    format = zx._scr._SCRFile
     assert format.FORMAT_NAME == 'SCR'
     # TODO: scr = format.make_snapshot(mach)
 
     # Dump.
-    # TODO: assert '_SCRSnapshot' in scr.dumps()
+    # TODO: assert '_SCRFile' in scr.dumps()
 
     # Produce and dump the machine snapshot.
     # TODO: uni = scr.to_machine_snapshot()
