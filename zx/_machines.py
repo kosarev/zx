@@ -31,22 +31,41 @@ def _load_rom_image(filename: str) -> bytes:
     return path.read_bytes()
 
 
+# The 48K ULA. The type states the wiring, so only the volatile
+# fields are parameters.
+class Spectrum48ULASnapshot(ULASnapshot):
+    def __init__(self, *,
+                 ticks_since_int: int | None = None,
+                 border_colour: int | None = None) -> None:
+        super().__init__(
+            ticks_per_second=3_500_000,
+            ticks_per_horizontal_retrace=48,
+            lines_per_vertical_retrace=24,
+            contention_base=14335,
+            ticks_since_int=ticks_since_int,
+            border_colour=border_colour)
+
+
 # The 48K core: fields not specified take their stock values, and the
 # given memory blocks amend the stock ROM -- a block carrying ROM
 # content replaces it.
 class Spectrum48CoreSnapshot(CoreSnapshot):
-    ula: ULASnapshot
+    ula: Spectrum48ULASnapshot
     memory: MemorySnapshot
 
     def __init__(self, **fields: typing.Any) -> None:
         fields.setdefault('active', True)
 
-        ula_fields = dict(fields.get('ula') or ULASnapshot())
-        ula_fields.setdefault('ticks_per_second', 3_500_000)
-        ula_fields.setdefault('ticks_per_horizontal_retrace', 48)
-        ula_fields.setdefault('lines_per_vertical_retrace', 24)
-        ula_fields.setdefault('contention_base', 14335)
-        fields['ula'] = ULASnapshot(**ula_fields)
+        # Lift the ULA facts to the model's type: nothing a given
+        # plain record states may disagree with the stock values.
+        ula = fields.get('ula') or ULASnapshot()
+        if not isinstance(ula, Spectrum48ULASnapshot):
+            lifted = Spectrum48ULASnapshot(
+                ticks_since_int=ula.ticks_since_int,
+                border_colour=ula.border_colour)
+            assert all(getattr(lifted, f) == v for f, v in ula)
+            ula = lifted
+        fields['ula'] = ula
 
         memory = fields.get('memory')
         blocks = list(memory.blocks or []) if memory is not None else []
@@ -79,24 +98,43 @@ class Spectrum48Snapshot(MachineSnapshot):
         super().__init__(core=core, keyboard=keyboard, beeper=beeper)
 
 
+# The 128K ULA. The type states the wiring, so only the volatile
+# fields are parameters.
+class Spectrum128ULASnapshot(ULASnapshot):
+    def __init__(self, *,
+                 ticks_since_int: int | None = None,
+                 border_colour: int | None = None) -> None:
+        super().__init__(
+            ticks_per_second=3_546_900,
+            ticks_per_horizontal_retrace=52,
+            lines_per_vertical_retrace=23,
+            contention_base=14361,
+            ticks_since_int=ticks_since_int,
+            border_colour=border_colour)
+
+
 # The 128K core: fields not specified take their stock values, and
 # the given memory blocks amend the stock ROMs -- blocks carrying ROM
 # content replace them. The remaining 128K facts, the clock and the
 # paging, still ride the core's model parameter; they become core
 # config fields as the 128K work proceeds.
 class Spectrum128CoreSnapshot(CoreSnapshot):
-    ula: ULASnapshot
+    ula: Spectrum128ULASnapshot
     memory: MemorySnapshot
 
     def __init__(self, **fields: typing.Any) -> None:
         fields.setdefault('active', True)
 
-        ula_fields = dict(fields.get('ula') or ULASnapshot())
-        ula_fields.setdefault('ticks_per_second', 3_546_900)
-        ula_fields.setdefault('ticks_per_horizontal_retrace', 52)
-        ula_fields.setdefault('lines_per_vertical_retrace', 23)
-        ula_fields.setdefault('contention_base', 14361)
-        fields['ula'] = ULASnapshot(**ula_fields)
+        # Lift the ULA facts to the model's type: nothing a given
+        # plain record states may disagree with the stock values.
+        ula = fields.get('ula') or ULASnapshot()
+        if not isinstance(ula, Spectrum128ULASnapshot):
+            lifted = Spectrum128ULASnapshot(
+                ticks_since_int=ula.ticks_since_int,
+                border_colour=ula.border_colour)
+            assert all(getattr(lifted, f) == v for f, v in ula)
+            ula = lifted
+        fields['ula'] = ula
 
         memory = fields.get('memory')
         blocks = list(memory.blocks or []) if memory is not None else []
