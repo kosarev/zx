@@ -49,6 +49,13 @@ class Spectrum48ULASnapshot(ULASnapshot,
             ticks_since_int=ticks_since_int,
             border_colour=border_colour)
 
+    # The type fixes the wiring, so the node stores only these fields.
+    def to_json(self) -> dict[str, int]:
+        d = super().to_json()
+        return {name: d[name]
+                for name in ('ticks_since_int', 'border_colour')
+                if name in d}
+
 
 # The 48K core: members not specified take their stock values, and
 # the given memory blocks amend the stock ROM -- a block carrying ROM

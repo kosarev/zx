@@ -211,6 +211,14 @@ class CoreSnapshot(DeviceSnapshot):
             ula=ula,
             memory=memory)
 
+    # Return the core with its ULA lifted to the chip-version type.
+    def lift(self) -> CoreSnapshot:
+        return CoreSnapshot(
+            active=self.active,
+            z80=self.z80,
+            ula=self.ula.lift() if self.ula is not None else None,
+            memory=self.memory)
+
 
 class StateParser:
     def __init__(self, image: memoryview) -> None:

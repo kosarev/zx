@@ -388,7 +388,7 @@ class Emulator:
                             filename: str) -> None:
         with pathlib.Path(filename).open('wb') as f:
             f.write(format.from_snapshot(
-                self.__make_machine_snapshot()).encode())
+                self.__make_machine_snapshot().lift()).encode())
 
     def notify(self, event: DeviceEvent, *,
                device: None | str = None) -> None:

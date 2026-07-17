@@ -363,7 +363,11 @@ class SnapshotFile(DataRecord):
 # A device's captured state: what a machine snapshot is composed
 # of. Each device type defines its own snapshot type.
 class DeviceSnapshot(DataRecord):
-    pass
+    # If a more specific type fits this snapshot, return it as that
+    # type; otherwise return the snapshot unchanged. Subclasses that
+    # can identify themselves override this.
+    def lift(self) -> DeviceSnapshot:
+        return self
 
 
 # The native machine snapshot: a composition of per-device
@@ -382,6 +386,11 @@ class MachineSnapshot(SnapshotFile):
 
     def to_machine_snapshot(self) -> MachineSnapshot:
         return self
+
+    # Lift every device snapshot in the machine to its own more
+    # specific type where there is one.
+    def lift(self) -> MachineSnapshot:
+        return MachineSnapshot(**{id: d.lift() for id, d in self})
 
 
 class PlaybackFile(DataRecord):
