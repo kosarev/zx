@@ -124,18 +124,30 @@ class ULASnapshot(DataRecord):
     ticks_since_int: int | None
     border_colour: int | None
 
+    # The chip-version subclasses keyed by their fixed configuration,
+    # so a plain record can be recognised as one of them.
+    __by_config: typing.ClassVar[
+        dict[tuple[int | None, ...], type[ULASnapshot]]] = {}
+
+    # A chip-version subclass states its whole wiring as class
+    # keywords, recorded as class attributes and keyed for recognition.
     def __init_subclass__(
             cls, *,
-            ticks_per_second: int | None = None,
-            ticks_per_horizontal_retrace: int | None = None,
-            lines_per_vertical_retrace: int | None = None,
-            contention_base: int | None = None,
+            ticks_per_second: int,
+            ticks_per_horizontal_retrace: int,
+            lines_per_vertical_retrace: int,
+            contention_base: int,
             **kwargs: typing.Any) -> None:
         super().__init_subclass__(**kwargs)
         cls.ticks_per_second = ticks_per_second
         cls.ticks_per_horizontal_retrace = ticks_per_horizontal_retrace
         cls.lines_per_vertical_retrace = lines_per_vertical_retrace
         cls.contention_base = contention_base
+
+        config = (ticks_per_second, ticks_per_horizontal_retrace,
+                  lines_per_vertical_retrace, contention_base)
+        assert config not in ULASnapshot.__by_config
+        ULASnapshot.__by_config[config] = cls
 
     def __init__(
             self, *,
@@ -152,6 +164,20 @@ class ULASnapshot(DataRecord):
             contention_base=contention_base,
             ticks_since_int=ticks_since_int,
             border_colour=border_colour)
+
+    # Recognise a plain record as its chip-version type by looking its
+    # configuration up. An already-typed record and an unrecognised
+    # one are returned unchanged.
+    def lift(self) -> ULASnapshot:
+        if type(self) is not ULASnapshot:
+            return self
+        config = (self.ticks_per_second, self.ticks_per_horizontal_retrace,
+                  self.lines_per_vertical_retrace, self.contention_base)
+        cls = self.__by_config.get(config)
+        if cls is None:
+            return self
+        return cls(ticks_since_int=self.ticks_since_int,
+                   border_colour=self.border_colour)
 
 
 # The memory chips' state: the ROM and RAM contents as blocks.

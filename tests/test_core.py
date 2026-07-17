@@ -16,6 +16,7 @@ import zx
 from zx._core import Core
 from zx._core import CoreSnapshot
 from zx._core import RunEvents
+from zx._core import ULASnapshot
 from zx._core import Z80Snapshot
 from zx._device import Device
 from zx._device import DeviceEvent
@@ -209,3 +210,27 @@ def test_install_snapshot() -> None:
     assert state['z80']['pc'] == 0x8000
     state['z80']['pc'] = canonical['z80']['pc']
     assert state == canonical
+
+
+def test_ula_lift() -> None:
+    from zx._machines import Spectrum48CoreSnapshot
+    from zx._machines import Spectrum48ULASnapshot
+
+    # A captured record is plain, and lift recognises its
+    # configuration as the 48K chip while preserving all its fields.
+    core = zx.Core()
+    core.install_snapshot(Spectrum48CoreSnapshot())
+    core.border_colour = 3
+    ula = core.to_snapshot().ula
+    assert type(ula) is ULASnapshot
+
+    lifted = ula.lift()
+    assert isinstance(lifted, Spectrum48ULASnapshot)
+    assert dict(lifted) == dict(ula)
+
+    # Lift is idempotent: an already-typed record is returned as is.
+    assert lifted.lift() is lifted
+
+    # An unrecognised configuration stays plain.
+    odd = ULASnapshot(ticks_per_second=1)
+    assert odd.lift() is odd
