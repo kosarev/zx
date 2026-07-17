@@ -111,29 +111,47 @@ class Z80Snapshot(DataRecord):
             iff1=iff1, iff2=iff2, int_mode=int_mode)
 
 
-# The core device's slice of a machine snapshot. Null fields mean
-# the canonical reset values.
-class CoreSnapshot(DeviceSnapshot):
-    active: bool | None
+# The ULA chip's state. The ULA divides the crystal into the CPU
+# clock, so the clock is its fact. Null fields mean the canonical
+# reset values.
+class ULASnapshot(DataRecord):
     ticks_per_second: int | None
     ticks_per_horizontal_retrace: int | None
     lines_per_vertical_retrace: int | None
     contention_base: int | None
-    z80: Z80Snapshot | None
     ticks_since_int: int | None
     border_colour: int | None
+
+    def __init__(
+            self, *,
+            ticks_per_second: int | None = None,
+            ticks_per_horizontal_retrace: int | None = None,
+            lines_per_vertical_retrace: int | None = None,
+            contention_base: int | None = None,
+            ticks_since_int: int | None = None,
+            border_colour: int | None = None):
+        super().__init__(
+            ticks_per_second=ticks_per_second,
+            ticks_per_horizontal_retrace=ticks_per_horizontal_retrace,
+            lines_per_vertical_retrace=lines_per_vertical_retrace,
+            contention_base=contention_base,
+            ticks_since_int=ticks_since_int,
+            border_colour=border_colour)
+
+
+# The core device's slice of a machine snapshot. Null fields mean
+# the canonical reset values.
+class CoreSnapshot(DeviceSnapshot):
+    active: bool | None
+    z80: Z80Snapshot | None
+    ula: ULASnapshot | None
     memory_blocks: list[MemoryBlock] | None
 
     def __init__(
             self,
             active: bool | None = None,
-            ticks_per_second: int | None = None,
-            ticks_per_horizontal_retrace: int | None = None,
-            lines_per_vertical_retrace: int | None = None,
-            contention_base: int | None = None,
             z80: Z80Snapshot | None = None,
-            ticks_since_int: int | None = None,
-            border_colour: int | None = None,
+            ula: ULASnapshot | None = None,
             memory_blocks: typing.Sequence[MemoryBlock] | None = None):
         if memory_blocks is None:
             blocks = None
@@ -142,13 +160,8 @@ class CoreSnapshot(DeviceSnapshot):
 
         super().__init__(
             active=active,
-            ticks_per_second=ticks_per_second,
-            ticks_per_horizontal_retrace=ticks_per_horizontal_retrace,
-            lines_per_vertical_retrace=lines_per_vertical_retrace,
-            contention_base=contention_base,
             z80=z80,
-            ticks_since_int=ticks_since_int,
-            border_colour=border_colour,
+            ula=ula,
             memory_blocks=blocks)
 
 
@@ -638,10 +651,6 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         assert self.model is Spectrum48  # TODO: Support 128K.
         return CoreSnapshot(
             active=True if self.active else None,
-            ticks_per_second=self.ticks_per_second,
-            ticks_per_horizontal_retrace=self.ticks_per_horizontal_retrace,
-            lines_per_vertical_retrace=self.lines_per_vertical_retrace,
-            contention_base=self.contention_base,
             z80=Z80Snapshot(
                 af=self.af, bc=self.bc, de=self.de, hl=self.hl,
                 ix=self.ix, iy=self.iy,
@@ -651,12 +660,18 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
                 # TODO: wz=self.wz,
                 iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
                 iregp_kind=self.iregp_kind),
+            ula=ULASnapshot(
+                ticks_per_second=self.ticks_per_second,
+                ticks_per_horizontal_retrace=(
+                    self.ticks_per_horizontal_retrace),
+                lines_per_vertical_retrace=self.lines_per_vertical_retrace,
+                contention_base=self.contention_base,
+                ticks_since_int=self.ticks_since_int,
+                border_colour=self.border_colour),
             memory_blocks=[MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
                                        data=self.read(0x0000, 0x4000)),
                            MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
-                                       data=self.read(0x4000, 0xc000))],
-            ticks_since_int=self.ticks_since_int,
-            border_colour=self.border_colour)
+                                       data=self.read(0x4000, 0xc000))])
 
     def install_snapshot(self, snapshot: CoreSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset
@@ -668,9 +683,9 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         self.active = False
 
         for field, value in snapshot:
-            if field == 'z80':
-                for register, register_value in value:
-                    setattr(self, register, register_value)
+            if field in ('z80', 'ula'):
+                for chip_field, chip_value in value:
+                    setattr(self, chip_field, chip_value)
             elif field == 'memory_blocks':
                 for block in value:
                     self.write(block.addr, block.data.data,

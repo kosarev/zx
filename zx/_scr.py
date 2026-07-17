@@ -12,6 +12,7 @@ import typing
 
 from ._binary import BinaryParser
 from ._binary import Bytes
+from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
@@ -46,7 +47,7 @@ class _SCRFile(SnapshotFile, format_name='SCR'):
                 pc=LOOP_ADDR,
                 iff1=0,
                 iff2=0),
-            border_colour=0,
+            ula=ULASnapshot(border_colour=0),
             memory_blocks=memory_blocks))
 
     # TODO: Refine.

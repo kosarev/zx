@@ -19,6 +19,7 @@ import typing
 
 from ._beeper import BeeperSnapshot
 from ._core import CoreSnapshot
+from ._core import ULASnapshot
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._keyboard import KeyboardSnapshot
@@ -35,10 +36,13 @@ def _load_rom_image(filename: str) -> bytes:
 class Spectrum48CoreSnapshot(CoreSnapshot):
     def __init__(self, **fields: typing.Any) -> None:
         fields.setdefault('active', True)
-        fields.setdefault('ticks_per_second', 3_500_000)
-        fields.setdefault('ticks_per_horizontal_retrace', 48)
-        fields.setdefault('lines_per_vertical_retrace', 24)
-        fields.setdefault('contention_base', 14335)
+
+        ula_fields = dict(fields.get('ula') or ULASnapshot())
+        ula_fields.setdefault('ticks_per_second', 3_500_000)
+        ula_fields.setdefault('ticks_per_horizontal_retrace', 48)
+        ula_fields.setdefault('lines_per_vertical_retrace', 24)
+        ula_fields.setdefault('contention_base', 14335)
+        fields['ula'] = ULASnapshot(**ula_fields)
 
         blocks = list(fields.get('memory_blocks') or [])
         if not any(b.addr < 0x4000 for b in blocks):
@@ -78,10 +82,13 @@ class Spectrum48Snapshot(MachineSnapshot):
 class Spectrum128CoreSnapshot(CoreSnapshot):
     def __init__(self, **fields: typing.Any) -> None:
         fields.setdefault('active', True)
-        fields.setdefault('ticks_per_second', 3_546_900)
-        fields.setdefault('ticks_per_horizontal_retrace', 52)
-        fields.setdefault('lines_per_vertical_retrace', 23)
-        fields.setdefault('contention_base', 14361)
+
+        ula_fields = dict(fields.get('ula') or ULASnapshot())
+        ula_fields.setdefault('ticks_per_second', 3_546_900)
+        ula_fields.setdefault('ticks_per_horizontal_retrace', 52)
+        ula_fields.setdefault('lines_per_vertical_retrace', 23)
+        ula_fields.setdefault('contention_base', 14361)
+        fields['ula'] = ULASnapshot(**ula_fields)
 
         blocks = list(fields.get('memory_blocks') or [])
         if not any(b.addr < 0x4000 for b in blocks):

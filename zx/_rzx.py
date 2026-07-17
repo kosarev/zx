@@ -15,6 +15,7 @@ from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
 from ._core import CoreSnapshot
+from ._core import ULASnapshot
 from ._data import ByteData
 from ._data import DataRecord
 from ._data import HexData
@@ -350,7 +351,9 @@ class RZXFile(PlaybackFile, format_name='RZX'):
                 if core is None:
                     core = CoreSnapshot()
                     s.snapshot = MachineSnapshot(core=core)
-                core.ticks_since_int = chunk.first_tick
+                if core.ula is None:
+                    core.ula = ULASnapshot()
+                core.ula.ticks_since_int = chunk.first_tick
                 s.frames.extend(
                     MachinePlaybackFrame(num_fetches=f.num_fetches,
                                          port_samples=f.samples.data)

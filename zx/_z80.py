@@ -17,6 +17,7 @@ from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
 from ._core import CoreSnapshot
+from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import ByteData
 from ._data import DataRecord
@@ -254,6 +255,7 @@ class Z80File(SnapshotFile, format_name='Z80'):
         if core is None:
             core = CoreSnapshot()
         z80 = core.z80 or Z80Snapshot()
+        ula = core.ula or ULASnapshot()
 
         # TODO: The z80 format cannot represent processor states in
         #       the middle of IX- and IY-prefixed instructions, so
@@ -271,7 +273,7 @@ class Z80File(SnapshotFile, format_name='Z80'):
         flags1 |= (r & 0x80) >> 7
         r &= 0x7f
 
-        border_colour = core.border_colour or 0
+        border_colour = ula.border_colour or 0
         assert 0 <= border_colour <= 7
         flags1 |= border_colour << 1
 
@@ -319,7 +321,7 @@ class Z80File(SnapshotFile, format_name='Z80'):
         # (70908) T states per frame.
         ticks_per_frame = 69888  # TODO
         quarter_frame = ticks_per_frame // 4
-        ticks_since_int = core.ticks_since_int or 0
+        ticks_since_int = ula.ticks_since_int or 0
         ticks_high = (ticks_since_int // quarter_frame + 3) % 4
         ticks_low = (quarter_frame - 1) - ticks_since_int % quarter_frame
 
@@ -450,8 +452,9 @@ class Z80File(SnapshotFile, format_name='Z80'):
                 iff1=0 if self.iff1 == 0 else 1,
                 iff2=0 if self.iff2 == 0 else 1,
                 int_mode=int_mode),
-            ticks_since_int=ticks_since_int,
-            border_colour=(flags1 >> 1) & 0x7,
+            ula=ULASnapshot(
+                ticks_since_int=ticks_since_int,
+                border_colour=(flags1 >> 1) & 0x7),
             memory_blocks=memory_blocks))
 
     __V1_HEADER: typing.ClassVar[list[str]] = [
