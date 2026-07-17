@@ -16,6 +16,7 @@ import zx
 from zx._core import Core
 from zx._core import CoreSnapshot
 from zx._core import RunEvents
+from zx._core import Z80Snapshot
 from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
@@ -203,8 +204,8 @@ def test_install_snapshot() -> None:
     assert mach.to_snapshot().to_json() == canonical
 
     mach.bc = 0x1234
-    mach.install_snapshot(CoreSnapshot(pc=0x8000))
+    mach.install_snapshot(CoreSnapshot(z80=Z80Snapshot(pc=0x8000)))
     state = mach.to_snapshot().to_json()
-    assert state['pc'] == 0x8000
-    state['pc'] = canonical['pc']
+    assert state['z80']['pc'] == 0x8000
+    state['z80']['pc'] = canonical['z80']['pc']
     assert state == canonical

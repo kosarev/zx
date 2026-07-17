@@ -8,6 +8,7 @@
 
 
 from zx._core import CoreSnapshot
+from zx._core import Z80Snapshot
 from zx._data import MachineSnapshot
 from zx._device import Dispatcher
 from zx._device import InstallSnapshot
@@ -16,8 +17,8 @@ from zx._playback import PlaybackRecorder
 
 def test_playback_recorder() -> None:
     dispatcher = Dispatcher()
-    snapshot1 = MachineSnapshot(core=CoreSnapshot(pc=0x8000))
-    snapshot2 = MachineSnapshot(core=CoreSnapshot(pc=0x9000))
+    snapshot1 = MachineSnapshot(core=CoreSnapshot(z80=Z80Snapshot(pc=0x8000)))
+    snapshot2 = MachineSnapshot(core=CoreSnapshot(z80=Z80Snapshot(pc=0x9000)))
 
     # Inactive by default: events are ignored.
     recorder = PlaybackRecorder()

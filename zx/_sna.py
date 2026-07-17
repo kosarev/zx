@@ -13,6 +13,7 @@ from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
 from ._core import CoreSnapshot
+from ._core import Z80Snapshot
 from ._data import ByteData
 from ._data import HexData
 from ._data import MachineSnapshot
@@ -77,15 +78,15 @@ class SNAFile(SnapshotFile, format_name='SNA'):
 
         # The file describes a 48K machine.
         return Spectrum48Snapshot(core=Spectrum48CoreSnapshot(
-            af=self.af, bc=self.bc, de=self.de, hl=self.hl,
-
-            ix=self.ix, iy=self.iy,
-            alt_af=self.alt_af, alt_bc=self.alt_bc,
-            alt_de=self.alt_de, alt_hl=self.alt_hl,
-            pc=pc, sp=sp,
-            ir=(self.i << 8) | (self.r & 0x7f),
-            iff1=iff, iff2=iff,
-            int_mode=self.int_mode,
+            z80=Z80Snapshot(
+                af=self.af, bc=self.bc, de=self.de, hl=self.hl,
+                ix=self.ix, iy=self.iy,
+                alt_af=self.alt_af, alt_bc=self.alt_bc,
+                alt_de=self.alt_de, alt_hl=self.alt_hl,
+                pc=pc, sp=sp,
+                ir=(self.i << 8) | (self.r & 0x7f),
+                iff1=iff, iff2=iff,
+                int_mode=self.int_mode),
             border_colour=self.border_colour,
             memory_blocks=[
                 MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
@@ -98,37 +99,38 @@ class SNAFile(SnapshotFile, format_name='SNA'):
              if isinstance(d, CoreSnapshot)), None)
         if core is None:
             core = CoreSnapshot()
+        z80 = core.z80 or Z80Snapshot()
 
         memory = bytearray(0x10000)
         for block in (core.memory_blocks or []):
             memory[block.addr:block.end_addr] = block.data.data
 
-        sp = core.sp or 0
-        pc = core.pc or 0
+        sp = z80.sp or 0
+        pc = z80.pc or 0
 
         # Push PC onto the stack to match the SNA format convention.
         sp = (sp - 2) & 0xFFFF
         memory[sp] = pc & 0xFF
         memory[sp + 1] = (pc >> 8) & 0xFF
 
-        ir = core.ir or 0
+        ir = z80.ir or 0
 
         return SNAFile(
             i=(ir >> 8) & 0xFF,
-            alt_hl=core.alt_hl or 0,
-            alt_de=core.alt_de or 0,
-            alt_bc=core.alt_bc or 0,
-            alt_af=core.alt_af or 0,
-            hl=core.hl or 0,
-            de=core.de or 0,
-            bc=core.bc or 0,
-            iy=core.iy or 0,
-            ix=core.ix or 0,
-            iff=(core.iff1 or 0) << 2,
+            alt_hl=z80.alt_hl or 0,
+            alt_de=z80.alt_de or 0,
+            alt_bc=z80.alt_bc or 0,
+            alt_af=z80.alt_af or 0,
+            hl=z80.hl or 0,
+            de=z80.de or 0,
+            bc=z80.bc or 0,
+            iy=z80.iy or 0,
+            ix=z80.ix or 0,
+            iff=(z80.iff1 or 0) << 2,
             r=ir & 0xFF,
-            af=core.af or 0,
+            af=z80.af or 0,
             sp=sp,
-            int_mode=core.int_mode or 0,
+            int_mode=z80.int_mode or 0,
             border_colour=core.border_colour or 0,
             memory=memory[0x4000:0x10000])
 

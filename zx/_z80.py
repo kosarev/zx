@@ -17,6 +17,7 @@ from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
 from ._core import CoreSnapshot
+from ._core import Z80Snapshot
 from ._data import ByteData
 from ._data import DataRecord
 from ._data import HexData
@@ -252,20 +253,21 @@ class Z80File(SnapshotFile, format_name='Z80'):
              if isinstance(d, CoreSnapshot)), None)
         if core is None:
             core = CoreSnapshot()
+        z80 = core.z80 or Z80Snapshot()
 
         # TODO: The z80 format cannot represent processor states in
         #       the middle of IX- and IY-prefixed instructions, so
         #       such situations need some additional processing.
         # TODO: Check for similar problems with other state attributes.
         # TODO: How do other emulators solve this problem?
-        assert (core.iregp_kind or 'hl') == 'hl'
+        assert (z80.iregp_kind or 'hl') == 'hl'
 
         flags1 = 0
         flags2 = 0
 
         # Bit 7 of the stored R value is not signigicant and
         # shall be taken from bit 0 of flags1.
-        r = get_low8(core.ir or 0)
+        r = get_low8(z80.ir or 0)
         flags1 |= (r & 0x80) >> 7
         r &= 0x7f
 
@@ -273,7 +275,7 @@ class Z80File(SnapshotFile, format_name='Z80'):
         assert 0 <= border_colour <= 7
         flags1 |= border_colour << 1
 
-        int_mode = core.int_mode or 0
+        int_mode = z80.int_mode or 0
         assert int_mode in [0, 1, 2]  # TODO
         flags2 |= int_mode
 
@@ -322,28 +324,28 @@ class Z80File(SnapshotFile, format_name='Z80'):
         ticks_low = (quarter_frame - 1) - ticks_since_int % quarter_frame
 
         return Z80File(
-            a=get_high8(core.af or 0),
-            f=get_low8(core.af or 0),
-            bc=core.bc or 0,
-            hl=core.hl or 0,
+            a=get_high8(z80.af or 0),
+            f=get_low8(z80.af or 0),
+            bc=z80.bc or 0,
+            hl=z80.hl or 0,
             pc=0,
-            sp=core.sp or 0,
-            i=get_high8(core.ir or 0),
-            r=get_low8(core.ir or 0) & 0x7f,
+            sp=z80.sp or 0,
+            i=get_high8(z80.ir or 0),
+            r=get_low8(z80.ir or 0) & 0x7f,
             flags1=flags1,
-            de=core.de or 0,
-            alt_bc=core.alt_bc or 0,
-            alt_de=core.alt_de or 0,
-            alt_hl=core.alt_hl or 0,
-            alt_a=get_high8(core.alt_af or 0),
-            alt_f=get_low8(core.alt_af or 0),
-            iy=core.iy or 0,
-            ix=core.ix or 0,
-            iff1=core.iff1 or 0,
-            iff2=core.iff2 or 0,
+            de=z80.de or 0,
+            alt_bc=z80.alt_bc or 0,
+            alt_de=z80.alt_de or 0,
+            alt_hl=z80.alt_hl or 0,
+            alt_a=get_high8(z80.alt_af or 0),
+            alt_f=get_low8(z80.alt_af or 0),
+            iy=z80.iy or 0,
+            ix=z80.ix or 0,
+            iff1=z80.iff1 or 0,
+            iff2=z80.iff2 or 0,
             flags2=flags2,
             v2_header=Z80FileV2Header(
-                pc=core.pc or 0,
+                pc=z80.pc or 0,
                 v3_header=Z80FileV3Header(
                     ticks_count_low=ticks_low,
                     ticks_count_high=ticks_high,
@@ -429,23 +431,25 @@ class Z80File(SnapshotFile, format_name='Z80'):
         # The file describes a 48K machine. TODO: 128K per the v2/v3
         # hardware mode.
         return Spectrum48Snapshot(core=Spectrum48CoreSnapshot(
-            af=make16(self.a, self.f),
-            bc=self.bc,
-            de=self.de,
-            hl=self.hl,
-            ix=self.ix,
-            iy=self.iy,
-            alt_af=make16(self.alt_a, self.alt_f),
-            alt_bc=self.alt_bc,
-            alt_de=self.alt_de,
-            alt_hl=self.alt_hl,
-            pc=self.v2_header.pc if self.v2_header is not None else self.pc,
-            sp=self.sp,
-            ir=make16(self.i, (self.r & 0x7f) | ((flags1 & 0x1) << 7)),
-            iregp_kind='hl',
-            iff1=0 if self.iff1 == 0 else 1,
-            iff2=0 if self.iff2 == 0 else 1,
-            int_mode=int_mode,
+            z80=Z80Snapshot(
+                af=make16(self.a, self.f),
+                bc=self.bc,
+                de=self.de,
+                hl=self.hl,
+                ix=self.ix,
+                iy=self.iy,
+                alt_af=make16(self.alt_a, self.alt_f),
+                alt_bc=self.alt_bc,
+                alt_de=self.alt_de,
+                alt_hl=self.alt_hl,
+                pc=(self.v2_header.pc if self.v2_header is not None
+                    else self.pc),
+                sp=self.sp,
+                ir=make16(self.i, (self.r & 0x7f) | ((flags1 & 0x1) << 7)),
+                iregp_kind='hl',
+                iff1=0 if self.iff1 == 0 else 1,
+                iff2=0 if self.iff2 == 0 else 1,
+                int_mode=int_mode),
             ticks_since_int=ticks_since_int,
             border_colour=(flags1 >> 1) & 0x7,
             memory_blocks=memory_blocks))

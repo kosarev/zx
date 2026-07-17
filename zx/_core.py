@@ -17,6 +17,7 @@ import typing
 import numpy
 
 from ._corebase import _CoreBase
+from ._data import DataRecord
 from ._data import DeviceSnapshot
 from ._data import MachinePlayback
 from ._data import MemoryBlock
@@ -61,14 +62,8 @@ class RunEvents(enum.IntFlag):
     STOP_REQUESTED = 1 << 5
 
 
-# The core device's slice of a machine snapshot. Null fields mean
-# the canonical reset values.
-class CoreSnapshot(DeviceSnapshot):
-    active: bool | None
-    ticks_per_second: int | None
-    ticks_per_horizontal_retrace: int | None
-    lines_per_vertical_retrace: int | None
-    contention_base: int | None
+# The Z80 chip's state. Null fields mean the canonical reset values.
+class Z80Snapshot(DataRecord):
     af: int | None
     bc: int | None
     de: int | None
@@ -87,17 +82,9 @@ class CoreSnapshot(DeviceSnapshot):
     iff1: int | None
     iff2: int | None
     int_mode: int | None
-    ticks_since_int: int | None
-    border_colour: int | None
-    memory_blocks: list[MemoryBlock] | None
 
     def __init__(
-            self,
-            active: bool | None = None,
-            ticks_per_second: int | None = None,
-            ticks_per_horizontal_retrace: int | None = None,
-            lines_per_vertical_retrace: int | None = None,
-            contention_base: int | None = None,
+            self, *,
             af: int | None = None,
             bc: int | None = None,
             de: int | None = None,
@@ -115,7 +102,36 @@ class CoreSnapshot(DeviceSnapshot):
             iregp_kind: str | None = None,
             iff1: int | None = None,
             iff2: int | None = None,
-            int_mode: int | None = None,
+            int_mode: int | None = None):
+        super().__init__(
+            af=af, bc=bc, de=de, hl=hl, ix=ix, iy=iy,
+            alt_af=alt_af, alt_bc=alt_bc,
+            alt_de=alt_de, alt_hl=alt_hl,
+            pc=pc, sp=sp, ir=ir, wz=wz, iregp_kind=iregp_kind,
+            iff1=iff1, iff2=iff2, int_mode=int_mode)
+
+
+# The core device's slice of a machine snapshot. Null fields mean
+# the canonical reset values.
+class CoreSnapshot(DeviceSnapshot):
+    active: bool | None
+    ticks_per_second: int | None
+    ticks_per_horizontal_retrace: int | None
+    lines_per_vertical_retrace: int | None
+    contention_base: int | None
+    z80: Z80Snapshot | None
+    ticks_since_int: int | None
+    border_colour: int | None
+    memory_blocks: list[MemoryBlock] | None
+
+    def __init__(
+            self,
+            active: bool | None = None,
+            ticks_per_second: int | None = None,
+            ticks_per_horizontal_retrace: int | None = None,
+            lines_per_vertical_retrace: int | None = None,
+            contention_base: int | None = None,
+            z80: Z80Snapshot | None = None,
             ticks_since_int: int | None = None,
             border_colour: int | None = None,
             memory_blocks: typing.Sequence[MemoryBlock] | None = None):
@@ -130,11 +146,7 @@ class CoreSnapshot(DeviceSnapshot):
             ticks_per_horizontal_retrace=ticks_per_horizontal_retrace,
             lines_per_vertical_retrace=lines_per_vertical_retrace,
             contention_base=contention_base,
-            af=af, bc=bc, de=de, hl=hl, ix=ix, iy=iy,
-            alt_af=alt_af, alt_bc=alt_bc,
-            alt_de=alt_de, alt_hl=alt_hl,
-            pc=pc, sp=sp, ir=ir, wz=wz, iregp_kind=iregp_kind,
-            iff1=iff1, iff2=iff2, int_mode=int_mode,
+            z80=z80,
             ticks_since_int=ticks_since_int,
             border_colour=border_colour,
             memory_blocks=blocks)
@@ -630,14 +642,15 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
             ticks_per_horizontal_retrace=self.ticks_per_horizontal_retrace,
             lines_per_vertical_retrace=self.lines_per_vertical_retrace,
             contention_base=self.contention_base,
-            af=self.af, bc=self.bc, de=self.de, hl=self.hl,
-            ix=self.ix, iy=self.iy,
-            alt_af=self.alt_af, alt_bc=self.alt_bc,
-            alt_de=self.alt_de, alt_hl=self.alt_hl,
-            pc=self.pc, sp=self.sp, ir=self.ir,
-            # TODO: wz=self.wz,
-            iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
-            iregp_kind=self.iregp_kind,
+            z80=Z80Snapshot(
+                af=self.af, bc=self.bc, de=self.de, hl=self.hl,
+                ix=self.ix, iy=self.iy,
+                alt_af=self.alt_af, alt_bc=self.alt_bc,
+                alt_de=self.alt_de, alt_hl=self.alt_hl,
+                pc=self.pc, sp=self.sp, ir=self.ir,
+                # TODO: wz=self.wz,
+                iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
+                iregp_kind=self.iregp_kind),
             memory_blocks=[MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
                                        data=self.read(0x0000, 0x4000)),
                            MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
@@ -655,7 +668,10 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         self.active = False
 
         for field, value in snapshot:
-            if field == 'memory_blocks':
+            if field == 'z80':
+                for register, register_value in value:
+                    setattr(self, register, register_value)
+            elif field == 'memory_blocks':
                 for block in value:
                     self.write(block.addr, block.data.data,
                                rom_page=block.rom_page,

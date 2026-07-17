@@ -15,6 +15,7 @@ import pytest
 import zx
 from zx._core import CoreSnapshot
 from zx._core import RunEvents
+from zx._core import Z80Snapshot
 from zx._data import MachineSnapshot
 from zx._device import DestroyEmulator
 from zx._device import Device
@@ -82,7 +83,7 @@ def test_init_and_destroy_emulator_dispatched() -> None:
 
 
 def test_load_installs_snapshot() -> None:
-    snapshot = MachineSnapshot(core=CoreSnapshot(pc=0x1234))
+    snapshot = MachineSnapshot(core=CoreSnapshot(z80=Z80Snapshot(pc=0x1234)))
 
     # Loading installs the state into the persistent device set: the
     # set is the machine definition's fact, never the snapshot's.

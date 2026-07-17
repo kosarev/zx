@@ -12,6 +12,7 @@ import typing
 
 from ._binary import BinaryParser
 from ._binary import Bytes
+from ._core import Z80Snapshot
 from ._data import MachineSnapshot
 from ._data import MemoryBlock
 from ._data import SnapshotFile
@@ -41,9 +42,10 @@ class _SCRFile(SnapshotFile, format_name='SCR'):
             data=loop_instr))
 
         return Spectrum48Snapshot(core=Spectrum48CoreSnapshot(
-            pc=LOOP_ADDR,
-            iff1=0,
-            iff2=0,
+            z80=Z80Snapshot(
+                pc=LOOP_ADDR,
+                iff1=0,
+                iff2=0),
             border_colour=0,
             memory_blocks=memory_blocks))
 
