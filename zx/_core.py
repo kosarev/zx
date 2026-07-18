@@ -184,24 +184,36 @@ class ULASnapshot(DataRecord):
                    border_colour=self.border_colour)
 
 
-# addr is the Z80 address where the block lives. rom_page and ram_page
-# select which physical page is mapped there: rom_page applies to
-# 0x0000-0x3FFF, ram_page to 0xC000-0xFFFF; 0x4000-0xBFFF maps directly.
+# The memory image layout: 16K pages in this order. This statement
+# is the published convention, which the C++ side follows. The 48K
+# map is the first 64K of the image, so its offsets equal addresses.
+MEMORY_PAGE_SIZE = 0x4000
+ROM_PAGE_IMAGE_OFFSETS = {
+    0: 0 * MEMORY_PAGE_SIZE,
+    1: 4 * MEMORY_PAGE_SIZE}
+RAM_PAGE_IMAGE_OFFSETS = {
+    5: 1 * MEMORY_PAGE_SIZE,
+    2: 2 * MEMORY_PAGE_SIZE,
+    0: 3 * MEMORY_PAGE_SIZE,
+    1: 5 * MEMORY_PAGE_SIZE,
+    3: 6 * MEMORY_PAGE_SIZE,
+    4: 7 * MEMORY_PAGE_SIZE,
+    6: 8 * MEMORY_PAGE_SIZE,
+    7: 9 * MEMORY_PAGE_SIZE}
+
+
+# A block of memory content: data at an offset of the contiguous
+# memory image.
 class MemoryBlock(DataRecord):
-    addr: int
-    rom_page: int | None
-    ram_page: int | None
+    offset: int
     data: ByteData
 
     @property
-    def end_addr(self) -> int:
-        return self.addr + len(self.data.data)
+    def end_offset(self) -> int:
+        return self.offset + len(self.data.data)
 
-    def __init__(self, *, addr: int, rom_page: int | None = None,
-                 ram_page: int | None = None,
-                 data: Bytes | ByteData):
-        super().__init__(addr=addr, rom_page=rom_page,
-                         ram_page=ram_page, data=HexData.wrap(data))
+    def __init__(self, *, offset: int, data: Bytes | ByteData):
+        super().__init__(offset=offset, data=HexData.wrap(data))
 
 
 # The memory chips' state: the ROM and RAM contents as blocks.
@@ -211,7 +223,7 @@ class MemorySnapshot(DataRecord):
     def __init__(
             self, blocks: typing.Sequence[MemoryBlock] | None = None):
         if blocks is not None:
-            blocks = sorted(blocks, key=lambda b: b.addr)
+            blocks = sorted(blocks, key=lambda b: b.offset)
         super().__init__(blocks=blocks)
 
 
@@ -463,22 +475,6 @@ class Z80State:
 
 
 class CoreState(Z80State):
-    __PAGE_SIZE = 0x4000
-
-    __ROM_PAGE_IMAGE_OFFSETS: typing.ClassVar[dict[int, int]] = {
-        0: 0 * __PAGE_SIZE,
-        1: 4 * __PAGE_SIZE}
-
-    __RAM_PAGE_IMAGE_OFFSETS: typing.ClassVar[dict[int, int]] = {
-        5: 1 * __PAGE_SIZE,
-        2: 2 * __PAGE_SIZE,
-        0: 3 * __PAGE_SIZE,
-        1: 5 * __PAGE_SIZE,
-        3: 6 * __PAGE_SIZE,
-        4: 7 * __PAGE_SIZE,
-        6: 8 * __PAGE_SIZE,
-        7: 9 * __PAGE_SIZE}
-
     def __init__(self, image: memoryview) -> None:
         p = StateParser(image)
 
@@ -505,7 +501,7 @@ class CoreState(Z80State):
         self.__lines_per_vertical_retrace = p.parse32()
         self.__contention_base = p.parse32()
 
-        self.__memory = p.read_bytes(10 * self.__PAGE_SIZE)
+        self.__memory = p.read_bytes(10 * MEMORY_PAGE_SIZE)
 
     @property
     def suppress_interrupts(self) -> bool:
@@ -638,24 +634,31 @@ class CoreState(Z80State):
               ram_page: int | None = None) -> None:
         assert addr + len(block) <= 0x10000  # TODO
         while block:
-            next_page_addr = (addr // self.__PAGE_SIZE + 1) * self.__PAGE_SIZE
+            next_page_addr = ((addr // MEMORY_PAGE_SIZE + 1) *
+                              MEMORY_PAGE_SIZE)
             chunk = block[:next_page_addr - addr]
 
             if addr < 0x4000:
                 # TODO: Write to the current ROM otherwise.
                 assert rom_page is not None
-                offset = self.__ROM_PAGE_IMAGE_OFFSETS[rom_page]
+                offset = ROM_PAGE_IMAGE_OFFSETS[rom_page]
             elif addr < 0xc000:
                 offset = addr
             else:
                 # TODO: Write to the current RAM otherwise.
                 assert ram_page is not None
-                offset = self.__RAM_PAGE_IMAGE_OFFSETS[ram_page]
+                offset = RAM_PAGE_IMAGE_OFFSETS[ram_page]
 
             self.__memory[offset:offset + len(chunk)] = chunk
 
             addr += len(chunk)
             block = block[len(chunk):]
+
+    # Writes at an offset of the memory image, the way memory blocks
+    # state their content.
+    def write_image(self, offset: int, block: bytes) -> None:
+        assert offset + len(block) <= len(self.__memory)
+        self.__memory[offset:offset + len(block)] = block
 
     def read8(self, addr: int) -> int:
         return self.read(addr, 1)[0]
@@ -748,10 +751,8 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
                 ticks_since_int=self.ticks_since_int,
                 border_colour=self.border_colour),
             memory=MemorySnapshot(blocks=[
-                MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
-                            data=self.read(0x0000, 0x4000)),
-                MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
-                            data=self.read(0x4000, 0xc000))]))
+                MemoryBlock(offset=0x0000, data=self.read(0x0000, 0x4000)),
+                MemoryBlock(offset=0x4000, data=self.read(0x4000, 0xc000))]))
 
     def install_snapshot(self, snapshot: CoreSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset
@@ -768,9 +769,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
                     setattr(self, chip_field, chip_value)
             elif field == 'memory':
                 for block in value.blocks or []:
-                    self.write(block.addr, block.data.data,
-                               rom_page=block.rom_page,
-                               ram_page=block.ram_page)
+                    self.write_image(block.offset, block.data.data)
             else:
                 setattr(self, field, value)
 

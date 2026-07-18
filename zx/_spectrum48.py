@@ -22,7 +22,6 @@ from ._core import MemoryBlock
 from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
-from ._data import HexData
 from ._data import MachineSnapshot
 from ._keyboard import KeyboardSnapshot
 from ._resources import RESOURCES
@@ -54,23 +53,17 @@ class Spectrum48ULASnapshot(ULASnapshot,
                 if name in d}
 
 
-# A block in the 48K's flat address space. The map is fixed, so the
-# page selectors translate from the address range: only a block
-# overlapping a paged region names its page.
+# A block in the 48K's flat address space, which maps one-to-one
+# onto the leading 64K of the memory image.
 class Spectrum48MemoryBlock(MemoryBlock):
     def __init__(self, *, addr: int, data: Bytes | ByteData) -> None:
-        data = HexData.wrap(data)
-        end_addr = addr + len(data.data)
-        super().__init__(
-            addr=addr,
-            rom_page=0 if addr < 0x4000 else None,
-            ram_page=0 if end_addr > 0xc000 else None,
-            data=data)
+        super().__init__(offset=addr, data=data)
+        assert self.end_offset <= 0x10000
 
-    # The type fixes the 48K map, so the node stores only these fields.
+    # The node speaks the 48K vocabulary.
     def to_json(self) -> dict[str, typing.Any]:
         d = super().to_json()
-        return {name: d[name] for name in ('addr', 'data') if name in d}
+        return {'addr': self.offset, 'data': d['data']}
 
 
 # The 48K's memory: a collection of blocks in the 48K's flat
@@ -82,7 +75,7 @@ class Spectrum48MemorySnapshot(MemorySnapshot):
             blocks: typing.Sequence[Spectrum48MemoryBlock] | None = None,
             ) -> None:
         blocks = list(blocks or [])
-        if not any(b.addr < 0x4000 for b in blocks):
+        if not any(b.offset < 0x4000 for b in blocks):
             rom = (RESOURCES / 'roms' / 'Spectrum48.rom').read_bytes()
             blocks = [Spectrum48MemoryBlock(addr=0x0000, data=rom),
                       *blocks]

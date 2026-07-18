@@ -109,7 +109,7 @@ class SNAFile(SnapshotFile, format_name='SNA'):
 
         memory = bytearray(0x10000)
         for block in blocks:
-            memory[block.addr:block.end_addr] = block.data.data
+            memory[block.offset:block.end_offset] = block.data.data
 
         sp = z80.sp or 0
         pc = z80.pc or 0

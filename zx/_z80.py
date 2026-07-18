@@ -290,13 +290,13 @@ class Z80File(SnapshotFile, format_name='Z80'):
             RAM_SIZE = 0x10000
             image: list[None | int] = [None] * RAM_SIZE
             for block in core.memory.blocks or []:
-                # Plain blocks must still speak the 48K map. TODO:
-                # Make this a pure type test once lift() promotes
-                # captured blocks.
+                # Plain blocks speak image offsets, which within the
+                # first 64K equal 48K addresses. TODO: Make this a
+                # pure type test once lift() promotes captured
+                # blocks.
                 if not isinstance(block, Spectrum48MemoryBlock):
-                    assert block.rom_page in (None, 0)
-                    assert block.ram_page in (None, 0)
-                image[block.addr:block.addr + len(block.data.data)] = (
+                    assert block.end_offset <= 0x10000
+                image[block.offset:block.end_offset] = (
                     list(block.data.data))
 
             [stock_rom] = Spectrum48CoreSnapshot().memory.blocks or []

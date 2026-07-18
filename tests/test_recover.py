@@ -47,7 +47,7 @@ def test_iregp_mid_instruction() -> None:
         active=True,
         z80=Z80Snapshot(pc=0x8000),
         memory=MemorySnapshot(blocks=[MemoryBlock(
-            addr=0x8000,
+            offset=0x8000,
             data=b'\xdd\x21\x00\x00')])))  # LD IX, 0x0000
 
     playback = MachinePlayback(
@@ -66,7 +66,7 @@ def test_spin_v05_trailing_in_sample() -> None:
         active=True,
         z80=Z80Snapshot(pc=0x8000),
         memory=MemorySnapshot(blocks=[MemoryBlock(
-            addr=0x8000,
+            offset=0x8000,
             data=b'\xdb\xfe\xdb\xfe')])))  # IN A,(0xfe) x2
 
     playback = MachinePlayback(
@@ -90,7 +90,7 @@ def test_spin_v05_bytes_saving_trap() -> None:
         active=True,
         z80=Z80Snapshot(pc=0x8000, sp=0xc000),
         memory=MemorySnapshot(blocks=[MemoryBlock(
-            addr=0x8000,
+            offset=0x8000,
             data=b'\xcd\xd4\x04')])))  # CALL 0x04d4
 
     playback = MachinePlayback(

@@ -519,7 +519,7 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
     # We know the machine is a 48K, so give its captured memory
     # blocks the 48K types.
     memory = Spectrum48MemorySnapshot(blocks=[
-        Spectrum48MemoryBlock(addr=b.addr, data=b.data)
+        Spectrum48MemoryBlock(addr=b.offset, data=b.data)
         for b in (captured.memory.blocks if captured.memory else None)
         or []])
     snapshot = Spectrum48Snapshot(
