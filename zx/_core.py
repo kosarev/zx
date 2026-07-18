@@ -189,10 +189,9 @@ class ULASnapshot(DataRecord):
 # work as if that selection of pages was in effect.
 class MemoryMapping:
     # Tells where the bytes of the given address range live in the
-    # internal memory image, as (offset, size) spans in address
-    # order.
-    def get_chunks(self, addr: int,
-                   size: int) -> typing.Iterator[tuple[int, int]]:
+    # internal memory image. A range never crosses from one page to
+    # another; content that would is handled piecewise.
+    def get_offset(self, addr: int, size: int) -> int:
         raise NotImplementedError
 
 
@@ -621,26 +620,23 @@ class CoreState(Z80State):
     def model(self, model: type[SpectrumModel]) -> None:
         self.__model[0] = model._CXX_MODEL_CODE
 
-    def read_image(self, offset: int, size: int) -> bytes:
+    def _read_image(self, offset: int, size: int) -> bytes:
         assert offset + size <= len(self.__memory)
         return bytes(self.__memory[offset:offset + size])
 
-    def write_image(self, offset: int, block: bytes) -> None:
+    def _write_image(self, offset: int, block: bytes) -> None:
         assert offset + len(block) <= len(self.__memory)
         self.__memory[offset:offset + len(block)] = block
 
+    # Reads and writes at machine addresses act as if the given
+    # mapping was applied to the machine.
     def read(self, mapping: MemoryMapping, addr: int,
              size: int) -> bytes:
-        return b''.join(
-            self.read_image(offset, chunk_size)
-            for offset, chunk_size in mapping.get_chunks(addr, size))
+        return self._read_image(mapping.get_offset(addr, size), size)
 
     def write(self, mapping: MemoryMapping, addr: int,
               block: bytes) -> None:
-        written = 0
-        for offset, chunk_size in mapping.get_chunks(addr, len(block)):
-            self.write_image(offset, block[written:written + chunk_size])
-            written += chunk_size
+        self._write_image(mapping.get_offset(addr, len(block)), block)
 
     def read8(self, mapping: MemoryMapping, addr: int) -> int:
         return self.read(mapping, addr, 1)[0]
@@ -734,7 +730,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
                 border_colour=self.border_colour),
             memory=MemorySnapshot(blocks=[
                 MemoryBlock(offset=0x0000,
-                            data=self.read_image(0x0000, 0x10000))]))
+                            data=self._read_image(0x0000, 0x10000))]))
 
     def install_snapshot(self, snapshot: CoreSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset
@@ -751,7 +747,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
                     setattr(self, chip_field, chip_value)
             elif field == 'memory':
                 for block in value.blocks or []:
-                    self.write_image(block.offset, block.data.data)
+                    self._write_image(block.offset, block.data.data)
             else:
                 setattr(self, field, value)
 

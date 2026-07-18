@@ -58,17 +58,16 @@ class Spectrum48ULASnapshot(ULASnapshot,
 # The 48K's fixed memory mapping: the whole 64K address space,
 # one-to-one onto the leading 64K of the internal memory image.
 class Spectrum48MemoryMapping(MemoryMapping):
-    def get_chunks(self, addr: int,
-                   size: int) -> typing.Iterator[tuple[int, int]]:
+    def get_offset(self, addr: int, size: int) -> int:
         assert addr >= 0 and addr + size <= 0x10000
-        yield addr, size
+        return addr
 
 
 # A block in the 48K's flat address space.
 class Spectrum48MemoryBlock(MemoryBlock):
     def __init__(self, *, addr: int, data: Bytes | ByteData) -> None:
         data = HexData.wrap(data)
-        [(offset, _)] = Spectrum48MemoryMapping().get_chunks(
+        offset = Spectrum48MemoryMapping().get_offset(
             addr, len(data.data))
         super().__init__(offset=offset, data=data)
 
