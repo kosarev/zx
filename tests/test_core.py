@@ -290,3 +290,39 @@ def test_memory_image_size() -> None:
     assert 'image_size' not in Spectrum48MemorySnapshot().to_json()
     plain = MemorySnapshot(image_size=0x10000)
     assert plain.to_json()['image_size'] == 0x10000
+
+
+def test_memory_lift() -> None:
+    from zx._spectrum48 import Spectrum48MemoryBlock
+    from zx._spectrum48 import Spectrum48MemorySnapshot
+    from zx._spectrum48 import Spectrum48ROM
+
+    rom = Spectrum48ROM().data.data
+    ram = bytes(range(256)) * 192
+
+    # A capture-shaped record with the stock ROM in place lifts to
+    # the 48K memory: the ROM node plus the retyped RAM content.
+    plain = MemorySnapshot(image_size=0x10000, blocks=[
+        MemoryBlock(offset=0x0000, data=rom + ram)])
+    lifted = plain.lift()
+    assert isinstance(lifted, Spectrum48MemorySnapshot)
+    rom_block, ram_block = lifted.blocks or []
+    assert isinstance(rom_block, Spectrum48ROM)
+    assert type(ram_block) is Spectrum48MemoryBlock
+    assert ram_block.offset == 0x4000
+    assert ram_block.data.data == ram
+
+    # Lift preserves meaning: the lifted record states the same
+    # bytes.
+    assert lifted.match(Spectrum48MemoryMapping(), 0x0000, rom + ram)
+
+    # Lift is idempotent.
+    assert lifted.lift() is lifted
+
+    # A custom ROM stays plain, as do records with no stated size.
+    custom = MemorySnapshot(image_size=0x10000, blocks=[
+        MemoryBlock(offset=0x0000, data=bytes(0x4000) + ram)])
+    assert custom.lift() is custom
+
+    unsized = MemorySnapshot(blocks=[MemoryBlock(offset=0x0000, data=rom)])
+    assert unsized.lift() is unsized

@@ -102,6 +102,32 @@ class Spectrum48MemorySnapshot(MemorySnapshot, image_size=0x10000):
 
         super().__init__(image_size=self.image_size, blocks=blocks)
 
+    # Recognise a plain record as the 48K memory: the stock ROM in
+    # place and all content within the 64K address space. Anything
+    # else stays plain.
+    @classmethod
+    def _lift(cls, plain: MemorySnapshot) -> MemorySnapshot:
+        rom = Spectrum48ROM()
+        if not plain.match(Spectrum48MemoryMapping(), 0x0000,
+                           rom.data.data):
+            return plain
+
+        blocks: list[Spectrum48MemoryBlock] = [rom]
+        for block in plain.blocks or []:
+            if block.end_offset > 0x10000:
+                return plain
+
+            # The ROM node subsumes the content below 0x4000, which
+            # match() verified; the rest retypes, split at the ROM
+            # boundary.
+            if block.end_offset <= rom.end_offset:
+                continue
+            begin = max(block.offset, rom.end_offset)
+            blocks.append(Spectrum48MemoryBlock(
+                addr=begin, data=block.data.data[begin - block.offset:]))
+
+        return cls(blocks=blocks)
+
     # The type fixes the configuration, so the node stores only the
     # blocks.
     def to_json(self) -> dict[str, typing.Any]:

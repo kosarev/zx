@@ -244,6 +244,25 @@ class MemorySnapshot(DataRecord):
 
         super().__init__(image_size=image_size, blocks=blocks)
 
+    # Recognise a plain record as a model type by looking its
+    # configuration up. An already-typed record and an unrecognised
+    # one are returned unchanged.
+    def lift(self) -> MemorySnapshot:
+        if type(self) is not MemorySnapshot:
+            return self
+        if self.image_size is None:
+            return self
+        cls = self.__by_config.get(self.image_size)
+        if cls is None:
+            return self
+        return cls._lift(self)
+
+    # The model subclasses recognise the plain record's content for
+    # themselves; without a recogniser the record stays plain.
+    @classmethod
+    def _lift(cls, plain: MemorySnapshot) -> MemorySnapshot:
+        return plain
+
     # Tells whether the memory holds the given content at the given
     # address, acting as if the given mapping was applied. A byte no
     # block states matches nothing.
@@ -297,7 +316,7 @@ class CoreSnapshot(DeviceSnapshot):
             active=self.active,
             z80=self.z80,
             ula=self.ula.lift() if self.ula is not None else None,
-            memory=self.memory)
+            memory=self.memory.lift() if self.memory is not None else None)
 
 
 class StateParser:
