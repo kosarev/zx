@@ -15,6 +15,8 @@ import pytest
 import zx
 from zx._core import Core
 from zx._core import CoreSnapshot
+from zx._core import MemoryBlock
+from zx._core import MemorySnapshot
 from zx._core import RunEvents
 from zx._core import ULASnapshot
 from zx._core import Z80Snapshot
@@ -238,3 +240,26 @@ def test_ula_lift() -> None:
     # An unrecognised configuration stays plain.
     odd = ULASnapshot(ticks_per_second=1)
     assert odd.lift() is odd
+
+
+def test_memory_match() -> None:
+    memory = MemorySnapshot(blocks=[
+        MemoryBlock(offset=0x4000, data=b'\x01\x02'),
+        MemoryBlock(offset=0x4002, data=b'\x03\x04'),
+        MemoryBlock(offset=0x5000, data=b'\x05')])
+    mapping = Spectrum48MemoryMapping()
+
+    # Within one block.
+    assert memory.match(mapping, 0x4000, b'\x01\x02')
+
+    # Stitched across adjacent blocks.
+    assert memory.match(mapping, 0x4001, b'\x02\x03')
+
+    # A byte mismatch.
+    assert not memory.match(mapping, 0x4000, b'\x01\xff')
+
+    # A gap between blocks.
+    assert not memory.match(mapping, 0x4003, b'\x04\x00')
+
+    # Past the stated content.
+    assert not memory.match(mapping, 0x5000, b'\x05\x06')

@@ -226,6 +226,32 @@ class MemorySnapshot(DataRecord):
 
         super().__init__(blocks=blocks)
 
+    # Tells whether the memory holds the given content at the given
+    # address, acting as if the given mapping was applied. A byte no
+    # block states matches nothing.
+    def match(self, mapping: MemoryMapping, addr: int,
+              content: Bytes) -> bool:
+        content = bytes(content)
+        offset = mapping.get_offset(addr, len(content))
+        end_offset = offset + len(content)
+
+        pos = offset
+        for block in self.blocks or []:
+            if block.end_offset <= pos:
+                continue
+            if pos >= end_offset:
+                break
+            if block.offset > pos:
+                return False
+
+            stop = min(end_offset, block.end_offset)
+            if (block.data.data[pos - block.offset:stop - block.offset] !=
+                    content[pos - offset:stop - offset]):
+                return False
+            pos = stop
+
+        return pos == end_offset
+
 
 # The core device's slice of a machine snapshot. Null fields mean
 # the canonical reset values.
