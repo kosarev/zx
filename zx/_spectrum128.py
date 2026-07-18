@@ -171,6 +171,7 @@ class Spectrum128CoreSnapshot(CoreSnapshot,
     memory: Spectrum128MemorySnapshot
 
     def __init__(self, *,
+                 active: bool = True,
                  z80: Z80Snapshot | None = None,
                  ula: ULASnapshot | None = None,
                  memory: Spectrum128MemorySnapshot | None = None) -> None:
@@ -188,7 +189,7 @@ class Spectrum128CoreSnapshot(CoreSnapshot,
         if memory is None:
             memory = Spectrum128MemorySnapshot()
 
-        super().__init__(active=True, z80=z80, ula=ula, memory=memory)
+        super().__init__(active=active, z80=z80, ula=ula, memory=memory)
 
 
 class Spectrum128Snapshot(MachineSnapshot):
