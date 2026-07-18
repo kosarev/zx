@@ -31,6 +31,24 @@ def test_basic() -> None:
         pass
 
 
+def test_128k_emulator() -> None:
+    from zx._data import Spectrum128
+    from zx._resources import RESOURCES
+    from zx._spectrum128 import Spectrum128MemoryMapping
+    from zx._spectrum128 import Spectrum128Snapshot
+
+    rom = (RESOURCES / 'roms' / 'Spectrum128.rom').read_bytes()
+
+    # A 128K emulator constructs with both ROMs in their pages.
+    with zx.Emulator(headless=True, model=Spectrum128,
+                     snapshot=Spectrum128Snapshot()) as app:
+        core = next(d for d in app.devices if isinstance(d, zx.Core))
+        assert core.read(Spectrum128MemoryMapping(rom_page=0),
+                         0x0000, 0x4000) == rom[:0x4000]
+        assert core.read(Spectrum128MemoryMapping(rom_page=1),
+                         0x0000, 0x4000) == rom[0x4000:]
+
+
 def test_ticks_limit() -> None:
     # A tick limit stops the run between instructions, just past the
     # limit (no sub-instruction execution), without ending the frame —
