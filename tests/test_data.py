@@ -33,6 +33,34 @@ def test_basic() -> None:
     assert snapshot.to_machine_snapshot() is snapshot
 
 
+def test_machine_lift() -> None:
+    from zx._beeper import BeeperSnapshot
+    from zx._keyboard import KeyboardSnapshot
+    from zx._spectrum48 import Spectrum48CoreSnapshot
+    from zx._spectrum48 import Spectrum48Snapshot
+
+    core = zx.Core()
+    core.install_snapshot(Spectrum48CoreSnapshot())
+
+    # A saved default machine recognises as the stock 48K.
+    machine = zx._data.MachineSnapshot(
+        core=core.to_snapshot(),
+        keyboard=KeyboardSnapshot(active=True),
+        beeper=BeeperSnapshot(active=True))
+    lifted = machine.lift()
+    assert isinstance(lifted, Spectrum48Snapshot)
+    assert isinstance(lifted.core, Spectrum48CoreSnapshot)
+
+    # A composition that is no known machine stays plain, its
+    # members still lifted.
+    partial = zx._data.MachineSnapshot(core=core.to_snapshot())
+    lifted_partial = partial.lift()
+    assert type(lifted_partial) is zx._data.MachineSnapshot
+    # getattr so mypy accepts access to the dynamic fields.
+    assert isinstance(getattr(lifted_partial, 'core'),  # noqa: B009
+                      Spectrum48CoreSnapshot)
+
+
 # Record fields may only hold ints, strings, other records, and
 # lists or tuples of those. Raw bytes and plain dicts do not
 # serialise; they must be wrapped in record types such as ByteData.

@@ -360,6 +360,20 @@ class DeviceSnapshot(DataRecord):
 # machine's types live in their own module (_spectrum48,
 # _spectrum128) as a capsule of that machine's knowledge.
 class MachineSnapshot(SnapshotFile):
+    # The model subclasses keyed by their member compositions: a
+    # machine's model shows in what devices it is made of.
+    __by_members: typing.ClassVar[
+        dict[tuple[tuple[str, type[DeviceSnapshot]], ...],
+             type[MachineSnapshot]]] = {}
+
+    # A model subclass states its members' types as class keywords.
+    def __init_subclass__(cls,
+                          **member_types: type[DeviceSnapshot]) -> None:
+        super().__init_subclass__()
+        members = tuple(sorted(member_types.items()))
+        assert members not in MachineSnapshot.__by_members
+        MachineSnapshot.__by_members[members] = cls
+
     def __init__(self, **devices: DeviceSnapshot):
         super().__init__(**devices)
 
@@ -373,10 +387,22 @@ class MachineSnapshot(SnapshotFile):
     def to_machine_snapshot(self) -> MachineSnapshot:
         return self
 
-    # Lift every device snapshot in the machine to its own more
-    # specific type where there is one.
+    # Recognise a plain composition as a model machine: its lifted
+    # members must be exactly one model's device types, all active.
+    # Unknown compositions are returned unchanged, members still
+    # lifted.
     def lift(self) -> MachineSnapshot:
-        return MachineSnapshot(**{id: d.lift() for id, d in self})
+        if type(self) is not MachineSnapshot:
+            return self
+
+        members = {id: d.lift() for id, d in self}
+        key = tuple(sorted((id, type(d)) for id, d in members.items()))
+        cls = MachineSnapshot.__by_members.get(key)
+        if cls is None or not all(getattr(d, 'active', None) is True
+                                  for d in members.values()):
+            return MachineSnapshot(**members)
+
+        return cls(**members)
 
 
 class PlaybackFile(DataRecord):

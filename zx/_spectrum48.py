@@ -164,7 +164,10 @@ class Spectrum48CoreSnapshot(CoreSnapshot,
         super().__init__(active=active, z80=z80, ula=ula, memory=memory)
 
 
-class Spectrum48Snapshot(MachineSnapshot):
+class Spectrum48Snapshot(MachineSnapshot,
+                         core=Spectrum48CoreSnapshot,
+                         keyboard=KeyboardSnapshot,
+                         beeper=BeeperSnapshot):
     core: CoreSnapshot
     keyboard: KeyboardSnapshot
     beeper: BeeperSnapshot
