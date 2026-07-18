@@ -93,11 +93,11 @@ from ._error import Error
 from ._file import parse_file
 from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
-from ._machines import Spectrum48Snapshot
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._screen import ScreenWindow
 from ._sound import SDLSound
+from ._spectrum48 import Spectrum48Snapshot
 from ._tape import TapePlayer
 from ._time import Time
 from ._z80 import Z80File

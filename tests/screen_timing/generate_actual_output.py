@@ -30,7 +30,7 @@ from zx._device import PauseUnpauseTape
 from zx._file import parse_file
 from zx._keyboard import Keyboard
 from zx._keyboard import make_key_strokes
-from zx._machines import Spectrum48CoreSnapshot
+from zx._spectrum48 import Spectrum48CoreSnapshot
 from zx._tape import TapePlayer
 from zx._time import Time
 

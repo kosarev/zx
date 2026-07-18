@@ -213,8 +213,8 @@ def test_install_snapshot() -> None:
 
 
 def test_ula_lift() -> None:
-    from zx._machines import Spectrum48CoreSnapshot
-    from zx._machines import Spectrum48ULASnapshot
+    from zx._spectrum48 import Spectrum48CoreSnapshot
+    from zx._spectrum48 import Spectrum48ULASnapshot
 
     # A captured record is plain, and lift recognises its
     # configuration as the 48K chip while preserving all its fields.

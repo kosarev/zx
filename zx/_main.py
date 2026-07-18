@@ -54,14 +54,14 @@ from ._file import parse_file
 from ._file import parse_file_image
 from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
-from ._machines import Spectrum48CoreSnapshot
-from ._machines import Spectrum48Snapshot
-from ._machines import Spectrum128Snapshot
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._rzx import RZXFile
 from ._settings import GlobalSettingsManager
 from ._sound import SDLSound
+from ._spectrum48 import Spectrum48CoreSnapshot
+from ._spectrum48 import Spectrum48Snapshot
+from ._spectrum128 import Spectrum128Snapshot
 from ._tape import TapePlayer
 from ._time import Time
 from ._zx import ZXFile

@@ -16,10 +16,10 @@ from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import MachineSnapshot
 from ._data import SnapshotFile
-from ._machines import Spectrum48CoreSnapshot
-from ._machines import Spectrum48MemoryBlock
-from ._machines import Spectrum48MemorySnapshot
-from ._machines import Spectrum48Snapshot
+from ._spectrum48 import Spectrum48CoreSnapshot
+from ._spectrum48 import Spectrum48MemoryBlock
+from ._spectrum48 import Spectrum48MemorySnapshot
+from ._spectrum48 import Spectrum48Snapshot
 
 
 class _SCRFile(SnapshotFile, format_name='SCR'):

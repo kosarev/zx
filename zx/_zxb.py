@@ -20,8 +20,8 @@ from ._device import Dispatcher
 from ._error import Error
 from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
-from ._machines import Spectrum48CoreSnapshot
-from ._machines import Spectrum48Snapshot
+from ._spectrum48 import Spectrum48CoreSnapshot
+from ._spectrum48 import Spectrum48Snapshot
 from ._time import Time
 
 if typing.TYPE_CHECKING:
