@@ -14,7 +14,14 @@ members. Converters compose their output over the stock snapshot of
 the machine their format declares.
 """
 
+from __future__ import annotations
+
 import importlib.resources
+import typing
+
+if typing.TYPE_CHECKING:
+    from ._binary import Bytes
+    from ._data import ByteData
 
 from ._beeper import BeeperSnapshot
 from ._core import CoreSnapshot
@@ -22,6 +29,7 @@ from ._core import MemoryBlock
 from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
+from ._data import HexData
 from ._data import MachineSnapshot
 from ._keyboard import KeyboardSnapshot
 
@@ -57,6 +65,25 @@ class Spectrum48ULASnapshot(ULASnapshot,
                 if name in d}
 
 
+# A block in the 48K's flat address space. The map is fixed, so the
+# page selectors translate from the address range: only a block
+# overlapping a paged region names its page.
+class Spectrum48MemoryBlock(MemoryBlock):
+    def __init__(self, *, addr: int, data: Bytes | ByteData) -> None:
+        data = HexData.wrap(data)
+        end_addr = addr + len(data.data)
+        super().__init__(
+            addr=addr,
+            rom_page=0 if addr < 0x4000 else None,
+            ram_page=0 if end_addr > 0xc000 else None,
+            data=data)
+
+    # The type fixes the 48K map, so the node stores only these fields.
+    def to_json(self) -> dict[str, typing.Any]:
+        d = super().to_json()
+        return {name: d[name] for name in ('addr', 'data') if name in d}
+
+
 # The 48K core: members not specified take their stock values, and
 # the given memory blocks amend the stock ROM -- a block carrying ROM
 # content replaces it.
@@ -81,8 +108,9 @@ class Spectrum48CoreSnapshot(CoreSnapshot):
 
         blocks = list(memory.blocks or []) if memory is not None else []
         if not any(b.addr < 0x4000 for b in blocks):
-            blocks = [MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
-                                  data=_load_rom_image('Spectrum48.rom')),
+            blocks = [Spectrum48MemoryBlock(
+                          addr=0x0000,
+                          data=_load_rom_image('Spectrum48.rom')),
                       *blocks]
 
         super().__init__(active=True, z80=z80, ula=ula,

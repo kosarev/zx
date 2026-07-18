@@ -13,7 +13,6 @@ from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
 from ._core import CoreSnapshot
-from ._core import MemoryBlock
 from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
@@ -23,6 +22,7 @@ from ._data import MachineSnapshot
 from ._data import SnapshotFile
 from ._error import Error
 from ._machines import Spectrum48CoreSnapshot
+from ._machines import Spectrum48MemoryBlock
 from ._machines import Spectrum48Snapshot
 
 
@@ -91,8 +91,8 @@ class SNAFile(SnapshotFile, format_name='SNA'):
                 int_mode=self.int_mode),
             ula=ULASnapshot(border_colour=self.border_colour),
             memory=MemorySnapshot(blocks=[
-                MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
-                            data=self.memory.data)])))
+                Spectrum48MemoryBlock(addr=0x4000,
+                                      data=self.memory.data)])))
 
     @classmethod
     def from_snapshot(cls, snapshot: SnapshotFile) -> 'SNAFile':

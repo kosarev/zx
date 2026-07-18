@@ -28,6 +28,7 @@ from ._data import MachineSnapshot
 from ._data import SnapshotFile
 from ._error import Error
 from ._machines import Spectrum48CoreSnapshot
+from ._machines import Spectrum48MemoryBlock
 from ._machines import Spectrum48Snapshot
 from ._utils import get_high8
 from ._utils import get_low8
@@ -289,8 +290,12 @@ class Z80File(SnapshotFile, format_name='Z80'):
             RAM_SIZE = 0x10000
             image: list[None | int] = [None] * RAM_SIZE
             for block in core.memory.blocks or []:
-                assert block.rom_page == 0  # TODO
-                assert block.ram_page == 0  # TODO
+                # Plain blocks must still speak the 48K map. TODO:
+                # Make this a pure type test once lift() promotes
+                # captured blocks.
+                if not isinstance(block, Spectrum48MemoryBlock):
+                    assert block.rom_page in (None, 0)
+                    assert block.ram_page in (None, 0)
                 image[block.addr:block.addr + len(block.data.data)] = (
                     list(block.data.data))
 
@@ -411,12 +416,12 @@ class Z80File(SnapshotFile, format_name='Z80'):
                                 id='z80_snapshot_no_end_marker')
                 memory_image = self.__uncompress(memory_image[:-4], 48 * 1024)
             memory_blocks.extend([
-                MemoryBlock(addr=0x4000, rom_page=0, ram_page=0,
-                            data=memory_image[0x0000:0x4000]),
-                MemoryBlock(addr=0x8000, rom_page=0, ram_page=0,
-                            data=memory_image[0x4000:0x8000]),
-                MemoryBlock(addr=0xc000, rom_page=0, ram_page=0,
-                            data=memory_image[0x8000:0xc000])])
+                Spectrum48MemoryBlock(addr=0x4000,
+                                      data=memory_image[0x0000:0x4000]),
+                Spectrum48MemoryBlock(addr=0x8000,
+                                      data=memory_image[0x4000:0x8000]),
+                Spectrum48MemoryBlock(addr=0xc000,
+                                      data=memory_image[0x8000:0xc000])])
         else:
             assert machine_kind == 'ZX Spectrum 48K', machine_kind  # TODO
 
@@ -427,9 +432,9 @@ class Z80File(SnapshotFile, format_name='Z80'):
                     assert len(image) == block.compressed_size
                     image = self.__uncompress(image, BLOCK_SIZE)
 
-                memory_blocks.append(MemoryBlock(
+                memory_blocks.append(Spectrum48MemoryBlock(
                     addr=self.__MEMORY_PAGE_ADDRS[block.page_no],
-                    rom_page=0, ram_page=0, data=image))
+                    data=image))
 
         # The file describes a 48K machine. TODO: 128K per the v2/v3
         # hardware mode.
