@@ -18,11 +18,11 @@ import importlib.resources
 
 from ._beeper import BeeperSnapshot
 from ._core import CoreSnapshot
+from ._core import MemoryBlock
 from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import MachineSnapshot
-from ._data import MemoryBlock
 from ._keyboard import KeyboardSnapshot
 
 

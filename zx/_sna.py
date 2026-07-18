@@ -13,13 +13,13 @@ from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
 from ._core import CoreSnapshot
+from ._core import MemoryBlock
 from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import ByteData
 from ._data import HexData
 from ._data import MachineSnapshot
-from ._data import MemoryBlock
 from ._data import SnapshotFile
 from ._error import Error
 from ._machines import Spectrum48CoreSnapshot

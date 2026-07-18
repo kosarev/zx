@@ -16,11 +16,15 @@ import typing
 
 import numpy
 
+if typing.TYPE_CHECKING:
+    from ._binary import Bytes
+
 from ._corebase import _CoreBase
+from ._data import ByteData
 from ._data import DataRecord
 from ._data import DeviceSnapshot
+from ._data import HexData
 from ._data import MachinePlayback
-from ._data import MemoryBlock
 from ._data import Spectrum48
 from ._data import SpectrumModel
 from ._device import BreakpointHit
@@ -178,6 +182,26 @@ class ULASnapshot(DataRecord):
             return self
         return cls(ticks_since_int=self.ticks_since_int,
                    border_colour=self.border_colour)
+
+
+# addr is the Z80 address where the block lives. rom_page and ram_page
+# select which physical page is mapped there: rom_page applies to
+# 0x0000-0x3FFF, ram_page to 0xC000-0xFFFF; 0x4000-0xBFFF maps directly.
+class MemoryBlock(DataRecord):
+    addr: int
+    rom_page: int | None
+    ram_page: int | None
+    data: ByteData
+
+    @property
+    def end_addr(self) -> int:
+        return self.addr + len(self.data.data)
+
+    def __init__(self, *, addr: int, rom_page: int | None = None,
+                 ram_page: int | None = None,
+                 data: Bytes | ByteData):
+        super().__init__(addr=addr, rom_page=rom_page,
+                         ram_page=ram_page, data=HexData.wrap(data))
 
 
 # The memory chips' state: the ROM and RAM contents as blocks.

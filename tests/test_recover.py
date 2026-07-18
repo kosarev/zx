@@ -11,13 +11,13 @@ import pytest
 
 import zx
 from zx._core import CoreSnapshot
+from zx._core import MemoryBlock
 from zx._core import MemorySnapshot
 from zx._core import Z80Snapshot
 from zx._data import MachinePlayback
 from zx._data import MachinePlaybackFrame
 from zx._data import MachinePlaybackSegment
 from zx._data import MachineSnapshot
-from zx._data import MemoryBlock
 from zx._error import Error
 from zx._except import EmulationExit
 from zx._main import recover_playback

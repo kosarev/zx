@@ -12,11 +12,11 @@ import typing
 
 from ._binary import BinaryParser
 from ._binary import Bytes
+from ._core import MemoryBlock
 from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import MachineSnapshot
-from ._data import MemoryBlock
 from ._data import SnapshotFile
 from ._machines import Spectrum48CoreSnapshot
 from ._machines import Spectrum48Snapshot
