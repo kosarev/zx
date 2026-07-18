@@ -12,6 +12,7 @@ from __future__ import annotations
 
 # TODO: Remove unused imports.
 import enum
+import itertools
 import typing
 
 import numpy
@@ -217,6 +218,12 @@ class MemorySnapshot(DataRecord):
             self, blocks: typing.Sequence[MemoryBlock] | None = None):
         if blocks is not None:
             blocks = sorted(blocks, key=lambda b: b.offset)
+
+            # Blocks never overlap, so their order carries no
+            # meaning and sorting them loses nothing.
+            for a, b in itertools.pairwise(blocks):
+                assert a.end_offset <= b.offset
+
         super().__init__(blocks=blocks)
 
 
