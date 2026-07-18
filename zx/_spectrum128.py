@@ -42,19 +42,28 @@ class Spectrum128ULASnapshot(ULASnapshot,
             border_colour=border_colour)
 
 
-# The 128K's memory: the given blocks amend the stock ROMs --
-# blocks carrying ROM content replace them.
+# A block in the 128K's paged address space: the Z80 address plus
+# the page selectors, which is the base vocabulary as it stands
+# today, so the type only names the speaker.
+class Spectrum128MemoryBlock(MemoryBlock):
+    pass
+
+
+# The 128K's memory: a collection of blocks in the 128K's paged
+# address space. The given blocks amend the stock ROMs -- blocks
+# carrying ROM content replace them.
 class Spectrum128MemorySnapshot(MemorySnapshot):
     def __init__(
             self,
-            blocks: typing.Sequence[MemoryBlock] | None = None) -> None:
+            blocks: typing.Sequence[Spectrum128MemoryBlock] | None = None,
+            ) -> None:
         blocks = list(blocks or [])
         if not any(b.addr < 0x4000 for b in blocks):
             rom = (RESOURCES / 'roms' / 'Spectrum128.rom').read_bytes()
-            blocks = [MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
-                                  data=rom[:0x4000]),
-                      MemoryBlock(addr=0x0000, rom_page=1, ram_page=0,
-                                  data=rom[0x4000:]),
+            blocks = [Spectrum128MemoryBlock(addr=0x0000, rom_page=0,
+                                             data=rom[:0x4000]),
+                      Spectrum128MemoryBlock(addr=0x0000, rom_page=1,
+                                             data=rom[0x4000:]),
                       *blocks]
 
         super().__init__(blocks=blocks)
@@ -71,7 +80,7 @@ class Spectrum128CoreSnapshot(CoreSnapshot):
     def __init__(self, *,
                  z80: Z80Snapshot | None = None,
                  ula: ULASnapshot | None = None,
-                 memory: MemorySnapshot | None = None) -> None:
+                 memory: Spectrum128MemorySnapshot | None = None) -> None:
         # Lift the ULA facts to the model's type: nothing a given
         # plain record states may disagree with the stock values.
         if ula is None:
@@ -83,9 +92,8 @@ class Spectrum128CoreSnapshot(CoreSnapshot):
             assert all(getattr(lifted, f) == v for f, v in ula)
             ula = lifted
 
-        if not isinstance(memory, Spectrum128MemorySnapshot):
-            memory = Spectrum128MemorySnapshot(
-                blocks=memory.blocks if memory is not None else None)
+        if memory is None:
+            memory = Spectrum128MemorySnapshot()
 
         super().__init__(active=True, z80=z80, ula=ula, memory=memory)
 

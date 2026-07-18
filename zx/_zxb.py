@@ -21,6 +21,8 @@ from ._error import Error
 from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
 from ._spectrum48 import Spectrum48CoreSnapshot
+from ._spectrum48 import Spectrum48MemoryBlock
+from ._spectrum48 import Spectrum48MemorySnapshot
 from ._spectrum48 import Spectrum48Snapshot
 from ._time import Time
 
@@ -129,6 +131,13 @@ class ZXBasicCompilerProgram(SnapshotFile, format_name='ZXB'):
 
         assert core.pc == self.entry_point
         captured = core.to_snapshot()
+
+        # We know the machine is a 48K, so give its captured memory
+        # blocks the 48K types.
+        memory = Spectrum48MemorySnapshot(blocks=[
+            Spectrum48MemoryBlock(addr=b.addr, data=b.data)
+            for b in (captured.memory.blocks if captured.memory else None)
+            or []])
         return Spectrum48Snapshot(
             core=Spectrum48CoreSnapshot(z80=captured.z80, ula=captured.ula,
-                                        memory=captured.memory))
+                                        memory=memory))

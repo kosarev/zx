@@ -79,10 +79,8 @@ class Spectrum48MemoryBlock(MemoryBlock):
 class Spectrum48MemorySnapshot(MemorySnapshot):
     def __init__(
             self,
-            blocks: typing.Sequence[MemoryBlock] | None = None) -> None:
-        assert all(isinstance(b, Spectrum48MemoryBlock)
-                   for b in blocks or [])
-
+            blocks: typing.Sequence[Spectrum48MemoryBlock] | None = None,
+            ) -> None:
         blocks = list(blocks or [])
         if not any(b.addr < 0x4000 for b in blocks):
             rom = (RESOURCES / 'roms' / 'Spectrum48.rom').read_bytes()
@@ -100,7 +98,7 @@ class Spectrum48CoreSnapshot(CoreSnapshot):
     def __init__(self, *,
                  z80: Z80Snapshot | None = None,
                  ula: ULASnapshot | None = None,
-                 memory: MemorySnapshot | None = None) -> None:
+                 memory: Spectrum48MemorySnapshot | None = None) -> None:
         # Lift the ULA facts to the model's type: nothing a given
         # plain record states may disagree with the stock values.
         if ula is None:
@@ -112,9 +110,8 @@ class Spectrum48CoreSnapshot(CoreSnapshot):
             assert all(getattr(lifted, f) == v for f, v in ula)
             ula = lifted
 
-        if not isinstance(memory, Spectrum48MemorySnapshot):
-            memory = Spectrum48MemorySnapshot(
-                blocks=memory.blocks if memory is not None else None)
+        if memory is None:
+            memory = Spectrum48MemorySnapshot()
 
         super().__init__(active=True, z80=z80, ula=ula, memory=memory)
 

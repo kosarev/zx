@@ -60,6 +60,8 @@ from ._rzx import RZXFile
 from ._settings import GlobalSettingsManager
 from ._sound import SDLSound
 from ._spectrum48 import Spectrum48CoreSnapshot
+from ._spectrum48 import Spectrum48MemoryBlock
+from ._spectrum48 import Spectrum48MemorySnapshot
 from ._spectrum48 import Spectrum48Snapshot
 from ._spectrum128 import Spectrum128Snapshot
 from ._tape import TapePlayer
@@ -513,9 +515,16 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
             break
 
     captured = core.to_snapshot()
+
+    # We know the machine is a 48K, so give its captured memory
+    # blocks the 48K types.
+    memory = Spectrum48MemorySnapshot(blocks=[
+        Spectrum48MemoryBlock(addr=b.addr, data=b.data)
+        for b in (captured.memory.blocks if captured.memory else None)
+        or []])
     snapshot = Spectrum48Snapshot(
         core=Spectrum48CoreSnapshot(z80=captured.z80, ula=captured.ula,
-                                    memory=captured.memory))
+                                    memory=memory))
     with pathlib.Path(dest_filename).open('wb') as f:
         f.write(dest_format.from_snapshot(snapshot).encode())
 
