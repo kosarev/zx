@@ -61,6 +61,7 @@ from ._settings import GlobalSettingsManager
 from ._sound import SDLSound
 from ._spectrum48 import Spectrum48CoreSnapshot
 from ._spectrum48 import Spectrum48MemoryBlock
+from ._spectrum48 import Spectrum48MemoryMapping
 from ._spectrum48 import Spectrum48MemorySnapshot
 from ._spectrum48 import Spectrum48Snapshot
 from ._spectrum128 import Spectrum128Snapshot
@@ -423,7 +424,7 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
         # SPIN v0.5 skips the bytes-saving ROM procedure in fast save mode.
         if isinstance(event, BreakpointHit) and self.pc == 0x04d4:
             sp = self.sp
-            self.pc = self.read16(sp)
+            self.pc = self.read16(Spectrum48MemoryMapping(), sp)
             self.sp = sp + 2
 
         # SPIN v0.5 doesn't update the fetch counter if the last

@@ -19,9 +19,11 @@ if typing.TYPE_CHECKING:
 from ._beeper import BeeperSnapshot
 from ._core import CoreSnapshot
 from ._core import MemoryBlock
+from ._core import MemoryMapping
 from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
+from ._data import HexData
 from ._data import MachineSnapshot
 from ._keyboard import KeyboardSnapshot
 from ._resources import RESOURCES
@@ -53,12 +55,22 @@ class Spectrum48ULASnapshot(ULASnapshot,
                 if name in d}
 
 
-# A block in the 48K's flat address space, which maps one-to-one
-# onto the leading 64K of the memory image.
+# The 48K's fixed memory mapping: the whole 64K address space,
+# one-to-one onto the leading 64K of the internal memory image.
+class Spectrum48MemoryMapping(MemoryMapping):
+    def get_chunks(self, addr: int,
+                   size: int) -> typing.Iterator[tuple[int, int]]:
+        assert addr >= 0 and addr + size <= 0x10000
+        yield addr, size
+
+
+# A block in the 48K's flat address space.
 class Spectrum48MemoryBlock(MemoryBlock):
     def __init__(self, *, addr: int, data: Bytes | ByteData) -> None:
-        super().__init__(offset=addr, data=data)
-        assert self.end_offset <= 0x10000
+        data = HexData.wrap(data)
+        [(offset, _)] = Spectrum48MemoryMapping().get_chunks(
+            addr, len(data.data))
+        super().__init__(offset=offset, data=data)
 
     # The node speaks the 48K vocabulary.
     def to_json(self) -> dict[str, typing.Any]:

@@ -184,22 +184,16 @@ class ULASnapshot(DataRecord):
                    border_colour=self.border_colour)
 
 
-# The memory image layout: 16K pages in this order. This statement
-# is the published convention, which the C++ side follows. The 48K
-# map is the first 64K of the image, so its offsets equal addresses.
-MEMORY_PAGE_SIZE = 0x4000
-ROM_PAGE_IMAGE_OFFSETS = {
-    0: 0 * MEMORY_PAGE_SIZE,
-    1: 4 * MEMORY_PAGE_SIZE}
-RAM_PAGE_IMAGE_OFFSETS = {
-    5: 1 * MEMORY_PAGE_SIZE,
-    2: 2 * MEMORY_PAGE_SIZE,
-    0: 3 * MEMORY_PAGE_SIZE,
-    1: 5 * MEMORY_PAGE_SIZE,
-    3: 6 * MEMORY_PAGE_SIZE,
-    4: 7 * MEMORY_PAGE_SIZE,
-    6: 8 * MEMORY_PAGE_SIZE,
-    7: 9 * MEMORY_PAGE_SIZE}
+# A concrete selection of memory pages within the machine's
+# address space. Reads and writes performed with a given mapping
+# work as if that selection of pages was in effect.
+class MemoryMapping:
+    # Tells where the bytes of the given address range live in the
+    # internal memory image, as (offset, size) spans in address
+    # order.
+    def get_chunks(self, addr: int,
+                   size: int) -> typing.Iterator[tuple[int, int]]:
+        raise NotImplementedError
 
 
 # A block of memory content: data at an offset of the contiguous
@@ -475,6 +469,8 @@ class Z80State:
 
 
 class CoreState(Z80State):
+    __PAGE_SIZE = 0x4000
+
     def __init__(self, image: memoryview) -> None:
         p = StateParser(image)
 
@@ -501,7 +497,7 @@ class CoreState(Z80State):
         self.__lines_per_vertical_retrace = p.parse32()
         self.__contention_base = p.parse32()
 
-        self.__memory = p.read_bytes(10 * MEMORY_PAGE_SIZE)
+        self.__memory = p.read_bytes(10 * self.__PAGE_SIZE)
 
     @property
     def suppress_interrupts(self) -> bool:
@@ -625,46 +621,32 @@ class CoreState(Z80State):
     def model(self, model: type[SpectrumModel]) -> None:
         self.__model[0] = model._CXX_MODEL_CODE
 
-    def read(self, addr: int, size: int) -> bytes:
-        assert addr + size <= 0x10000  # TODO
-        return bytes(self.__memory[addr:addr + size])
+    def read_image(self, offset: int, size: int) -> bytes:
+        assert offset + size <= len(self.__memory)
+        return bytes(self.__memory[offset:offset + size])
 
-    def write(self, addr: int, block: bytes, *,
-              rom_page: int | None = None,
-              ram_page: int | None = None) -> None:
-        assert addr + len(block) <= 0x10000  # TODO
-        while block:
-            next_page_addr = ((addr // MEMORY_PAGE_SIZE + 1) *
-                              MEMORY_PAGE_SIZE)
-            chunk = block[:next_page_addr - addr]
-
-            if addr < 0x4000:
-                # TODO: Write to the current ROM otherwise.
-                assert rom_page is not None
-                offset = ROM_PAGE_IMAGE_OFFSETS[rom_page]
-            elif addr < 0xc000:
-                offset = addr
-            else:
-                # TODO: Write to the current RAM otherwise.
-                assert ram_page is not None
-                offset = RAM_PAGE_IMAGE_OFFSETS[ram_page]
-
-            self.__memory[offset:offset + len(chunk)] = chunk
-
-            addr += len(chunk)
-            block = block[len(chunk):]
-
-    # Writes at an offset of the memory image, the way memory blocks
-    # state their content.
     def write_image(self, offset: int, block: bytes) -> None:
         assert offset + len(block) <= len(self.__memory)
         self.__memory[offset:offset + len(block)] = block
 
-    def read8(self, addr: int) -> int:
-        return self.read(addr, 1)[0]
+    def read(self, mapping: MemoryMapping, addr: int,
+             size: int) -> bytes:
+        return b''.join(
+            self.read_image(offset, chunk_size)
+            for offset, chunk_size in mapping.get_chunks(addr, size))
 
-    def read16(self, addr: int) -> int:
-        return int.from_bytes(self.read(addr, 2), 'little')
+    def write(self, mapping: MemoryMapping, addr: int,
+              block: bytes) -> None:
+        written = 0
+        for offset, chunk_size in mapping.get_chunks(addr, len(block)):
+            self.write_image(offset, block[written:written + chunk_size])
+            written += chunk_size
+
+    def read8(self, mapping: MemoryMapping, addr: int) -> int:
+        return self.read(mapping, addr, 1)[0]
+
+    def read16(self, mapping: MemoryMapping, addr: int) -> int:
+        return int.from_bytes(self.read(mapping, addr, 2), 'little')
 
 
 # Stores information about the running code.
@@ -751,8 +733,8 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
                 ticks_since_int=self.ticks_since_int,
                 border_colour=self.border_colour),
             memory=MemorySnapshot(blocks=[
-                MemoryBlock(offset=0x0000, data=self.read(0x0000, 0x4000)),
-                MemoryBlock(offset=0x4000, data=self.read(0x4000, 0xc000))]))
+                MemoryBlock(offset=0x0000,
+                            data=self.read_image(0x0000, 0x10000))]))
 
     def install_snapshot(self, snapshot: CoreSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset

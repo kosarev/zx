@@ -23,6 +23,7 @@ from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import ReadPort
 from zx._device import RunQuantum
+from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
 
 
@@ -42,7 +43,8 @@ def test_on_input_propagates_exception() -> None:
     mach = zx.Core()
     dispatcher = Dispatcher([mach, _Raiser()])
 
-    mach.write(0x8000, b'\xdb\xfe')  # IN A, (0xfe)
+    mach.write(Spectrum48MemoryMapping(), 0x8000,
+               b'\xdb\xfe')  # IN A, (0xfe)
     mach.pc = 0x8000
     mach.a = 0x12
 
@@ -69,7 +71,8 @@ def test_on_output_propagates_exception() -> None:
     dispatcher = Dispatcher([mach])
     mach.set_on_output_callback(raise_on_output)
 
-    mach.write(0x8000, b'\xd3\xfe')  # OUT (0xfe), A
+    mach.write(Spectrum48MemoryMapping(), 0x8000,
+               b'\xd3\xfe')  # OUT (0xfe), A
     mach.pc = 0x8000
 
     with pytest.raises(_PortError):
@@ -101,7 +104,8 @@ def test_deferred_input() -> None:
     port = _Port()
     dispatcher = Dispatcher([mach, port])
 
-    mach.write(0x8000, b'\xdb\xfe')  # IN A, (0xfe)
+    mach.write(Spectrum48MemoryMapping(), 0x8000,
+               b'\xdb\xfe')  # IN A, (0xfe)
     mach.pc = 0x8000
     mach.a = 0x12
 
@@ -200,7 +204,7 @@ def test_install_snapshot() -> None:
     mach.pc = 0x8000
     mach.bc = 0x1234
     mach.border_colour = 5
-    mach.write(0x8000, b'\x01\x02\x03')
+    mach.write(Spectrum48MemoryMapping(), 0x8000, b'\x01\x02\x03')
     mach.install_snapshot(CoreSnapshot())
     assert mach.to_snapshot().to_json() == canonical
 

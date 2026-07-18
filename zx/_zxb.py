@@ -24,6 +24,7 @@ from ._keyboard import Keyboard
 from ._keyboard import make_key_strokes
 from ._spectrum48 import Spectrum48CoreSnapshot
 from ._spectrum48 import Spectrum48MemoryBlock
+from ._spectrum48 import Spectrum48MemoryMapping
 from ._spectrum48 import Spectrum48MemorySnapshot
 from ._spectrum48 import Spectrum48Snapshot
 from ._time import Time
@@ -123,7 +124,8 @@ class ZXBasicCompilerProgram(SnapshotFile, format_name='ZXB'):
         # CLEAR <entry_point>
         type_keys('X', self.entry_point, 'ENTER')
 
-        core.write(self.entry_point, self.program_bytes.data)
+        core.write(Spectrum48MemoryMapping(), self.entry_point,
+                   self.program_bytes.data)
         core.set_breakpoint(self.entry_point)
 
         # RANDOMIZE USR <entry_point>

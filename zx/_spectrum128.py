@@ -17,11 +17,9 @@ if typing.TYPE_CHECKING:
     from ._data import ByteData
 
 from ._beeper import BeeperSnapshot
-from ._core import MEMORY_PAGE_SIZE
-from ._core import RAM_PAGE_IMAGE_OFFSETS
-from ._core import ROM_PAGE_IMAGE_OFFSETS
 from ._core import CoreSnapshot
 from ._core import MemoryBlock
+from ._core import MemoryMapping
 from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
@@ -50,69 +48,95 @@ class Spectrum128ULASnapshot(ULASnapshot,
             border_colour=border_colour)
 
 
+# The 128K's memory mapping: rom_page selects the ROM at
+# 0x0000-0x3FFF and ram_page the RAM page at 0xC000-0xFFFF;
+# 0x4000-0xBFFF always holds ram5 and ram2.
+class Spectrum128MemoryMapping(MemoryMapping):
+    __PAGE_SIZE = 0x4000
+
+    # Where the 128K's pages sit in the internal memory image. This
+    # statement is the published convention, which the C++ side
+    # follows.
+    __ROM_PAGE_IMAGE_OFFSETS: typing.ClassVar[dict[int, int]] = {
+        0: 0 * __PAGE_SIZE,
+        1: 4 * __PAGE_SIZE}
+    __RAM_PAGE_IMAGE_OFFSETS: typing.ClassVar[dict[int, int]] = {
+        5: 1 * __PAGE_SIZE,
+        2: 2 * __PAGE_SIZE,
+        0: 3 * __PAGE_SIZE,
+        1: 5 * __PAGE_SIZE,
+        3: 6 * __PAGE_SIZE,
+        4: 7 * __PAGE_SIZE,
+        6: 8 * __PAGE_SIZE,
+        7: 9 * __PAGE_SIZE}
+
+    def __init__(self, *, rom_page: int | None = None,
+                 ram_page: int | None = None) -> None:
+        self.rom_page = rom_page
+        self.ram_page = ram_page
+
+    def get_chunks(self, addr: int,
+                   size: int) -> typing.Iterator[tuple[int, int]]:
+        end_addr = addr + size
+        assert addr >= 0 and end_addr <= 0x10000
+
+        if addr < 0x4000:
+            assert self.rom_page is not None
+            chunk_size = min(end_addr, 0x4000) - addr
+            yield (self.__ROM_PAGE_IMAGE_OFFSETS[self.rom_page] + addr,
+                   chunk_size)
+            addr += chunk_size
+
+        if addr < end_addr and addr < 0xc000:
+            chunk_size = min(end_addr, 0xc000) - addr
+            yield addr, chunk_size
+            addr += chunk_size
+
+        if addr < end_addr:
+            assert self.ram_page is not None
+            yield (self.__RAM_PAGE_IMAGE_OFFSETS[self.ram_page] +
+                   (addr - 0xc000), end_addr - addr)
+
+
 # A block in the 128K's paged address space: the Z80 address plus
-# the page selectors, rom_page selecting the ROM at 0x0000-0x3FFF
-# and ram_page the RAM page at 0xC000-0xFFFF, translated to image
-# offsets at construction.
+# the page selectors of the mapping the address is meant under.
 class Spectrum128MemoryBlock(MemoryBlock):
     def __init__(self, *, addr: int, rom_page: int | None = None,
                  ram_page: int | None = None,
                  data: Bytes | ByteData) -> None:
         data = HexData.wrap(data)
-        end_addr = addr + len(data.data)
-        assert end_addr <= 0x10000
+        mapping = Spectrum128MemoryMapping(rom_page=rom_page,
+                                           ram_page=ram_page)
 
-        if addr < 0x4000:
-            assert rom_page is not None
-            offset = ROM_PAGE_IMAGE_OFFSETS[rom_page] + addr
-            # Only the first ROM is followed by the rest of the 48K
-            # map in the image.
-            assert end_addr <= 0x4000 or rom_page == 0
-        elif addr < 0xc000:
-            offset = addr
-        else:
-            assert ram_page is not None
-            offset = RAM_PAGE_IMAGE_OFFSETS[ram_page] + (addr - 0xc000)
-
-        # Past 0xC000 the image continues with ram0 only.
-        if addr < 0xc000 and end_addr > 0xc000:
-            assert ram_page in (None, 0)
+        # A block holds one uninterrupted run of image bytes;
+        # content whose pieces land apart in the image needs
+        # separate blocks.
+        offset = None
+        next_offset = None
+        for chunk_offset, chunk_size in mapping.get_chunks(
+                addr, len(data.data)):
+            if offset is None:
+                offset = chunk_offset
+            else:
+                assert chunk_offset == next_offset
+            next_offset = chunk_offset + chunk_size
+        assert offset is not None
 
         super().__init__(offset=offset, data=data)
+        self.__addr = addr
+        self.__rom_page = rom_page
+        self.__ram_page = ram_page
 
-    # The node speaks the 128K vocabulary, translated back from the
-    # image offset.
+    # The node speaks the 128K vocabulary the block was constructed
+    # in.
     def to_json(self) -> dict[str, typing.Any]:
         d = super().to_json()
-        offset, end_offset = self.offset, self.end_offset
 
-        rom1_offset = ROM_PAGE_IMAGE_OFFSETS[1]
-        rom_page = None
-        ram_page = None
-        if offset < 0x10000:
-            # Within the image of the 48K map.
-            addr = offset
-            if addr < 0x4000:
-                rom_page = 0
-            if end_offset > 0xc000:
-                ram_page = 0
-        elif offset < rom1_offset + MEMORY_PAGE_SIZE:
-            addr = offset - rom1_offset
-            rom_page = 1
-            assert end_offset <= rom1_offset + MEMORY_PAGE_SIZE
-        else:
-            page = next(n for n, o in RAM_PAGE_IMAGE_OFFSETS.items()
-                        if o <= offset < o + MEMORY_PAGE_SIZE)
-            page_offset = RAM_PAGE_IMAGE_OFFSETS[page]
-            addr = 0xc000 + (offset - page_offset)
-            ram_page = page
-            assert end_offset <= page_offset + MEMORY_PAGE_SIZE
-
-        node: dict[str, typing.Any] = {'addr': addr}
-        if rom_page is not None:
-            node['rom_page'] = rom_page
-        if ram_page is not None:
-            node['ram_page'] = ram_page
+        node: dict[str, typing.Any] = {'addr': self.__addr}
+        if self.__rom_page is not None:
+            node['rom_page'] = self.__rom_page
+        if self.__ram_page is not None:
+            node['ram_page'] = self.__ram_page
         node['data'] = d['data']
         return node
 
@@ -127,13 +151,19 @@ class Spectrum128MemorySnapshot(MemorySnapshot):
             ) -> None:
         blocks = list(blocks or [])
 
-        # A block starting in either ROM page replaces the stock
-        # ROMs.
-        rom1_offset = ROM_PAGE_IMAGE_OFFSETS[1]
-        if not any(b.offset < 0x4000
-                   or rom1_offset <= b.offset < (rom1_offset +
-                                                 MEMORY_PAGE_SIZE)
-                   for b in blocks):
+        # A block starting in either ROM replaces the stock ROMs.
+        # TODO: Replace with ROM recognition over the canonical
+        # block list.
+        def starts_in_rom(block: Spectrum128MemoryBlock) -> bool:
+            for rom_page in (0, 1):
+                mapping = Spectrum128MemoryMapping(rom_page=rom_page)
+                [(rom_offset, rom_size)] = mapping.get_chunks(
+                    0x0000, 0x4000)
+                if rom_offset <= block.offset < rom_offset + rom_size:
+                    return True
+            return False
+
+        if not any(starts_in_rom(b) for b in blocks):
             rom = (RESOURCES / 'roms' / 'Spectrum128.rom').read_bytes()
             blocks = [Spectrum128MemoryBlock(addr=0x0000, rom_page=0,
                                              data=rom[:0x4000]),
