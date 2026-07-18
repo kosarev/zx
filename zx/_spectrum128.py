@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+import typing
+
 from ._beeper import BeeperSnapshot
 from ._core import CoreSnapshot
 from ._core import MemoryBlock
@@ -40,14 +42,31 @@ class Spectrum128ULASnapshot(ULASnapshot,
             border_colour=border_colour)
 
 
-# The 128K core: members not specified take their stock values, and
-# the given memory blocks amend the stock ROMs -- blocks carrying ROM
-# content replace them. The remaining 128K facts, the clock and the
-# paging, still ride the core's model parameter; they become core
-# config fields as the 128K work proceeds.
+# The 128K's memory: the given blocks amend the stock ROMs --
+# blocks carrying ROM content replace them.
+class Spectrum128MemorySnapshot(MemorySnapshot):
+    def __init__(
+            self,
+            blocks: typing.Sequence[MemoryBlock] | None = None) -> None:
+        blocks = list(blocks or [])
+        if not any(b.addr < 0x4000 for b in blocks):
+            rom = (RESOURCES / 'roms' / 'Spectrum128.rom').read_bytes()
+            blocks = [MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
+                                  data=rom[:0x4000]),
+                      MemoryBlock(addr=0x0000, rom_page=1, ram_page=0,
+                                  data=rom[0x4000:]),
+                      *blocks]
+
+        super().__init__(blocks=blocks)
+
+
+# The 128K core: members not specified take their stock values. The
+# remaining 128K facts, the clock and the paging, still ride the
+# core's model parameter; they become core config fields as the 128K
+# work proceeds.
 class Spectrum128CoreSnapshot(CoreSnapshot):
     ula: Spectrum128ULASnapshot
-    memory: MemorySnapshot
+    memory: Spectrum128MemorySnapshot
 
     def __init__(self, *,
                  z80: Z80Snapshot | None = None,
@@ -64,17 +83,11 @@ class Spectrum128CoreSnapshot(CoreSnapshot):
             assert all(getattr(lifted, f) == v for f, v in ula)
             ula = lifted
 
-        blocks = list(memory.blocks or []) if memory is not None else []
-        if not any(b.addr < 0x4000 for b in blocks):
-            rom = (RESOURCES / 'roms' / 'Spectrum128.rom').read_bytes()
-            blocks = [MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
-                                  data=rom[:0x4000]),
-                      MemoryBlock(addr=0x0000, rom_page=1, ram_page=0,
-                                  data=rom[0x4000:]),
-                      *blocks]
+        if not isinstance(memory, Spectrum128MemorySnapshot):
+            memory = Spectrum128MemorySnapshot(
+                blocks=memory.blocks if memory is not None else None)
 
-        super().__init__(active=True, z80=z80, ula=ula,
-                         memory=MemorySnapshot(blocks=blocks))
+        super().__init__(active=True, z80=z80, ula=ula, memory=memory)
 
 
 class Spectrum128Snapshot(MachineSnapshot):

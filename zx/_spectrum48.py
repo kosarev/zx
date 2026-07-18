@@ -74,19 +74,25 @@ class Spectrum48MemoryBlock(MemoryBlock):
 
 
 # The 48K's memory: a collection of blocks in the 48K's flat
-# address space.
+# address space. The given blocks amend the stock ROM -- a block
+# carrying ROM content replaces it.
 class Spectrum48MemorySnapshot(MemorySnapshot):
     def __init__(
             self,
             blocks: typing.Sequence[MemoryBlock] | None = None) -> None:
         assert all(isinstance(b, Spectrum48MemoryBlock)
                    for b in blocks or [])
+
+        blocks = list(blocks or [])
+        if not any(b.addr < 0x4000 for b in blocks):
+            rom = (RESOURCES / 'roms' / 'Spectrum48.rom').read_bytes()
+            blocks = [Spectrum48MemoryBlock(addr=0x0000, data=rom),
+                      *blocks]
+
         super().__init__(blocks=blocks)
 
 
-# The 48K core: members not specified take their stock values, and
-# the given memory blocks amend the stock ROM -- a block carrying ROM
-# content replaces it.
+# The 48K core: members not specified take their stock values.
 class Spectrum48CoreSnapshot(CoreSnapshot):
     ula: Spectrum48ULASnapshot
     memory: Spectrum48MemorySnapshot
@@ -106,14 +112,11 @@ class Spectrum48CoreSnapshot(CoreSnapshot):
             assert all(getattr(lifted, f) == v for f, v in ula)
             ula = lifted
 
-        blocks = list(memory.blocks or []) if memory is not None else []
-        if not any(b.addr < 0x4000 for b in blocks):
-            rom = (RESOURCES / 'roms' / 'Spectrum48.rom').read_bytes()
-            blocks = [Spectrum48MemoryBlock(addr=0x0000, data=rom),
-                      *blocks]
+        if not isinstance(memory, Spectrum48MemorySnapshot):
+            memory = Spectrum48MemorySnapshot(
+                blocks=memory.blocks if memory is not None else None)
 
-        super().__init__(active=True, z80=z80, ula=ula,
-                         memory=Spectrum48MemorySnapshot(blocks=blocks))
+        super().__init__(active=True, z80=z80, ula=ula, memory=memory)
 
 
 class Spectrum48Snapshot(MachineSnapshot):
