@@ -210,12 +210,30 @@ class MemoryBlock(DataRecord):
         super().__init__(offset=offset, data=HexData.wrap(data))
 
 
-# The memory chips' state: the ROM and RAM contents as blocks.
+# The memory chips' state: the contents as blocks, and the total
+# size of the machine's memory as its configuration. A model
+# subclass fixes the configuration as a class keyword, which the
+# base records as a class attribute. Null fields mean the canonical
+# reset values.
 class MemorySnapshot(DataRecord):
+    image_size: int | None
     blocks: list[MemoryBlock] | None
 
+    # The model subclasses keyed by their fixed configuration, so a
+    # plain record can be recognised as one of them.
+    __by_config: typing.ClassVar[dict[int, type[MemorySnapshot]]] = {}
+
+    def __init_subclass__(cls, *, image_size: int,
+                          **kwargs: typing.Any) -> None:
+        super().__init_subclass__(**kwargs)
+        cls.image_size = image_size
+
+        assert image_size not in MemorySnapshot.__by_config
+        MemorySnapshot.__by_config[image_size] = cls
+
     def __init__(
-            self, blocks: typing.Sequence[MemoryBlock] | None = None):
+            self, *, image_size: int | None = None,
+            blocks: typing.Sequence[MemoryBlock] | None = None):
         if blocks is not None:
             blocks = sorted(blocks, key=lambda b: b.offset)
 
@@ -224,7 +242,7 @@ class MemorySnapshot(DataRecord):
             for a, b in itertools.pairwise(blocks):
                 assert a.end_offset <= b.offset
 
-        super().__init__(blocks=blocks)
+        super().__init__(image_size=image_size, blocks=blocks)
 
     # Tells whether the memory holds the given content at the given
     # address, acting as if the given mapping was applied. A byte no
@@ -761,9 +779,11 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
                 contention_base=self.contention_base,
                 ticks_since_int=self.ticks_since_int,
                 border_colour=self.border_colour),
-            memory=MemorySnapshot(blocks=[
-                MemoryBlock(offset=0x0000,
-                            data=self._read_image(0x0000, 0x10000))]))
+            memory=MemorySnapshot(
+                image_size=0x10000,
+                blocks=[MemoryBlock(offset=0x0000,
+                                    data=self._read_image(0x0000,
+                                                          0x10000))]))
 
     def install_snapshot(self, snapshot: CoreSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset

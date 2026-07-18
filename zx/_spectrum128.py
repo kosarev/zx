@@ -124,9 +124,9 @@ class Spectrum128MemoryBlock(MemoryBlock):
 # The 128K's memory: a collection of blocks in the 128K's paged
 # address space. The given blocks amend the stock ROMs -- blocks
 # carrying ROM content replace them.
-class Spectrum128MemorySnapshot(MemorySnapshot):
+class Spectrum128MemorySnapshot(MemorySnapshot, image_size=0x28000):
     def __init__(
-            self,
+            self, *,
             blocks: typing.Sequence[Spectrum128MemoryBlock] | None = None,
             ) -> None:
         blocks = list(blocks or [])
@@ -151,7 +151,13 @@ class Spectrum128MemorySnapshot(MemorySnapshot):
                                              data=rom[0x4000:]),
                       *blocks]
 
-        super().__init__(blocks=blocks)
+        super().__init__(image_size=self.image_size, blocks=blocks)
+
+    # The type fixes the configuration, so the node stores only the
+    # blocks.
+    def to_json(self) -> dict[str, typing.Any]:
+        d = super().to_json()
+        return {name: d[name] for name in ('blocks',) if name in d}
 
 
 # The 128K core: members not specified take their stock values. The

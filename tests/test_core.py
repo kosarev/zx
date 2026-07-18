@@ -279,3 +279,14 @@ def test_stock_rom_block() -> None:
     loaded = DataRecord.from_json({'type': 'Spectrum48ROM'})
     assert isinstance(loaded, Spectrum48ROM)
     assert loaded.data.data == rom.data.data
+
+
+def test_memory_image_size() -> None:
+    from zx._spectrum48 import Spectrum48MemorySnapshot
+
+    # The model type fixes the configuration, so its node does not
+    # store it; a plain record states it as an ordinary field.
+    assert Spectrum48MemorySnapshot.image_size == 0x10000
+    assert 'image_size' not in Spectrum48MemorySnapshot().to_json()
+    plain = MemorySnapshot(image_size=0x10000)
+    assert plain.to_json()['image_size'] == 0x10000
