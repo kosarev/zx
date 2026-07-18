@@ -14,6 +14,8 @@ import typing
 
 from ._core import Core
 from ._core import RunEvents
+from ._data import ByteData
+from ._data import HexData
 from ._data import MachineSnapshot
 from ._data import SnapshotFile
 from ._device import Dispatcher
@@ -34,7 +36,12 @@ if typing.TYPE_CHECKING:
 # file converts to a machine snapshot.
 class ZXBasicCompilerProgram(SnapshotFile, format_name='ZXB'):
     entry_point: int
-    program_bytes: bytes
+    program_bytes: ByteData
+
+    def __init__(self, *, entry_point: int,
+                 program_bytes: Bytes | ByteData) -> None:
+        super().__init__(entry_point=entry_point,
+                         program_bytes=HexData.wrap(program_bytes))
 
     @classmethod
     def decode(cls, filename: str,
@@ -116,7 +123,7 @@ class ZXBasicCompilerProgram(SnapshotFile, format_name='ZXB'):
         # CLEAR <entry_point>
         type_keys('X', self.entry_point, 'ENTER')
 
-        core.write(self.entry_point, self.program_bytes)
+        core.write(self.entry_point, self.program_bytes.data)
         core.set_breakpoint(self.entry_point)
 
         # RANDOMIZE USR <entry_point>

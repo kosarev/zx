@@ -9,6 +9,8 @@
 #   Published under the MIT license.
 
 
+import typing
+
 import zx
 
 
@@ -29,3 +31,36 @@ def test_basic() -> None:
     # Machine snapshots convert to themselves.
     snapshot = zx._data.MachineSnapshot()
     assert snapshot.to_machine_snapshot() is snapshot
+
+
+# Record fields may only hold ints, strings, other records, and
+# lists or tuples of those. Raw bytes and plain dicts do not
+# serialise; they must be wrapped in record types such as ByteData.
+def test_fields_are_serialisable_types() -> None:
+    def all_record_types(
+            cls: type) -> typing.Iterator[type]:
+        yield cls
+        for sub in cls.__subclasses__():
+            yield from all_record_types(sub)
+
+    def leaf_types(hint: object) -> typing.Iterator[object]:
+        origin = typing.get_origin(hint)
+        if origin is None:
+            yield hint
+            return
+        yield origin
+        for arg in typing.get_args(hint):
+            yield from leaf_types(arg)
+
+    for cls in all_record_types(zx._data.DataRecord):
+        # The ByteData wrappers are the sanctioned holders of raw
+        # bytes, serialising them themselves.
+        if issubclass(cls, zx._data.ByteData):
+            continue
+
+        for name, hint in typing.get_type_hints(cls).items():
+            if typing.get_origin(hint) is typing.ClassVar:
+                continue
+            for leaf in leaf_types(hint):
+                assert leaf not in (bytes, bytearray, memoryview, dict), (
+                    f'{cls.__name__}.{name} holds {leaf!r}')

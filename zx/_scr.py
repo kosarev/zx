@@ -14,6 +14,8 @@ from ._binary import BinaryParser
 from ._binary import Bytes
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
+from ._data import ByteData
+from ._data import HexData
 from ._data import MachineSnapshot
 from ._data import SnapshotFile
 from ._spectrum48 import Spectrum48CoreSnapshot
@@ -23,8 +25,13 @@ from ._spectrum48 import Spectrum48Snapshot
 
 
 class _SCRFile(SnapshotFile, format_name='SCR'):
-    dot_patterns: bytes
-    colour_attrs: bytes
+    dot_patterns: ByteData
+    colour_attrs: ByteData
+
+    def __init__(self, *, dot_patterns: Bytes | ByteData,
+                 colour_attrs: Bytes | ByteData) -> None:
+        super().__init__(dot_patterns=HexData.wrap(dot_patterns),
+                         colour_attrs=HexData.wrap(colour_attrs))
 
     def to_machine_snapshot(self) -> MachineSnapshot:
         # The address of the endless loop.
@@ -50,7 +57,7 @@ class _SCRFile(SnapshotFile, format_name='SCR'):
 
     # TODO: Refine.
     def x_encode(self) -> bytes:
-        return self.dot_patterns + self.colour_attrs
+        return self.dot_patterns.data + self.colour_attrs.data
 
     _FIELDS: typing.ClassVar[list[str]] = [
         '6144s:dot_patterns', '768s:colour_attrs']
