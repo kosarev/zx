@@ -263,3 +263,19 @@ def test_memory_match() -> None:
 
     # Past the stated content.
     assert not memory.match(mapping, 0x5000, b'\x05\x06')
+
+
+def test_stock_rom_block() -> None:
+    from zx._data import DataRecord
+    from zx._spectrum48 import Spectrum48ROM
+
+    rom = Spectrum48ROM()
+    assert rom.offset == 0
+    assert len(rom.data.data) == 0x4000
+
+    # The type alone determines the content, so the node stores
+    # nothing and loads back from the bare tag.
+    assert rom.to_json() == {}
+    loaded = DataRecord.from_json({'type': 'Spectrum48ROM'})
+    assert isinstance(loaded, Spectrum48ROM)
+    assert loaded.data.data == rom.data.data

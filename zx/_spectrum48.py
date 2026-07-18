@@ -77,6 +77,17 @@ class Spectrum48MemoryBlock(MemoryBlock):
         return {'addr': self.offset, 'data': d['data']}
 
 
+# The stock 48K ROM at address 0. The type alone determines the
+# content, so its node stores nothing.
+class Spectrum48ROM(Spectrum48MemoryBlock):
+    def __init__(self) -> None:
+        rom = (RESOURCES / 'roms' / 'Spectrum48.rom').read_bytes()
+        super().__init__(addr=0x0000, data=rom)
+
+    def to_json(self) -> dict[str, typing.Any]:
+        return {}
+
+
 # The 48K's memory: a collection of blocks in the 48K's flat
 # address space. The given blocks amend the stock ROM -- a block
 # carrying ROM content replaces it.
@@ -87,9 +98,7 @@ class Spectrum48MemorySnapshot(MemorySnapshot):
             ) -> None:
         blocks = list(blocks or [])
         if not any(b.offset < 0x4000 for b in blocks):
-            rom = (RESOURCES / 'roms' / 'Spectrum48.rom').read_bytes()
-            blocks = [Spectrum48MemoryBlock(addr=0x0000, data=rom),
-                      *blocks]
+            blocks = [Spectrum48ROM(), *blocks]
 
         super().__init__(blocks=blocks)
 
