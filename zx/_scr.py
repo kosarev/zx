@@ -12,13 +12,13 @@ import typing
 
 from ._binary import BinaryParser
 from ._binary import Bytes
-from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import MachineSnapshot
 from ._data import SnapshotFile
 from ._machines import Spectrum48CoreSnapshot
 from ._machines import Spectrum48MemoryBlock
+from ._machines import Spectrum48MemorySnapshot
 from ._machines import Spectrum48Snapshot
 
 
@@ -46,7 +46,7 @@ class _SCRFile(SnapshotFile, format_name='SCR'):
                 iff1=0,
                 iff2=0),
             ula=ULASnapshot(border_colour=0),
-            memory=MemorySnapshot(blocks=memory_blocks)))
+            memory=Spectrum48MemorySnapshot(blocks=memory_blocks)))
 
     # TODO: Refine.
     def x_encode(self) -> bytes:

@@ -23,6 +23,7 @@ from ._data import SnapshotFile
 from ._error import Error
 from ._machines import Spectrum48CoreSnapshot
 from ._machines import Spectrum48MemoryBlock
+from ._machines import Spectrum48MemorySnapshot
 from ._machines import Spectrum48Snapshot
 
 
@@ -90,7 +91,7 @@ class SNAFile(SnapshotFile, format_name='SNA'):
                 iff1=iff, iff2=iff,
                 int_mode=self.int_mode),
             ula=ULASnapshot(border_colour=self.border_colour),
-            memory=MemorySnapshot(blocks=[
+            memory=Spectrum48MemorySnapshot(blocks=[
                 Spectrum48MemoryBlock(addr=0x4000,
                                       data=self.memory.data)])))
 

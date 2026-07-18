@@ -84,12 +84,23 @@ class Spectrum48MemoryBlock(MemoryBlock):
         return {name: d[name] for name in ('addr', 'data') if name in d}
 
 
+# The 48K's memory: a collection of blocks in the 48K's flat
+# address space.
+class Spectrum48MemorySnapshot(MemorySnapshot):
+    def __init__(
+            self,
+            blocks: typing.Sequence[MemoryBlock] | None = None) -> None:
+        assert all(isinstance(b, Spectrum48MemoryBlock)
+                   for b in blocks or [])
+        super().__init__(blocks=blocks)
+
+
 # The 48K core: members not specified take their stock values, and
 # the given memory blocks amend the stock ROM -- a block carrying ROM
 # content replaces it.
 class Spectrum48CoreSnapshot(CoreSnapshot):
     ula: Spectrum48ULASnapshot
-    memory: MemorySnapshot
+    memory: Spectrum48MemorySnapshot
 
     def __init__(self, *,
                  z80: Z80Snapshot | None = None,
@@ -114,7 +125,7 @@ class Spectrum48CoreSnapshot(CoreSnapshot):
                       *blocks]
 
         super().__init__(active=True, z80=z80, ula=ula,
-                         memory=MemorySnapshot(blocks=blocks))
+                         memory=Spectrum48MemorySnapshot(blocks=blocks))
 
 
 class Spectrum48Snapshot(MachineSnapshot):

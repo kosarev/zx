@@ -18,7 +18,6 @@ from ._binary import BinaryWriter
 from ._binary import Bytes
 from ._core import CoreSnapshot
 from ._core import MemoryBlock
-from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import ByteData
@@ -29,6 +28,7 @@ from ._data import SnapshotFile
 from ._error import Error
 from ._machines import Spectrum48CoreSnapshot
 from ._machines import Spectrum48MemoryBlock
+from ._machines import Spectrum48MemorySnapshot
 from ._machines import Spectrum48Snapshot
 from ._utils import get_high8
 from ._utils import get_low8
@@ -461,7 +461,7 @@ class Z80File(SnapshotFile, format_name='Z80'):
             ula=ULASnapshot(
                 ticks_since_int=ticks_since_int,
                 border_colour=(flags1 >> 1) & 0x7),
-            memory=MemorySnapshot(blocks=memory_blocks)))
+            memory=Spectrum48MemorySnapshot(blocks=memory_blocks)))
 
     __V1_HEADER: typing.ClassVar[list[str]] = [
         'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',
