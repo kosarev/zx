@@ -164,7 +164,9 @@ class Spectrum128MemorySnapshot(MemorySnapshot, image_size=0x28000):
 # remaining 128K facts, the clock and the paging, still ride the
 # core's model parameter; they become core config fields as the 128K
 # work proceeds.
-class Spectrum128CoreSnapshot(CoreSnapshot):
+class Spectrum128CoreSnapshot(CoreSnapshot,
+                              ula=Spectrum128ULASnapshot,
+                              memory=Spectrum128MemorySnapshot):
     ula: Spectrum128ULASnapshot
     memory: Spectrum128MemorySnapshot
 

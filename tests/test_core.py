@@ -326,3 +326,28 @@ def test_memory_lift() -> None:
 
     unsized = MemorySnapshot(blocks=[MemoryBlock(offset=0x0000, data=rom)])
     assert unsized.lift() is unsized
+
+
+def test_core_lift() -> None:
+    from zx._spectrum48 import Spectrum48CoreSnapshot
+    from zx._spectrum48 import Spectrum48MemorySnapshot
+    from zx._spectrum48 import Spectrum48ULASnapshot
+
+    core = zx.Core()
+    core.install_snapshot(Spectrum48CoreSnapshot())
+    captured = core.to_snapshot()
+    assert type(captured) is CoreSnapshot
+
+    # A captured stock 48K board recognises as the model core once
+    # its members do.
+    lifted = captured.lift()
+    assert isinstance(lifted, Spectrum48CoreSnapshot)
+    assert isinstance(lifted.ula, Spectrum48ULASnapshot)
+    assert isinstance(lifted.memory, Spectrum48MemorySnapshot)
+    assert lifted.z80 is captured.z80
+
+    # An inactive board stays plain, its members still lifted.
+    core.active = False
+    inactive = core.to_snapshot().lift()
+    assert type(inactive) is CoreSnapshot
+    assert isinstance(inactive.ula, Spectrum48ULASnapshot)

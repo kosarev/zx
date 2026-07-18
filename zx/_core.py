@@ -298,6 +298,22 @@ class CoreSnapshot(DeviceSnapshot):
     ula: ULASnapshot | None
     memory: MemorySnapshot | None
 
+    # The model subclasses keyed by their members' types: the board
+    # has no configuration of its own, so its model shows in what
+    # its chips are.
+    __by_members: typing.ClassVar[
+        dict[tuple[type[ULASnapshot], type[MemorySnapshot]],
+             type[CoreSnapshot]]] = {}
+
+    # A model subclass states its members' types as class keywords.
+    def __init_subclass__(cls, *, ula: type[ULASnapshot],
+                          memory: type[MemorySnapshot],
+                          **kwargs: typing.Any) -> None:
+        super().__init_subclass__(**kwargs)
+        members = (ula, memory)
+        assert members not in CoreSnapshot.__by_members
+        CoreSnapshot.__by_members[members] = cls
+
     def __init__(
             self,
             active: bool | None = None,
@@ -310,13 +326,24 @@ class CoreSnapshot(DeviceSnapshot):
             ula=ula,
             memory=memory)
 
-    # Return the core with its ULA lifted to the chip-version type.
+    # Recognise a plain board whose lifted members carry one
+    # model's types. A model activates its core, so an inactive
+    # board stays plain, its members still lifted.
     def lift(self) -> CoreSnapshot:
-        return CoreSnapshot(
-            active=self.active,
-            z80=self.z80,
-            ula=self.ula.lift() if self.ula is not None else None,
-            memory=self.memory.lift() if self.memory is not None else None)
+        if type(self) is not CoreSnapshot:
+            return self
+
+        ula = self.ula.lift() if self.ula is not None else None
+        memory = self.memory.lift() if self.memory is not None else None
+
+        cls = None
+        if self.active is True and ula is not None and memory is not None:
+            cls = self.__by_members.get((type(ula), type(memory)))
+        if cls is None:
+            return CoreSnapshot(active=self.active, z80=self.z80,
+                                ula=ula, memory=memory)
+
+        return cls(z80=self.z80, ula=ula, memory=memory)
 
 
 class StateParser:

@@ -136,7 +136,9 @@ class Spectrum48MemorySnapshot(MemorySnapshot, image_size=0x10000):
 
 
 # The 48K core: members not specified take their stock values.
-class Spectrum48CoreSnapshot(CoreSnapshot):
+class Spectrum48CoreSnapshot(CoreSnapshot,
+                             ula=Spectrum48ULASnapshot,
+                             memory=Spectrum48MemorySnapshot):
     ula: Spectrum48ULASnapshot
     memory: Spectrum48MemorySnapshot
 
