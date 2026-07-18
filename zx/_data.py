@@ -353,6 +353,12 @@ class DeviceSnapshot(DataRecord):
 # The native machine snapshot: a composition of per-device
 # snapshots, keyed by device id. A device absent from the
 # composition is at its canonical reset state.
+# A model is a stock snapshot installed like any other: devices
+# default to inactive, so a stock snapshot explicitly activates its
+# machine's members, and converters compose their output over the
+# stock snapshot of the machine their format declares. Each
+# machine's types live in their own module (_spectrum48,
+# _spectrum128) as a capsule of that machine's knowledge.
 class MachineSnapshot(SnapshotFile):
     def __init__(self, **devices: DeviceSnapshot):
         super().__init__(**devices)

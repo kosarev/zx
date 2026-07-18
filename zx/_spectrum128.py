@@ -18,7 +18,7 @@ from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import MachineSnapshot
 from ._keyboard import KeyboardSnapshot
-from ._machines import _load_rom_image
+from ._resources import RESOURCES
 
 
 # The 128K ULA. The type fixes the wiring as class keywords, so only
@@ -66,7 +66,7 @@ class Spectrum128CoreSnapshot(CoreSnapshot):
 
         blocks = list(memory.blocks or []) if memory is not None else []
         if not any(b.addr < 0x4000 for b in blocks):
-            rom = _load_rom_image('Spectrum128.rom')
+            rom = (RESOURCES / 'roms' / 'Spectrum128.rom').read_bytes()
             blocks = [MemoryBlock(addr=0x0000, rom_page=0, ram_page=0,
                                   data=rom[:0x4000]),
                       MemoryBlock(addr=0x0000, rom_page=1, ram_page=0,

@@ -47,6 +47,7 @@ from ._except import EmulationExit
 from ._keyboard import KEYS
 from ._keyboard import Key
 from ._keyboard import KeyStroke
+from ._resources import RESOURCES
 from ._time import Time
 from ._time import get_elapsed_time
 from ._time import get_timestamp
@@ -227,9 +228,7 @@ class _Font:
     def __init__(self, size: float) -> None:
         self.text_size = size
 
-        import importlib.resources
-        font_path = str(importlib.resources.files('zx').joinpath('fonts')
-                        .joinpath('DejaVuSans.ttf'))
+        font_path = str(RESOURCES / 'fonts' / 'DejaVuSans.ttf')
 
         import sdl2.sdlttf  # type: ignore[import-untyped]
         self.__font = sdl2.sdlttf.TTF_OpenFont(
