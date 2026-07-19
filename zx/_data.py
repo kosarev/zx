@@ -352,13 +352,13 @@ class DeviceSnapshot(DataRecord):
 
 # The native machine snapshot: a composition of per-device
 # snapshots, keyed by device id. A device absent from the
-# composition is at its canonical reset state.
-# A model is a stock snapshot installed like any other: devices
-# default to inactive, so a stock snapshot explicitly activates its
-# machine's members, and converters compose their output over the
-# stock snapshot of the machine their format declares. Each
-# machine's types live in their own module (_spectrum48,
-# _spectrum128) as a capsule of that machine's knowledge.
+# composition is not part of the machine the snapshot describes,
+# so installing the snapshot disables it.
+# A model is a stock snapshot installed like any other; converters
+# compose their output over the stock snapshot of the machine
+# their format declares. Each machine's types live in their own
+# module (_spectrum48, _spectrum128) as a capsule of that
+# machine's knowledge.
 class MachineSnapshot(SnapshotFile):
     # The model subclasses keyed by their member compositions: a
     # machine's model shows in what devices it is made of.
@@ -387,10 +387,8 @@ class MachineSnapshot(SnapshotFile):
     def to_machine_snapshot(self) -> MachineSnapshot:
         return self
 
-    # Recognise a plain composition as a model machine: its lifted
-    # members must be exactly one model's device types, all active.
-    # Unknown compositions are returned unchanged, members still
-    # lifted.
+    # Returns the most specific known version of this machine
+    # snapshot.
     def lift(self) -> MachineSnapshot:
         if type(self) is not MachineSnapshot:
             return self
@@ -398,8 +396,7 @@ class MachineSnapshot(SnapshotFile):
         members = {id: d.lift() for id, d in self}
         key = tuple(sorted((id, type(d)) for id, d in members.items()))
         cls = MachineSnapshot.__by_members.get(key)
-        if cls is None or not all(getattr(d, 'active', None) is True
-                                  for d in members.values()):
+        if cls is None:
             return MachineSnapshot(**members)
 
         return cls(**members)

@@ -162,10 +162,10 @@ def test_from_snapshot() -> None:
     assert device.pc == 0x1234
 
 
-def test_inactive_core() -> None:
-    # An inactive core is indistinguishable from an absent one: it
+def test_disabled_core() -> None:
+    # A disabled core is indistinguishable from an absent one: it
     # runs no quanta.
-    core = zx.Core()
+    core = zx.Core(disabled=True)
     devices = Dispatcher([core])
     rate = core.ticks_per_second
 
@@ -173,26 +173,26 @@ def test_inactive_core() -> None:
     devices.notify(quantum)
     assert quantum.advanced_ceiling is None
 
-    core.active = True
+    core.disabled = False
     quantum = RunQuantum(stop_after=Time(1000, ticks_per_second=rate))
     devices.notify(quantum)
     assert quantum.advanced_ceiling is not None
 
 
-def test_core_activity_in_snapshots() -> None:
-    # Activity is captured as the difference from the reset state and
-    # applied by snapshot installs.
+def test_core_disabled_in_snapshots() -> None:
+    # The disabled flag is captured as the difference from the reset
+    # state and applied by snapshot installs.
     core = zx.Core()
-    assert 'active' not in core.to_snapshot().to_json()
+    assert 'disabled' not in core.to_snapshot().to_json()
 
-    core.active = True
-    assert core.to_snapshot().to_json()['active'] is True
+    core.disabled = True
+    assert core.to_snapshot().to_json()['disabled'] is True
+
+    core.install_snapshot(CoreSnapshot(disabled=True))
+    assert core.disabled
 
     core.install_snapshot(CoreSnapshot())
-    assert not core.active
-
-    core.install_snapshot(CoreSnapshot(active=True))
-    assert core.active
+    assert not core.disabled
 
 
 def test_install_snapshot() -> None:
@@ -346,8 +346,9 @@ def test_core_lift() -> None:
     assert isinstance(lifted.memory, Spectrum48MemorySnapshot)
     assert lifted.z80 is captured.z80
 
-    # An inactive board stays plain, its members still lifted.
-    core.active = False
-    inactive = core.to_snapshot().lift()
-    assert type(inactive) is CoreSnapshot
-    assert isinstance(inactive.ula, Spectrum48ULASnapshot)
+    # The disabled flag is ordinary content: it passes through the
+    # lift unchanged.
+    core.disabled = True
+    disabled = core.to_snapshot().lift()
+    assert isinstance(disabled, Spectrum48CoreSnapshot)
+    assert disabled.disabled is True

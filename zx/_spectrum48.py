@@ -143,7 +143,7 @@ class Spectrum48CoreSnapshot(CoreSnapshot,
     memory: Spectrum48MemorySnapshot
 
     def __init__(self, *,
-                 active: bool = True,
+                 disabled: bool | None = None,
                  z80: Z80Snapshot | None = None,
                  ula: ULASnapshot | None = None,
                  memory: Spectrum48MemorySnapshot | None = None) -> None:
@@ -161,7 +161,7 @@ class Spectrum48CoreSnapshot(CoreSnapshot,
         if memory is None:
             memory = Spectrum48MemorySnapshot()
 
-        super().__init__(active=active, z80=z80, ula=ula, memory=memory)
+        super().__init__(disabled=disabled, z80=z80, ula=ula, memory=memory)
 
 
 class Spectrum48Snapshot(MachineSnapshot,
@@ -180,8 +180,8 @@ class Spectrum48Snapshot(MachineSnapshot,
         if core is None:
             core = Spectrum48CoreSnapshot()
         if keyboard is None:
-            keyboard = KeyboardSnapshot(active=True)
+            keyboard = KeyboardSnapshot()
         if beeper is None:
-            beeper = BeeperSnapshot(active=True)
+            beeper = BeeperSnapshot()
 
         super().__init__(core=core, keyboard=keyboard, beeper=beeper)

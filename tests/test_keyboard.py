@@ -67,7 +67,7 @@ def pressed_value(key_id: str) -> int:
 
 
 def test_port_reads() -> None:
-    keyboard = Keyboard(active=True)
+    keyboard = Keyboard()
     devices = Dispatcher([keyboard])
 
     devices.notify(KeyStroke(KEYS['J'], pressed=True, time=at(2)))
@@ -81,7 +81,7 @@ def test_port_reads() -> None:
 
 
 def test_stroke_at_time_zero() -> None:
-    keyboard = Keyboard(active=True)
+    keyboard = Keyboard()
     devices = Dispatcher([keyboard])
 
     # Before the first read, any time is schedulable, the very
@@ -95,8 +95,8 @@ def test_stroke_at_quantum_ceiling() -> None:
     # so a stroke stamped there must always be admissible — including
     # when the quantum ends on the very instruction that reads the
     # keyboard, which happens when the tick budget expires inside it.
-    core = zx.Core(active=True)
-    keyboard = Keyboard(active=True)
+    core = zx.Core()
+    keyboard = Keyboard()
     devices = Dispatcher([core, keyboard])
 
     # IN A,(0xFE); JR $-2 -- an endless keyboard read loop.
@@ -116,10 +116,10 @@ def test_stroke_at_quantum_ceiling() -> None:
                              time=quantum.advanced_ceiling))
 
 
-def test_inactive_keyboard() -> None:
-    # An inactive keyboard is indistinguishable from an absent one:
+def test_disabled_keyboard() -> None:
+    # A disabled keyboard is indistinguishable from an absent one:
     # it does not drive the input lines.
-    keyboard = Keyboard()
+    keyboard = Keyboard(disabled=True)
     devices = Dispatcher([keyboard])
 
     devices.notify(KeyStroke(KEYS['J'], pressed=True, time=at(2)))
@@ -127,14 +127,14 @@ def test_inactive_keyboard() -> None:
 
 
 def test_keyboard_snapshot() -> None:
-    # Activity is captured as the difference from the reset state and
-    # applied by snapshot installs.
-    assert Keyboard().to_snapshot() is None
+    # A disabled keyboard is indistinguishable from an absent one,
+    # so it captures as nothing.
+    assert Keyboard(disabled=True).to_snapshot() is None
 
-    keyboard = Keyboard(active=True)
+    keyboard = Keyboard()
     snapshot = keyboard.to_snapshot()
     assert snapshot is not None
-    assert snapshot.active
+    assert snapshot.disabled is None
 
     # Installing a snapshot brings the keyboard to the state the
     # snapshot describes; a pressed key does not survive it.
@@ -142,17 +142,16 @@ def test_keyboard_snapshot() -> None:
     devices.notify(KeyStroke(KEYS['J'], pressed=True, time=at(2)))
     assert read(devices, halfrow_addr('J'), 3) == pressed_value('J')
 
-    devices.notify(InstallDeviceSnapshot(KeyboardSnapshot(active=True)),
+    devices.notify(InstallDeviceSnapshot(KeyboardSnapshot()),
                    device='keyboard')
     assert read(devices, halfrow_addr('J'), 1) == 0xff
 
-    devices.notify(InstallDeviceSnapshot(KeyboardSnapshot(active=False)),
+    devices.notify(InstallDeviceSnapshot(KeyboardSnapshot(disabled=True)),
                    device='keyboard')
-    assert not keyboard.active
+    assert keyboard.disabled
 
-    # A device snapshot that does not mention the activity means the
-    # reset state: inactive.
-    keyboard.active = True
+    # A device snapshot that does not state the flag means the reset
+    # state: not disabled.
     devices.notify(InstallDeviceSnapshot(KeyboardSnapshot()),
                    device='keyboard')
-    assert not keyboard.active
+    assert not keyboard.disabled

@@ -20,14 +20,14 @@ def test_playback_recorder() -> None:
     snapshot1 = MachineSnapshot(core=CoreSnapshot(z80=Z80Snapshot(pc=0x8000)))
     snapshot2 = MachineSnapshot(core=CoreSnapshot(z80=Z80Snapshot(pc=0x9000)))
 
-    # Inactive by default: events are ignored.
-    recorder = PlaybackRecorder()
+    # A disabled recorder ignores events.
+    recorder = PlaybackRecorder(disabled=True)
     recorder.on_event(InstallSnapshot(snapshot1), dispatcher)
     assert recorder.make_playback().segments == []
 
-    # An active recorder starts a new segment per installed snapshot,
-    # in order.
-    recorder = PlaybackRecorder(active=True)
+    # The recorder starts a new segment per installed snapshot, in
+    # order.
+    recorder = PlaybackRecorder()
     recorder.on_event(InstallSnapshot(snapshot1), dispatcher)
     recorder.on_event(InstallSnapshot(snapshot2), dispatcher)
 

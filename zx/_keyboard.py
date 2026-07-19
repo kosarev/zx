@@ -92,10 +92,10 @@ def make_key_strokes(*keys: int | str, start: Time) -> list[KeyStroke]:
 
 
 class KeyboardSnapshot(DeviceSnapshot):
-    active: bool | None
+    disabled: bool | None
 
-    def __init__(self, *, active: bool | None = None) -> None:
-        super().__init__(active=active)
+    def __init__(self, *, disabled: bool | None = None) -> None:
+        super().__init__(disabled=disabled)
 
 
 class Keyboard(Device, snapshot_type=KeyboardSnapshot):
@@ -107,8 +107,8 @@ class Keyboard(Device, snapshot_type=KeyboardSnapshot):
     which would otherwise have sampled differently.
     """
 
-    def __init__(self, *, active: bool = False) -> None:
-        super().__init__(active=active)
+    def __init__(self, *, disabled: bool = False) -> None:
+        super().__init__(disabled=disabled)
 
         self.__state = [0xff] * 8
 
@@ -121,14 +121,15 @@ class Keyboard(Device, snapshot_type=KeyboardSnapshot):
     @classmethod
     def from_snapshot(cls, snapshot: DeviceSnapshot) -> Keyboard:
         assert isinstance(snapshot, KeyboardSnapshot)
-        return cls(active=snapshot.active is True)
+        return cls(disabled=snapshot.disabled is True)
 
     def to_snapshot(self) -> KeyboardSnapshot | None:
-        # Only the difference from the reset state is captured.
-        if not self.active:
+        # A disabled keyboard is indistinguishable from an absent
+        # one, so there is nothing to capture.
+        if self.disabled:
             return None
 
-        return KeyboardSnapshot(active=True)
+        return KeyboardSnapshot()
 
     def __apply(self, key: Key, pressed: bool) -> None:
         mask = 1 << key.port_bit
@@ -167,17 +168,16 @@ class Keyboard(Device, snapshot_type=KeyboardSnapshot):
         self.__last_read_time = None
         self.__pending.clear()
 
-        # Unmentioned activity means the reset state: inactive.
-        self.active = s.active is True
+        self.disabled = s.disabled is True
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, InstallDeviceSnapshot):
             self.__install_snapshot(event.snapshot)
             return
 
-        # An inactive keyboard is indistinguishable from an absent
+        # A disabled keyboard is indistinguishable from an absent
         # one: it drives no input lines and consumes no strokes.
-        if not self.active:
+        if self.disabled:
             return
 
         if isinstance(event, KeyStroke):

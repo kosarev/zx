@@ -29,16 +29,16 @@ if typing.TYPE_CHECKING:
 
 
 class BeeperSnapshot(DeviceSnapshot):
-    active: bool | None
+    disabled: bool | None
 
-    def __init__(self, *, active: bool | None = None) -> None:
-        super().__init__(active=active)
+    def __init__(self, *, disabled: bool | None = None) -> None:
+        super().__init__(disabled=disabled)
 
 
 class Beeper(Device, snapshot_type=BeeperSnapshot):
 
-    def __init__(self, *, active: bool = False) -> None:
-        super().__init__(active=active)
+    def __init__(self, *, disabled: bool = False) -> None:
+        super().__init__(disabled=disabled)
 
         self.__stream = PulseStream()
 
@@ -54,14 +54,15 @@ class Beeper(Device, snapshot_type=BeeperSnapshot):
     @classmethod
     def from_snapshot(cls, snapshot: DeviceSnapshot) -> Beeper:
         assert isinstance(snapshot, BeeperSnapshot)
-        return cls(active=snapshot.active is True)
+        return cls(disabled=snapshot.disabled is True)
 
     def to_snapshot(self) -> BeeperSnapshot | None:
-        # Only the difference from the reset state is captured.
-        if not self.active:
+        # A disabled beeper is indistinguishable from an absent
+        # one, so there is nothing to capture.
+        if self.disabled:
             return None
 
-        return BeeperSnapshot(active=True)
+        return BeeperSnapshot()
 
     def __collect(self, writes: numpy.typing.NDArray[numpy.uint64]) -> None:
         # Filter writes to the 0xfe port.
@@ -124,17 +125,16 @@ class Beeper(Device, snapshot_type=BeeperSnapshot):
         # Whatever the snapshot does not mention is at reset.
         self.__reset()
 
-        # Unmentioned activity means the reset state: inactive.
-        self.active = s.active is True
+        self.disabled = s.disabled is True
 
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
         if isinstance(event, InstallDeviceSnapshot):
             self.__install_snapshot(event.snapshot)
             return
 
-        # An inactive beeper is indistinguishable from an absent
+        # A disabled beeper is indistinguishable from an absent
         # one: it publishes no sound.
-        if not self.active:
+        if self.disabled:
             return
 
         if isinstance(event, ResetEmulator):

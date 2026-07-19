@@ -114,7 +114,7 @@ def _play_ay_stream(stream: AYStream) -> None:
     # A player has no latency concern anyway.
     sound = SDLSound(num_buffer_samples=4096, latency_ms=200)
 
-    with Emulator(machine=Machine(ay=AY(active=True)),
+    with Emulator(machine=Machine(ay=AY()),
                   environment=[player, _HoldWaiter(), sound]) as app:
         # Give the last notes a second to ring out.
         tail = Time(stream.ticks_per_second,
@@ -380,7 +380,7 @@ class _PlaybackRecoverer(Core):
     def __init__(self, *,
                  playback_player: PlaybackPlayer | None = None) -> None:
         self._player = playback_player or PlaybackPlayer()
-        self._recorder = PlaybackRecorder(active=True)
+        self._recorder = PlaybackRecorder()
         super().__init__()
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
@@ -484,7 +484,7 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
 
     core = Core()
     core.install_snapshot(Spectrum48CoreSnapshot())
-    devices = Dispatcher([core, Keyboard(active=True), TapePlayer()])
+    devices = Dispatcher([core, Keyboard(), TapePlayer()])
 
     def current_time() -> Time:
         return Time(core.tick_count,

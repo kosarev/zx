@@ -91,7 +91,7 @@ class ZXBasicCompilerProgram(SnapshotFile, format_name='ZXB'):
     def to_machine_snapshot(self) -> MachineSnapshot:
         core = Core()
         core.install_snapshot(Spectrum48CoreSnapshot())
-        keyboard = Keyboard(active=True)
+        keyboard = Keyboard()
         devices = Dispatcher([core, keyboard])
 
         hit_entry_point = False

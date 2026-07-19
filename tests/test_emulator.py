@@ -117,17 +117,18 @@ def test_load_installs_snapshot() -> None:
         assert isinstance(core, zx.Core)
         assert core.pc == 0x1234
 
-        # This snapshot activates nothing, so the keyboard is at
-        # reset: inactive.
-        assert not app.machine.devices['keyboard'].active
+        # This snapshot does not mention the keyboard, so the
+        # keyboard is not part of the machine it describes: disabled.
+        assert app.machine.devices['keyboard'].disabled
 
 
 def test_construction_installs_snapshot() -> None:
     # Construction installs the given snapshot, the stock 48K one by
-    # default -- which is what activates the machine's members.
+    # default -- whose member composition is what keeps the
+    # machine's devices enabled.
     with zx.Emulator(headless=True) as app:
-        assert app.machine.devices['core'].active
-        assert app.machine.devices['keyboard'].active
+        assert not app.machine.devices['core'].disabled
+        assert not app.machine.devices['keyboard'].disabled
 
 
 def test_snapshot_addressing() -> None:

@@ -169,9 +169,12 @@ class Emulator:
                 snapshot = Spectrum48Snapshot()
 
         if environment is None:
+            # The default set's recorder sits disabled until a
+            # feature, such as playback recovery, enables it.
             environment = [TapePlayer(),
                            playback_player or PlaybackPlayer(),
-                           playback_recorder or PlaybackRecorder()]
+                           playback_recorder or
+                           PlaybackRecorder(disabled=True)]
             if not headless:
                 if screen is None:
                     screen = ScreenWindow(Core.FRAME_SIZE)
@@ -283,13 +286,13 @@ class Emulator:
         for id, device in self.machine.devices.items():
             device_snapshot = device_snapshots.get(id)
             if device_snapshot is None:
-                # Every machine device carries at least its activity.
                 snapshot_type = type(device).SNAPSHOT_TYPE
                 assert snapshot_type is not None
 
-                # A device the snapshot does not mention is at its
-                # reset state: inactive.
-                device_snapshot = snapshot_type(active=False)
+                # A device the snapshot does not mention is not part
+                # of the machine the snapshot describes, so it
+                # installs as disabled.
+                device_snapshot = snapshot_type(disabled=True)
 
             self.notify(InstallDeviceSnapshot(device_snapshot), device=id)
 

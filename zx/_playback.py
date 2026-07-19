@@ -217,15 +217,15 @@ class PlaybackPlayer(Device):
 
 
 class PlaybackRecorder(Device):
-    def __init__(self, *, active: bool = False) -> None:
-        super().__init__(active=active)
+    def __init__(self, *, disabled: bool = False) -> None:
+        super().__init__(disabled=disabled)
         self.__segments: list[MachinePlaybackSegment] = []
 
     def make_playback(self) -> MachinePlayback:
         return MachinePlayback(segments=self.__segments)
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
-        if not self.active:
+        if self.disabled:
             return
 
         if isinstance(event, InstallSnapshot):

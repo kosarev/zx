@@ -61,10 +61,10 @@ _DAC = numpy.array([
 
 
 class AYSnapshot(DeviceSnapshot):
-    active: bool | None
+    disabled: bool | None
 
-    def __init__(self, *, active: bool | None = None) -> None:
-        super().__init__(active=active)
+    def __init__(self, *, disabled: bool | None = None) -> None:
+        super().__init__(disabled=disabled)
 
 
 class AY(Device, snapshot_type=AYSnapshot):
@@ -92,8 +92,8 @@ class AY(Device, snapshot_type=AYSnapshot):
     _noise_bits: typing.ClassVar[
         numpy.typing.NDArray[numpy.uint8] | None] = None
 
-    def __init__(self, *, active: bool = False) -> None:
-        super().__init__(active=active)
+    def __init__(self, *, disabled: bool = False) -> None:
+        super().__init__(disabled=disabled)
 
         if AY._noise_bits is None:
             AY._noise_bits = _make_noise_bits()
@@ -105,14 +105,15 @@ class AY(Device, snapshot_type=AYSnapshot):
     @classmethod
     def from_snapshot(cls, snapshot: DeviceSnapshot) -> AY:
         assert isinstance(snapshot, AYSnapshot)
-        return cls(active=snapshot.active is True)
+        return cls(disabled=snapshot.disabled is True)
 
     def to_snapshot(self) -> AYSnapshot | None:
-        # Only the difference from the reset state is captured.
-        if not self.active:
+        # A disabled AY is indistinguishable from an absent one, so
+        # there is nothing to capture.
+        if self.disabled:
             return None
 
-        return AYSnapshot(active=True)
+        return AYSnapshot()
 
     def __reset_state(self) -> None:
         self.__regs = [0] * 16
@@ -338,17 +339,16 @@ class AY(Device, snapshot_type=AYSnapshot):
         self.__pending.clear()
         self.__reset_state()
 
-        # Unmentioned activity means the reset state: inactive.
-        self.active = s.active is True
+        self.disabled = s.disabled is True
 
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
         if isinstance(event, InstallDeviceSnapshot):
             self.__install_snapshot(event.snapshot)
             return
 
-        # An inactive AY is indistinguishable from an absent one: it
+        # A disabled AY is indistinguishable from an absent one: it
         # publishes no sound.
-        if not self.active:
+        if self.disabled:
             return
 
         if isinstance(event, ResetEmulator):

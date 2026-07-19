@@ -41,34 +41,30 @@ def count_published_chunks(beeper: Beeper) -> int:
     return receiver.num_chunks
 
 
-def test_inactive_beeper() -> None:
-    # An inactive beeper is indistinguishable from an absent one: it
+def test_disabled_beeper() -> None:
+    # A disabled beeper is indistinguishable from an absent one: it
     # publishes no sound.
-    assert count_published_chunks(Beeper()) == 0
-    assert count_published_chunks(Beeper(active=True)) == 1
+    assert count_published_chunks(Beeper(disabled=True)) == 0
+    assert count_published_chunks(Beeper()) == 1
 
 
 def test_beeper_snapshot() -> None:
-    # Activity is captured as the difference from the reset state and
-    # applied by snapshot installs.
-    assert Beeper().to_snapshot() is None
+    # A disabled beeper is indistinguishable from an absent one, so
+    # it captures as nothing.
+    assert Beeper(disabled=True).to_snapshot() is None
 
-    beeper = Beeper(active=True)
+    beeper = Beeper()
     snapshot = beeper.to_snapshot()
     assert snapshot is not None
-    assert snapshot.active
+    assert snapshot.disabled is None
 
     devices = Dispatcher([beeper], devices_by_id={'beeper': beeper})
-    devices.notify(InstallDeviceSnapshot(BeeperSnapshot(active=False)),
+    devices.notify(InstallDeviceSnapshot(BeeperSnapshot(disabled=True)),
                    device='beeper')
-    assert not beeper.active
+    assert beeper.disabled
 
-    devices.notify(InstallDeviceSnapshot(BeeperSnapshot(active=True)),
-                   device='beeper')
-    assert beeper.active
-
-    # A device snapshot that does not mention the activity means the
-    # reset state: inactive.
+    # A device snapshot that does not state the flag means the reset
+    # state: not disabled.
     devices.notify(InstallDeviceSnapshot(BeeperSnapshot()),
                    device='beeper')
-    assert not beeper.active
+    assert not beeper.disabled

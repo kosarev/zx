@@ -425,15 +425,15 @@ class Device:
     # no state to describe.
     SNAPSHOT_TYPE: typing.ClassVar[type[DeviceSnapshot] | None] = None
 
-    # Whether the device participates in the machine's operation. An
-    # inactive device is indistinguishable from an absent one to the
+    # Whether the device is excluded from the machine's operation. A
+    # disabled device is indistinguishable from an absent one to the
     # emulated machine, but still receives the events that can
     # reconfigure it, such as InstallDeviceSnapshot. The class-level
     # default covers devices that do not call the initialiser.
-    active: bool = False
+    disabled: bool = False
 
-    def __init__(self, *, active: bool = False) -> None:
-        self.active = active
+    def __init__(self, *, disabled: bool = False) -> None:
+        self.disabled = disabled
 
     def __init_subclass__(
             cls, *,

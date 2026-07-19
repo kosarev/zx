@@ -45,8 +45,8 @@ def test_machine_lift() -> None:
     # A saved default machine recognises as the stock 48K.
     machine = zx._data.MachineSnapshot(
         core=core.to_snapshot(),
-        keyboard=KeyboardSnapshot(active=True),
-        beeper=BeeperSnapshot(active=True))
+        keyboard=KeyboardSnapshot(),
+        beeper=BeeperSnapshot())
     lifted = machine.lift()
     assert isinstance(lifted, Spectrum48Snapshot)
     assert isinstance(lifted.core, Spectrum48CoreSnapshot)

@@ -293,7 +293,7 @@ class MemorySnapshot(DataRecord):
 # The core device's slice of a machine snapshot. Null fields mean
 # the canonical reset values.
 class CoreSnapshot(DeviceSnapshot):
-    active: bool | None
+    disabled: bool | None
     z80: Z80Snapshot | None
     ula: ULASnapshot | None
     memory: MemorySnapshot | None
@@ -316,19 +316,18 @@ class CoreSnapshot(DeviceSnapshot):
 
     def __init__(
             self,
-            active: bool | None = None,
+            disabled: bool | None = None,
             z80: Z80Snapshot | None = None,
             ula: ULASnapshot | None = None,
             memory: MemorySnapshot | None = None):
         super().__init__(
-            active=active,
+            disabled=disabled,
             z80=z80,
             ula=ula,
             memory=memory)
 
-    # Recognise a plain board whose lifted members carry one
-    # model's types. A model activates its core, so an inactive
-    # board stays plain, its members still lifted.
+    # Returns the most specific known version of this core
+    # snapshot.
     def lift(self) -> CoreSnapshot:
         if type(self) is not CoreSnapshot:
             return self
@@ -337,13 +336,14 @@ class CoreSnapshot(DeviceSnapshot):
         memory = self.memory.lift() if self.memory is not None else None
 
         cls = None
-        if self.active is True and ula is not None and memory is not None:
+        if ula is not None and memory is not None:
             cls = self.__by_members.get((type(ula), type(memory)))
         if cls is None:
-            return CoreSnapshot(active=self.active, z80=self.z80,
+            return CoreSnapshot(disabled=self.disabled, z80=self.z80,
                                 ula=ula, memory=memory)
 
-        return cls(z80=self.z80, ula=ula, memory=memory)
+        return cls(disabled=self.disabled, z80=self.z80,
+                   ula=ula, memory=memory)
 
 
 class StateParser:
@@ -781,11 +781,11 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
     __playback: MachinePlayback | None
 
     def __init__(self, *,
-                 active: bool = False,
+                 disabled: bool = False,
                  model: type[SpectrumModel] | None = None,
                  profile: Profile | None = None):
         CoreState.__init__(self, self._get_state_view())
-        Device.__init__(self, active=active)
+        Device.__init__(self, disabled=disabled)
 
         self.model = model if model is not None else Spectrum48
 
@@ -807,7 +807,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         # TODO: Store all fields.
         assert self.model is Spectrum48  # TODO: Support 128K.
         return CoreSnapshot(
-            active=True if self.active else None,
+            disabled=True if self.disabled else None,
             z80=Z80Snapshot(
                 af=self.af, bc=self.bc, de=self.de, hl=self.hl,
                 ix=self.ix, iy=self.iy,
@@ -838,7 +838,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         # stays at reset.
         self._reset()
         self._reset_config()
-        self.active = False
+        self.disabled = False
 
         for field, value in snapshot:
             if field in ('z80', 'ula'):
@@ -995,9 +995,9 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
             self.install_snapshot(snapshot)
             return
 
-        # An inactive core is indistinguishable from an absent one:
+        # A disabled core is indistinguishable from an absent one:
         # it runs no quanta and answers no queries.
-        if not self.active:
+        if self.disabled:
             return
 
         if isinstance(event, GetEmulationPauseState):
