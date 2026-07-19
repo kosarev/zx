@@ -26,6 +26,7 @@ from zx._data import AYWrite
 from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
+from zx._device import NewPortWrites
 from zx._device import NewSoundPulses
 from zx._device import TimeAdvanced
 from zx._emulator import Machine
@@ -143,6 +144,75 @@ def test_write_takes_effect_at_step_boundary() -> None:
     # step boundary.
     write(devices, 8, 15, 3 * TICKS_PER_STEP + 7)
     devices.notify(TimeAdvanced(at(10 * TICKS_PER_STEP)))
+
+    chunk = collector.chunks[0]
+    assert list(chunk.ticks) == [0, 4 * TICKS_PER_STEP]
+    assert chunk.levels[0] == 0.0
+    assert abs(chunk.levels[1] - 1 / 2) < 1e-9
+
+
+def port_writes(devices: Dispatcher, time_tick: int,
+                writes: list[tuple[int, int, int]]) -> None:
+    words = numpy.array([(tick << 32) | (value << 16) | addr
+                         for tick, addr, value in writes],
+                        dtype=numpy.uint64)
+    devices.notify(NewPortWrites(at(time_tick), words))
+
+
+def test_bus_interface() -> None:
+    _, collector, devices = make_ay()
+
+    # Tone A at period 5, full volume, tone-only mixing, driven
+    # through the bus interface: writes to the 0xFFFD pattern latch
+    # the register address, writes to the 0xBFFD pattern write the
+    # addressed register — mirrors included, since the board's gates
+    # only look at A15, A14 and A1. Writes to other devices' ports
+    # are not the AY's business, and a latched value with the high
+    # nibble set deselects the chip.
+    port_writes(devices, 100, [
+        (0, 0xfffd, 0),
+        (0, 0xbffd, 5),
+        (0, 0xc000, 7),
+        (0, 0x8000, 0b00111110),
+        (0, 0xfffd, 8),
+        (0, 0xbffd, 15),
+        (0, 0x00fe, 0x18),
+        (0, 0xfffd, 0x10),
+        (0, 0xbffd, 0xff)])
+
+    devices.notify(TimeAdvanced(at(100 * TICKS_PER_STEP)))
+
+    a, b, c = collector.chunks
+    spacing = numpy.diff(a.ticks[1:])
+    assert (spacing == 5 * TICKS_PER_STEP).all()
+
+    levels = numpy.unique(a.levels)
+    assert len(levels) == 2
+    assert abs(levels[-1] - 1 / 2) < 1e-9
+
+    for chunk in b, c:
+        assert len(chunk.ticks) == 1
+
+
+def test_bus_interface_stamp_rebase() -> None:
+    # The per-write stamps are 32-bit and wrap; the event's closing
+    # time rebases them onto the 64-bit axis.
+    ay = AY8910()
+    collector = _Collector()
+    devices = Dispatcher([ay, collector])
+
+    base = 1 << 32
+    devices.notify(TimeAdvanced(at(base)))
+
+    # The volume write lands mid-step, with its stamp wrapped; its
+    # effect starts at the next step boundary.
+    port_writes(devices, base + 10 * TICKS_PER_STEP, [
+        (base & 0xffffffff, 0xfffd, 7),
+        (base & 0xffffffff, 0xbffd, 0b00111111),
+        ((base + 3 * TICKS_PER_STEP + 7) & 0xffffffff, 0xfffd, 8),
+        ((base + 3 * TICKS_PER_STEP + 7) & 0xffffffff, 0xbffd, 15)])
+
+    devices.notify(TimeAdvanced(at(base + 10 * TICKS_PER_STEP)))
 
     chunk = collector.chunks[0]
     assert list(chunk.ticks) == [0, 4 * TICKS_PER_STEP]

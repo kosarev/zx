@@ -19,6 +19,7 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import InstallDeviceSnapshot
+from ._device import NewPortWrites
 from ._device import NewSoundPulses
 from ._device import ResetEmulator
 from ._device import RunQuantum
@@ -68,19 +69,26 @@ class AY8910Snapshot(DeviceSnapshot):
 
 
 class AY8910(Device, snapshot_type=AY8910Snapshot):
-    """The AY-3-8910 sound generator as a pure function of a stamped
-    register-write stream.
+    """The AY-3-8910 sound generator.
 
-    The synthesiser never sees port addresses; it consumes
-    AY8910RegisterWrite events and publishes, on TimeAdvanced, a
-    SoundPulses chunk per channel covering the elapsed span — the
-    chip has three outputs, and combining them is the mixer's
-    business, like any other emitters'. The internal grid is the
-    generator step of 8 chip clocks: a tone flips every period count
-    of it, noise and the envelope move every second count of theirs.
-    The chip clock is half the 128K CPU clock, so a step is 16 CPU
-    ticks and the grid is exact on the stamp timeline. A write takes
-    effect at the following step boundary.
+    The synthesiser is a pure function of a stamped register-write
+    stream: it publishes, on TimeAdvanced, a SoundPulses chunk per
+    channel covering the elapsed span — the chip has three outputs,
+    and combining them is the mixer's business, like any other
+    emitters'. The internal grid is the generator step of 8 chip
+    clocks: a tone flips every period count of it, noise and the
+    envelope move every second count of theirs. The chip clock is
+    half the 128K CPU clock, so a step is 16 CPU ticks and the grid
+    is exact on the stamp timeline. A write takes effect at the
+    following step boundary.
+
+    The stream has two producers. The chip's own bus interface
+    decodes the machine's stamped port writes: the board's gates
+    only look at A15, A14 and A1, so writes to the 0xFFFD pattern
+    latch the register address and writes to the 0xBFFD pattern
+    write the addressed register, mirrors included. Players bypass
+    the bus interface and drive the stream directly with
+    AY8910RegisterWrite events.
     """
 
     # The chip clock, in Hz: half the 128K CPU clock.
@@ -117,6 +125,12 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
 
     def __reset_state(self) -> None:
         self.__regs = [0] * 16
+
+        # The bus interface's register-address latch. It stores the
+        # full written byte: a value with the high nibble set
+        # deselects the chip (the nibble is a chip address for
+        # multi-AY buses).
+        self.__selected_register = 0
 
         # Generators run as down-counters: the steps remaining to the
         # next flip/shift/ramp move, reloaded with the period on
@@ -341,6 +355,36 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
 
         self.disabled = s.disabled is True
 
+    def __add_write(self, write: AY8910RegisterWrite) -> None:
+        assert (not self.__pending or
+                not (write.time < self.__pending[-1].time))
+        self.__pending.append(write)
+
+    # The bus interface's write side: decode the machine's stamped
+    # port writes into register writes on the pending stream.
+    def __on_port_writes(self, event: NewPortWrites) -> None:
+        # Prefilter with the board's two patterns, so writes to
+        # other devices' ports cost no per-write work.
+        masked = event.writes & numpy.uint64(0xc002)
+        ops = event.writes[(masked == numpy.uint64(0xc000)) |
+                           (masked == numpy.uint64(0x8000))]
+
+        for op in ops:
+            addr = int(op) & 0xffff
+            value = (int(op) >> 16) & 0xff
+
+            if addr & 0xc002 == 0xc000:
+                self.__selected_register = value
+            elif self.__selected_register < 16:
+                # The per-write 32-bit stamps wrap; rebase against
+                # the event's closing time.
+                end = event.time.count
+                tick = end - ((end - (int(op) >> 32)) & 0xffffffff)
+                self.__add_write(AY8910RegisterWrite(
+                    self.__selected_register, value,
+                    Time(tick,
+                         ticks_per_second=event.time.ticks_per_second)))
+
     def on_event(self, event: DeviceEvent, dispatcher: Dispatcher) -> None:
         if isinstance(event, InstallDeviceSnapshot):
             self.__install_snapshot(event.snapshot)
@@ -356,9 +400,9 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
             self.__pending.clear()
             self.__reset_state()
         elif isinstance(event, AY8910RegisterWrite):
-            assert (not self.__pending or
-                    not (event.time < self.__pending[-1].time))
-            self.__pending.append(event)
+            self.__add_write(event)
+        elif isinstance(event, NewPortWrites):
+            self.__on_port_writes(event)
         elif isinstance(event, TimeAdvanced):
             self.__publish(event.time, dispatcher)
 
