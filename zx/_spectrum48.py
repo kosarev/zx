@@ -168,13 +168,13 @@ class Spectrum48Snapshot(MachineSnapshot,
                          core=Spectrum48CoreSnapshot,
                          keyboard=KeyboardSnapshot,
                          beeper=BeeperSnapshot):
-    core: CoreSnapshot
+    core: Spectrum48CoreSnapshot
     keyboard: KeyboardSnapshot
     beeper: BeeperSnapshot
 
     # Members not specified take their stock values, so constructing
     # with no arguments gives the stock 48K machine.
-    def __init__(self, *, core: CoreSnapshot | None = None,
+    def __init__(self, *, core: Spectrum48CoreSnapshot | None = None,
                  keyboard: KeyboardSnapshot | None = None,
                  beeper: BeeperSnapshot | None = None) -> None:
         if core is None:
