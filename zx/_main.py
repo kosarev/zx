@@ -19,6 +19,7 @@ import typing
 
 import platformdirs
 
+from ._ay import AYFile
 from ._ay8910 import AY8910
 from ._ay8910 import AYPlayer
 from ._binary import Bytes
@@ -322,6 +323,10 @@ def test_file(filename: str, batch_mode: bool,
             stream = file.to_ay_stream()
             stream2 = type(file).from_ay_music(stream).to_ay_stream()
             match(stream, stream2)
+        elif isinstance(file, AYFile):
+            # No semantic form yet: the literal representation and
+            # its byte-exact reproduction are what is tested.
+            match(image, file.encode())
         elif isinstance(file, RZXFile):
             with Emulator(headless=True) as app:
                 app._run_file(filename)

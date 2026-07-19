@@ -9,6 +9,7 @@
 import pathlib
 import typing
 
+from ._ay import AYFile
 from ._binary import Bytes
 from ._data import ArchiveFile
 from ._data import DataRecord
@@ -50,6 +51,7 @@ def detect_file_format(image: None | Bytes,
     KNOWN_FORMATS = [
         ('.zx', None, ZXFile),
         ('.zxb', None, ZXBasicCompilerProgram),
+        ('.ay', b'ZXAY', AYFile),
         ('.psg', b'PSG\x1a', PSGFile),
         ('.rzx', b'RZX!', RZXFile),
         ('.scr', None, _SCRFile),
