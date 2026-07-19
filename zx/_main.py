@@ -19,8 +19,8 @@ import typing
 
 import platformdirs
 
-from ._ay import AY
-from ._ay import AYPlayer
+from ._ay8910 import AY8910
+from ._ay8910 import AYPlayer
 from ._binary import Bytes
 from ._core import Core
 from ._core import Profile
@@ -114,7 +114,7 @@ def _play_ay_stream(stream: AYStream) -> None:
     # A player has no latency concern anyway.
     sound = SDLSound(num_buffer_samples=4096, latency_ms=200)
 
-    with Emulator(machine=Machine(ay=AY()),
+    with Emulator(machine=Machine(ay=AY8910()),
                   environment=[player, _HoldWaiter(), sound]) as app:
         # Give the last notes a second to ring out.
         tail = Time(stream.ticks_per_second,

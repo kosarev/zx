@@ -17,9 +17,9 @@ import typing
 import numpy
 
 import zx
-from zx._ay import AY
-from zx._ay import AYPlayer
-from zx._ay import AYRegisterWrite
+from zx._ay8910 import AY8910
+from zx._ay8910 import AY8910RegisterWrite
+from zx._ay8910 import AYPlayer
 from zx._data import AYFrame
 from zx._data import AYStream
 from zx._data import AYWrite
@@ -53,8 +53,8 @@ def at(tick: int) -> Time:
     return Time(tick, ticks_per_second=RATE)
 
 
-def make_ay() -> tuple[AY, _Collector, Dispatcher]:
-    ay = AY()
+def make_ay() -> tuple[AY8910, _Collector, Dispatcher]:
+    ay = AY8910()
     collector = _Collector()
     devices = Dispatcher([ay, collector])
 
@@ -64,7 +64,7 @@ def make_ay() -> tuple[AY, _Collector, Dispatcher]:
 
 
 def write(devices: Dispatcher, reg: int, value: int, tick: int) -> None:
-    devices.notify(AYRegisterWrite(reg, value, at(tick)))
+    devices.notify(AY8910RegisterWrite(reg, value, at(tick)))
 
 
 def test_tone_period() -> None:
@@ -175,7 +175,7 @@ def test_stream_player() -> None:
     # The player is the session's runner; no core is present.
     player = AYPlayer(stream)
     sound = _CapturingSound()
-    with zx.Emulator(machine=Machine(ay=AY()),
+    with zx.Emulator(machine=Machine(ay=AY8910()),
                      environment=[player, sound]) as app:
         app.run(until=player.get_end_time() +
                 Time(RATE // 10, ticks_per_second=RATE))

@@ -29,12 +29,12 @@ if typing.TYPE_CHECKING:
     from ._data import AYStream
 
 
-# The AY-3-8912 register write as a stamped fact: the chip vocabulary,
+# The AY-3-8910 register write as a stamped fact: the chip vocabulary,
 # with the port decoding left to the machine side. Values are stored
 # as written; consumers mask off the significant bits. Writes are
 # events, not states: rewriting the envelope shape register restarts
 # the envelope even with an unchanged value.
-class AYRegisterWrite(DeviceEvent):
+class AY8910RegisterWrite(DeviceEvent):
     def __init__(self, reg: int, value: int, time: Time):
         self.reg = reg
         self.value = value
@@ -60,19 +60,19 @@ _DAC = numpy.array([
     0.42906, 0.50441, 0.72940, 1.0])
 
 
-class AYSnapshot(DeviceSnapshot):
+class AY8910Snapshot(DeviceSnapshot):
     disabled: bool | None
 
     def __init__(self, *, disabled: bool | None = None) -> None:
         super().__init__(disabled=disabled)
 
 
-class AY(Device, snapshot_type=AYSnapshot):
-    """The AY-3-8912 sound generator as a pure function of a stamped
+class AY8910(Device, snapshot_type=AY8910Snapshot):
+    """The AY-3-8910 sound generator as a pure function of a stamped
     register-write stream.
 
     The synthesiser never sees port addresses; it consumes
-    AYRegisterWrite events and publishes, on TimeAdvanced, a
+    AY8910RegisterWrite events and publishes, on TimeAdvanced, a
     SoundPulses chunk per channel covering the elapsed span — the
     chip has three outputs, and combining them is the mixer's
     business, like any other emitters'. The internal grid is the
@@ -95,25 +95,25 @@ class AY(Device, snapshot_type=AYSnapshot):
     def __init__(self, *, disabled: bool = False) -> None:
         super().__init__(disabled=disabled)
 
-        if AY._noise_bits is None:
-            AY._noise_bits = _make_noise_bits()
+        if AY8910._noise_bits is None:
+            AY8910._noise_bits = _make_noise_bits()
 
         self.__published_up_to: None | Time = None
-        self.__pending: list[AYRegisterWrite] = []
+        self.__pending: list[AY8910RegisterWrite] = []
         self.__reset_state()
 
     @classmethod
-    def from_snapshot(cls, snapshot: DeviceSnapshot) -> AY:
-        assert isinstance(snapshot, AYSnapshot)
+    def from_snapshot(cls, snapshot: DeviceSnapshot) -> AY8910:
+        assert isinstance(snapshot, AY8910Snapshot)
         return cls(disabled=snapshot.disabled is True)
 
-    def to_snapshot(self) -> AYSnapshot | None:
+    def to_snapshot(self) -> AY8910Snapshot | None:
         # A disabled AY is indistinguishable from an absent one, so
         # there is nothing to capture.
         if self.disabled:
             return None
 
-        return AYSnapshot()
+        return AY8910Snapshot()
 
     def __reset_state(self) -> None:
         self.__regs = [0] * 16
@@ -205,7 +205,7 @@ class AY(Device, snapshot_type=AYSnapshot):
         steps = numpy.arange(1, count + 1, dtype=numpy.int64)
         mixer = self.__regs[7]
 
-        noise_bits = AY._noise_bits
+        noise_bits = AY8910._noise_bits
         assert noise_bits is not None
         shifts, total_shifts, self.__noise_steps_to_shift = (
             self.__count_moves(steps, count, self.__noise_steps_to_shift,
@@ -245,7 +245,7 @@ class AY(Device, snapshot_type=AYSnapshot):
 
         return outputs
 
-    def __apply_write(self, write: AYRegisterWrite) -> None:
+    def __apply_write(self, write: AY8910RegisterWrite) -> None:
         reg = write.reg & 0x0f
         self.__regs[reg] = write.value & 0xff
 
@@ -332,7 +332,7 @@ class AY(Device, snapshot_type=AYSnapshot):
             dispatcher.notify(NewSoundPulses(pulses))
 
     def __install_snapshot(self, s: DeviceSnapshot) -> None:
-        assert isinstance(s, AYSnapshot)
+        assert isinstance(s, AY8910Snapshot)
 
         # Whatever the snapshot does not mention is at reset.
         self.__published_up_to = None
@@ -355,7 +355,7 @@ class AY(Device, snapshot_type=AYSnapshot):
             self.__published_up_to = None
             self.__pending.clear()
             self.__reset_state()
-        elif isinstance(event, AYRegisterWrite):
+        elif isinstance(event, AY8910RegisterWrite):
             assert (not self.__pending or
                     not (event.time < self.__pending[-1].time))
             self.__pending.append(event)
@@ -365,7 +365,7 @@ class AY(Device, snapshot_type=AYSnapshot):
 
 class AYPlayer(Device):
     """Plays an AY stream: desk equipment that walks the
-    frames and emits their writes as stamped AYRegisterWrite events.
+    frames and emits their writes as stamped AY8910RegisterWrite events.
 
     With no core present it is also the round loop's runner: it
     advances towards the requested stop time by its own decision and
@@ -410,7 +410,7 @@ class AYPlayer(Device):
         while (self.__num_emitted < len(self.__writes) and
                self.__writes[self.__num_emitted][0] < target):
             tick, reg, value = self.__writes[self.__num_emitted]
-            devices.notify(AYRegisterWrite(
+            devices.notify(AY8910RegisterWrite(
                 reg, value, Time(tick, ticks_per_second=self.__rate)))
             self.__num_emitted += 1
 
