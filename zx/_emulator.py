@@ -239,11 +239,30 @@ class Emulator:
             if fast_forward:
                 self.notify(SetFastForward(False))
 
-    # One round of the run loop: evaluate the hold once and broadcast
-    # RunQuantum -- every device sees it each round, held or not.
-    # When held the round is bookkeeping only; otherwise the round's
-    # time limit rides on the event and devices advance on it, each
-    # budgeting from its own position in time.
+    # Runs one quantum: asks the devices for a time limit, then
+    # dispatches RunQuantum, on which each device advances up to its
+    # own natural boundary at or right after the limit. If there is
+    # a device that holds, the quantum advances nothing.
+    #
+    # Devices advance independently, so each is at its own point in
+    # emulated time: the floor is where the least advanced device is,
+    # the ceiling where the most advanced one is.
+    #
+    # A device keeps the results it has produced for times past the
+    # floor, because devices not yet past those times may still query
+    # them. A result being produced means everything it depends on
+    # is resolved, so it never changes and querying it again gives
+    # the same answer. A queried device may advance to the queried
+    # time in order to answer; only when the answer depends on
+    # something not yet resolved does the query stay unanswered, to
+    # be posed again in a later quantum.
+    #
+    # Facts arriving from outside, such as key strokes, are stamped
+    # at or past the point reached by the device they affect, so they
+    # never contradict produced results; stamping at the ceiling is
+    # safe for any of them. Once the floor passes a point, no device
+    # can query it any more, and results kept for it can be released.
+    #
     # TODO: Handle deferred port reads (RETRY_INPUT) by retrying; add
     # converge-to-T rollback; drive more than one core.
     def __run_quantum(self) -> None:
