@@ -245,10 +245,15 @@ def test_stream_player() -> None:
     # The player is the session's runner; no core is present.
     player = AYPlayer(stream)
     sound = _CapturingSound()
+    # The pad past the stream end covers the two spans that produce
+    # no output -- the synthesiser renders nothing before its first
+    # TimeAdvanced stamp, and the sound device consumes a published
+    # chunk only on the following round -- each up to one quantum
+    # long, plus the 0.1s of output the test expects.
     with zx.Emulator(machine=Machine(ay=AY8910()),
                      environment=[player, sound]) as app:
         app.run(until=player.get_end_time() +
-                Time(RATE // 10, ticks_per_second=RATE))
+                Time(3 * RATE // 10, ticks_per_second=RATE))
 
     samples = numpy.concatenate(sound.samples)
     assert len(samples) >= 44100 // 10

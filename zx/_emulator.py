@@ -273,8 +273,14 @@ class Emulator:
             self.notify(RunQuantum(held=True, wake_in=hold.wake_in))
             return
 
-        # Ask by what time this round should stop.
-        limit = GetQuantumTimeLimit()
+        # Ask by what time this round should stop. The default keeps
+        # the limit always defined; devices may only narrow it. The
+        # default is uncritical, but must comfortably exceed one frame
+        # of any plausible machine, so a full frame is never split
+        # across quanta.
+        DEFAULT_QUANTUM_SPAN = Time(1, ticks_per_second=20)
+        limit = GetQuantumTimeLimit(self.__advanced_floor,
+                                    DEFAULT_QUANTUM_SPAN)
         self.notify(limit)
 
         run = RunQuantum(wake_in=hold.wake_in,

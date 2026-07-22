@@ -236,18 +236,24 @@ class GetHoldState(DeviceEvent):
 # emulated-time twin of GetHoldState: that one bounds how long the
 # loop may sleep in wallclock time; this one bounds how far the
 # machine runs before the next quantum. The earliest requested time
-# wins; with no requests the quantum runs to the frame end as usual.
+# wins; the Emulator requests its default span, so the limit is
+# always defined and devices can only narrow it.
 # The requested time is not a hard ceiling: a device stops at its
 # first natural boundary at or after it — for the core, the next
 # instruction boundary.
 class GetQuantumTimeLimit(DeviceEvent):
-    def __init__(self) -> None:
-        self.stop_after_time: None | Time = None
+    # The event is born with the default limit, floor + default_span,
+    # so the limit is defined at all times.
+    def __init__(self, floor: Time, default_span: Time) -> None:
+        self.floor = floor
+        self.stop_after_time = floor + default_span
 
     # Requests that the quantum stop right after the given time; the
-    # earliest request wins.
+    # earliest request wins. The floor is the first moment that has
+    # not happened yet, so requests before it are meaningless.
     def stop_after(self, time: Time) -> None:
-        if self.stop_after_time is None or time < self.stop_after_time:
+        assert self.floor <= time
+        if time < self.stop_after_time:
             self.stop_after_time = time
 
 
