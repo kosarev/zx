@@ -397,6 +397,7 @@ class Z80State:
         self.__iregp_kind = p.parse8()
 
     # TODO: Use a mix-in from the z80 module to implement these?
+    # TODO: Add accessors for all the 8-bit registers.
     @property
     def bc(self) -> int:
         return int.from_bytes(self.__bc, 'little')
@@ -792,6 +793,15 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         self.frame_count = 0
 
         self.set_on_input_callback(self.__on_input)
+
+        # With no port-read samples supplied at all, every read
+        # would resolve to the open-bus 0xff, as if no device drove
+        # any port. This series matches every address and covers no
+        # time, so every read stays on the ReadPort path.
+        # TODO: Supply real samples per quantum and drop this.
+        self._add_port_read_samples(
+            0, 1, 0, 0x0000, 0x0000, 0,
+            numpy.zeros(0, dtype=numpy.uint64))
 
         self.__port_reads = bytearray()
 

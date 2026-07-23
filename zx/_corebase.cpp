@@ -23,6 +23,8 @@ using zx::least_u16;
 using zx::unreachable;
 
 typedef uint_least32_t least_u32;
+typedef uint_least64_t least_u64;
+typedef uint_fast64_t fast_u64;
 
 class decref_guard {
 public:
@@ -125,12 +127,59 @@ struct __attribute__((packed)) machine_state {
 #pragma pack(pop)
 #endif
 
+// A series of port-read samples supplied for the current quantum:
+// the value a device drives on the input lines of the port
+// addresses matching the series' address pattern, as a function of
+// time. Like SoundPulses, each entry states the value driven since
+// the entry's tick; the series covers num_ticks ticks from tick 0
+// and must state its value from tick 0 on, explicitly spanning its
+// whole range -- no values carry over between quanta. 1s in a
+// value are the bits the device does not drive.
+//
+// Ticks count in the device's own resolution, device_resolution
+// ticks a second. Tick 0 is the last device-resolution tick at or
+// before the floor the quantum starts at; reads never precede the
+// floor, so every read falls at or after tick 0. Each sample is
+// one 64-bit word in the entries buffer: the value in the low 8
+// bits and the tick in the rest.
+//
+// Reads happen at core ticks, so their moments and the entries'
+// compare in the common resolution of
+// core_resolution * device_resolution ticks a second, with
+// core_resolution being the core's ticks per second.
+// core_resolution_tick is the floor's core tick, and
+// device_resolution_tick_remainder is how far the floor lies past
+// tick 0, in the common resolution. The compared differences are
+// bounded by the quantum span, and both resolutions must be
+// physical ones, each under 2^32 ticks a second -- never rates
+// produced by mixing different-resolution Time values -- so the
+// products fit unsigned 64-bit integers; arbitrary-precision
+// arithmetic stays on the Python side.
+struct port_read_series {
+    least_u64 core_resolution_tick;
+    least_u64 device_resolution;
+    least_u64 device_resolution_tick_remainder;
+    least_u16 addr_mask;
+    least_u16 addr_value;
+    least_u64 num_ticks;
+    Py_buffer entries;
+
+    // The entry whose value is currently driven. Within a run,
+    // reads never go back in time, so this only advances as the
+    // reads progress through the quantum.
+    unsigned current_entry;
+};
+
 class machine_emulator : public zx::spectrum<machine_emulator> {
 public:
     typedef zx::spectrum<machine_emulator> base;
 
     machine_emulator() {
         retrieve_state();
+    }
+
+    ~machine_emulator() {
+        clear_port_read_samples();
     }
 
     machine_state &get_machine_state() {
@@ -226,6 +275,40 @@ public:
         return old_callback;
     }
 
+    // The samples live for one quantum: the caller replaces them
+    // wholesale each quantum -- clear, then add each series whole.
+    void clear_port_read_samples() {
+        for(unsigned i = 0; i != num_port_read_series; ++i)
+            PyBuffer_Release(&port_read_series_list[i].entries);
+        num_port_read_series = 0;
+    }
+
+    // Takes ownership of the entries buffer. Returns false when
+    // there is no room for another series.
+    bool add_port_read_samples(fast_u64 core_resolution_tick,
+                               fast_u64 device_resolution,
+                               fast_u64 device_resolution_tick_remainder,
+                               fast_u16 addr_mask,
+                               fast_u16 addr_value,
+                               fast_u64 num_ticks,
+                               const Py_buffer &entries) {
+        if(num_port_read_series == max_num_port_read_series)
+            return false;
+
+        port_read_series &series =
+            port_read_series_list[num_port_read_series++];
+        series.core_resolution_tick = core_resolution_tick;
+        series.device_resolution = device_resolution;
+        series.device_resolution_tick_remainder =
+            device_resolution_tick_remainder;
+        series.addr_mask = static_cast<least_u16>(addr_mask);
+        series.addr_value = static_cast<least_u16>(addr_value);
+        series.num_ticks = num_ticks;
+        series.entries = entries;
+        series.current_entry = 0;
+        return true;
+    }
+
 protected:
     Core::processor_state get_processor_state() {
         Core::processor_state state;
@@ -300,7 +383,71 @@ public:
         return state.memory;
     }
 
+private:
+    // Answers a read of the given port from the samples supplied
+    // for this quantum. The samples either cover the read's moment
+    // or they do not. Covered means every series whose pattern
+    // matches the address has a sample for the moment; the value
+    // is then the AND of those samples -- input lines pulled high
+    // unless a sample drives them low, so 0xff where no series
+    // drives them, no series matching at all included. Not covered
+    // -- a matching series with no sample for the moment, an empty
+    // one included -- means the read cannot be resolved from the
+    // samples, and this returns false.
+    bool sample_port_read(fast_u16 addr, fast_u8 &value) {
+        value = 0xff;
+        for(unsigned i = 0; i != num_port_read_series; ++i) {
+            port_read_series &series = port_read_series_list[i];
+            if((addr & series.addr_mask) != series.addr_value)
+                continue;
+
+            // The read's moment in the common resolution, measured
+            // from tick 0 like the remainder and the entry ticks.
+            fast_u64 delta = tick_count - series.core_resolution_tick;
+            fast_u64 read_time =
+                series.device_resolution_tick_remainder +
+                    delta * series.device_resolution;
+            fast_u64 core_resolution = state.config.ticks_per_second;
+
+            // An empty series has num_ticks 0 and so covers no
+            // moment at all.
+            if(read_time >= series.num_ticks * core_resolution)
+                return false;
+
+            // The value driven at the read is the last entry's
+            // whose tick is at or before it. Reads never go back
+            // in time within a run, so resume from the entry
+            // currently in effect.
+            const auto *entries = static_cast<const least_u64*>(
+                series.entries.buf);
+            auto num_entries = static_cast<unsigned>(
+                series.entries.len /
+                    static_cast<Py_ssize_t>(sizeof(least_u64)));
+            while(series.current_entry + 1 != num_entries) {
+                fast_u64 next_entry_time =
+                    (entries[series.current_entry + 1] >> 8) *
+                        core_resolution;
+                if(next_entry_time > read_time)
+                    break;
+
+                ++series.current_entry;
+            }
+
+            value &= static_cast<fast_u8>(
+                entries[series.current_entry] & 0xff);
+        }
+        return true;
+    }
+
+public:
     fast_u8 on_input(fast_u16 addr) {
+        // Answer from the samples supplied for this quantum, if any
+        // cover this read; with no covering sample the read falls
+        // through to the callback below.
+        fast_u8 sampled;
+        if(sample_port_read(addr, sampled))
+            return sampled;
+
         const fast_u8 default_value = 0xbf;
         if(!on_input_callback)
             return default_value;
@@ -361,6 +508,10 @@ private:
     PyObject *on_input_callback = nullptr;
     PyObject *on_output_callback = nullptr;
 
+    static const unsigned max_num_port_read_series = 64;
+    unsigned num_port_read_series = 0;
+    port_read_series port_read_series_list[max_num_port_read_series];
+
     // The dispatcher of the current run, set only while run() is on the
     // stack, passed to the Python callbacks invoked from the core.
     PyObject *run_dispatcher = nullptr;
@@ -409,6 +560,75 @@ static PyObject *drain_port_writes(PyObject *self, PyObject *args) {
         sizeof(*writes) * emulator.get_num_port_writes());
     emulator.clear_port_writes();
     return result;
+}
+
+static PyObject *clear_port_read_samples(PyObject *self, PyObject *args) {
+    cast_emulator(self).clear_port_read_samples();
+    Py_RETURN_NONE;
+}
+
+static PyObject *add_port_read_samples(PyObject *self, PyObject *args) {
+    unsigned long long core_resolution_tick;
+    unsigned long long device_resolution;
+    unsigned long long device_resolution_tick_remainder;
+    unsigned addr_mask, addr_value;
+    unsigned long long num_ticks;
+    Py_buffer entries;
+    if(!PyArg_ParseTuple(args, "KKKIIKy*", &core_resolution_tick,
+                         &device_resolution,
+                         &device_resolution_tick_remainder,
+                         &addr_mask, &addr_value, &num_ticks, &entries))
+        return nullptr;
+
+    if(device_resolution == 0 || device_resolution >> 32 != 0) {
+        PyBuffer_Release(&entries);
+        PyErr_SetString(PyExc_ValueError,
+                        "the resolution must be positive and fit "
+                        "32 bits");
+        return nullptr;
+    }
+
+    if(addr_mask > 0xffff || addr_value > 0xffff) {
+        PyBuffer_Release(&entries);
+        PyErr_SetString(PyExc_ValueError,
+                        "the address pattern must be 16-bit");
+        return nullptr;
+    }
+
+    if(entries.len % static_cast<Py_ssize_t>(sizeof(least_u64)) != 0) {
+        PyBuffer_Release(&entries);
+        PyErr_SetString(PyExc_ValueError,
+                        "entries must be 64-bit words");
+        return nullptr;
+    }
+
+    if(entries.len != 0 &&
+            static_cast<const least_u64*>(entries.buf)[0] >> 8 != 0) {
+        PyBuffer_Release(&entries);
+        PyErr_SetString(PyExc_ValueError,
+                        "the first entry must be at tick 0");
+        return nullptr;
+    }
+
+    // An empty series must not claim to cover any ticks: it has no
+    // values to state for them.
+    if(entries.len == 0 && num_ticks != 0) {
+        PyBuffer_Release(&entries);
+        PyErr_SetString(PyExc_ValueError,
+                        "an empty series must have zero num_ticks");
+        return nullptr;
+    }
+
+    if(!cast_emulator(self).add_port_read_samples(
+            core_resolution_tick, device_resolution,
+            device_resolution_tick_remainder,
+            addr_mask, addr_value, num_ticks, entries)) {
+        PyBuffer_Release(&entries);
+        PyErr_SetString(PyExc_ValueError, "too many port-read series");
+        return nullptr;
+    }
+
+    Py_RETURN_NONE;
 }
 
 static PyObject *mark_addrs(PyObject *self, PyObject *args) {
@@ -515,6 +735,11 @@ PyMethodDef methods[] = {
     {"drain_port_writes", drain_port_writes, METH_NOARGS,
      "Return the accumulated port writes as a bytes object and clear "
      "the buffer."},
+    {"_clear_port_read_samples", clear_port_read_samples, METH_NOARGS,
+     "Discard all supplied port-read sample series."},
+    {"_add_port_read_samples", add_port_read_samples, METH_VARARGS,
+     "Add a series of port-read samples supplied for the current "
+     "quantum."},
     {"mark_addrs", mark_addrs, METH_VARARGS,
      "Mark a range of memory bytes as ones that require custom "
      "processing on reading, writing or executing them."},

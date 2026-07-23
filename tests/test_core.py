@@ -10,6 +10,8 @@
 #
 #   Published under the MIT license.
 
+import numpy
+import numpy.typing
 import pytest
 
 import zx
@@ -352,3 +354,263 @@ def test_core_lift() -> None:
     disabled = core.to_snapshot().lift()
     assert isinstance(disabled, Spectrum48CoreSnapshot)
     assert disabled.disabled is True
+
+
+# The core's resolution: the CPU clock of the default 48K core.
+CORE_RESOLUTION = 3_500_000
+
+
+# Packs (tick, value) samples into series entry words.
+def _sample_entries(
+        *samples: tuple[int, int]) -> numpy.typing.NDArray[numpy.uint64]:
+    return numpy.array([(tick << 8) | value for tick, value in samples],
+                       dtype=numpy.uint64)
+
+
+# A device answering ReadPort with the given value, recording the
+# addresses read.
+class _PortReadResponder(Device):
+    def __init__(self, value: int = 0x99) -> None:
+        self.reads: list[int] = []
+        self.__value = value
+
+    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
+        if isinstance(event, ReadPort):
+            self.reads.append(event.addr)
+            assert event.value is not None
+            event.value &= self.__value
+
+
+# A bare core about to execute IN A, (0xfe) with A = 0x12, so the
+# port address is 0x12fe and the input cycle's read falls at tick
+# 10. The JR loop then spins to the end of the frame, keeping the
+# power-up memory pattern from executing as code.
+def _make_core_reading_port() -> zx.Core:
+    core = zx.Core()
+    core.write(Spectrum48MemoryMapping(), 0x8000,
+               b'\xdb\xfe'   # IN A, (0xfe)
+               b'\x18\xfe')  # JR $
+    core.pc = 0x8000
+    core.a = 0x12
+    return core
+
+
+def test_port_read_samples_answer_covered_read() -> None:
+    core = _make_core_reading_port()
+    responder = _PortReadResponder()
+    devices = Dispatcher([core, responder])
+
+    core._clear_port_read_samples()
+    core._add_port_read_samples(
+        0, CORE_RESOLUTION, 0, 0xffff, 0x12fe, 1000,
+        _sample_entries((0, 0x55)))
+
+    core._run(devices)
+    assert core.a == 0x55
+    assert responder.reads == []
+
+
+def test_port_read_samples_and_together() -> None:
+    # Two series drive the same read; undriven bits stay 1s, so the
+    # samples AND together like open-collector outputs.
+    core = _make_core_reading_port()
+    devices = Dispatcher([core, _PortReadResponder()])
+
+    core._clear_port_read_samples()
+    core._add_port_read_samples(
+        0, CORE_RESOLUTION, 0, 0xffff, 0x12fe, 1000,
+        _sample_entries((0, 0xfa)))
+    core._add_port_read_samples(
+        0, CORE_RESOLUTION, 0, 0xffff, 0x12fe, 1000,
+        _sample_entries((0, 0xaf)))
+
+    core._run(devices)
+    assert core.a == 0xaa
+
+
+def test_port_read_samples_cover_num_ticks() -> None:
+    # A series covers num_ticks ticks from tick 0, the end excluded.
+    # The IN's read falls at tick 10, so a 10-tick span misses it
+    # and the read goes to ReadPort.
+    core = _make_core_reading_port()
+    responder = _PortReadResponder()
+    devices = Dispatcher([core, responder])
+
+    core._clear_port_read_samples()
+    core._add_port_read_samples(
+        0, CORE_RESOLUTION, 0, 0xffff, 0x12fe, 10,
+        _sample_entries((0, 0x55)))
+
+    core._run(devices)
+    assert core.a == 0x99
+    assert responder.reads == [0x12fe]
+
+    # An 11-tick span covers it.
+    core = _make_core_reading_port()
+    responder = _PortReadResponder()
+    devices = Dispatcher([core, responder])
+
+    core._clear_port_read_samples()
+    core._add_port_read_samples(
+        0, CORE_RESOLUTION, 0, 0xffff, 0x12fe, 11,
+        _sample_entries((0, 0x55)))
+
+    core._run(devices)
+    assert core.a == 0x55
+    assert responder.reads == []
+
+
+def test_port_read_with_no_matching_series_is_open_bus() -> None:
+    # With samples supplied and no series matching the address, no
+    # device drives the read: the input lines all read high.
+    core = _make_core_reading_port()
+    responder = _PortReadResponder()
+    devices = Dispatcher([core, responder])
+
+    core._clear_port_read_samples()
+    core._add_port_read_samples(
+        0, CORE_RESOLUTION, 0, 0xffff, 0x30fe, 1000,
+        _sample_entries((0, 0x55)))
+
+    core._run(devices)
+    assert core.a == 0xff
+    assert responder.reads == []
+
+
+def test_empty_series_forces_read_port() -> None:
+    # An empty series states its device can foretell nothing, so
+    # reads of its addresses cannot be resolved from the samples,
+    # whatever other series cover. The construction-time series
+    # of a bare core is exactly this, for all addresses.
+    core = _make_core_reading_port()
+    responder = _PortReadResponder()
+    devices = Dispatcher([core, responder])
+
+    core._run(devices)
+    assert core.a == 0x99
+    assert responder.reads == [0x12fe]
+
+    # The same, stated explicitly beside a covering series.
+    core = _make_core_reading_port()
+    responder = _PortReadResponder()
+    devices = Dispatcher([core, responder])
+
+    core._clear_port_read_samples()
+    core._add_port_read_samples(
+        0, CORE_RESOLUTION, 0, 0xffff, 0x12fe, 1000,
+        _sample_entries((0, 0x55)))
+    core._add_port_read_samples(
+        0, 1, 0, 0x0000, 0x0000, 0,
+        numpy.zeros(0, dtype=numpy.uint64))
+
+    core._run(devices)
+    assert core.a == 0x99
+    assert responder.reads == [0x12fe]
+
+
+def test_port_read_samples_in_device_resolution() -> None:
+    # A series at twice the core resolution: the read at core tick
+    # 10 is at device tick 20 exactly, so a sample since device
+    # tick 20 drives it and a 21-device-tick span covers it.
+    core = _make_core_reading_port()
+    devices = Dispatcher([core, _PortReadResponder()])
+
+    core._clear_port_read_samples()
+    core._add_port_read_samples(
+        0, 2 * CORE_RESOLUTION, 0, 0xffff, 0x12fe, 21,
+        _sample_entries((0, 0x55), (20, 0x66)))
+
+    core._run(devices)
+    assert core.a == 0x66
+
+    # A sample since device tick 21 starts right after the read.
+    core = _make_core_reading_port()
+    responder = _PortReadResponder()
+    devices = Dispatcher([core, responder])
+
+    core._clear_port_read_samples()
+    core._add_port_read_samples(
+        0, 2 * CORE_RESOLUTION, 0, 0xffff, 0x12fe, 1000,
+        _sample_entries((0, 0x55), (21, 0x66)))
+
+    core._run(devices)
+    assert core.a == 0x55
+
+    # A 20-device-tick span ends exactly at the read.
+    core = _make_core_reading_port()
+    responder = _PortReadResponder()
+    devices = Dispatcher([core, responder])
+
+    core._clear_port_read_samples()
+    core._add_port_read_samples(
+        0, 2 * CORE_RESOLUTION, 0, 0xffff, 0x12fe, 20,
+        _sample_entries((0, 0x55)))
+
+    core._run(devices)
+    assert core.a == 0x99
+    assert responder.reads == [0x12fe]
+
+
+def test_port_read_samples_progress_with_reads() -> None:
+    # Two reads pick their values from the sample series as time
+    # progresses: IN A, (0xfe); LD C, A; IN A, (0xfe) reads at
+    # ticks 10 and 25, with the sampled value changing at tick 20.
+    core = zx.Core()
+    core.write(Spectrum48MemoryMapping(), 0x8000,
+               b'\xdb\xfe'   # IN A, (0xfe)
+               b'\x4f'       # LD C, A
+               b'\xdb\xfe'   # IN A, (0xfe)
+               b'\x18\xfe')  # JR $
+    core.pc = 0x8000
+    core.a = 0x12
+    devices = Dispatcher([core, _PortReadResponder()])
+
+    core._clear_port_read_samples()
+    core._add_port_read_samples(
+        0, CORE_RESOLUTION, 0, 0x00ff, 0x00fe, 1000,
+        _sample_entries((0, 0x55), (20, 0x66)))
+
+    core._run(devices)
+    # TODO: Use the c accessor once CoreState grows the 8-bit
+    # register accessors.
+    assert core.bc & 0xff == 0x55
+    assert core.a == 0x66
+
+
+def test_port_read_samples_replaced_wholesale() -> None:
+    # Clearing discards previously added series entirely.
+    core = _make_core_reading_port()
+    devices = Dispatcher([core, _PortReadResponder()])
+
+    core._clear_port_read_samples()
+    core._add_port_read_samples(
+        0, CORE_RESOLUTION, 0, 0xffff, 0x12fe, 1000,
+        _sample_entries((0, 0x55)))
+    core._clear_port_read_samples()
+    core._add_port_read_samples(
+        0, CORE_RESOLUTION, 0, 0xffff, 0x12fe, 1000,
+        _sample_entries((0, 0x66)))
+
+    core._run(devices)
+    assert core.a == 0x66
+
+
+def test_port_read_samples_validation() -> None:
+    core = zx.Core()
+    no_entries = numpy.zeros(0, dtype=numpy.uint64)
+
+    # The resolution must be positive and fit 32 bits.
+    with pytest.raises(ValueError):
+        core._add_port_read_samples(0, 0, 0, 0, 0, 0, no_entries)
+    with pytest.raises(ValueError):
+        core._add_port_read_samples(0, 1 << 32, 0, 0, 0, 0, no_entries)
+
+    # The first entry must be at tick 0.
+    with pytest.raises(ValueError):
+        core._add_port_read_samples(
+            0, CORE_RESOLUTION, 0, 0, 0, 10, _sample_entries((1, 0x55)))
+
+    # An empty series covers no ticks.
+    with pytest.raises(ValueError):
+        core._add_port_read_samples(0, CORE_RESOLUTION, 0, 0, 0, 10,
+                                    no_entries)

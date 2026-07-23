@@ -1,6 +1,9 @@
 
 import typing
 
+import numpy
+import numpy.typing
+
 from ._device import Dispatcher
 
 class _CoreBase:
@@ -14,6 +17,16 @@ class _CoreBase:
         ...
 
     def drain_port_writes(self) -> bytes:
+        ...
+
+    def _clear_port_read_samples(self) -> None:
+        ...
+
+    def _add_port_read_samples(
+            self, core_resolution_tick: int, device_resolution: int,
+            device_resolution_tick_remainder: int,
+            addr_mask: int, addr_value: int, num_ticks: int,
+            entries: numpy.typing.NDArray[numpy.uint64]) -> None:
         ...
 
     def mark_addrs(self, addr: int, size: int, marks: int) -> None:
