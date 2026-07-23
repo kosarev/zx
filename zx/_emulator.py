@@ -59,15 +59,19 @@ not a device, and it never nests.
 import pathlib
 import types
 
+import numpy
+
 from ._beeper import Beeper
 from ._core import Core
 from ._core import Profile
 from ._data import DataRecord
 from ._data import MachineSnapshot
 from ._data import PlaybackFile
+from ._data import PortReadSeries
 from ._data import SnapshotFile
 from ._data import SoundFile
 from ._data import SpectrumModel
+from ._device import CollectPortReads
 from ._device import DestroyEmulator
 from ._device import Device
 from ._device import DeviceEvent
@@ -81,6 +85,7 @@ from ._device import InstallSnapshot
 from ._device import IsTapePlayerPaused
 from ._device import LoadFile
 from ._device import LoadTape
+from ._device import NewPortReads
 from ._device import PauseUnpauseTape
 from ._device import ResetEmulator
 from ._device import RunQuantum
@@ -273,15 +278,32 @@ class Emulator:
             self.notify(RunQuantum(held=True, wake_in=hold.wake_in))
             return
 
-        # Ask by what time this round should stop. The default keeps
-        # the limit always defined; devices may only narrow it. The
-        # default is uncritical, but must comfortably exceed one frame
-        # of any plausible machine, so a full frame is never split
-        # across quanta.
+        # Ask by what time this quantum should stop. The default
+        # keeps the limit always defined; devices may only narrow it.
+        # The default is uncritical, but must comfortably exceed one
+        # frame of any plausible machine, so a full frame is never
+        # split across quanta.
         DEFAULT_QUANTUM_SPAN = Time(1, ticks_per_second=20)
         limit = GetQuantumTimeLimit(self.__advanced_floor,
                                     DEFAULT_QUANTUM_SPAN)
         self.notify(limit)
+
+        # Collect the port-read samples for the span up to the limit
+        # and publish them whole; the publication is the delivery.
+        collect = CollectPortReads(self.__advanced_floor,
+                                   limit.stop_after_time)
+        self.notify(collect)
+
+        # Devices still answering via ReadPort are not represented
+        # in the collection, so a series matching every address and
+        # covering no time keeps every read on the ReadPort path.
+        # TODO: Drop once every device supplies samples.
+        collect.supply(PortReadSeries(
+            addr_mask=0x0000, addr_value=0x0000, ticks_per_second=1,
+            ticks=numpy.zeros(0, dtype=numpy.uint64),
+            values=numpy.zeros(0, dtype=numpy.uint64)))
+
+        self.notify(NewPortReads(self.__advanced_floor, collect.series))
 
         run = RunQuantum(wake_in=hold.wake_in,
                          stop_after=limit.stop_after_time)

@@ -208,6 +208,32 @@ class SoundPulses:
         self.num_ticks = num_ticks
 
 
+class PortReadSeries:
+    # A series of port-read samples supplied for one quantum: the
+    # value a device drives on the input lines of the port addresses
+    # matching the address pattern, as a function of time. Each
+    # sample states the value driven since its tick, with 1s in the
+    # bits the device does not drive; the coverage ends at end_tick,
+    # exclusive. Ticks count on the device's own timeline, in its
+    # own resolution of ticks_per_second ticks a second.
+    #
+    # The first sample must lie at or before the floor the samples
+    # are collected for, so the value at the floor is always stated.
+    # A device that can foretell nothing supplies no samples: the
+    # empty series still declares that the device drives the
+    # addresses, so reads of them cannot be resolved from samples.
+    def __init__(self, *, addr_mask: int, addr_value: int,
+                 ticks_per_second: int,
+                 ticks: numpy.typing.NDArray[numpy.uint64],
+                 values: numpy.typing.NDArray[numpy.uint64],
+                 end_tick: int = 0) -> None:
+        assert len(ticks) == len(values)
+        self.addr_mask, self.addr_value = addr_mask, addr_value
+        self.ticks_per_second = ticks_per_second
+        self.ticks, self.values = ticks, values
+        self.end_tick = end_tick
+
+
 # A single AY register write. The tick is the write's position
 # within its frame; a null tick means the frame start, which is all
 # frame-granular sources know.

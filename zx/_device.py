@@ -18,6 +18,7 @@ if typing.TYPE_CHECKING:
     from ._data import DeviceSnapshot
     from ._data import MachinePlayback
     from ._data import MachineSnapshot
+    from ._data import PortReadSeries
     from ._data import SoundFile
     from ._data import SoundPulses
     from ._time import Time
@@ -201,6 +202,33 @@ class NewPortWrites(EmulationEvent):
                  writes: numpy.typing.NDArray[numpy.uint64]) -> None:
         super().__init__(time)
         self.writes = writes
+
+
+# A quantum step: asks devices to supply port-read samples for the
+# span from the floor up to the limit, assuming the quantum reaches
+# the limit but without relying on it. A device that drives port
+# input lines always handles this event, supplying an empty series
+# when it can foretell nothing; the samples live for this quantum
+# only and are collected anew each quantum.
+class CollectPortReads(DeviceEvent):
+    def __init__(self, floor: Time, limit: Time) -> None:
+        self.floor = floor
+        self.limit = limit
+        self.series: list[PortReadSeries] = []
+
+    def supply(self, series: PortReadSeries) -> None:
+        self.series.append(series)
+
+
+# The port-read samples collected for the quantum starting at the
+# stamped floor, published whole. The publication is the delivery:
+# every device doing port I/O consumes it, the core first -- its
+# C++-side samples are its copy of this stream.
+class NewPortReads(EmulationEvent):
+    def __init__(self, time: Time,
+                 series: list[PortReadSeries]) -> None:
+        super().__init__(time)
+        self.series = series
 
 
 # Asks whether emulation must not advance this quantum, and for how

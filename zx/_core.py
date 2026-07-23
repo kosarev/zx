@@ -38,6 +38,7 @@ from ._device import GetEmulationPauseState
 from ._device import GetFramePixels
 from ._device import GetHoldState
 from ._device import InstallDeviceSnapshot
+from ._device import NewPortReads
 from ._device import NewPortWrites
 from ._device import OutputFrame
 from ._device import PauseStateUpdated
@@ -797,11 +798,11 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         # With no port-read samples supplied at all, every read
         # would resolve to the open-bus 0xff, as if no device drove
         # any port. This series matches every address and covers no
-        # time, so every read stays on the ReadPort path.
-        # TODO: Supply real samples per quantum and drop this.
-        self._add_port_read_samples(
-            0, 1, 0, 0x0000, 0x0000, 0,
-            numpy.zeros(0, dtype=numpy.uint64))
+        # time, so every read stays on the ReadPort path. The
+        # NewPortReads handler re-adds the same series per quantum;
+        # this one covers bare rigs that drive _run() directly.
+        # TODO: Drop both once every device supplies samples.
+        self.__add_catch_all_port_read_series()
 
         self.__port_reads = bytearray()
 
@@ -874,6 +875,58 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         if v is not None:
             self.__port_reads.append(v)
         return v
+
+    # A series that matches every address and covers no time, so no
+    # read resolves from samples and all of them go to ReadPort.
+    def __add_catch_all_port_read_series(self) -> None:
+        self._add_port_read_samples(
+            0, 1, 0, 0x0000, 0x0000, 0,
+            numpy.zeros(0, dtype=numpy.uint64))
+
+    # Loads the C++-side sample table from the published stream:
+    # this device's copy of it. Each series' ticks, counted on its
+    # device's own timeline, become offsets from tick 0 -- the last
+    # device-resolution tick at or before the floor -- with the
+    # samples before the floor pruned to the one stating the value
+    # in effect at it. The exact arbitrary-precision arithmetic all
+    # happens here; the C++ side only compares quantum-bounded
+    # differences.
+    def __load_port_read_samples(self, event: NewPortReads) -> None:
+        self._clear_port_read_samples()
+
+        core_resolution = self.ticks_per_second
+        floor = event.time
+        floor_core_tick = (floor.count * core_resolution //
+                           floor.ticks_per_second)
+
+        for series in event.series:
+            device_resolution = series.ticks_per_second
+            tick0, remainder = divmod(
+                floor_core_tick * device_resolution, core_resolution)
+
+            if len(series.ticks) == 0:
+                self._add_port_read_samples(
+                    floor_core_tick, device_resolution, remainder,
+                    series.addr_mask, series.addr_value, 0,
+                    numpy.zeros(0, dtype=numpy.uint64))
+                continue
+
+            # The sample in effect at tick 0 is the last one at or
+            # before it; earlier history means nothing this quantum.
+            first = int(numpy.searchsorted(
+                series.ticks, tick0, side='right')) - 1
+            assert first >= 0, 'the value at the floor must be stated'
+
+            ticks = series.ticks[first:].copy()
+            ticks[0] = tick0
+            entries = ((ticks - numpy.uint64(tick0)) << numpy.uint64(8) |
+                       series.values[first:])
+
+            num_ticks = series.end_tick - tick0
+            assert num_ticks > 0, 'the coverage must reach the floor'
+            self._add_port_read_samples(
+                floor_core_tick, device_resolution, remainder,
+                series.addr_mask, series.addr_value, num_ticks, entries)
 
     # TODO: Brush up and re-enable. A content device must not
     # write files or know file formats; this belongs to a
@@ -1021,6 +1074,8 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
             if not event.held:
                 self.__advance(devices, event.stop_after)
                 event.advanced_to(self.__current_time())
+        elif isinstance(event, NewPortReads):
+            self.__load_port_read_samples(event)
         elif isinstance(event, GetFramePixels):
             # The core has already rendered the screen up to the
             # current tick on returning control, so this is current.

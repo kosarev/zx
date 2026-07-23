@@ -22,9 +22,11 @@ from zx._core import MemorySnapshot
 from zx._core import RunEvents
 from zx._core import ULASnapshot
 from zx._core import Z80Snapshot
+from zx._data import PortReadSeries
 from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
+from zx._device import NewPortReads
 from zx._device import ReadPort
 from zx._device import RunQuantum
 from zx._spectrum48 import Spectrum48MemoryMapping
@@ -593,6 +595,68 @@ def test_port_read_samples_replaced_wholesale() -> None:
 
     core._run(devices)
     assert core.a == 0x66
+
+
+def test_new_port_reads_load_the_samples() -> None:
+    # A published series answers the read via the border: the
+    # core loads its C++-side copy on NewPortReads.
+    core = _make_core_reading_port()
+    responder = _PortReadResponder()
+    devices = Dispatcher([core, responder])
+
+    series = PortReadSeries(
+        addr_mask=0xffff, addr_value=0x12fe,
+        ticks_per_second=CORE_RESOLUTION,
+        ticks=numpy.array([0], dtype=numpy.uint64),
+        values=numpy.array([0x55], dtype=numpy.uint64),
+        end_tick=1000)
+    devices.notify(NewPortReads(
+        Time(0, ticks_per_second=CORE_RESOLUTION), [series]))
+
+    core._run(devices)
+    assert core.a == 0x55
+    assert responder.reads == []
+
+
+def test_new_port_reads_replace_the_samples_wholesale() -> None:
+    # A publication replaces the samples entirely: after an empty
+    # one, no series is left -- the construction-time catch-all
+    # included -- so nothing drives any port and reads resolve to
+    # the open-bus 0xff. In the Emulator's loop the collect step
+    # re-supplies the catch-all, keeping reads on ReadPort while
+    # devices still answer there.
+    core = _make_core_reading_port()
+    responder = _PortReadResponder()
+    devices = Dispatcher([core, responder])
+
+    devices.notify(NewPortReads(
+        Time(0, ticks_per_second=CORE_RESOLUTION), []))
+
+    core._run(devices)
+    assert core.a == 0xff
+    assert responder.reads == []
+
+
+def test_new_port_reads_relate_the_resolutions() -> None:
+    # A series on its own timeline at twice the core resolution,
+    # collected for a floor at core tick 5, so tick 0 is device
+    # tick 10: the history before it prunes down to the sample in
+    # effect there, and the change at device tick 30 lies past the
+    # read at core tick 10.
+    core = _make_core_reading_port()
+    devices = Dispatcher([core, _PortReadResponder()])
+
+    series = PortReadSeries(
+        addr_mask=0xffff, addr_value=0x12fe,
+        ticks_per_second=2 * CORE_RESOLUTION,
+        ticks=numpy.array([0, 8, 30], dtype=numpy.uint64),
+        values=numpy.array([0x11, 0x55, 0x66], dtype=numpy.uint64),
+        end_tick=1000)
+    devices.notify(NewPortReads(
+        Time(5, ticks_per_second=CORE_RESOLUTION), [series]))
+
+    core._run(devices)
+    assert core.a == 0x55
 
 
 def test_port_read_samples_validation() -> None:
