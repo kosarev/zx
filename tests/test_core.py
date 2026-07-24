@@ -23,6 +23,7 @@ from zx._core import RunEvents
 from zx._core import ULASnapshot
 from zx._core import Z80Snapshot
 from zx._data import PortReadSeries
+from zx._device import CollectPortReads
 from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
@@ -657,6 +658,91 @@ def test_new_port_reads_relate_the_resolutions() -> None:
 
     core._run(devices)
     assert core.a == 0x55
+
+
+# A prototype of a transport-switched device: it answers ReadPort
+# for its port with None only -- deferring the read -- and supplies
+# the value in effect at the floor on CollectPortReads instead. A
+# None value means the device supplies the declaration alone.
+class _FloorValueSupplier(Device):
+    def __init__(self, value: int | None) -> None:
+        self.__value = value
+
+    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
+        if isinstance(event, ReadPort):
+            if event.addr == 0x12fe:
+                event.value = None
+        elif isinstance(event, CollectPortReads):
+            assert event.floor.ticks_per_second == CORE_RESOLUTION
+            floor_tick = event.floor.count
+
+            if self.__value is None:
+                event.supply(PortReadSeries(
+                    addr_mask=0xffff, addr_value=0x12fe,
+                    ticks_per_second=CORE_RESOLUTION,
+                    ticks=numpy.zeros(0, dtype=numpy.uint64),
+                    values=numpy.zeros(0, dtype=numpy.uint64)))
+                return
+
+            event.supply(PortReadSeries(
+                addr_mask=0xffff, addr_value=0x12fe,
+                ticks_per_second=CORE_RESOLUTION,
+                ticks=numpy.array([floor_tick], dtype=numpy.uint64),
+                values=numpy.array([self.__value], dtype=numpy.uint64),
+                end_tick=floor_tick + 1))
+
+
+# One hand-driven quantum of the loop's dispatches: collect, publish,
+# run. Returns the position the run reports.
+def _run_one_quantum(devices: Dispatcher, floor: Time) -> Time:
+    collect = CollectPortReads(floor, floor)
+    devices.notify(collect)
+    devices.notify(NewPortReads(floor, collect.series))
+
+    run = RunQuantum()
+    devices.notify(run)
+    assert run.advanced_floor is not None
+    return run.advanced_floor
+
+
+def test_deferred_read_resumes_on_the_floor_value() -> None:
+    core = _make_core_reading_port()
+    devices = Dispatcher([core, _FloorValueSupplier(0x55)])
+
+    # The first quantum: the supplier's value at the floor covers
+    # tick 0 only, so the read at tick 10 defers -- the instruction
+    # aborts with the counters rewound, and the reported position
+    # is the read's moment.
+    floor = Time(0, ticks_per_second=CORE_RESOLUTION)
+    position = _run_one_quantum(devices, floor)
+    assert core.pc == 0x8000
+    assert core.a == 0x12
+    assert (position.count, position.ticks_per_second) == (
+        10, CORE_RESOLUTION)
+
+    # The next quantum starts at the read's moment, so the
+    # supplier's value at the floor now covers it: the read
+    # resumes and completes.
+    _run_one_quantum(devices, position)
+    assert core.a == 0x55
+
+
+def test_deferred_read_defers_again_without_coverage() -> None:
+    # A supplier saying nothing keeps deferring the read, with the
+    # same position reported every time.
+    core = _make_core_reading_port()
+    devices = Dispatcher([core, _FloorValueSupplier(None)])
+
+    floor = Time(0, ticks_per_second=CORE_RESOLUTION)
+    position = _run_one_quantum(devices, floor)
+    assert (position.count, position.ticks_per_second) == (
+        10, CORE_RESOLUTION)
+
+    position = _run_one_quantum(devices, position)
+    assert (position.count, position.ticks_per_second) == (
+        10, CORE_RESOLUTION)
+    assert core.pc == 0x8000
+    assert core.a == 0x12
 
 
 def test_port_read_samples_validation() -> None:

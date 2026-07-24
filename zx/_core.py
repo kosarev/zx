@@ -806,6 +806,10 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
 
         self.__port_reads = bytearray()
 
+        # The moment of the read that deferred, ending the current
+        # quantum; None while no read has deferred.
+        self.__deferred_read_time: Time | None = None
+
         self.__playback: MachinePlayback | None = None
 
         self.__profile = profile
@@ -872,7 +876,16 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         read_port = ReadPort(addr, self.__current_time())
         devices.notify(read_port)
         v = read_port.value
-        if v is not None:
+        if v is None:
+            # The read is deferred: the instruction aborts, to be
+            # retried with the counters rewound to its start.
+            # Remember the read's moment -- the quantum's position
+            # is there, not at the rewound counters.
+            # TODO: Once every device supplies samples, defer reads
+            # the samples do not cover on the C++ side and retire
+            # this path together with ReadPort.
+            self.__deferred_read_time = read_port.time
+        else:
             self.__port_reads.append(v)
         return v
 
@@ -1072,8 +1085,19 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
                 event.hold()
         elif isinstance(event, RunQuantum):
             if not event.held:
+                self.__deferred_read_time = None
                 self.__advance(devices, event.stop_after)
-                event.advanced_to(self.__current_time())
+
+                # A quantum ended by a deferred read has its
+                # position at the read's moment: the first moment
+                # whose value the core lacks. The current time
+                # reads the aborted instruction's start instead,
+                # the counters being rewound for the retry; the
+                # ticks before the read are deterministic replay.
+                position = self.__deferred_read_time
+                if position is None:
+                    position = self.__current_time()
+                event.advanced_to(position)
         elif isinstance(event, NewPortReads):
             self.__load_port_read_samples(event)
         elif isinstance(event, GetFramePixels):
