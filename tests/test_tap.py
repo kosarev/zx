@@ -12,6 +12,7 @@ from zx._device import CollectPortReads
 from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
+from zx._device import GetQuantumTimeLimit
 from zx._device import IsTapePlayerStopped
 from zx._device import LoadTape
 from zx._device import PauseUnpauseTape
@@ -182,6 +183,40 @@ def test_paused_tape_holds_its_level() -> None:
     assert list(series.ticks) == [0]
     assert list(series.values) == [0xbf]
     assert series.end_tick == 1001
+
+
+def test_tape_bounds_the_quantum_at_its_end() -> None:
+    # The tape asks the quantum to stop right at the end-of-tape
+    # moment, so emulation never runs past it; with the end beyond
+    # the limit already requested, or the tape paused, it asks
+    # nothing.
+    tap = _make_test_tape()
+    tape = TapePlayer()
+    tape.on_event(LoadTape(tap), Dispatcher())
+
+    total = sum(duration for _, duration, _ in tap.get_pulses())
+    floor = Time(0, ticks_per_second=TAPE_RESOLUTION)
+    end = Time(total, ticks_per_second=TAPE_RESOLUTION)
+
+    # Paused: no request.
+    limit = GetQuantumTimeLimit(floor, Time(100, ticks_per_second=1))
+    tape.on_event(limit, Dispatcher())
+    assert not (limit.stop_after_time < end)
+
+    tape.on_event(PauseUnpauseTape(False), Dispatcher())
+
+    # The end within the default span: the quantum stops there.
+    limit = GetQuantumTimeLimit(floor, Time(100, ticks_per_second=1))
+    tape.on_event(limit, Dispatcher())
+    assert not (limit.stop_after_time < end)
+    assert not (end < limit.stop_after_time)
+
+    # The end beyond the span: nothing requested.
+    span = Time(1000, ticks_per_second=TAPE_RESOLUTION)
+    limit = GetQuantumTimeLimit(floor, span)
+    tape.on_event(limit, Dispatcher())
+    assert not (limit.stop_after_time < span)
+    assert not (span < limit.stop_after_time)
 
 
 def test_tape_read_from_samples() -> None:

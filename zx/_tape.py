@@ -19,6 +19,7 @@ from ._device import CollectPortReads
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
+from ._device import GetQuantumTimeLimit
 from ._device import GetTapePlayerTime
 from ._device import IsTapePlayerPaused
 from ._device import IsTapePlayerStopped
@@ -269,6 +270,26 @@ class TapePlayer(Device):
 
         return self._level
 
+    # Asks the quantum to stop right at the end of the tape, so
+    # emulation never runs past the end-of-tape moment: the signal
+    # is stated exactly to its end, and the end commits on the very
+    # next TimeAdvanced. Peeking for the end is capped by the limit
+    # requested so far; later requests only shrink it, so a needed
+    # request is never missed and device order cannot matter.
+    def __request_stop_at_end(self, event: GetQuantumTimeLimit) -> None:
+        boundary = self.__position + self._pulse
+        index = 0
+        while not (event.stop_after_time < boundary):
+            pulse = self.__peek_pulse(index)
+            if pulse is None:
+                if not (boundary < event.floor):
+                    event.stop_after(boundary)
+                return
+
+            index += 1
+            boundary = boundary + Time(
+                pulse[1], ticks_per_second=_TAPE_TICKS_PER_SECOND)
+
     # Supplies the tape signal as samples on the tape's own
     # timeline: the level at the floor, then the boundaries of the
     # pulses ahead, decoded without consuming so the signal can be
@@ -386,6 +407,10 @@ class TapePlayer(Device):
             self.__publish_chunk(event.time, dispatcher)
         elif isinstance(event, GetTapePlayerTime):
             event.time = self.__get_time()
+        elif isinstance(event, GetQuantumTimeLimit):
+            # A paused tape's signal is frozen: no end approaches.
+            if not self.__ended and not self._is_paused:
+                self.__request_stop_at_end(event)
         elif isinstance(event, CollectPortReads):
             # A tape drives the EAR bit, bit 6, of reads with A0
             # low -- the ULA decode, although ReadPort below still
