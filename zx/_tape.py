@@ -130,6 +130,18 @@ class TapePlayer(Device):
         self._pulses = None
         self._level = False
 
+        # True when there is no tape signal left to play: no tape
+        # loaded, or the last pulse fetched. Distinct from the
+        # source iterator running dry, which decoding ahead of the
+        # committed position may cause at any point.
+        self.__ended = True
+
+        # Pulses decoded ahead of the committed position, oldest
+        # first. Peeking refills this from the source without
+        # consuming, so the signal ahead can be stated and
+        # re-stated; committed fetches pop from here first.
+        self.__upcoming: list[tuple[bool, int, tuple[str, ...]]] = []
+
         # The position the tape has resolved its signal up to.
         self.__position = Time(0, ticks_per_second=_TAPE_TICKS_PER_SECOND)
 
@@ -160,7 +172,7 @@ class TapePlayer(Device):
         self.__pause(not self.__is_paused())
 
     def __is_end(self) -> bool:
-        return self._pulses is None
+        return self.__ended
 
     def __get_time(self) -> Time:
         return self._time
@@ -168,10 +180,27 @@ class TapePlayer(Device):
     def __load_parsed_file(self, file: SoundFile) -> None:
         self._pulses = file.get_pulses()
         self._level = False
+        self.__ended = False
+        self.__upcoming = []
         self.__pause()
 
     def __load_tape(self, file: SoundFile) -> None:
         self.__load_parsed_file(file)
+
+    # The next pulse at the committed position, consuming it: from
+    # the decoded-ahead pulses first, then the source. None at the
+    # tape end.
+    def __fetch_pulse(self) -> tuple[bool, int, tuple[str, ...]] | None:
+        if self.__upcoming:
+            return self.__upcoming.pop(0)
+
+        if self._pulses is None:
+            return None
+
+        pulse = next(iter(self._pulses), None)
+        if pulse is None:
+            self._pulses = None
+        return pulse
 
     def __get_level_at_time(self, time: Time) -> bool:
         assert self.__position <= time, (self.__position, time)
@@ -198,9 +227,7 @@ class TapePlayer(Device):
                 continue
 
             # Get the subsequent pulse, if any.
-            new_pulse = None
-            if self._pulses:
-                new_pulse = next(iter(self._pulses), None)
+            new_pulse = self.__fetch_pulse()
 
             if new_pulse:
                 self._level, duration, ids = new_pulse
@@ -212,12 +239,12 @@ class TapePlayer(Device):
                 # pulse is fetched, and not on the next attempt to fetch a
                 # pulse.
                 if 'END' in ids:
-                    self._pulses = None
+                    self.__ended = True
 
                 continue
 
             # Do nothing, if there are no more pulses available.
-            self._pulses = None
+            self.__ended = True
             self._level = False
             self.__position = time
             break
@@ -279,18 +306,18 @@ class TapePlayer(Device):
             # yet, so reads of these addresses go to ReadPort.
             # TODO: Supply the pulses as samples, up to the tape
             # end, and stop answering ReadPort.
-            if self._pulses is not None:
+            if not self.__ended:
                 event.supply(PortReadSeries(addr_mask=0x0001,
                                             addr_value=0x0000))
         elif isinstance(event, ReadPort):
-            if self._pulses is not None:
+            if not self.__ended:
                 if not self.__get_level_at_time(event.time):
                     event.supply(0xbf)  # EAR bit low when no tape signal
 
                 # If that read exhausted the tape, ask the run to stop
                 # at this exact tick (fires once -- the block is skipped
                 # thereafter, since the tape is now ended).
-                if self._pulses is None:
+                if self.__ended:
                     dispatcher.notify(StopQuantum())
         elif isinstance(event, IsTapePlayerPaused):
             event.paused |= self.__is_paused()
