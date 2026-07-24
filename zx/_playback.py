@@ -122,6 +122,8 @@ import typing
 from ._data import MachinePlayback
 from ._data import MachinePlaybackFrame
 from ._data import MachinePlaybackSegment
+from ._data import PortReadSeries
+from ._device import CollectPortReads
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
@@ -199,6 +201,14 @@ class PlaybackPlayer(Device):
         if self.__playback is None:
             return
 
+        if isinstance(event, CollectPortReads):
+            # Playback owns every read: the recorded samples are
+            # indexed by read order, not time, so no read may
+            # resolve from samples behind ReadPort's back.
+            event.supply(PortReadSeries(addr_mask=0x0000,
+                                        addr_value=0x0000))
+            return
+
         if isinstance(event, ReadPort):
             if not self.has_remaining_samples:
                 raise Error('Too few input samples.',
@@ -227,6 +237,12 @@ class PlaybackRecorder(Device):
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if self.disabled:
             return
+
+        if isinstance(event, CollectPortReads):
+            # Recording needs every read the core executes to go
+            # through ReadPort, where the frames count them.
+            event.supply(PortReadSeries(addr_mask=0x0000,
+                                        addr_value=0x0000))
 
         if isinstance(event, InstallSnapshot):
             self.__segments.append(

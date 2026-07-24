@@ -59,8 +59,6 @@ not a device, and it never nests.
 import pathlib
 import types
 
-import numpy
-
 from ._beeper import Beeper
 from ._core import Core
 from ._core import Profile
@@ -297,11 +295,8 @@ class Emulator:
         # Devices still answering via ReadPort are not represented
         # in the collection, so a series matching every address and
         # covering no time keeps every read on the ReadPort path.
-        # TODO: Drop once every device supplies samples.
-        collect.supply(PortReadSeries(
-            addr_mask=0x0000, addr_value=0x0000, ticks_per_second=1,
-            ticks=numpy.zeros(0, dtype=numpy.uint64),
-            values=numpy.zeros(0, dtype=numpy.uint64)))
+        # TODO: Drop once every device declares its own ports.
+        collect.supply(PortReadSeries(addr_mask=0x0000, addr_value=0x0000))
 
         self.notify(NewPortReads(self.__advanced_floor, collect.series))
 

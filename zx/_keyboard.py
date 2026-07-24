@@ -10,6 +10,8 @@
 from __future__ import annotations
 
 from ._data import DeviceSnapshot
+from ._data import PortReadSeries
+from ._device import CollectPortReads
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
@@ -188,3 +190,11 @@ class Keyboard(Device, snapshot_type=KeyboardSnapshot):
             self.__pending.append(event)
         elif isinstance(event, ReadPort):
             event.supply(self.read_port(event.addr, event.time))
+        elif isinstance(event, CollectPortReads):
+            # The keyboard drives bits 0-4 of reads with A0 low, its
+            # rows selected by the high address byte. No samples
+            # yet, so reads of these addresses go to ReadPort.
+            # TODO: Supply the matrix, constant from stroke to
+            # stroke, as samples, and stop answering ReadPort.
+            event.supply(PortReadSeries(addr_mask=0x0001,
+                                        addr_value=0x0000))

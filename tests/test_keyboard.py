@@ -8,6 +8,7 @@
 
 
 import zx
+from zx._device import CollectPortReads
 from zx._device import Dispatcher
 from zx._device import InstallDeviceSnapshot
 from zx._device import ReadPort
@@ -114,6 +115,21 @@ def test_stroke_at_quantum_ceiling() -> None:
 
     devices.notify(KeyStroke(KEYS['SPACE'], pressed=True,
                              time=quantum.advanced_ceiling))
+
+
+def test_keyboard_declares_its_port() -> None:
+    # The keyboard drives reads with A0 low; the declaration alone,
+    # with no samples, keeps those reads on the ReadPort path. A
+    # disabled keyboard declares nothing.
+    collect = CollectPortReads(at(0), at(1))
+    Dispatcher([Keyboard()]).notify(collect)
+    (series,) = collect.series
+    assert (series.addr_mask, series.addr_value) == (0x0001, 0x0000)
+    assert len(series.ticks) == 0
+
+    collect = CollectPortReads(at(0), at(1))
+    Dispatcher([Keyboard(disabled=True)]).notify(collect)
+    assert collect.series == []
 
 
 def test_disabled_keyboard() -> None:

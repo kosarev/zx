@@ -10,11 +10,11 @@ from __future__ import annotations
 
 import typing
 
+import numpy
+
 import zx
 
 if typing.TYPE_CHECKING:
-    import numpy
-
     from ._binary import Bytes
 
 
@@ -219,14 +219,19 @@ class PortReadSeries:
     #
     # The first sample must lie at or before the floor the samples
     # are collected for, so the value at the floor is always stated.
-    # A device that can foretell nothing supplies no samples: the
-    # empty series still declares that the device drives the
-    # addresses, so reads of them cannot be resolved from samples.
+    # A device that can foretell nothing supplies no samples, the
+    # default: the empty series still declares that the device
+    # drives the addresses, so reads of them cannot be resolved
+    # from samples.
     def __init__(self, *, addr_mask: int, addr_value: int,
-                 ticks_per_second: int,
-                 ticks: numpy.typing.NDArray[numpy.uint64],
-                 values: numpy.typing.NDArray[numpy.uint64],
+                 ticks_per_second: int = 1,
+                 ticks: numpy.typing.NDArray[numpy.uint64] | None = None,
+                 values: numpy.typing.NDArray[numpy.uint64] | None = None,
                  end_tick: int = 0) -> None:
+        if ticks is None:
+            ticks = numpy.zeros(0, dtype=numpy.uint64)
+        if values is None:
+            values = numpy.zeros(0, dtype=numpy.uint64)
         assert len(ticks) == len(values)
         self.addr_mask, self.addr_value = addr_mask, addr_value
         self.ticks_per_second = ticks_per_second

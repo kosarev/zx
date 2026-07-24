@@ -14,6 +14,8 @@ import typing
 
 import numpy
 
+from ._data import PortReadSeries
+from ._device import CollectPortReads
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
@@ -270,6 +272,16 @@ class TapePlayer(Device):
             self.__publish_chunk(event.time, dispatcher)
         elif isinstance(event, GetTapePlayerTime):
             event.time = self.__get_time()
+        elif isinstance(event, CollectPortReads):
+            # A playing tape drives the EAR bit, bit 6, of reads
+            # with A0 low -- the ULA decode, although ReadPort
+            # below still answers any address for now. No samples
+            # yet, so reads of these addresses go to ReadPort.
+            # TODO: Supply the pulses as samples, up to the tape
+            # end, and stop answering ReadPort.
+            if self._pulses is not None:
+                event.supply(PortReadSeries(addr_mask=0x0001,
+                                            addr_value=0x0000))
         elif isinstance(event, ReadPort):
             if self._pulses is not None:
                 if not self.__get_level_at_time(event.time):
