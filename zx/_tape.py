@@ -187,6 +187,24 @@ class TapePlayer(Device):
     def __load_tape(self, file: SoundFile) -> None:
         self.__load_parsed_file(file)
 
+    # The pulse at the given index past the committed position,
+    # decoding more as necessary and never consuming, so the signal
+    # ahead can be stated and re-stated. None past the last pulse.
+    def __peek_pulse(self, index: int) -> (
+            tuple[bool, int, tuple[str, ...]] | None):
+        while len(self.__upcoming) <= index:
+            if self._pulses is None:
+                return None
+
+            pulse = next(iter(self._pulses), None)
+            if pulse is None:
+                self._pulses = None
+                return None
+
+            self.__upcoming.append(pulse)
+
+        return self.__upcoming[index]
+
     # The next pulse at the committed position, consuming it: from
     # the decoded-ahead pulses first, then the source. None at the
     # tape end.
@@ -251,6 +269,75 @@ class TapePlayer(Device):
 
         return self._level
 
+    # Supplies the tape signal as samples on the tape's own
+    # timeline: the level at the floor, then the boundaries of the
+    # pulses ahead, decoded without consuming so the signal can be
+    # re-stated next quantum. Coverage runs through the limit, or to
+    # the tape end if that comes first -- a read past the end falls
+    # back to ReadPort, which plays the end out as before. A paused
+    # tape holds its level.
+    def __supply_samples(self, event: CollectPortReads) -> None:
+        def tape_tick_at_or_after(time: Time) -> int:
+            return -(-time.count * _TAPE_TICKS_PER_SECOND //
+                     time.ticks_per_second)
+
+        floor = event.floor
+        first_tick = (floor.count * _TAPE_TICKS_PER_SECOND //
+                      floor.ticks_per_second)
+        limit_tick = tape_tick_at_or_after(event.limit) + 1
+
+        ticks = [first_tick]
+        levels = [self._level]
+        end_tick = limit_tick
+
+        if not self._is_paused:
+            # The first boundary ahead is the end of the pulse in
+            # progress. Boundaries fall off the tape's own grid once
+            # a pause has shifted the signal, so each converts by
+            # its integer ceiling -- a boundary drives reads at
+            # moments at or after it.
+            boundary = self.__position + self._pulse
+            index = 0
+            while True:
+                boundary_tick = tape_tick_at_or_after(boundary)
+                if boundary_tick >= limit_tick:
+                    break
+
+                pulse = self.__peek_pulse(index)
+                if pulse is None:
+                    # The tape ends here and drives nothing past it.
+                    end_tick = boundary_tick
+                    break
+                index += 1
+
+                level, duration, _ = pulse
+                if boundary_tick <= first_tick:
+                    levels[0] = level
+                elif boundary_tick == ticks[-1]:
+                    levels[-1] = level
+                else:
+                    ticks.append(boundary_tick)
+                    levels.append(level)
+
+                boundary = boundary + Time(
+                    duration, ticks_per_second=_TAPE_TICKS_PER_SECOND)
+
+        # At its very end the tape has nothing left to say: reads
+        # keep going to ReadPort until the end is committed.
+        if end_tick <= first_tick:
+            event.supply(PortReadSeries(addr_mask=0x0001,
+                                        addr_value=0x0000))
+            return
+
+        event.supply(PortReadSeries(
+            addr_mask=0x0001, addr_value=0x0000,
+            ticks_per_second=_TAPE_TICKS_PER_SECOND,
+            ticks=numpy.array(ticks, dtype=numpy.uint64),
+            values=numpy.array(
+                [0xff if level else 0xbf for level in levels],
+                dtype=numpy.uint64),
+            end_tick=end_tick))
+
     def __publish_chunk(self, stamp: Time, dispatcher: Dispatcher) -> None:
         # Catch the tape up to the time-advanced position so its
         # sound advances even without port reads.
@@ -300,15 +387,11 @@ class TapePlayer(Device):
         elif isinstance(event, GetTapePlayerTime):
             event.time = self.__get_time()
         elif isinstance(event, CollectPortReads):
-            # A playing tape drives the EAR bit, bit 6, of reads
-            # with A0 low -- the ULA decode, although ReadPort
-            # below still answers any address for now. No samples
-            # yet, so reads of these addresses go to ReadPort.
-            # TODO: Supply the pulses as samples, up to the tape
-            # end, and stop answering ReadPort.
+            # A tape drives the EAR bit, bit 6, of reads with A0
+            # low -- the ULA decode, although ReadPort below still
+            # answers any address until it retires.
             if not self.__ended:
-                event.supply(PortReadSeries(addr_mask=0x0001,
-                                            addr_value=0x0000))
+                self.__supply_samples(event)
         elif isinstance(event, ReadPort):
             if not self.__ended:
                 if not self.__get_level_at_time(event.time):
