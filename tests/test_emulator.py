@@ -22,7 +22,10 @@ from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import InitEmulator
+from zx._device import ReadPort
 from zx._error import Error
+from zx._spectrum48 import Spectrum48MemoryMapping
+from zx._time import Time
 
 
 def test_basic() -> None:
@@ -138,3 +141,35 @@ def test_snapshot_addressing() -> None:
         with pytest.raises(Error) as exc_info:
             app._load_snapshot(MachineSnapshot(core2=CoreSnapshot()))
         assert exc_info.value.id == 'unknown_device_in_snapshot'
+
+
+def test_undeclared_port_reads_skip_read_port() -> None:
+    # With every ReadPort device declaring its ports at the collect
+    # step, a read of an address nobody declares means no device
+    # drives it: the input lines all read high, resolved on the C++
+    # side with no ReadPort dispatched. Port 0x121f has A0 high, so
+    # neither the keyboard nor the tape declares it.
+    class _ReadPortObserver(Device):
+        def __init__(self) -> None:
+            self.reads: list[int] = []
+
+        def on_event(self, event: DeviceEvent,
+                     devices: Dispatcher) -> None:
+            if isinstance(event, ReadPort):
+                self.reads.append(event.addr)
+
+    observer = _ReadPortObserver()
+    with zx.Emulator(headless=True,
+                     extra_environment=[observer]) as app:
+        core = app.machine.devices['core']
+        assert isinstance(core, zx.Core)
+        core.write(Spectrum48MemoryMapping(), 0x8000,
+                   b'\xdb\x1f'   # IN A, (0x1f)
+                   b'\x18\xfe')  # JR $
+        core.pc = 0x8000
+        core.a = 0x12
+
+        app.run(until=Time(1000,
+                           ticks_per_second=core.ticks_per_second))
+        assert core.a == 0xff
+        assert observer.reads == []

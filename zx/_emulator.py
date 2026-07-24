@@ -65,7 +65,6 @@ from ._core import Profile
 from ._data import DataRecord
 from ._data import MachineSnapshot
 from ._data import PlaybackFile
-from ._data import PortReadSeries
 from ._data import SnapshotFile
 from ._data import SoundFile
 from ._data import SpectrumModel
@@ -288,16 +287,11 @@ class Emulator:
 
         # Collect the port-read samples for the span up to the limit
         # and publish them whole; the publication is the delivery.
+        # Reads of ports no series declares resolve to the open-bus
+        # 0xff without dispatching ReadPort.
         collect = CollectPortReads(self.__advanced_floor,
                                    limit.stop_after_time)
         self.notify(collect)
-
-        # Devices still answering via ReadPort are not represented
-        # in the collection, so a series matching every address and
-        # covering no time keeps every read on the ReadPort path.
-        # TODO: Drop once every device declares its own ports.
-        collect.supply(PortReadSeries(addr_mask=0x0000, addr_value=0x0000))
-
         self.notify(NewPortReads(self.__advanced_floor, collect.series))
 
         run = RunQuantum(wake_in=hold.wake_in,
