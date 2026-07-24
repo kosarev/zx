@@ -33,11 +33,11 @@ def test_basic() -> None:
     assert 'TAPFile' in tap.dumps()
 
 
-def test_tape_declares_its_port() -> None:
-    # A tape drives the EAR bit of reads with A0 low; the
-    # declaration alone, with no samples, keeps those reads on the
-    # ReadPort path. With no tape loaded there is no signal to
-    # drive, so nothing is declared.
+def test_tape_supplies_empty_series() -> None:
+    # A tape drives the EAR bit of reads with A0 low; the empty
+    # series, stating the addresses with no samples, keeps those
+    # reads on the ReadPort path. With no tape loaded there is no
+    # signal to drive, so nothing is supplied.
     def collect(tape: TapePlayer) -> CollectPortReads:
         event = CollectPortReads(Time(0, ticks_per_second=1),
                                  Time(1, ticks_per_second=1))

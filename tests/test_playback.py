@@ -53,11 +53,11 @@ def _collect() -> CollectPortReads:
                             Time(1, ticks_per_second=1))
 
 
-def test_playback_devices_declare_all_ports() -> None:
+def test_playback_devices_supply_empty_series() -> None:
     # The recorded samples are indexed by read order, so both
     # playing and recording need every read on the ReadPort path:
-    # the empty all-addresses series declares that no read may
-    # resolve from samples.
+    # the empty all-addresses series makes every read unresolvable
+    # from samples.
     dispatcher = Dispatcher()
 
     recorder = PlaybackRecorder()
@@ -71,7 +71,7 @@ def test_playback_devices_declare_all_ports() -> None:
     PlaybackRecorder(disabled=True).on_event(collect, dispatcher)
     assert collect.series == []
 
-    # The player declares only while a playback is loaded.
+    # The player supplies only while a playback is loaded.
     player = PlaybackPlayer()
     collect = _collect()
     player.on_event(collect, dispatcher)

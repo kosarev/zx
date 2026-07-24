@@ -8,9 +8,13 @@
 
 
 import zx
+from zx._data import PortReadSeries
 from zx._device import CollectPortReads
+from zx._device import Device
+from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import InstallDeviceSnapshot
+from zx._device import NewPortReads
 from zx._device import ReadPort
 from zx._device import RunQuantum
 from zx._keyboard import KEYS
@@ -117,19 +121,127 @@ def test_stroke_at_quantum_ceiling() -> None:
                              time=quantum.advanced_ceiling))
 
 
-def test_keyboard_declares_its_port() -> None:
-    # The keyboard drives reads with A0 low; the declaration alone,
-    # with no samples, keeps those reads on the ReadPort path. A
-    # disabled keyboard declares nothing.
-    collect = CollectPortReads(at(0), at(1))
-    Dispatcher([Keyboard()]).notify(collect)
-    (series,) = collect.series
-    assert (series.addr_mask, series.addr_value) == (0x0001, 0x0000)
-    assert len(series.ticks) == 0
+def test_keyboard_supplies_the_matrix() -> None:
+    # One series per half-row, matching reads with the row's address
+    # line and A0 both low, valued at the row's five bits with 1s in
+    # the bits the row does not drive. A disabled keyboard supplies
+    # nothing.
+    keyboard = Keyboard()
+    devices = Dispatcher([keyboard])
+    devices.notify(KeyStroke(KEYS['A'], pressed=True, time=at(1)))
 
-    collect = CollectPortReads(at(0), at(1))
+    collect = CollectPortReads(at(2), at(10))
+    devices.notify(collect)
+    assert len(collect.series) == 8
+
+    masks = {series.addr_mask: series for series in collect.series}
+    assert sorted(masks) == [(1 << (8 + row)) | 1 for row in range(8)]
+    for series in collect.series:
+        assert series.addr_value == 0x0000
+        assert list(series.ticks) == [at(2).count]
+        assert series.end_tick == at(10).count + 1
+
+    # A is bit 0 of the half-row on address line 9.
+    for row in range(8):
+        series = masks[(1 << (8 + row)) | 1]
+        assert list(series.values) == [0xfe if row == 1 else 0xff]
+
+    collect = CollectPortReads(at(2), at(10))
     Dispatcher([Keyboard(disabled=True)]).notify(collect)
     assert collect.series == []
+
+
+def test_keyboard_stroke_within_the_span() -> None:
+    # A stroke past the floor becomes a transition within the
+    # supplied span, at its exact moment.
+    keyboard = Keyboard()
+    devices = Dispatcher([keyboard])
+    devices.notify(KeyStroke(KEYS['A'], pressed=True, time=at(5)))
+
+    collect = CollectPortReads(at(2), at(10))
+    devices.notify(collect)
+    (series,) = [series for series in collect.series
+                 if series.addr_mask == 0x0201]
+    assert list(series.ticks) == [at(2).count, at(5).count]
+    assert list(series.values) == [0xff, 0xfe]
+
+
+def test_keyboard_read_from_samples() -> None:
+    # A read of a half-row resolves from the supplied samples on the
+    # C++ side, with no ReadPort dispatched.
+    class _ReadPortObserver(Device):
+        def __init__(self) -> None:
+            self.reads: list[int] = []
+
+        def on_event(self, event: DeviceEvent,
+                     devices: Dispatcher) -> None:
+            if isinstance(event, ReadPort):
+                self.reads.append(event.addr)
+
+    core = zx.Core()
+    keyboard = Keyboard()
+    observer = _ReadPortObserver()
+    devices = Dispatcher([core, keyboard, observer])
+
+    # Select the A9 half-row: IN A, (0xfe) with A = 0xfd, reading
+    # port 0xfdfe at tick 10.
+    core.write(Spectrum48MemoryMapping(), 0x8000,
+               b'\xdb\xfe'   # IN A, (0xfe)
+               b'\x18\xfe')  # JR $
+    core.pc = 0x8000
+    core.a = 0xfd
+
+    rate = core.ticks_per_second
+    floor = Time(0, ticks_per_second=rate)
+    devices.notify(KeyStroke(KEYS['A'], pressed=True, time=floor))
+
+    collect = CollectPortReads(floor, Time(1000, ticks_per_second=rate))
+    devices.notify(collect)
+    devices.notify(NewPortReads(floor, collect.series))
+
+    core._run(devices)
+    assert core.a == 0xfe
+    assert observer.reads == []
+
+
+def test_keyboard_samples_with_a_co_driver_series() -> None:
+    # An empty series for the same reads -- a playing tape's --
+    # makes them unresolvable from samples, so they go to ReadPort,
+    # where the keyboard still answers.
+    class _Responder(Device):
+        def __init__(self) -> None:
+            self.reads: list[int] = []
+
+        def on_event(self, event: DeviceEvent,
+                     devices: Dispatcher) -> None:
+            if isinstance(event, ReadPort):
+                self.reads.append(event.addr)
+                assert event.value is not None
+                event.value &= 0xdf
+
+    core = zx.Core()
+    keyboard = Keyboard()
+    responder = _Responder()
+    devices = Dispatcher([core, keyboard, responder])
+
+    core.write(Spectrum48MemoryMapping(), 0x8000,
+               b'\xdb\xfe'   # IN A, (0xfe)
+               b'\x18\xfe')  # JR $
+    core.pc = 0x8000
+    core.a = 0xfd
+
+    rate = core.ticks_per_second
+    floor = Time(0, ticks_per_second=rate)
+    devices.notify(KeyStroke(KEYS['A'], pressed=True, time=floor))
+
+    collect = CollectPortReads(floor, Time(1000, ticks_per_second=rate))
+    devices.notify(collect)
+    collect.supply(PortReadSeries(addr_mask=0x0001, addr_value=0x0000))
+    devices.notify(NewPortReads(floor, collect.series))
+
+    core._run(devices)
+    assert core.a == 0xfe & 0xdf
+    assert responder.reads == [0xfdfe]
 
 
 def test_disabled_keyboard() -> None:

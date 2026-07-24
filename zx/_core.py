@@ -924,10 +924,18 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
                     numpy.zeros(0, dtype=numpy.uint64))
                 continue
 
-            # The sample in effect at tick 0 is the last one at or
-            # before it; earlier history means nothing this quantum.
+            # The sample in effect at the floor is the last one at
+            # or before it; earlier history means nothing this
+            # quantum. A sample tick s lies at or before the floor
+            # exactly when s * floor_resolution does not exceed
+            # floor_count * device_resolution, so the last such
+            # sample is the last with s at or under the quotient.
+            # Its tick clamps back to tick 0, which lies at or
+            # before the floor too, and no read falls in between.
+            latest = (floor.count * device_resolution //
+                      floor.ticks_per_second)
             first = int(numpy.searchsorted(
-                series.ticks, tick0, side='right')) - 1
+                series.ticks, latest, side='right')) - 1
             assert first >= 0, 'the value at the floor must be stated'
 
             ticks = series.ticks[first:].copy()

@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+import numpy
+
 from ._data import DeviceSnapshot
 from ._data import PortReadSeries
 from ._device import CollectPortReads
@@ -162,6 +164,66 @@ class Keyboard(Device, snapshot_type=KeyboardSnapshot):
 
         return n
 
+    # Supplies the matrix as samples: one series per half-row, its
+    # row selected when the row's address line and A0 are both low.
+    # A value is the row's five bits with 1s in the bits the row
+    # does not drive, changing at the pending strokes' moments. The
+    # matrix is fully known up to the limit: strokes drain at
+    # TimeAdvanced, before the collect, stamped at the ceiling, so
+    # none can appear mid-quantum.
+    def __supply_samples(self, event: CollectPortReads) -> None:
+        # Strokes at or before the floor are committed: apply and
+        # consume them.
+        i = 0
+        for stroke in self.__pending:
+            if event.floor < stroke.time:
+                break
+            self.__apply(stroke.key, stroke.pressed)
+            i += 1
+        del self.__pending[:i]
+
+        # The keyboard has no resolution of its own: the matrix
+        # changes at stroke moments. The series therefore speak the
+        # floor's resolution. A stroke drives reads at moments at or
+        # after it, so its tick is its moment's integer ceiling on
+        # that grid -- exact containment, no approximation.
+        resolution = event.floor.ticks_per_second
+        floor_tick = event.floor.count
+
+        # Cover through the limit; reads past it -- the core's
+        # natural overshoot -- fall back to ReadPort.
+        end_tick = (-(-event.limit.count * resolution //
+                      event.limit.ticks_per_second)) + 1
+
+        ticks = [[floor_tick] for _ in range(8)]
+        values = [[self.__state[row] | 0xe0] for row in range(8)]
+        state = list(self.__state)
+        for stroke in self.__pending:
+            tick = -(-stroke.time.count * resolution //
+                     stroke.time.ticks_per_second)
+            row = stroke.key.address_line - 8
+            mask = 1 << stroke.key.port_bit
+
+            if stroke.pressed:
+                state[row] &= mask ^ 0xff
+            else:
+                state[row] |= mask
+
+            value = state[row] | 0xe0
+            if tick == ticks[row][-1]:
+                values[row][-1] = value
+            else:
+                ticks[row].append(tick)
+                values[row].append(value)
+
+        for row in range(8):
+            event.supply(PortReadSeries(
+                addr_mask=(1 << (8 + row)) | 0x0001, addr_value=0x0000,
+                ticks_per_second=resolution,
+                ticks=numpy.array(ticks[row], dtype=numpy.uint64),
+                values=numpy.array(values[row], dtype=numpy.uint64),
+                end_tick=end_tick))
+
     def __install_snapshot(self, s: DeviceSnapshot) -> None:
         assert isinstance(s, KeyboardSnapshot)
 
@@ -191,10 +253,4 @@ class Keyboard(Device, snapshot_type=KeyboardSnapshot):
         elif isinstance(event, ReadPort):
             event.supply(self.read_port(event.addr, event.time))
         elif isinstance(event, CollectPortReads):
-            # The keyboard drives bits 0-4 of reads with A0 low, its
-            # rows selected by the high address byte. No samples
-            # yet, so reads of these addresses go to ReadPort.
-            # TODO: Supply the matrix, constant from stroke to
-            # stroke, as samples, and stop answering ReadPort.
-            event.supply(PortReadSeries(addr_mask=0x0001,
-                                        addr_value=0x0000))
+            self.__supply_samples(event)
