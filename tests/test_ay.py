@@ -16,11 +16,15 @@ import json
 
 import pytest
 
+import zx
 from zx._ay import AYFile
 from zx._ay import AYFileBlock
 from zx._ay import AYFileSong
+from zx._ay8910 import AY8910
 from zx._ay8910 import AY8910Snapshot
 from zx._data import DataRecord
+from zx._emulator import Emulator
+from zx._emulator import Machine
 from zx._error import Error
 from zx._file import parse_file_image
 from zx._spectrum48 import Spectrum48CoreSnapshot
@@ -258,6 +262,37 @@ def test_to_machine_snapshot_block_placement() -> None:
                                     0xfb, 0x76,
                                     0x11, 0x22)))
     assert core.memory.match(mapping, 0xfffe, b'\x33\x44')
+
+
+def test_converted_song_plays() -> None:
+    # The player machine runs a converted song end to end: the stub
+    # calls init once, and the IM 1 handler calls the play routine
+    # on every interrupt.
+    init = bytes((
+        0x3e, 0x5a,        # LD A, 0x5a
+        0x32, 0x00, 0xc0,  # LD (0xc000), A
+        0xc9))             # RET
+    play = bytes((
+        0x21, 0x01, 0xc0,  # LD HL, 0xc001
+        0x34,              # INC (HL)
+        0xc9))             # RET
+
+    ay = AYFile(songs_offset=0, songs=[])
+    song = _make_song(
+        init_addr=0x8000, int_addr=0x9000, sp=0xfff0,
+        blocks=[AYFileBlock(address=0x8000, data_offset=0, data=init),
+                AYFileBlock(address=0x9000, data_offset=0, data=play)])
+
+    with Emulator(machine=Machine(core=zx.Core(), ay=AY8910()),
+                  snapshot=ay.to_machine_snapshot(song),
+                  environment=[]) as app:
+        app.run(duration=0.1)
+
+        core = app.machine.devices['core']
+        assert isinstance(core, zx.Core)
+        mapping = Spectrum48MemoryMapping()
+        assert core.read8(mapping, 0xc000) == 0x5a
+        assert core.read8(mapping, 0xc001) >= 3
 
 
 def test_to_machine_snapshot_no_entry() -> None:

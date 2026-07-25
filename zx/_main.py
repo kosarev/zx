@@ -42,6 +42,7 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import FetchesLimitHit
+from ._device import InstallSnapshot
 from ._device import LoadTape
 from ._device import PauseUnpauseTape
 from ._device import RunQuantum
@@ -98,24 +99,48 @@ class _HoldWaiter(Device):
             time.sleep(min(event.wake_in or 0.05, 0.05))
 
 
+# A large device buffer rides out the late audio-thread wakeups of
+# an idle process; the queued-audio target must exceed the buffer,
+# or every pull of the audio thread drains the queue dry. A player
+# has no latency concern anyway.
+def _make_player_sound() -> SDLSound:
+    return SDLSound(num_buffer_samples=4096, latency_ms=200)
+
+
 # Plays an AY music stream: a session of the AY chip alone, driven
 # by the stream player, with no Spectrum machine involved.
 def _play_ay_stream(stream: AYStream) -> None:
     player = AYPlayer(stream)
 
-    # A large device buffer rides out the late audio-thread wakeups
-    # of an idle process; the queued-audio target must exceed the
-    # buffer, or every pull of the audio thread drains the queue dry.
-    # A player has no latency concern anyway.
-    sound = SDLSound(num_buffer_samples=4096, latency_ms=200)
-
     with Emulator(machine=Machine(ay=AY8910()),
-                  environment=[player, _HoldWaiter(), sound]) as app:
+                  environment=[player, _HoldWaiter(),
+                               _make_player_sound()]) as app:
         # Give the last notes a second to ring out.
         tail = Time(stream.ticks_per_second,
                     ticks_per_second=stream.ticks_per_second)
         with contextlib.suppress(EmulationExit):
             app.run(until=player.get_end_time() + tail)
+
+
+# A song stating no duration plays for this long: three minutes,
+# the usual player convention.
+_DEFAULT_SONG_FRAMES = 3 * 60 * 50
+
+
+# Plays the songs of a .ay file in order, then quits. Playing a
+# song is installing its snapshot into the player machine, a 48K
+# core with the AY; the song's stated duration says how long it
+# runs. The fade-out that should follow needs mixer gain, so for
+# now the song just ends.
+def _play_ay_file(file: AYFile) -> None:
+    with (Emulator(machine=Machine(core=Core(), ay=AY8910()),
+                   environment=[_HoldWaiter(),
+                                _make_player_sound()]) as app,
+          contextlib.suppress(EmulationExit)):
+        for song in file.songs:
+            app.notify(InstallSnapshot(file.to_machine_snapshot(song)))
+            frames = song.frames_per_song or _DEFAULT_SONG_FRAMES
+            app.run(duration=frames / 50)
 
 
 def run(args: list[str]) -> None:
@@ -135,6 +160,9 @@ def run(args: list[str]) -> None:
         file = parse_file(filename)
         if isinstance(file, AYMusicFile):
             _play_ay_stream(file.to_ay_stream())
+            return
+        if isinstance(file, AYFile):
+            _play_ay_file(file)
             return
 
     session_snapshot = get_config_dir() / 'session.zx'
@@ -318,9 +346,11 @@ def test_file(filename: str, batch_mode: bool,
             stream2 = type(file).from_ay_music(stream).to_ay_stream()
             match(stream, stream2)
         elif isinstance(file, AYFile):
-            # No semantic form yet: the literal representation and
-            # its byte-exact reproduction are what is tested.
             match(image, file.encode())
+
+            # Every song must convert to its player snapshot.
+            for song in file.songs:
+                file.to_machine_snapshot(song)
         elif isinstance(file, RZXFile):
             with Emulator(headless=True) as app:
                 app._run_file(filename)
