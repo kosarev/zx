@@ -25,6 +25,7 @@ from ._ay8910 import AYPlayer
 from ._basic import StopAtTapeEnd
 from ._basic import boot_to_prompt
 from ._basic import capture_spectrum48
+from ._beeper import Beeper
 from ._binary import Bytes
 from ._core import Core
 from ._core import Profile
@@ -129,11 +130,12 @@ _DEFAULT_SONG_FRAMES = 3 * 60 * 50
 
 # Plays the songs of a .ay file in order, then quits. Playing a
 # song is installing its snapshot into the player machine, a 48K
-# core with the AY; the song's stated duration says how long it
-# runs. The fade-out that should follow needs mixer gain, so for
-# now the song just ends.
+# core with the AY and the beeper; the song's stated duration says
+# how long it runs. The fade-out that should follow needs mixer
+# gain, so for now the song just ends.
 def _play_ay_file(file: AYFile) -> None:
-    with (Emulator(machine=Machine(core=Core(), ay=AY8910()),
+    with (Emulator(machine=Machine(core=Core(), ay=AY8910(),
+                                   beeper=Beeper()),
                    environment=[_HoldWaiter(),
                                 _make_player_sound()]) as app,
           contextlib.suppress(EmulationExit)):

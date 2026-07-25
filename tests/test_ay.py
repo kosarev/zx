@@ -22,6 +22,8 @@ from zx._ay import AYFileBlock
 from zx._ay import AYFileSong
 from zx._ay8910 import AY8910
 from zx._ay8910 import AY8910Snapshot
+from zx._beeper import Beeper
+from zx._beeper import BeeperSnapshot
 from zx._data import DataRecord
 from zx._emulator import Emulator
 from zx._emulator import Machine
@@ -183,6 +185,7 @@ def test_to_machine_snapshot() -> None:
 
     members = dict(snapshot)
     assert isinstance(members['ay'], AY8910Snapshot)
+    assert isinstance(members['beeper'], BeeperSnapshot)
 
     core = members['core']
     assert isinstance(core, Spectrum48CoreSnapshot)
@@ -283,7 +286,8 @@ def test_converted_song_plays() -> None:
         blocks=[AYFileBlock(address=0x8000, data_offset=0, data=init),
                 AYFileBlock(address=0x9000, data_offset=0, data=play)])
 
-    with Emulator(machine=Machine(core=zx.Core(), ay=AY8910()),
+    with Emulator(machine=Machine(core=zx.Core(), ay=AY8910(),
+                                  beeper=Beeper()),
                   snapshot=ay.to_machine_snapshot(song),
                   environment=[]) as app:
         app.run(duration=0.1)

@@ -11,6 +11,7 @@ from __future__ import annotations
 import typing
 
 from ._ay8910 import AY8910Snapshot
+from ._beeper import BeeperSnapshot
 from ._core import Z80Snapshot
 from ._data import ByteData
 from ._data import DataRecord
@@ -436,9 +437,10 @@ class AYFile(DataRecord, format_name='AY'):
     # The snapshot that plays the given song: the canonical memory
     # fill, the launch stub the file does not contain, the song's
     # blocks, and the register seeds. The machine is the player
-    # convention: flat 48K memory with no paging port, and the AY at
-    # its standard ports. The first cut runs the 48K clock, like an
-    # AY box on a real 48K; exact 128K clocking comes with 128K
+    # convention: flat 48K memory with no paging port, the AY at
+    # its standard ports, and the beeper -- rips drive it alongside
+    # or instead of the AY. The first cut runs the 48K clock, like
+    # an AY box on a real 48K; exact 128K clocking comes with 128K
     # support proper.
     def to_machine_snapshot(self, song: AYFileSong) -> MachineSnapshot:
         # The canonical fill: RET over the ROM area's entry points,
@@ -494,4 +496,5 @@ class AYFile(DataRecord, format_name='AY'):
                 memory=Spectrum48MemorySnapshot(blocks=[
                     Spectrum48MemoryBlock(addr=0x0000,
                                           data=bytes(image))])),
-            ay=AY8910Snapshot())
+            ay=AY8910Snapshot(),
+            beeper=BeeperSnapshot())
