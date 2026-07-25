@@ -42,7 +42,6 @@ from ._device import NewPortReads
 from ._device import NewPortWrites
 from ._device import OutputFrame
 from ._device import PauseStateUpdated
-from ._device import ReadPort
 from ._device import ResetEmulator
 from ._device import RunQuantum
 from ._device import SetBreakpoint
@@ -793,19 +792,6 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
 
         self.frame_count = 0
 
-        self.set_on_input_callback(self.__on_input)
-
-        # With no port-read samples supplied at all, every read
-        # would resolve to the open-bus 0xff, as if no device drove
-        # any port. This series matches every address and covers no
-        # time, so every read stays on the ReadPort path. The
-        # NewPortReads handler re-adds the same series per quantum;
-        # this one covers bare rigs that drive _run() directly.
-        # TODO: Drop both once every device supplies samples.
-        self.__add_catch_all_port_read_series()
-
-        self.__port_reads = bytearray()
-
         # The moment of the read that deferred, ending the current
         # quantum; None while no read has deferred.
         self.__deferred_read_time: Time | None = None
@@ -868,33 +854,6 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
     def __current_time(self) -> Time:
         return Time(self.tick_count,
                     ticks_per_second=self.ticks_per_second)
-
-    def __on_input(self, addr: int, devices: Dispatcher) -> int | None:
-        # The core makes port accesses with tick_count reading the
-        # 0-based number of the tick the data crosses the bus during,
-        # so the current time is the exact sampling moment.
-        read_port = ReadPort(addr, self.__current_time())
-        devices.notify(read_port)
-        v = read_port.value
-        if v is None:
-            # The read is deferred: the instruction aborts, to be
-            # retried with the counters rewound to its start.
-            # Remember the read's moment -- the quantum's position
-            # is there, not at the rewound counters.
-            # TODO: Once every device supplies samples, defer reads
-            # the samples do not cover on the C++ side and retire
-            # this path together with ReadPort.
-            self.__deferred_read_time = read_port.time
-        else:
-            self.__port_reads.append(v)
-        return v
-
-    # A series that matches every address and covers no time, so no
-    # read resolves from samples and all of them go to ReadPort.
-    def __add_catch_all_port_read_series(self) -> None:
-        self._add_port_read_samples(
-            0, 1, 0, 0x0000, 0x0000, 0,
-            numpy.zeros(0, dtype=numpy.uint64))
 
     # Loads the C++-side sample table from the published stream:
     # this device's copy of it. Each series' ticks, counted on its
@@ -988,10 +947,12 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         if self.__playback is not None:
             self.on_handle_active_int()
 
+        # TODO: Count the executed reads on the C++ side and report
+        # them here, for the recorder's frames; reads resolved from
+        # samples never enter Python.
         devices.notify(OutputFrame(
             pixels=self.get_frame_pixels(),
-            port_reads=self.__port_reads))
-        self.__port_reads.clear()
+            port_reads=bytearray()))
 
         self.frame_count += 1
 
@@ -1007,8 +968,8 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
         self.suppress_interrupts = False
         self.allow_int_after_ei = False
 
-    # Advances the core by one quantum, to the round's time limit if
-    # any, otherwise to the frame end as before.
+    # Advances the core by one quantum, to the quantum's time limit
+    # if any, otherwise to the frame end as before.
     def __advance(self, devices: Dispatcher,
                   stop_after: Time | None) -> None:
         if stop_after is None:
@@ -1026,6 +987,12 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
             self.ticks_to_stop = budget
 
         events = RunEvents(self._run(devices))
+
+        if RunEvents.RETRY_INPUT in events:
+            tick = self._get_deferred_port_read_tick()
+            if tick is not None:
+                self.__deferred_read_time = Time(
+                    tick, ticks_per_second=self.ticks_per_second)
 
         # The run traps at a marked instruction without executing it,
         # so running again would just trap there anew. Report the

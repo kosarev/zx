@@ -18,7 +18,6 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import InstallDeviceSnapshot
-from ._device import ReadPort
 from ._time import Time
 
 
@@ -190,8 +189,9 @@ class Keyboard(Device, snapshot_type=KeyboardSnapshot):
         resolution = event.floor.ticks_per_second
         floor_tick = event.floor.count
 
-        # Cover through the limit; reads past it -- the core's
-        # natural overshoot -- fall back to ReadPort.
+        # Cover through the limit; a read past it -- the core's
+        # natural overshoot -- defers and is answered at the next
+        # collect.
         end_tick = (-(-event.limit.count * resolution //
                       event.limit.ticks_per_second)) + 1
 
@@ -250,7 +250,5 @@ class Keyboard(Device, snapshot_type=KeyboardSnapshot):
             assert (not self.__pending or
                     not (event.time < self.__pending[-1].time))
             self.__pending.append(event)
-        elif isinstance(event, ReadPort):
-            event.supply(self.read_port(event.addr, event.time))
         elif isinstance(event, CollectPortReads):
             self.__supply_samples(event)

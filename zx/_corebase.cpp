@@ -226,6 +226,8 @@ public:
         // return.
         run_dispatcher = dispatcher;
 
+        has_deferred_port_read = false;
+
         install_state();
         events_mask::type events = base::run();
 
@@ -273,6 +275,14 @@ public:
         PyObject *old_callback = on_output_callback;
         on_output_callback = callback;
         return old_callback;
+    }
+
+    // The moment of the run's deferred port read, or None when the
+    // run ended otherwise.
+    PyObject *get_deferred_port_read_tick() const {
+        if(!has_deferred_port_read)
+            Py_RETURN_NONE;
+        return PyLong_FromUnsignedLongLong(deferred_port_read_tick);
     }
 
     // The samples live for one quantum: the caller replaces them
@@ -442,18 +452,24 @@ private:
 public:
     fast_u8 on_input(fast_u16 addr) {
         // Answer from the samples supplied for this quantum, if any
-        // cover this read; with no covering sample the read falls
-        // through to the callback below.
+        // cover this read.
         fast_u8 sampled;
         if(sample_port_read(addr, sampled))
             return sampled;
 
-        const fast_u8 default_value = 0xbf;
-        if(!on_input_callback)
-            return default_value;
+        // With no custom callback -- the primary emulator relies on
+        // the samples alone -- the read defers, to be answered at
+        // the following collect step; its moment is remembered for
+        // the reporting.
+        if(!on_input_callback) {
+            deferred_port_read_tick = tick_count;
+            has_deferred_port_read = true;
+            return z80::retry_input;
+        }
 
-        // on_input only fires during a run(), which always sets the
-        // dispatcher.
+        // A custom callback, an option for private rigs, answers
+        // the read instead. on_input only fires during a run(),
+        // which always sets the dispatcher.
         assert(run_dispatcher);
         PyObject *arg = Py_BuildValue("(iO)", addr, run_dispatcher);
         decref_guard arg_guard(arg);
@@ -470,10 +486,13 @@ public:
         if(!result)
             return z80::retry_input;
 
-        // None means the value is not known yet, aborting the input
-        // instruction to be retried later.
-        if(result == Py_None)
+        // None means the value is not known yet, deferring the read
+        // just like a samples miss does.
+        if(result == Py_None) {
+            deferred_port_read_tick = tick_count;
+            has_deferred_port_read = true;
             return z80::retry_input;
+        }
 
         if(!PyLong_Check(result)) {
             PyErr_SetString(PyExc_TypeError, "returning value must be integer");
@@ -507,6 +526,11 @@ private:
     pixels_buffer_type pixels;
     PyObject *on_input_callback = nullptr;
     PyObject *on_output_callback = nullptr;
+
+    // The moment of the deferred port read of the current run, if
+    // any; cleared as each run starts.
+    least_u64 deferred_port_read_tick = 0;
+    bool has_deferred_port_read = false;
 
     static const unsigned max_num_port_read_series = 64;
     unsigned num_port_read_series = 0;
@@ -560,6 +584,11 @@ static PyObject *drain_port_writes(PyObject *self, PyObject *args) {
         sizeof(*writes) * emulator.get_num_port_writes());
     emulator.clear_port_writes();
     return result;
+}
+
+static PyObject *get_deferred_port_read_tick(PyObject *self,
+                                             PyObject *args) {
+    return cast_emulator(self).get_deferred_port_read_tick();
 }
 
 static PyObject *clear_port_read_samples(PyObject *self, PyObject *args) {
@@ -735,6 +764,10 @@ PyMethodDef methods[] = {
     {"drain_port_writes", drain_port_writes, METH_NOARGS,
      "Return the accumulated port writes as a bytes object and clear "
      "the buffer."},
+    {"_get_deferred_port_read_tick", get_deferred_port_read_tick,
+     METH_NOARGS,
+     "Return the moment of the run's deferred port read, or None "
+     "when the run ended otherwise."},
     {"_clear_port_read_samples", clear_port_read_samples, METH_NOARGS,
      "Discard all supplied port-read sample series."},
     {"_add_port_read_samples", add_port_read_samples, METH_VARARGS,

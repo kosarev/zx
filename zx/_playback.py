@@ -132,7 +132,6 @@ from ._device import Dispatcher
 from ._device import EndOfFrame
 from ._device import FetchesLimitHit
 from ._device import InstallSnapshot
-from ._device import ReadPort
 from ._device import SetFetchesLimit
 from ._device import StartPlayback
 from ._device import StopPlayback
@@ -219,8 +218,7 @@ class PlaybackPlayer(Device):
     # series makes the next read defer first. The all-addresses
     # pattern does double duty: no read resolves behind the
     # recording's back, and at the sampled moment the recorded
-    # value ANDs with any live series covering it, exactly as the
-    # ReadPort answers combined.
+    # value ANDs with any live series covering it.
     def __supply_sample(self, event: CollectPortReads) -> None:
         deferred = event.deferred_port_read_time
         self._confirm_dealt_sample(
@@ -231,8 +229,6 @@ class PlaybackPlayer(Device):
                                         addr_value=0x0000))
             return
 
-        # Dead while ReadPort lives -- the deferring read raises
-        # there first; the live check once ReadPort retires.
         if not self.has_remaining_samples:
             raise Error('Too few input samples.',
                         id='too_few_input_samples')
@@ -270,18 +266,6 @@ class PlaybackPlayer(Device):
             self.__supply_sample(event)
             return
 
-        if isinstance(event, ReadPort):
-            self._confirm_dealt_sample(event.time)
-
-            if not self.has_remaining_samples:
-                raise Error('Too few input samples.',
-                            id='too_few_input_samples')
-
-            # The read defers; the next collect deals the sample at
-            # the read's moment, where the retry consumes it.
-            event.value = None
-            return
-
         if isinstance(event, FetchesLimitHit):
             # Reaching the frame's fetch limit means the run went
             # past any dealt sample's moment.
@@ -312,5 +296,5 @@ class PlaybackRecorder(Device):
 
         # TODO: Collect frames from OutputFrame events once the C++
         # core counts the executed reads and fetches itself -- reads
-        # resolved from samples never reach ReadPort, so the frames
-        # must come from the core's own stream.
+        # resolve on the C++ side and never enter Python, so the
+        # frames must come from the core's own stream.

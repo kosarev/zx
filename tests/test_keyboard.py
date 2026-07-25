@@ -8,14 +8,12 @@
 
 
 import zx
+from zx._core import RunEvents
 from zx._data import PortReadSeries
 from zx._device import CollectPortReads
-from zx._device import Device
-from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import InstallDeviceSnapshot
 from zx._device import NewPortReads
-from zx._device import ReadPort
 from zx._device import RunQuantum
 from zx._keyboard import KEYS
 from zx._keyboard import Keyboard
@@ -167,20 +165,10 @@ def test_keyboard_stroke_within_the_span() -> None:
 
 def test_keyboard_read_from_samples() -> None:
     # A read of a half-row resolves from the supplied samples on the
-    # C++ side, with no ReadPort dispatched.
-    class _ReadPortObserver(Device):
-        def __init__(self) -> None:
-            self.reads: list[int] = []
-
-        def on_event(self, event: DeviceEvent,
-                     devices: Dispatcher) -> None:
-            if isinstance(event, ReadPort):
-                self.reads.append(event.addr)
-
+    # C++ side.
     core = zx.Core()
     keyboard = Keyboard()
-    observer = _ReadPortObserver()
-    devices = Dispatcher([core, keyboard, observer])
+    devices = Dispatcher([core, keyboard])
 
     # Select the A9 half-row: IN A, (0xfe) with A = 0xfd, reading
     # port 0xfdfe at tick 10.
@@ -200,28 +188,15 @@ def test_keyboard_read_from_samples() -> None:
 
     core._run(devices)
     assert core.a == 0xfe
-    assert observer.reads == []
 
 
 def test_keyboard_samples_with_a_co_driver_series() -> None:
     # An empty series for the same reads -- a playing tape's --
-    # makes them unresolvable from samples, so they go to ReadPort,
-    # where the keyboard still answers.
-    class _Responder(Device):
-        def __init__(self) -> None:
-            self.reads: list[int] = []
-
-        def on_event(self, event: DeviceEvent,
-                     devices: Dispatcher) -> None:
-            if isinstance(event, ReadPort):
-                self.reads.append(event.addr)
-                assert event.value is not None
-                event.value &= 0xdf
-
+    # makes them unresolvable from samples, whatever the keyboard
+    # states: the read defers.
     core = zx.Core()
     keyboard = Keyboard()
-    responder = _Responder()
-    devices = Dispatcher([core, keyboard, responder])
+    devices = Dispatcher([core, keyboard])
 
     core.write(Spectrum48MemoryMapping(), 0x8000,
                b'\xdb\xfe'   # IN A, (0xfe)
@@ -238,9 +213,10 @@ def test_keyboard_samples_with_a_co_driver_series() -> None:
     collect.supply(PortReadSeries(addr_mask=0x0001, addr_value=0x0000))
     devices.notify(NewPortReads(floor, collect.series))
 
-    core._run(devices)
-    assert core.a == 0xfe & 0xdf
-    assert responder.reads == [0xfdfe]
+    events = RunEvents(core._run(devices))
+    assert RunEvents.RETRY_INPUT in events
+    assert core.pc == 0x8000
+    assert core.a == 0xfd
 
 
 def test_disabled_keyboard() -> None:

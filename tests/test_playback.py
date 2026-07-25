@@ -155,8 +155,8 @@ def test_playback_deal_covers_through_the_deferred_moment() -> None:
 
 
 def test_too_few_samples_detected_at_collect() -> None:
-    # Once ReadPort retires, a deferred read with the samples
-    # exhausted is detected at the collect step. The first collect
+    # A deferred read with the samples exhausted is an error,
+    # detected at the collect step. The first collect
     # deals the last sample; the second, at a later deferred
     # moment, confirms it consumed and finds nothing left.
     player = PlaybackPlayer()
@@ -183,8 +183,8 @@ def test_too_few_samples_detected_at_collect() -> None:
 
 
 def test_playback_still_raises_on_too_few_samples() -> None:
-    # A read with no samples remaining is an error, detected on the
-    # ReadPort path a deferred read falls back to.
+    # A read with no samples remaining is an error, raised at the
+    # collect step carrying the deferred read's moment.
     core = zx.Core()
     player = PlaybackPlayer()
     devices = Dispatcher([core, player])

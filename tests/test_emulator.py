@@ -22,7 +22,6 @@ from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import InitEmulator
-from zx._device import ReadPort
 from zx._error import Error
 from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
@@ -143,24 +142,12 @@ def test_snapshot_addressing() -> None:
         assert exc_info.value.id == 'unknown_device_in_snapshot'
 
 
-def test_undeclared_port_reads_skip_read_port() -> None:
-    # With every ReadPort device declaring its ports at the collect
-    # step, a read of an address nobody declares means no device
-    # drives it: the input lines all read high, resolved on the C++
-    # side with no ReadPort dispatched. Port 0x121f has A0 high, so
-    # neither the keyboard nor the tape declares it.
-    class _ReadPortObserver(Device):
-        def __init__(self) -> None:
-            self.reads: list[int] = []
-
-        def on_event(self, event: DeviceEvent,
-                     devices: Dispatcher) -> None:
-            if isinstance(event, ReadPort):
-                self.reads.append(event.addr)
-
-    observer = _ReadPortObserver()
-    with zx.Emulator(headless=True,
-                     extra_environment=[observer]) as app:
+def test_undriven_port_reads_as_open_bus() -> None:
+    # A read of an address no series states means no device drives
+    # it: the input lines all read high, resolved on the C++ side.
+    # Port 0x121f has A0 high, so neither the keyboard nor the tape
+    # supplies for it.
+    with zx.Emulator(headless=True) as app:
         core = app.machine.devices['core']
         assert isinstance(core, zx.Core)
         core.write(Spectrum48MemoryMapping(), 0x8000,
@@ -172,4 +159,3 @@ def test_undeclared_port_reads_skip_read_port() -> None:
         app.run(until=Time(1000,
                            ticks_per_second=core.ticks_per_second))
         assert core.a == 0xff
-        assert observer.reads == []

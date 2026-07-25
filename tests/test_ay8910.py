@@ -30,7 +30,6 @@ from zx._device import Dispatcher
 from zx._device import NewPortReads
 from zx._device import NewPortWrites
 from zx._device import NewSoundPulses
-from zx._device import ReadPort
 from zx._device import RunQuantum
 from zx._device import TimeAdvanced
 from zx._emulator import Machine
@@ -316,24 +315,6 @@ def test_ay_supplies_the_selected_register() -> None:
     collect = CollectPortReads(at(300), at(1000))
     Dispatcher([AY8910(disabled=True)]).notify(collect)
     assert collect.series == []
-
-
-def test_ay_read_port_defers_when_selected() -> None:
-    # While ReadPort lives, a read of the select/read port defers
-    # when the chip would drive it; a deselected chip leaves the
-    # read alone.
-    ay = AY8910()
-    devices = Dispatcher([ay])
-
-    read = ReadPort(0xfffd, at(10))
-    devices.notify(read)
-    assert read.value is None
-
-    devices.notify(NewPortWrites(at(20), _port_write_words(
-        (15, 0xfffd, 0x10))))
-    read = ReadPort(0xfffd, at(20))
-    devices.notify(read)
-    assert read.value == 0xff
 
 
 def test_ay_register_read_on_a_core() -> None:

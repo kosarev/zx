@@ -390,25 +390,6 @@ class StopQuantum(DeviceEvent):
     pass
 
 
-class ReadPort(EmulationEvent):
-    def __init__(self, addr: int, time: Time) -> None:
-        super().__init__(time)
-        self.addr = addr
-
-        # All input lines are pulled high unless a device drives
-        # them low. None means a device cannot tell its input yet;
-        # the input instruction is then aborted to be retried later.
-        self.value: int | None = 0xff
-
-    # Devices contribute their samples by ANDing them in, so several
-    # devices can drive the same lines without overriding each other.
-    # A deferred read stays deferred: the samples do not matter, as
-    # the aborted instruction is to re-pose the read anyway.
-    def supply(self, sample: int) -> None:
-        if self.value is not None:
-            self.value &= sample
-
-
 class RequestLoadFile(DeviceEvent):
     pass
 

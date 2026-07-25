@@ -9,15 +9,12 @@
 
 import zx
 from zx._device import CollectPortReads
-from zx._device import Device
-from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import GetQuantumTimeLimit
 from zx._device import IsTapePlayerStopped
 from zx._device import LoadTape
 from zx._device import PauseUnpauseTape
-from zx._device import ReadPort
-from zx._device import StopQuantum
+from zx._device import TimeAdvanced
 from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._tape import TapePlayer
 from zx._time import Time
@@ -42,21 +39,11 @@ def test_basic() -> None:
 
 
 def test_tape_plays_to_the_end() -> None:
-    # Reads pull the tape signal until the last pulse is fetched:
-    # the tape then reports itself stopped, asks the run to stop
-    # exactly once, and leaves further reads alone.
-    class _StopObserver(Device):
-        def __init__(self) -> None:
-            self.count = 0
-
-        def on_event(self, event: DeviceEvent,
-                     devices: Dispatcher) -> None:
-            if isinstance(event, StopQuantum):
-                self.count += 1
-
+    # The tape commits its end as the floor passes it: the last
+    # pulse is fetched, the tape reports itself stopped, and it
+    # supplies nothing thereafter.
     tape = TapePlayer()
-    observer = _StopObserver()
-    devices = Dispatcher([tape, observer])
+    devices = Dispatcher([tape])
 
     data = b'123'
     block = len(data).to_bytes(2, 'little') + data
@@ -68,21 +55,21 @@ def test_tape_plays_to_the_end() -> None:
     tape.on_event(stopped, devices)
     assert not stopped.stopped
 
-    # A read far past the whole recording exhausts the tape.
-    read = ReadPort(0xfe, Time(10 ** 9, ticks_per_second=3_500_000))
-    tape.on_event(read, devices)
-    assert read.value == 0xbf
-    assert observer.count == 1
+    # A floor far past the whole recording commits the end.
+    tape.on_event(
+        TimeAdvanced(Time(10 ** 9, ticks_per_second=3_500_000)),
+        devices)
 
     stopped = IsTapePlayerStopped()
     tape.on_event(stopped, devices)
     assert stopped.stopped
 
-    # An ended tape drives nothing.
-    read = ReadPort(0xfe, Time(2 * 10 ** 9, ticks_per_second=3_500_000))
-    tape.on_event(read, devices)
-    assert read.value == 0xff
-    assert observer.count == 1
+    # An ended tape supplies nothing.
+    collect = CollectPortReads(
+        Time(10 ** 9, ticks_per_second=3_500_000),
+        Time(10 ** 9 + 1000, ticks_per_second=3_500_000))
+    tape.on_event(collect, devices)
+    assert collect.series == []
 
 
 # The tape's own resolution.
@@ -138,8 +125,7 @@ def test_tape_supplies_its_signal() -> None:
 
 def test_tape_supply_does_not_consume() -> None:
     # Supplying peeks the pulses without consuming: the same span
-    # re-states identically, the tape does not stop, and reads
-    # still see the same signal on the ReadPort path.
+    # re-states identically, and the tape does not stop.
     tape = TapePlayer()
     tape.on_event(LoadTape(_make_test_tape()), Dispatcher())
     tape.on_event(PauseUnpauseTape(False), Dispatcher())
@@ -152,12 +138,6 @@ def test_tape_supply_does_not_consume() -> None:
     stopped = IsTapePlayerStopped()
     tape.on_event(stopped, Dispatcher())
     assert not stopped.stopped
-
-    # The level right after the second transition, via ReadPort.
-    tick = int(series.ticks[2])
-    read = ReadPort(0xfe, Time(tick, ticks_per_second=TAPE_RESOLUTION))
-    tape.on_event(read, Dispatcher())
-    assert read.value == series.values[2]
 
 
 def test_tape_supply_bounded_at_the_end() -> None:
@@ -221,24 +201,12 @@ def test_tape_bounds_the_quantum_at_its_end() -> None:
 
 def test_tape_read_from_samples() -> None:
     # In the Emulator loop, a read of the EAR port resolves from
-    # the supplied samples on the C++ side, with no ReadPort
-    # dispatched. Port 0xfffe selects no keyboard row, so the tape
-    # is the read's only driver.
-    class _ReadPortObserver(Device):
-        def __init__(self) -> None:
-            self.reads: list[int] = []
-
-        def on_event(self, event: DeviceEvent,
-                     devices: Dispatcher) -> None:
-            if isinstance(event, ReadPort):
-                self.reads.append(event.addr)
-
+    # the supplied samples on the C++ side. Port 0xfffe selects no
+    # keyboard row, so the tape is the read's only driver.
     tap = _make_test_tape()
     first_level = next(iter(tap.get_pulses()))[0]
 
-    observer = _ReadPortObserver()
-    with zx.Emulator(headless=True,
-                     extra_environment=[observer]) as app:
+    with zx.Emulator(headless=True) as app:
         core = app.machine.devices['core']
         assert isinstance(core, zx.Core)
         core.write(Spectrum48MemoryMapping(), 0x8000,
@@ -253,4 +221,3 @@ def test_tape_read_from_samples() -> None:
         app.run(until=Time(1000,
                            ticks_per_second=core.ticks_per_second))
         assert core.a == (0xff if first_level else 0xbf)
-        assert observer.reads == []

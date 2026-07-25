@@ -23,7 +23,6 @@ from ._device import Dispatcher
 from ._device import InstallDeviceSnapshot
 from ._device import NewPortWrites
 from ._device import NewSoundPulses
-from ._device import ReadPort
 from ._device import ResetEmulator
 from ._device import RunQuantum
 from ._device import TimeAdvanced
@@ -434,14 +433,6 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
             self.__on_port_writes(event)
         elif isinstance(event, CollectPortReads):
             self.__supply_register_value(event)
-        elif isinstance(event, ReadPort):
-            # A read of the select/read port defers; the next
-            # collect answers it with the value at the floor.
-            # TODO: Delete together with ReadPort.
-            if (event.addr & 0xc002 == 0xc000 and
-                    self.__selected_register <
-                    len(self.__REGISTER_READ_MASKS)):
-                event.value = None
         elif isinstance(event, TimeAdvanced):
             self.__publish(event.time, dispatcher)
 

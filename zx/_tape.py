@@ -26,9 +26,7 @@ from ._device import IsTapePlayerStopped
 from ._device import LoadTape
 from ._device import NewSoundPulses
 from ._device import PauseUnpauseTape
-from ._device import ReadPort
 from ._device import ResetEmulator
-from ._device import StopQuantum
 from ._device import TapeStateUpdated
 from ._device import TimeAdvanced
 from ._sound import PulseStream
@@ -294,9 +292,9 @@ class TapePlayer(Device):
     # timeline: the level at the floor, then the boundaries of the
     # pulses ahead, decoded without consuming so the signal can be
     # re-stated next quantum. Coverage runs through the limit, or to
-    # the tape end if that comes first -- a read past the end falls
-    # back to ReadPort, which plays the end out as before. A paused
-    # tape holds its level.
+    # the tape end if that comes first -- a read past the end
+    # defers until the end is committed, past which the ended tape
+    # drives nothing. A paused tape holds its level.
     def __supply_samples(self, event: CollectPortReads) -> None:
         def tape_tick_at_or_after(time: Time) -> int:
             return -(-time.count * _TAPE_TICKS_PER_SECOND //
@@ -344,7 +342,7 @@ class TapePlayer(Device):
                     duration, ticks_per_second=_TAPE_TICKS_PER_SECOND)
 
         # At its very end the tape has nothing left to say: reads
-        # keep going to ReadPort until the end is committed.
+        # defer until the end is committed.
         if end_tick <= first_tick:
             event.supply(PortReadSeries(addr_mask=0x0001,
                                         addr_value=0x0000))
@@ -413,20 +411,9 @@ class TapePlayer(Device):
                 self.__request_stop_at_end(event)
         elif isinstance(event, CollectPortReads):
             # A tape drives the EAR bit, bit 6, of reads with A0
-            # low -- the ULA decode, although ReadPort below still
-            # answers any address until it retires.
+            # low -- the ULA decode.
             if not self.__ended:
                 self.__supply_samples(event)
-        elif isinstance(event, ReadPort):
-            if not self.__ended:
-                if not self.__get_level_at_time(event.time):
-                    event.supply(0xbf)  # EAR bit low when no tape signal
-
-                # If that read exhausted the tape, ask the run to stop
-                # at this exact tick (fires once -- the block is skipped
-                # thereafter, since the tape is now ended).
-                if self.__ended:
-                    dispatcher.notify(StopQuantum())
         elif isinstance(event, IsTapePlayerPaused):
             event.paused |= self.__is_paused()
         elif isinstance(event, IsTapePlayerStopped):

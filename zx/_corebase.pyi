@@ -19,6 +19,9 @@ class _CoreBase:
     def drain_port_writes(self) -> bytes:
         ...
 
+    def _get_deferred_port_read_tick(self) -> int | None:
+        ...
+
     def _clear_port_read_samples(self) -> None:
         ...
 

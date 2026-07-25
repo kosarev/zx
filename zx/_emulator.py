@@ -292,8 +292,9 @@ class Emulator:
 
         # Collect the port-read samples for the span up to the limit
         # and publish them whole; the publication is the delivery.
-        # Reads of ports no series declares resolve to the open-bus
-        # 0xff without dispatching ReadPort.
+        # Reads of ports no series states resolve to the open-bus
+        # 0xff; a read a matching series does not cover defers, and
+        # the next collect carries its moment.
         collect = CollectPortReads(self.__advanced_floor,
                                    limit.stop_after_time,
                                    self.__deferred_port_read_time)

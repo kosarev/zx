@@ -28,27 +28,30 @@ from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import NewPortReads
-from zx._device import ReadPort
 from zx._device import RunQuantum
 from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
 
 
 def test_on_input_propagates_exception() -> None:
-    # An exception raised while handling a port read must propagate
-    # out of the run promptly, aborting the input instruction just
-    # like a deferred read, so nothing is committed on a value that
-    # never existed.
+    # An exception raised in a custom port-read callback -- the
+    # option for private rigs -- must propagate out of the run
+    # promptly, aborting the input instruction just like a deferred
+    # read, so nothing is committed on a value that never existed.
     class _PortError(Exception):
         pass
 
-    class _Raiser(Device):
-        def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
-            if isinstance(event, ReadPort):
-                raise _PortError()
+    def raise_on_input(addr: int, devices: Dispatcher) -> int | None:
+        raise _PortError()
 
     mach = zx.Core()
-    dispatcher = Dispatcher([mach, _Raiser()])
+    dispatcher = Dispatcher([mach])
+    mach.set_on_input_callback(raise_on_input)
+
+    # The rig states a driver for every port, so reads the samples
+    # do not resolve reach the callback.
+    mach._add_port_read_samples(0, 1, 0, 0x0000, 0x0000, 0,
+                                numpy.zeros(0, dtype=numpy.uint64))
 
     mach.write(Spectrum48MemoryMapping(), 0x8000,
                b'\xdb\xfe')  # IN A, (0xfe)
@@ -90,26 +93,28 @@ def test_on_output_propagates_exception() -> None:
 
 
 def test_deferred_input() -> None:
-    # A device that cannot tell the value of a port read yet defers
-    # it: the input instruction is aborted with nothing committed and
-    # the run ends, so a later run can retry the instruction once the
-    # value is known.
-    class _Port(Device):
+    # A custom port-read callback that cannot tell the value yet
+    # defers the read: the input instruction is aborted with nothing
+    # committed and the run ends, so a later run can retry the
+    # instruction once the value is known.
+    class _Port:
         def __init__(self) -> None:
             self.ready = False
             self.num_read_attempts = 0
 
-        def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
-            if isinstance(event, ReadPort):
-                self.num_read_attempts += 1
-                if self.ready:
-                    event.supply(0x5a)
-                else:
-                    event.value = None
+        def read(self, addr: int, devices: Dispatcher) -> int | None:
+            self.num_read_attempts += 1
+            return 0x5a if self.ready else None
 
     mach = zx.Core()
     port = _Port()
-    dispatcher = Dispatcher([mach, port])
+    dispatcher = Dispatcher([mach])
+    mach.set_on_input_callback(port.read)
+
+    # The rig states a driver for every port, so reads the samples
+    # do not resolve reach the callback.
+    mach._add_port_read_samples(0, 1, 0, 0x0000, 0x0000, 0,
+                                numpy.zeros(0, dtype=numpy.uint64))
 
     mach.write(Spectrum48MemoryMapping(), 0x8000,
                b'\xdb\xfe')  # IN A, (0xfe)
@@ -370,20 +375,6 @@ def _sample_entries(
                        dtype=numpy.uint64)
 
 
-# A device answering ReadPort with the given value, recording the
-# addresses read.
-class _PortReadResponder(Device):
-    def __init__(self, value: int = 0x99) -> None:
-        self.reads: list[int] = []
-        self.__value = value
-
-    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
-        if isinstance(event, ReadPort):
-            self.reads.append(event.addr)
-            assert event.value is not None
-            event.value &= self.__value
-
-
 # A bare core about to execute IN A, (0xfe) with A = 0x12, so the
 # port address is 0x12fe and the input cycle's read falls at tick
 # 10. The JR loop then spins to the end of the frame, keeping the
@@ -400,26 +391,22 @@ def _make_core_reading_port() -> zx.Core:
 
 def test_port_read_samples_answer_covered_read() -> None:
     core = _make_core_reading_port()
-    responder = _PortReadResponder()
-    devices = Dispatcher([core, responder])
+    devices = Dispatcher([core])
 
-    core._clear_port_read_samples()
     core._add_port_read_samples(
         0, CORE_RESOLUTION, 0, 0xffff, 0x12fe, 1000,
         _sample_entries((0, 0x55)))
 
     core._run(devices)
     assert core.a == 0x55
-    assert responder.reads == []
 
 
 def test_port_read_samples_and_together() -> None:
     # Two series drive the same read; undriven bits stay 1s, so the
     # samples AND together like open-collector outputs.
     core = _make_core_reading_port()
-    devices = Dispatcher([core, _PortReadResponder()])
+    devices = Dispatcher([core])
 
-    core._clear_port_read_samples()
     core._add_port_read_samples(
         0, CORE_RESOLUTION, 0, 0xffff, 0x12fe, 1000,
         _sample_entries((0, 0xfa)))
@@ -434,71 +421,59 @@ def test_port_read_samples_and_together() -> None:
 def test_port_read_samples_cover_num_ticks() -> None:
     # A series covers num_ticks ticks from tick 0, the end excluded.
     # The IN's read falls at tick 10, so a 10-tick span misses it
-    # and the read goes to ReadPort.
+    # and the read defers, with nothing committed.
     core = _make_core_reading_port()
-    responder = _PortReadResponder()
-    devices = Dispatcher([core, responder])
+    devices = Dispatcher([core])
 
-    core._clear_port_read_samples()
     core._add_port_read_samples(
         0, CORE_RESOLUTION, 0, 0xffff, 0x12fe, 10,
         _sample_entries((0, 0x55)))
 
-    core._run(devices)
-    assert core.a == 0x99
-    assert responder.reads == [0x12fe]
+    events = RunEvents(core._run(devices))
+    assert RunEvents.RETRY_INPUT in events
+    assert core.pc == 0x8000
+    assert core.a == 0x12
 
     # An 11-tick span covers it.
     core = _make_core_reading_port()
-    responder = _PortReadResponder()
-    devices = Dispatcher([core, responder])
+    devices = Dispatcher([core])
 
-    core._clear_port_read_samples()
     core._add_port_read_samples(
         0, CORE_RESOLUTION, 0, 0xffff, 0x12fe, 11,
         _sample_entries((0, 0x55)))
 
     core._run(devices)
     assert core.a == 0x55
-    assert responder.reads == []
 
 
 def test_port_read_with_no_matching_series_is_open_bus() -> None:
-    # With samples supplied and no series matching the address, no
-    # device drives the read: the input lines all read high.
+    # With no series matching the address, no device drives the
+    # read: the input lines all read high. A bare core with no
+    # samples at all reads every port that way.
     core = _make_core_reading_port()
-    responder = _PortReadResponder()
-    devices = Dispatcher([core, responder])
+    devices = Dispatcher([core])
 
-    core._clear_port_read_samples()
+    core._run(devices)
+    assert core.a == 0xff
+
+    core = _make_core_reading_port()
+    devices = Dispatcher([core])
+
     core._add_port_read_samples(
         0, CORE_RESOLUTION, 0, 0xffff, 0x30fe, 1000,
         _sample_entries((0, 0x55)))
 
     core._run(devices)
     assert core.a == 0xff
-    assert responder.reads == []
 
 
-def test_empty_series_forces_read_port() -> None:
+def test_empty_series_defers_the_read() -> None:
     # An empty series states its device can foretell nothing, so
     # reads of its addresses cannot be resolved from the samples,
-    # whatever other series cover. The construction-time series
-    # of a bare core is exactly this, for all addresses.
+    # whatever other series cover: they defer.
     core = _make_core_reading_port()
-    responder = _PortReadResponder()
-    devices = Dispatcher([core, responder])
+    devices = Dispatcher([core])
 
-    core._run(devices)
-    assert core.a == 0x99
-    assert responder.reads == [0x12fe]
-
-    # The same, stated explicitly beside a covering series.
-    core = _make_core_reading_port()
-    responder = _PortReadResponder()
-    devices = Dispatcher([core, responder])
-
-    core._clear_port_read_samples()
     core._add_port_read_samples(
         0, CORE_RESOLUTION, 0, 0xffff, 0x12fe, 1000,
         _sample_entries((0, 0x55)))
@@ -506,9 +481,10 @@ def test_empty_series_forces_read_port() -> None:
         0, 1, 0, 0x0000, 0x0000, 0,
         numpy.zeros(0, dtype=numpy.uint64))
 
-    core._run(devices)
-    assert core.a == 0x99
-    assert responder.reads == [0x12fe]
+    events = RunEvents(core._run(devices))
+    assert RunEvents.RETRY_INPUT in events
+    assert core.pc == 0x8000
+    assert core.a == 0x12
 
 
 def test_port_read_samples_in_device_resolution() -> None:
@@ -516,9 +492,8 @@ def test_port_read_samples_in_device_resolution() -> None:
     # 10 is at device tick 20 exactly, so a sample since device
     # tick 20 drives it and a 21-device-tick span covers it.
     core = _make_core_reading_port()
-    devices = Dispatcher([core, _PortReadResponder()])
+    devices = Dispatcher([core])
 
-    core._clear_port_read_samples()
     core._add_port_read_samples(
         0, 2 * CORE_RESOLUTION, 0, 0xffff, 0x12fe, 21,
         _sample_entries((0, 0x55), (20, 0x66)))
@@ -528,10 +503,8 @@ def test_port_read_samples_in_device_resolution() -> None:
 
     # A sample since device tick 21 starts right after the read.
     core = _make_core_reading_port()
-    responder = _PortReadResponder()
-    devices = Dispatcher([core, responder])
+    devices = Dispatcher([core])
 
-    core._clear_port_read_samples()
     core._add_port_read_samples(
         0, 2 * CORE_RESOLUTION, 0, 0xffff, 0x12fe, 1000,
         _sample_entries((0, 0x55), (21, 0x66)))
@@ -539,19 +512,17 @@ def test_port_read_samples_in_device_resolution() -> None:
     core._run(devices)
     assert core.a == 0x55
 
-    # A 20-device-tick span ends exactly at the read.
+    # A 20-device-tick span ends exactly at the read, deferring it.
     core = _make_core_reading_port()
-    responder = _PortReadResponder()
-    devices = Dispatcher([core, responder])
+    devices = Dispatcher([core])
 
-    core._clear_port_read_samples()
     core._add_port_read_samples(
         0, 2 * CORE_RESOLUTION, 0, 0xffff, 0x12fe, 20,
         _sample_entries((0, 0x55)))
 
-    core._run(devices)
-    assert core.a == 0x99
-    assert responder.reads == [0x12fe]
+    events = RunEvents(core._run(devices))
+    assert RunEvents.RETRY_INPUT in events
+    assert core.a == 0x12
 
 
 def test_port_read_samples_progress_with_reads() -> None:
@@ -566,9 +537,8 @@ def test_port_read_samples_progress_with_reads() -> None:
                b'\x18\xfe')  # JR $
     core.pc = 0x8000
     core.a = 0x12
-    devices = Dispatcher([core, _PortReadResponder()])
+    devices = Dispatcher([core])
 
-    core._clear_port_read_samples()
     core._add_port_read_samples(
         0, CORE_RESOLUTION, 0, 0x00ff, 0x00fe, 1000,
         _sample_entries((0, 0x55), (20, 0x66)))
@@ -583,9 +553,8 @@ def test_port_read_samples_progress_with_reads() -> None:
 def test_port_read_samples_replaced_wholesale() -> None:
     # Clearing discards previously added series entirely.
     core = _make_core_reading_port()
-    devices = Dispatcher([core, _PortReadResponder()])
+    devices = Dispatcher([core])
 
-    core._clear_port_read_samples()
     core._add_port_read_samples(
         0, CORE_RESOLUTION, 0, 0xffff, 0x12fe, 1000,
         _sample_entries((0, 0x55)))
@@ -602,8 +571,7 @@ def test_new_port_reads_load_the_samples() -> None:
     # A published series answers the read via the border: the
     # core loads its C++-side copy on NewPortReads.
     core = _make_core_reading_port()
-    responder = _PortReadResponder()
-    devices = Dispatcher([core, responder])
+    devices = Dispatcher([core])
 
     series = PortReadSeries(
         addr_mask=0xffff, addr_value=0x12fe,
@@ -616,26 +584,23 @@ def test_new_port_reads_load_the_samples() -> None:
 
     core._run(devices)
     assert core.a == 0x55
-    assert responder.reads == []
 
 
 def test_new_port_reads_replace_the_samples_wholesale() -> None:
-    # A publication replaces the samples entirely: after an empty
-    # one, no series is left -- the construction-time catch-all
-    # included -- so nothing drives any port and reads resolve to
-    # the open-bus 0xff. In the Emulator's loop the collect step
-    # re-supplies the catch-all, keeping reads on ReadPort while
-    # devices still answer there.
+    # A publication replaces the samples entirely: series added
+    # beforehand are gone, so only the published statements drive
+    # the ports.
     core = _make_core_reading_port()
-    responder = _PortReadResponder()
-    devices = Dispatcher([core, responder])
+    devices = Dispatcher([core])
 
+    core._add_port_read_samples(
+        0, CORE_RESOLUTION, 0, 0xffff, 0x12fe, 1000,
+        _sample_entries((0, 0x55)))
     devices.notify(NewPortReads(
         Time(0, ticks_per_second=CORE_RESOLUTION), []))
 
     core._run(devices)
     assert core.a == 0xff
-    assert responder.reads == []
 
 
 def test_new_port_reads_relate_the_resolutions() -> None:
@@ -645,7 +610,7 @@ def test_new_port_reads_relate_the_resolutions() -> None:
     # effect there, and the change at device tick 30 lies past the
     # read at core tick 10.
     core = _make_core_reading_port()
-    devices = Dispatcher([core, _PortReadResponder()])
+    devices = Dispatcher([core])
 
     series = PortReadSeries(
         addr_mask=0xffff, addr_value=0x12fe,
@@ -660,19 +625,16 @@ def test_new_port_reads_relate_the_resolutions() -> None:
     assert core.a == 0x55
 
 
-# A prototype of a transport-switched device: it answers ReadPort
-# for its port with None only -- deferring the read -- and supplies
-# the value in effect at the floor on CollectPortReads instead. A
-# None value means the device supplies the declaration alone.
+# A supplier of the value in effect at the floor, one tick of
+# coverage: any read past it defers and is answered at the next
+# collect. A None value means the device supplies the empty series
+# alone.
 class _FloorValueSupplier(Device):
     def __init__(self, value: int | None) -> None:
         self.__value = value
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
-        if isinstance(event, ReadPort):
-            if event.addr == 0x12fe:
-                event.value = None
-        elif isinstance(event, CollectPortReads):
+        if isinstance(event, CollectPortReads):
             assert event.floor.ticks_per_second == CORE_RESOLUTION
             floor_tick = event.floor.count
 
