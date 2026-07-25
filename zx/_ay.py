@@ -10,10 +10,16 @@ from __future__ import annotations
 
 import typing
 
+from ._ay8910 import AY8910Snapshot
+from ._core import Z80Snapshot
 from ._data import ByteData
 from ._data import DataRecord
 from ._data import HexData
+from ._data import MachineSnapshot
 from ._error import Error
+from ._spectrum48 import Spectrum48CoreSnapshot
+from ._spectrum48 import Spectrum48MemoryBlock
+from ._spectrum48 import Spectrum48MemorySnapshot
 
 if typing.TYPE_CHECKING:
     from ._binary import Bytes
@@ -426,3 +432,66 @@ class AYFile(DataRecord, format_name='AY'):
             w.write_bytes(gap.data.data)
 
         return w.get_image()
+
+    # The snapshot that plays the given song: the canonical memory
+    # fill, the launch stub the file does not contain, the song's
+    # blocks, and the register seeds. The machine is the player
+    # convention: flat 48K memory with no paging port, and the AY at
+    # its standard ports. The first cut runs the 48K clock, like an
+    # AY box on a real 48K; exact 128K clocking comes with 128K
+    # support proper.
+    def to_machine_snapshot(self, song: AYFileSong) -> MachineSnapshot:
+        # The canonical fill: RET over the ROM area's entry points,
+        # then 0xff up to the RAM, which is zeroed.
+        image = bytearray(0x10000)
+        image[0x0000:0x0100] = b'\xc9' * 0x0100
+        image[0x0100:0x4000] = b'\xff' * 0x3f00
+
+        if song.init_addr:
+            init = song.init_addr
+        elif song.blocks:
+            init = song.blocks[0].address
+        else:
+            raise Error(f'AY song {song.name!r} has no init address '
+                        f'and no blocks.', id='bad_ay_file')
+
+        # The launch stub: set the song up, then wait for interrupts.
+        image[0x0000:0x0007] = bytes((
+            0xcd, init & 0xff, init >> 8,   # CALL init
+            0xfb,                           # loop: EI
+            0x76,                           # HALT
+            0x18, 0xfc))                    # JR loop
+
+        play = song.int_addr
+        if play:
+            # The IM 1 handler calls the play routine; the fill's
+            # RET returns.
+            image[0x0038:0x003b] = bytes((0xcd, play & 0xff, play >> 8))
+        else:
+            # The code drives itself: init never returns, or it
+            # installs an IM 2 handler, so the loop runs in IM 2.
+            # EI at 0x0038 serves rips that select IM 1 themselves.
+            image[0x0038] = 0xfb
+
+        # The blocks land over the fill and the stub: the file's
+        # content is authoritative. Content past the top of memory
+        # is dropped.
+        for block in song.blocks:
+            data = block.data.data
+            end = min(block.address + len(data), 0x10000)
+            image[block.address:end] = data[:end - block.address]
+
+        regs = song.z80_regs_value
+        return MachineSnapshot(
+            core=Spectrum48CoreSnapshot(
+                z80=Z80Snapshot(
+                    af=regs, bc=regs, de=regs, hl=regs,
+                    ix=regs, iy=regs,
+                    alt_af=regs, alt_bc=regs,
+                    alt_de=regs, alt_hl=regs,
+                    pc=0x0000, sp=song.sp,
+                    int_mode=1 if play else 2),
+                memory=Spectrum48MemorySnapshot(blocks=[
+                    Spectrum48MemoryBlock(addr=0x0000,
+                                          data=bytes(image))])),
+            ay=AY8910Snapshot())

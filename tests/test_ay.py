@@ -17,9 +17,14 @@ import json
 import pytest
 
 from zx._ay import AYFile
+from zx._ay import AYFileBlock
+from zx._ay import AYFileSong
+from zx._ay8910 import AY8910Snapshot
 from zx._data import DataRecord
 from zx._error import Error
 from zx._file import parse_file_image
+from zx._spectrum48 import Spectrum48CoreSnapshot
+from zx._spectrum48 import Spectrum48MemoryMapping
 
 
 def be(value: int) -> bytes:
@@ -148,6 +153,119 @@ def test_truncated_block_data() -> None:
     assert block.length == 100
     assert block.data.data == b'\xaa\xbb\xcc'
     assert ay.encode() == bytes(image)
+
+
+def _make_song(*, init_addr: int = 0x8000, int_addr: int = 0,
+               sp: int = 0, z80_regs_value: int = 0,
+               blocks: list[AYFileBlock] | None = None) -> AYFileSong:
+    return AYFileSong(
+        name_offset=0, name='S', data_offset=0,
+        a_amiga_channel_number=0, b_amiga_channel_number=1,
+        c_amiga_channel_number=2, noise_amiga_channel_number=3,
+        frames_per_song=0, frames_per_fade_out=0,
+        z80_regs_value=z80_regs_value,
+        entry_points_offset=0, sp=sp,
+        init_addr=init_addr, int_addr=int_addr,
+        blocks_offset=0, blocks=blocks if blocks is not None else [])
+
+
+def test_to_machine_snapshot() -> None:
+    # The song converts to a snapshot of the player machine: the
+    # canonical fill, the launch stub, the song's blocks and the
+    # register seeds, with the AY as a machine member.
+    ay = AYFile.decode('x.ay', IMAGE)
+    song, = ay.songs
+    snapshot = ay.to_machine_snapshot(song)
+
+    members = dict(snapshot)
+    assert isinstance(members['ay'], AY8910Snapshot)
+
+    core = members['core']
+    assert isinstance(core, Spectrum48CoreSnapshot)
+
+    z80 = core.z80
+    assert z80 is not None
+    assert (z80.af, z80.bc, z80.de, z80.hl) == (0, 0, 0, 0)
+    assert (z80.ix, z80.iy) == (0, 0)
+    assert (z80.alt_af, z80.alt_bc, z80.alt_de, z80.alt_hl) == (0, 0, 0, 0)
+    assert (z80.pc, z80.sp) == (0x0000, 0xc000)
+
+    # No play routine: the loop runs in IM 2 and 0x0038 keeps the
+    # spec's EI over the fill's RET.
+    assert z80.int_mode == 2
+
+    memory = core.memory
+    mapping = Spectrum48MemoryMapping()
+    assert memory.match(mapping, 0x0000,
+                        bytes((0xcd, 0x00, 0x80,      # CALL 0x8000
+                               0xfb, 0x76,            # EI; HALT
+                               0x18, 0xfc,            # JR $-2
+                               0xc9)))                # the fill
+    assert memory.match(mapping, 0x0038, b'\xfb\xc9')
+    assert memory.match(mapping, 0x00ff, b'\xc9\xff\xff')
+    assert memory.match(mapping, 0x3fff, b'\xff\x00\x00')
+    assert memory.match(mapping, 0x8000, b'\xaa\xbb\xcc\x00')
+
+
+def test_to_machine_snapshot_play_routine_and_seeds() -> None:
+    # A play routine turns the 0x0038 handler into a call to it and
+    # the loop runs in IM 1; the register seeds land in every pair.
+    ay = AYFile(songs_offset=0, songs=[])
+    song = _make_song(int_addr=0x9000, sp=0xfff0, z80_regs_value=0x1234,
+                      blocks=[AYFileBlock(address=0x8000, data_offset=0,
+                                          data=b'\xee')])
+    snapshot = ay.to_machine_snapshot(song)
+
+    core = dict(snapshot)['core']
+    assert isinstance(core, Spectrum48CoreSnapshot)
+
+    z80 = core.z80
+    assert z80 is not None
+    assert (z80.af, z80.bc, z80.de, z80.hl) == (0x1234,) * 4
+    assert (z80.ix, z80.iy) == (0x1234, 0x1234)
+    assert (z80.alt_af, z80.alt_bc,
+            z80.alt_de, z80.alt_hl) == (0x1234,) * 4
+    assert z80.sp == 0xfff0
+    assert z80.int_mode == 1
+
+    mapping = Spectrum48MemoryMapping()
+    assert core.memory.match(mapping, 0x0038,
+                             bytes((0xcd, 0x00, 0x90,  # CALL 0x9000
+                                    0xc9)))            # the fill
+
+
+def test_to_machine_snapshot_block_placement() -> None:
+    # Blocks land over the fill and the stub, and content past the
+    # top of memory is dropped. A zero init address means the first
+    # block's address.
+    ay = AYFile(songs_offset=0, songs=[])
+    song = _make_song(
+        init_addr=0,
+        blocks=[AYFileBlock(address=0x0005, data_offset=0,
+                            data=b'\x11\x22'),
+                AYFileBlock(address=0xfffe, data_offset=0,
+                            data=b'\x33\x44\x55\x66')])
+    snapshot = ay.to_machine_snapshot(song)
+
+    core = dict(snapshot)['core']
+    assert isinstance(core, Spectrum48CoreSnapshot)
+    z80 = core.z80
+    assert z80 is not None
+
+    mapping = Spectrum48MemoryMapping()
+    assert core.memory.match(mapping, 0x0000,
+                             bytes((0xcd, 0x05, 0x00,  # CALL 0x0005
+                                    0xfb, 0x76,
+                                    0x11, 0x22)))
+    assert core.memory.match(mapping, 0xfffe, b'\x33\x44')
+
+
+def test_to_machine_snapshot_no_entry() -> None:
+    # A song with no init address and no blocks has nothing to run.
+    ay = AYFile(songs_offset=0, songs=[])
+    with pytest.raises(Error) as e:
+        ay.to_machine_snapshot(_make_song(init_addr=0))
+    assert e.value.id == 'bad_ay_file'
 
 
 def test_errors() -> None:
