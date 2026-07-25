@@ -45,8 +45,10 @@ from ._device import Dispatcher
 from ._device import FetchesLimitHit
 from ._device import InstallSnapshot
 from ._device import LoadTape
+from ._device import NewSoundPulses
 from ._device import PauseUnpauseTape
 from ._device import RunQuantum
+from ._device import TimeAdvanced
 from ._emulator import Emulator
 from ._emulator import Machine
 from ._error import USER_ERRORS
@@ -123,8 +125,50 @@ def _play_ay_stream(stream: AYStream) -> None:
             app.run(until=player.get_end_time() + tail)
 
 
-# A song stating no duration plays for this long: three minutes,
-# the usual player convention.
+# Tells when the emitted sound has stopped: a chunk with any level
+# transition beyond its opening level is sound, and a run of
+# transition-free chunks is silence -- a constant level is
+# inaudible whatever its value. Installing a snapshot restarts the
+# watch.
+class _SilenceWatcher(Device):
+    def __init__(self) -> None:
+        super().__init__()
+        self.__restart()
+
+    def __restart(self) -> None:
+        self.__heard = False
+        self.__silent_since: Time | None = None
+        self.__now: Time | None = None
+
+    # Whether nothing has sounded for the given number of seconds.
+    def is_silent_for(self, seconds: int) -> bool:
+        if self.__silent_since is None or self.__now is None:
+            return False
+        return not (self.__now - self.__silent_since <
+                    Time(seconds, ticks_per_second=1))
+
+    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
+        if isinstance(event, InstallSnapshot):
+            self.__restart()
+        elif isinstance(event, NewSoundPulses):
+            if len(event.pulses.ticks) > 1:
+                self.__heard = True
+        elif isinstance(event, TimeAdvanced):
+            # Sound during the elapsed span means the silence, if
+            # any, starts at this stamp; before the first stamp it
+            # counts from the start.
+            if self.__heard or self.__silent_since is None:
+                self.__silent_since = event.time
+            self.__heard = False
+            self.__now = event.time
+
+
+# A song stating no duration plays until nothing has sounded for
+# this many seconds -- how short jingles with no stated length end.
+_SILENCE_ENDS_SONG_SECONDS = 6
+
+# The cap for songs stating no duration: three minutes, the usual
+# player convention, so endlessly looping tunes still end.
 _DEFAULT_SONG_FRAMES = 3 * 60 * 50
 
 
@@ -134,15 +178,23 @@ _DEFAULT_SONG_FRAMES = 3 * 60 * 50
 # how long it runs. The fade-out that should follow needs mixer
 # gain, so for now the song just ends.
 def _play_ay_file(file: AYFile) -> None:
+    watcher = _SilenceWatcher()
     with (Emulator(machine=Machine(core=Core(), ay=AY8910(),
                                    beeper=Beeper()),
-                   environment=[_HoldWaiter(),
+                   environment=[_HoldWaiter(), watcher,
                                 _make_player_sound()]) as app,
           contextlib.suppress(EmulationExit)):
         for song in file.songs:
             app.notify(InstallSnapshot(file.to_machine_snapshot(song)))
-            frames = song.frames_per_song or _DEFAULT_SONG_FRAMES
-            app.run(duration=frames / 50)
+
+            if song.frames_per_song:
+                app.run(duration=song.frames_per_song / 50)
+                continue
+
+            for _ in range(_DEFAULT_SONG_FRAMES // 50):
+                app.run(duration=1.0)
+                if watcher.is_silent_for(_SILENCE_ENDS_SONG_SECONDS):
+                    break
 
 
 def run(args: list[str]) -> None:
