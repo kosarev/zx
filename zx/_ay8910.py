@@ -79,10 +79,11 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
     and combining them is the mixer's business, like any other
     emitters'. The internal grid is the generator step of 8 chip
     clocks: a tone flips every period count of it, noise and the
-    envelope move every second count of theirs. The chip clock is
-    half the 128K CPU clock, so a step is 16 CPU ticks and the grid
-    is exact on the stamp timeline. A write takes effect at the
-    following step boundary.
+    envelope move every second count of theirs. The boards wire the
+    chip clock as half the CPU clock -- the 128K and the 48K AY
+    interfaces alike -- so a step is 16 CPU ticks and the grid is
+    exact on the stamp timeline of any machine. A write takes
+    effect at the following step boundary.
 
     The stream has two producers. The chip's own bus interface
     decodes the machine's stamped port writes: the board's gates
@@ -93,8 +94,13 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
     AY8910RegisterWrite events.
     """
 
-    # The chip clock, in Hz: half the 128K CPU clock.
-    _CLOCK = 1_773_450
+    # CPU clocks per chip clock, the boards' wiring choice: the
+    # 128K and the 48K AY interfaces alike halve the machine's
+    # clock.
+    # TODO: Rework the synthesiser to run on the chip's own
+    # timeline, with the chip clock as an AY configuration field,
+    # so a chip clocked independently of the CPU is expressible.
+    _CPU_CLOCKS_PER_CHIP_CLOCK = 2
 
     # Chip clocks per generator step.
     _CLOCKS_PER_STEP = 8
@@ -150,12 +156,11 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
         # The levels the current chunks open at, per channel.
         self.__current_levels = [0.0, 0.0, 0.0]
 
-    # The number of stamp-timeline ticks per generator step; exact by
-    # construction or not representable.
-    def __ticks_per_step(self, rate: int) -> int:
-        ticks = rate * self._CLOCKS_PER_STEP
-        assert ticks % self._CLOCK == 0, (rate, self._CLOCK)
-        return ticks // self._CLOCK
+    # The number of stamp-timeline ticks per generator step: with
+    # the chip clock derived from the stream's own clock, the count
+    # is the same on any timeline.
+    def __ticks_per_step(self) -> int:
+        return self._CPU_CLOCKS_PER_CHIP_CLOCK * self._CLOCKS_PER_STEP
 
     def __tone_period(self, channel: int) -> int:
         fine = self.__regs[channel * 2]
@@ -288,7 +293,7 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
         if span == 0:
             return
 
-        ticks_per_step = self.__ticks_per_step(stamp.ticks_per_second)
+        ticks_per_step = self.__ticks_per_step()
         begin = published_up_to.count
 
         # The steps whose boundaries land within the span; levels are
