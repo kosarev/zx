@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import math
 import typing
 
 import numpy
@@ -79,11 +80,10 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
     and combining them is the mixer's business, like any other
     emitters'. The internal grid is the generator step of 8 chip
     clocks: a tone flips every period count of it, noise and the
-    envelope move every second count of theirs. The boards wire the
-    chip clock as half the CPU clock -- the 128K and the 48K AY
-    interfaces alike -- so a step is 16 CPU ticks and the grid is
-    exact on the stamp timeline of any machine. A write takes
-    effect at the following step boundary.
+    envelope move every second count of theirs. The chip runs its
+    own clock, and stamps of any timeline place against its grid by
+    exact integer arithmetic, so any machine's clock may drive the
+    bus. A write takes effect at the following step boundary.
 
     The stream has two producers. The chip's own bus interface
     decodes the machine's stamped port writes: the board's gates
@@ -94,13 +94,11 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
     AY8910RegisterWrite events.
     """
 
-    # CPU clocks per chip clock, the boards' wiring choice: the
-    # 128K and the 48K AY interfaces alike halve the machine's
-    # clock.
-    # TODO: Rework the synthesiser to run on the chip's own
-    # timeline, with the chip clock as an AY configuration field,
-    # so a chip clocked independently of the CPU is expressible.
-    _CPU_CLOCKS_PER_CHIP_CLOCK = 2
+    # The chip clock, in Hz: the 128K's wiring and the .ay player
+    # convention. It becomes an AY configuration field when a
+    # machine that wires a different clock arrives (CPC rips run
+    # the chip at 1 MHz).
+    _CLOCK = 1_773_450
 
     # Chip clocks per generator step.
     _CLOCKS_PER_STEP = 8
@@ -156,11 +154,15 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
         # The levels the current chunks open at, per channel.
         self.__current_levels = [0.0, 0.0, 0.0]
 
-    # The number of stamp-timeline ticks per generator step: with
-    # the chip clock derived from the stream's own clock, the count
-    # is the same on any timeline.
-    def __ticks_per_step(self) -> int:
-        return self._CPU_CLOCKS_PER_CHIP_CLOCK * self._CLOCKS_PER_STEP
+    # The first generator-step boundary at or after the given
+    # moment, as a step index. Steps count 8 chip clocks each from
+    # tick 0, so the boundary of step s falls at s * 8 / _CLOCK
+    # seconds, and a stamp of any resolution places against the
+    # boundaries by exact integer arithmetic.
+    def __step_at_or_after(self, time: Time) -> int:
+        ticks = time.count * self._CLOCK
+        step = time.ticks_per_second * self._CLOCKS_PER_STEP
+        return -(-ticks // step)
 
     def __tone_period(self, channel: int) -> int:
         fine = self.__regs[channel * 2]
@@ -288,31 +290,33 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
             self.__pending.clear()
             return
 
-        assert stamp.ticks_per_second == published_up_to.ticks_per_second
-        span = stamp.count - published_up_to.count
-        if span == 0:
+        # The chunk's resolution: fine enough to place the span ends
+        # and the step boundaries exactly. For streams stamped on
+        # the 128K clock this is the stamp resolution itself.
+        rate = math.lcm(published_up_to.ticks_per_second,
+                        stamp.ticks_per_second, self._CLOCK)
+        begin = published_up_to.count * (
+            rate // published_up_to.ticks_per_second)
+        num_ticks = stamp.count * (rate // stamp.ticks_per_second) - begin
+        if num_ticks == 0:
             return
+        assert num_ticks <= 0xffffffff
 
-        ticks_per_step = self.__ticks_per_step()
-        begin = published_up_to.count
+        ticks_per_step = self._CLOCKS_PER_STEP * (rate // self._CLOCK)
 
         # The steps whose boundaries land within the span; levels are
         # constant within a step, so these are the only possible
         # transition points.
-        def step_of(tick: int) -> int:
-            return -(-tick // ticks_per_step)
-
-        first_step = step_of(begin)
-        end_step = step_of(stamp.count)
+        first_step = self.__step_at_or_after(published_up_to)
+        end_step = self.__step_at_or_after(stamp)
 
         writes, self.__pending = self.__pending, []
 
         level_chunks: list[list[numpy.typing.NDArray[numpy.float64]]] = []
         step = first_step
         for write in writes:
-            assert write.time.ticks_per_second == stamp.ticks_per_second
-            effect_step = min(max(step_of(write.time.count), step),
-                              end_step)
+            effect_step = min(max(self.__step_at_or_after(write.time),
+                                  step), end_step)
             if effect_step > step:
                 level_chunks.append(
                     self.__render_steps(effect_step - step))
@@ -348,8 +352,8 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
                 transition_levels = numpy.insert(transition_levels, 0,
                                                  opening_level)
 
-            pulses = SoundPulses(stamp.ticks_per_second,
-                                 transition_levels, ticks, num_ticks=span)
+            pulses = SoundPulses(rate, transition_levels, ticks,
+                                 num_ticks=num_ticks)
             dispatcher.notify(NewSoundPulses(pulses))
 
     def __install_snapshot(self, s: DeviceSnapshot) -> None:

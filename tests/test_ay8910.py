@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import math
 import typing
 
 import numpy
@@ -100,6 +101,38 @@ def test_tone_period() -> None:
 
     for chunk in b, c:
         assert len(chunk.ticks) == 1
+
+
+def test_stream_on_the_48k_clock_keeps_the_chip_pitch() -> None:
+    # The chip runs its own clock whatever the stream's timeline: a
+    # stream stamped on the 48K clock renders on the same chip grid
+    # as a 128K one, with the chunks at the exact common resolution
+    # of the two timelines.
+    rate = 3_500_000
+    chunk_rate = math.lcm(rate, 1_773_450)
+
+    ay = AY8910()
+    collector = _Collector()
+    devices = Dispatcher([ay, collector])
+    devices.notify(TimeAdvanced(Time(0, ticks_per_second=rate)))
+
+    for reg, value in (0, 5), (7, 0b00111110), (8, 15):
+        devices.notify(AY8910RegisterWrite(
+            reg, value, Time(0, ticks_per_second=rate)))
+
+    span = rate // 100
+    devices.notify(TimeAdvanced(Time(span, ticks_per_second=rate)))
+
+    a = collector.chunks[0]
+    assert a.rate == chunk_rate
+    assert a.num_ticks == span * (chunk_rate // rate)
+
+    # A generator step is 8 chip clocks on the chunk timeline; the
+    # period-5 tone flips every 5 steps -- the 128K pitch, not a
+    # step of 16 stamp ticks.
+    ticks_per_step = 8 * (chunk_rate // 1_773_450)
+    spacing = numpy.diff(a.ticks[1:])
+    assert (spacing == 5 * ticks_per_step).all()
 
 
 def test_sustained_level_has_no_transitions() -> None:
