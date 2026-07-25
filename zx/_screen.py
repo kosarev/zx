@@ -258,11 +258,11 @@ class _Theme:
     __NOTIFICATION_BG_COLOUR = '#1e1e1e'
     overlay_bg = rgb('#000000', 0.75)
 
-    window_size: None | tuple[int, int]
-    display_scale: None | float
-    normal_font: None | _Font
-    title_font: None | _Font
-    key_button_font: None | _Font
+    window_size: tuple[int, int] | None
+    display_scale: float | None
+    normal_font: _Font | None
+    title_font: _Font | None
+    key_button_font: _Font | None
 
     def __init__(self) -> None:
         self.window_size = None
@@ -338,7 +338,7 @@ class _Theme:
         text_surface.free()
         return button_surface
 
-    def draw_action_hint(self, hotkey: None | str, label: str,
+    def draw_action_hint(self, hotkey: str | None, label: str,
                          ) -> tuple[_Surface, float]:
         assert self.normal_font is not None
         font = self.normal_font
@@ -422,7 +422,7 @@ class _Theme:
 
 
 class Notification:
-    _timestamp: None | float
+    _timestamp: float | None
 
     def __init__(self, time: Time) -> None:
         self._timestamp = get_timestamp()
@@ -501,10 +501,10 @@ class _Button(_Control):
     min_width: float
 
     def __init__(self, label: str,
-                 hotkey: None | str = None) -> None:
+                 hotkey: str | None = None) -> None:
         self.label = label
         self.hotkey = hotkey
-        self.__surface: None | _Surface = None
+        self.__surface: _Surface | None = None
         self.x = 0.0
         self.y = 0.0
         self.width = 0.0
@@ -572,7 +572,7 @@ class _TextInput(_Control):
         self.v_padding = 0.0
         self.h_padding = 0.0
         self.min_width = 0.0
-        self.__font: None | _Font = None
+        self.__font: _Font | None = None
 
     def rebuild(self, theme: _Theme) -> None:
         assert theme.normal_font is not None
@@ -604,7 +604,7 @@ class _Menu(_Control):
     max_height: float
 
     def __init__(self, items: list[_MenuItem]) -> None:
-        self.selected_item: None | _MenuItem = None
+        self.selected_item: _MenuItem | None = None
         self.__view_y = 0.0
         self.__total_height = 0.0
         self.__line_height = 0.0
@@ -657,7 +657,7 @@ class _Menu(_Control):
         for item in self.items:
             item.x += item_x
 
-    def __compute_step(self, selected: None | _MenuItem, view_y: float,
+    def __compute_step(self, selected: _MenuItem | None, view_y: float,
                        down: bool) -> tuple[_MenuItem, float]:
         if selected is None:
             return self.items[0 if down else -1], view_y
@@ -748,7 +748,7 @@ class _Menu(_Control):
         self.__view_y = limit
         return self.__view_y != old_view_y
 
-    def on_key(self, key_id: str) -> None | bool:
+    def on_key(self, key_id: str) -> bool | None:
         if key_id == 'DOWN':
             return self.select_next()
         if key_id == 'UP':
@@ -777,7 +777,7 @@ class _Menu(_Control):
                 self.selected_item = item
                 return
 
-    def __item_at(self, y: float) -> None | _MenuItem:
+    def __item_at(self, y: float) -> _MenuItem | None:
         for item in self.items:
             if item.y <= y < item.y + item.height:
                 return item
@@ -901,8 +901,8 @@ class _Panel:
     def __init__(self, theme: '_Theme') -> None:
         self._theme = theme
         self._controls: list[_Control] = []
-        self._selected_control: None | _Control = None
-        self._dialog: None | _Panel = None
+        self._selected_control: _Control | None = None
+        self._dialog: _Panel | None = None
 
     def invalidate(self) -> None:
         if self._dialog is not None:
@@ -943,13 +943,13 @@ class _Panel:
 
 class _PrimaryMainMenuItem(MenuItemDescriptor):
     def __init__(self, label: str, event_type: type[DeviceEvent],
-                 hotkey: None | str = None) -> None:
+                 hotkey: str | None = None) -> None:
         super().__init__(label, hotkey)
         self.event_type = event_type
 
 
 class _MainMenuPanel(_Panel):
-    __texture: None | _Texture
+    __texture: _Texture | None
 
     def __init__(self, theme: _Theme) -> None:
         super().__init__(theme)
@@ -1068,7 +1068,7 @@ class _FileEntryDescriptor(MenuItemDescriptor):
 
 
 class _FileBrowserPanel(_Panel):
-    __texture: None | _Texture
+    __texture: _Texture | None
     __descriptors: list[_FileEntryDescriptor]
 
     def __init__(self, theme: _Theme) -> None:
@@ -1099,7 +1099,7 @@ class _FileBrowserPanel(_Panel):
 
     def __load_entries(self) -> None:
         selected = self.__menu.selected_item
-        selected_path: None | pathlib.Path = None
+        selected_path: pathlib.Path | None = None
         if selected is not None:
             assert isinstance(selected.descriptor, _FileEntryDescriptor)
             selected_path = selected.descriptor.path
@@ -1352,7 +1352,7 @@ class _FileBrowserPanel(_Panel):
 # Lists the settings the devices advertise, each a row whose value is
 # changed in place with LEFT/RIGHT over its choices.
 class _SettingsPanel(_Panel):
-    __texture: None | _Texture
+    __texture: _Texture | None
 
     def __init__(self, theme: _Theme) -> None:
         super().__init__(theme)
@@ -1466,11 +1466,11 @@ class _SettingsPanel(_Panel):
         self.__menu.highlight(renderer)
 
 
-_ButtonSpec = tuple[str, None | str, type[DeviceEvent]]
+_ButtonSpec = tuple[str, str | None, type[DeviceEvent]]
 
 
 class _MessageDialog(_Panel):
-    __texture: None | _Texture
+    __texture: _Texture | None
 
     def __init__(self, theme: _Theme, title: str, title_colour: _Colour,
                  message: str, buttons: list[_ButtonSpec]) -> None:
@@ -1724,7 +1724,7 @@ class ScreenWindow(Device):
         self.__settings_panel = _SettingsPanel(self._theme)
         self.__panel: _Panel = self.__main_menu_panel
         self.__panel_active = False
-        self._notification: None | Notification = None
+        self._notification: Notification | None = None
         self._screencast = Screencast()
 
         minimum_size = self.frame_width // 4, self.frame_height // 4

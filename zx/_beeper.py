@@ -44,7 +44,7 @@ class Beeper(Device, snapshot_type=BeeperSnapshot):
 
         # The time up to which the beeper's sound has been
         # published.
-        self.__published_up_to: None | Time = None
+        self.__published_up_to: Time | None = None
 
         # EAR transitions collected since then, with their
         # free-running tick stamps.

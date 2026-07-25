@@ -36,7 +36,7 @@ class EmulationEvent(DeviceEvent):
 
 class MenuItemDescriptor:
     def __init__(self, label: str,
-                 hotkey: None | str = None) -> None:
+                 hotkey: str | None = None) -> None:
         self.label = label
         self.hotkey = hotkey
 
@@ -181,7 +181,7 @@ class OutputFrame(DeviceEvent):
 # frame rate.
 class GetFramePixels(DeviceEvent):
     def __init__(self) -> None:
-        self.pixels: None | Bytes = None
+        self.pixels: Bytes | None = None
 
 
 # Notified after every quantum that advanced emulation, carrying
@@ -249,11 +249,11 @@ class GetHoldState(DeviceEvent):
         # when only external input can change it. All answers are
         # given within one dispatch, so the durations are directly
         # comparable.
-        self.wake_in: None | float = None
+        self.wake_in: float | None = None
 
     # Any device may hold; the earliest wake deadline wins. Holding
     # with no deadline relies on the waiting device's cap.
-    def hold(self, wake_in: None | float = None) -> None:
+    def hold(self, wake_in: float | None = None) -> None:
         self.held = True
         if wake_in is not None:
             self.wake_within(wake_in)
@@ -348,8 +348,8 @@ class PauseUnpauseTape(DeviceEvent):
 # cut short by input).
 class RunQuantum(DeviceEvent):
     def __init__(self, *, held: bool = False,
-                 wake_in: None | float = None,
-                 stop_after: None | Time = None) -> None:
+                 wake_in: float | None = None,
+                 stop_after: Time | None = None) -> None:
         self.held = held
         self.wake_in = wake_in
 
@@ -361,12 +361,12 @@ class RunQuantum(DeviceEvent):
         # position is the device's first uncommitted moment:
         # everything strictly before it has happened. The floor is
         # the earliest position, the ceiling the latest.
-        self.advanced_floor: None | Time = None
-        self.advanced_ceiling: None | Time = None
+        self.advanced_floor: Time | None = None
+        self.advanced_ceiling: Time | None = None
 
         # The moment of the deferred port read this quantum ended
         # on, if any; the next quantum's collect step carries it.
-        self.deferred_port_read_time: None | Time = None
+        self.deferred_port_read_time: Time | None = None
 
     # Devices advancing on this event report the position they have
     # advanced to.
@@ -495,8 +495,8 @@ class Device:
 # Passes events to the devices: to all of them, or, given a device
 # id, to the addressed device only.
 class Dispatcher:
-    def __init__(self, devices: None | list[Device] = None, *,
-                 devices_by_id: None | dict[str, Device] = None) -> None:
+    def __init__(self, devices: list[Device] | None = None, *,
+                 devices_by_id: dict[str, Device] | None = None) -> None:
         if devices is None:
             devices = []
 
@@ -504,7 +504,7 @@ class Dispatcher:
         self.__devices_by_id = devices_by_id if devices_by_id else {}
 
     def notify(self, event: DeviceEvent, *,
-               device: None | str = None) -> None:
+               device: str | None = None) -> None:
         if device is not None:
             self.__devices_by_id[device].on_event(event, self)
             return

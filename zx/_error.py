@@ -12,7 +12,7 @@ from ._except import EmulatorException
 class Error(EmulatorException):
     # TODO: Use the class name itself instead of the 'id'.
     """Basic exception for the whole ZX module."""
-    def __init__(self, reason: str, id: None | str = None):
+    def __init__(self, reason: str, id: str | None = None):
         super().__init__(reason)
         self.id = id
 

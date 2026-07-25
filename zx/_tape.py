@@ -83,7 +83,7 @@ def get_block_pulses(data: Bytes,
                      second_sync_pulse_len: int = 735,
                      zero_bit_pulse_len: int = 855,
                      one_bit_pulse_len: int = 1710,
-                     pilot_tone_len: None | int = None) -> (
+                     pilot_tone_len: int | None = None) -> (
         typing.Iterable[tuple[int, tuple[str, ...]]]):
     # Generate pilot tone.
     if pilot_tone_len is None:
@@ -122,7 +122,7 @@ def tag_last_pulse(pulses: typing.Iterable[tuple[bool, int,
 
 
 class TapePlayer(Device):
-    _pulses: None | typing.Iterable[tuple[bool, int, tuple[str, ...]]]
+    _pulses: typing.Iterable[tuple[bool, int, tuple[str, ...]]] | None
 
     def __init__(self) -> None:
         self._is_paused = True
@@ -156,7 +156,7 @@ class TapePlayer(Device):
         self.__audible_pulses: list[tuple[int, Time]] = []
 
         # The stamp up to which sound has been published.
-        self.__published_up_to: None | Time = None
+        self.__published_up_to: Time | None = None
 
     def __is_paused(self) -> bool:
         return self._is_paused

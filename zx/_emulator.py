@@ -122,7 +122,7 @@ class _EmulatorDispatcher(Dispatcher):
         self.__emulator = emulator
 
     def notify(self, event: DeviceEvent, *,
-               device: None | str = None) -> None:
+               device: str | None = None) -> None:
         super().notify(event, device=device)
         self.__emulator._on_event(event)
 
@@ -219,16 +219,16 @@ class Emulator:
         self.notify(InitEmulator())
         return self
 
-    def __exit__(self, xtype: None | type[BaseException],
-                 value: None | BaseException,
-                 traceback: None | types.TracebackType) -> None:
+    def __exit__(self, xtype: type[BaseException] | None,
+                 value: BaseException | None,
+                 traceback: types.TracebackType | None) -> None:
         self.notify(DestroyEmulator())
 
     # Runs for the given duration in emulated seconds, or until the
     # floor reaches the given time, or indefinitely.
-    def run(self, duration: None | float = None,
+    def run(self, duration: float | None = None,
             fast_forward: bool = False,
-            until: None | Time = None) -> None:
+            until: Time | None = None) -> None:
         assert duration is None or until is None
 
         end_time = None
@@ -438,7 +438,7 @@ class Emulator:
                 self.__make_machine_snapshot().lift()).encode())
 
     def notify(self, event: DeviceEvent, *,
-               device: None | str = None) -> None:
+               device: str | None = None) -> None:
         dispatcher = _EmulatorDispatcher(self.devices, self.machine.devices,
                                          self)
         dispatcher.notify(event, device=device)

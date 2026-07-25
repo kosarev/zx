@@ -112,7 +112,7 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
         if AY8910._noise_bits is None:
             AY8910._noise_bits = _make_noise_bits()
 
-        self.__published_up_to: None | Time = None
+        self.__published_up_to: Time | None = None
         self.__pending: list[AY8910RegisterWrite] = []
         self.__reset_state()
 
@@ -480,7 +480,7 @@ class AYPlayer(Device):
         end = self.__writes[-1][0] + 1 if self.__writes else 0
         return Time(end, ticks_per_second=self.__rate)
 
-    def __advance(self, stop_after: None | Time,
+    def __advance(self, stop_after: Time | None,
                   devices: Dispatcher) -> Time:
         if stop_after is None:
             target = self.__position + self.__ticks_per_quantum

@@ -103,7 +103,7 @@ class _PulseResampler:
     def __init__(self, output_rate: int, speed: float) -> None:
         self.__output_rate = output_rate
         self.__speed = speed
-        self.__source_rate: None | int = None
+        self.__source_rate: int | None = None
 
         # The finalised stream position, in source ticks.
         self.__num_ticks = 0
@@ -205,10 +205,10 @@ class SoundDevice(Device):
 
         # The stamp of the last TimeAdvanced notification, not yet
         # consumed.
-        self.__last_time_advanced: None | Time = None
+        self.__last_time_advanced: Time | None = None
 
         # The time up to which sound has been consumed.
-        self.__consumed_up_to: None | Time = None
+        self.__consumed_up_to: Time | None = None
 
         self.__fast_forward = False
         self.__speed = SPEED
@@ -440,7 +440,7 @@ class SDLSound(SoundDevice):
     # e.g. a music player, wants it large instead: its late
     # audio-thread wakeups under pull-based backends otherwise cause
     # sporadic dropouts.
-    def __init__(self, *, num_buffer_samples: None | int = None,
+    def __init__(self, *, num_buffer_samples: int | None = None,
                  latency_ms: int = 50) -> None:
         if num_buffer_samples is None:
             num_buffer_samples = self._OUTPUT_FREQ // 50

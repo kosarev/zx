@@ -64,9 +64,9 @@ def _write_json(obj: typing.Any, depth: int = 0) -> typing.Iterator[str]:
 
 
 class DataRecord:
-    FORMAT_NAME: None | str
+    FORMAT_NAME: str | None
 
-    def __init_subclass__(cls, *, format_name: None | str = None):
+    def __init_subclass__(cls, *, format_name: str | None = None):
         assert format_name is None or format_name.isupper()
         cls.FORMAT_NAME = format_name
 

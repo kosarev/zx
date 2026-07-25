@@ -778,7 +778,7 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
 
     FRAME_SIZE = 48 + 256 + 48, 48 + 192 + 40
 
-    __profile: None | Profile
+    __profile: Profile | None
     __playback: MachinePlayback | None
 
     def __init__(self, *,

@@ -46,8 +46,8 @@ def _open_file_or_url(path: str) -> typing.Any:
     return pathlib.Path(path).open('rb')
 
 
-def detect_file_format(image: None | Bytes,
-                       filename_extension: str) -> None | type[DataRecord]:
+def detect_file_format(image: Bytes | None,
+                       filename_extension: str) -> type[DataRecord] | None:
     KNOWN_FORMATS = [
         ('.zx', None, ZXFile),
         ('.zxb', None, ZXBasicCompilerProgram),

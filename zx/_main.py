@@ -668,7 +668,7 @@ def handle_command_line(args: list[str]) -> None:
     COMMANDS[command](args[1:])
 
 
-def main(args: None | list[str] = None) -> None:
+def main(args: list[str] | None = None) -> None:
     """The ``zx`` command-line entry point.
 
     Parses ``args`` (defaulting to ``sys.argv[1:]``) and runs the
