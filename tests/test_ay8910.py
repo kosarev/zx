@@ -23,14 +23,19 @@ from zx._ay8910 import AYPlayer
 from zx._data import AYFrame
 from zx._data import AYStream
 from zx._data import AYWrite
+from zx._device import CollectPortReads
 from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
+from zx._device import NewPortReads
 from zx._device import NewPortWrites
 from zx._device import NewSoundPulses
+from zx._device import ReadPort
+from zx._device import RunQuantum
 from zx._device import TimeAdvanced
 from zx._emulator import Machine
 from zx._sound import SoundDevice
+from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
 
 if typing.TYPE_CHECKING:
@@ -258,3 +263,118 @@ def test_stream_player() -> None:
     samples = numpy.concatenate(sound.samples)
     assert len(samples) >= 44100 // 10
     assert numpy.abs(samples).max() > 0.0
+
+
+# The given (tick, addr, value) port writes packed as the core's
+# port-write words.
+def _port_write_words(
+        *writes: tuple[int, int, int]) -> (
+        numpy.typing.NDArray[numpy.uint64]):
+    return numpy.array([(tick << 32) | (value << 16) | addr
+                        for tick, addr, value in writes],
+                       dtype=numpy.uint64)
+
+
+def test_ay_supplies_the_selected_register() -> None:
+    # A read of the select/read port is answered with the selected
+    # register's value at the floor, its unimplemented bits driven
+    # low; a deselected chip, or an unimplemented register, drives
+    # nothing.
+    ay = AY8910()
+    devices = Dispatcher([ay])
+
+    devices.notify(NewPortWrites(at(100), _port_write_words(
+        (10, 0xfffd, 1),         # select R1
+        (20, 0xbffd, 0xff))))    # write 0xff to it
+    devices.notify(TimeAdvanced(at(100)))
+
+    collect = CollectPortReads(at(100), at(1000))
+    devices.notify(collect)
+    (series,) = collect.series
+    assert (series.addr_mask, series.addr_value) == (0xc002, 0xc000)
+    assert list(series.ticks) == [100]
+    assert list(series.values) == [0x0f]
+    assert series.end_tick == 101
+
+    # A value with the high nibble set deselects the chip.
+    devices.notify(NewPortWrites(at(200), _port_write_words(
+        (150, 0xfffd, 0x10))))
+    devices.notify(TimeAdvanced(at(200)))
+    collect = CollectPortReads(at(200), at(1000))
+    devices.notify(collect)
+    assert collect.series == []
+
+    # An unimplemented register drives nothing either.
+    devices.notify(NewPortWrites(at(300), _port_write_words(
+        (250, 0xfffd, 14))))
+    devices.notify(TimeAdvanced(at(300)))
+    collect = CollectPortReads(at(300), at(1000))
+    devices.notify(collect)
+    assert collect.series == []
+
+    # A disabled AY supplies nothing at all.
+    collect = CollectPortReads(at(300), at(1000))
+    Dispatcher([AY8910(disabled=True)]).notify(collect)
+    assert collect.series == []
+
+
+def test_ay_read_port_defers_when_selected() -> None:
+    # While ReadPort lives, a read of the select/read port defers
+    # when the chip would drive it; a deselected chip leaves the
+    # read alone.
+    ay = AY8910()
+    devices = Dispatcher([ay])
+
+    read = ReadPort(0xfffd, at(10))
+    devices.notify(read)
+    assert read.value is None
+
+    devices.notify(NewPortWrites(at(20), _port_write_words(
+        (15, 0xfffd, 0x10))))
+    read = ReadPort(0xfffd, at(20))
+    devices.notify(read)
+    assert read.value == 0xff
+
+
+def test_ay_register_read_on_a_core() -> None:
+    # OUT, OUT, IN end to end: select a register, write it, read it
+    # back within the same emulated stretch -- the read defers, the
+    # published writes catch the register file up, and the next
+    # collect answers with the value at the floor.
+    core = zx.Core()
+    ay = AY8910()
+    devices = Dispatcher([core, ay])
+
+    # An AY rig runs at the 128K clock, which the chip's clock
+    # divides evenly.
+    core.ticks_per_second = RATE
+
+    core.write(Spectrum48MemoryMapping(), 0x8000,
+               b'\x01\xfd\xff'   # LD BC, 0xfffd
+               b'\x3e\x02'       # LD A, 2
+               b'\xed\x79'       # OUT (C), A
+               b'\x06\xbf'       # LD B, 0xbf
+               b'\x3e\x3c'       # LD A, 0x3c
+               b'\xed\x79'       # OUT (C), A
+               b'\x06\xff'       # LD B, 0xff
+               b'\xed\x78'       # IN A, (C)
+               b'\x18\xfe')      # JR $
+    core.pc = 0x8000
+
+    floor = Time(0, ticks_per_second=RATE)
+    deferred = None
+    for _ in range(2):
+        collect = CollectPortReads(floor, Time(100_000,
+                                               ticks_per_second=RATE),
+                                   deferred)
+        devices.notify(collect)
+        devices.notify(NewPortReads(floor, collect.series))
+
+        run = RunQuantum()
+        devices.notify(run)
+        assert run.advanced_floor is not None
+        floor = run.advanced_floor
+        deferred = run.deferred_port_read_time
+        devices.notify(TimeAdvanced(floor))
+
+    assert core.a == 0x3c

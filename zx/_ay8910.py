@@ -14,13 +14,16 @@ import typing
 import numpy
 
 from ._data import DeviceSnapshot
+from ._data import PortReadSeries
 from ._data import SoundPulses
+from ._device import CollectPortReads
 from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import InstallDeviceSnapshot
 from ._device import NewPortWrites
 from ._device import NewSoundPulses
+from ._device import ReadPort
 from ._device import ResetEmulator
 from ._device import RunQuantum
 from ._device import TimeAdvanced
@@ -362,6 +365,32 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
 
     # The bus interface's write side: decode the machine's stamped
     # port writes into register writes on the pending stream.
+    # Reading a register returns its implemented bits, the rest
+    # driven low.
+    __REGISTER_READ_MASKS = (0xff, 0x0f, 0xff, 0x0f, 0xff, 0x0f, 0x1f,
+                             0xff, 0x1f, 0x1f, 0x1f, 0xff, 0xff, 0x0f)
+
+    # Supplies the selected register's value at the floor, covering
+    # one tick: the value holds only until a write no one can
+    # foretell, so any later read defers, moves the floor here and
+    # is answered then -- register reads are rare, so the stops are
+    # cheap. A deselected chip, or one with an unimplemented
+    # register selected, drives nothing: reads of the port then
+    # resolve to the open-bus 0xff with no series at all.
+    def __supply_register_value(self, event: CollectPortReads) -> None:
+        if self.__selected_register >= len(self.__REGISTER_READ_MASKS):
+            return
+
+        value = (self.__regs[self.__selected_register] &
+                 self.__REGISTER_READ_MASKS[self.__selected_register])
+        floor_tick = event.floor.count
+        event.supply(PortReadSeries(
+            addr_mask=0xc002, addr_value=0xc000,
+            ticks_per_second=event.floor.ticks_per_second,
+            ticks=numpy.array([floor_tick], dtype=numpy.uint64),
+            values=numpy.array([value], dtype=numpy.uint64),
+            end_tick=floor_tick + 1))
+
     def __on_port_writes(self, event: NewPortWrites) -> None:
         # Prefilter with the board's two patterns, so writes to
         # other devices' ports cost no per-write work.
@@ -403,6 +432,16 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
             self.__add_write(event)
         elif isinstance(event, NewPortWrites):
             self.__on_port_writes(event)
+        elif isinstance(event, CollectPortReads):
+            self.__supply_register_value(event)
+        elif isinstance(event, ReadPort):
+            # A read of the select/read port defers; the next
+            # collect answers it with the value at the floor.
+            # TODO: Delete together with ReadPort.
+            if (event.addr & 0xc002 == 0xc000 and
+                    self.__selected_register <
+                    len(self.__REGISTER_READ_MASKS)):
+                event.value = None
         elif isinstance(event, TimeAdvanced):
             self.__publish(event.time, dispatcher)
 
