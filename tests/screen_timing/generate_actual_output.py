@@ -15,78 +15,67 @@
 # side-by-side comparison against the expected output as
 # comparison.png.
 
+import contextlib
 import pathlib
 import sys
 
 import numpy
 import PIL.Image
 
+import zx
+from zx._basic import StopAtTapeEnd
+from zx._basic import boot_to_prompt
 from zx._core import Core
-from zx._core import RunEvents
-from zx._device import Dispatcher
-from zx._device import IsTapePlayerStopped
+from zx._device import GetEmulationTime
 from zx._device import LoadTape
 from zx._device import PauseUnpauseTape
+from zx._except import EmulationExit
 from zx._file import parse_file
-from zx._keyboard import Keyboard
-from zx._keyboard import make_key_strokes
-from zx._spectrum48 import Spectrum48CoreSnapshot
-from zx._tape import TapePlayer
 from zx._time import Time
+
+# The 48K frame, in ticks.
+_TICKS_PER_FRAME = 69888
 
 
 def main() -> None:
     tape_filename = (sys.argv[1] if len(sys.argv) > 1
                      else 'screen_timing_early.tap')
 
-    core = Core()
-    core.install_snapshot(Spectrum48CoreSnapshot())
-    devices = Dispatcher([core, Keyboard(active=True), TapePlayer()])
+    with zx.Emulator(headless=True,
+                     extra_environment=[StopAtTapeEnd()]) as app:
+        core = app.machine.devices['core']
+        assert isinstance(core, Core)
 
-    def current_time() -> Time:
-        return Time(core.tick_count,
-                    ticks_per_second=core.ticks_per_second)
+        boot_to_prompt(app)
 
-    def run_frames(count: int) -> None:
-        frames = 0
-        while frames < count:
-            if RunEvents.END_OF_FRAME in RunEvents(core._run(devices)):
-                frames += 1
+        # LOAD ""
+        app.generate_key_strokes('J', 'SS+P', 'SS+P', 'ENTER')
 
-    def type_keys(*keys: int | str) -> None:
-        strokes = make_key_strokes(*keys, start=current_time())
-        for stroke in strokes:
-            devices.notify(stroke)
-        while current_time() < strokes[-1].time:
-            core._run(devices)
+        app.notify(LoadTape(parse_file(tape_filename)))
+        app.notify(PauseUnpauseTape(False))
 
-    # Boot to the BASIC prompt.
-    run_frames(90)
+        with contextlib.suppress(EmulationExit):
+            app.run()
 
-    # LOAD ""
-    type_keys('J', 'SS+P', 'SS+P', 'ENTER')
+        # The loaded program waits for a key before starting the
+        # drawing loop.
+        app.generate_key_strokes('ENTER')
 
-    devices.notify(LoadTape(parse_file(tape_filename)))
-    devices.notify(PauseUnpauseTape(False))
+        # Let the drawing loop calibrate against ~INT and settle.
+        # The drawn pattern repeats identically every frame by
+        # then, so where within a frame the capture lands does not
+        # matter.
+        time = GetEmulationTime()
+        app.notify(time)
+        assert time.floor is not None
+        app.run(until=time.floor + Time(
+            100 * _TICKS_PER_FRAME,
+            ticks_per_second=core.ticks_per_second))
 
-    while True:
-        core._run(devices)
-
-        stopped = IsTapePlayerStopped()
-        devices.notify(stopped)
-        if stopped.stopped:
-            break
-
-    # The loaded program waits for a key before starting the drawing
-    # loop.
-    type_keys('ENTER')
-
-    # Let the drawing loop calibrate against ~INT and settle, then
-    # capture at the end of a fully rendered frame.
-    run_frames(100)
+        pixels = numpy.frombuffer(core.get_frame_pixels(),
+                                  dtype=numpy.uint32).copy()
 
     width, height = Core.FRAME_SIZE
-    pixels = numpy.frombuffer(core.get_frame_pixels(), dtype=numpy.uint32)
     pixels = pixels.reshape(height, width)
 
     rgb = numpy.empty((height, width, 3), dtype=numpy.uint8)

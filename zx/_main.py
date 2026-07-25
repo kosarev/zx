@@ -22,6 +22,7 @@ import platformdirs
 from ._ay import AYFile
 from ._ay8910 import AY8910
 from ._ay8910 import AYPlayer
+from ._basic import StopAtTapeEnd
 from ._basic import boot_to_prompt
 from ._basic import capture_spectrum48
 from ._binary import Bytes
@@ -41,11 +42,9 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import FetchesLimitHit
-from ._device import IsTapePlayerStopped
 from ._device import LoadTape
 from ._device import PauseUnpauseTape
 from ._device import RunQuantum
-from ._device import TimeAdvanced
 from ._emulator import Emulator
 from ._emulator import Machine
 from ._error import USER_ERRORS
@@ -478,24 +477,6 @@ def fast_forward(args: list[str]) -> None:
             app._run_file(filename, fast_forward=True)
 
 
-# Ends the run as soon as the tape player reports itself stopped.
-# The tape bounds the quanta at the end-of-tape moment, so the run
-# ends right there. An unloaded tape reports stopped too, so this
-# only checks once a tape has been loaded.
-class _StopAtTapeEnd(Device):
-    def __init__(self) -> None:
-        self.__tape_loaded = False
-
-    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
-        if isinstance(event, LoadTape):
-            self.__tape_loaded = True
-        elif self.__tape_loaded and isinstance(event, TimeAdvanced):
-            stopped = IsTapePlayerStopped()
-            devices.notify(stopped)
-            if stopped.stopped:
-                raise EmulationExit()
-
-
 # Runs a private machine through the ROM's own loading process --
 # boot, type LOAD "", play the tape to its end -- and saves the
 # machine that results.
@@ -506,7 +487,7 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
     assert issubclass(dest_format, SnapshotFile), dest_format
 
     with Emulator(headless=True,
-                  extra_environment=[_StopAtTapeEnd()]) as app:
+                  extra_environment=[StopAtTapeEnd()]) as app:
         boot_to_prompt(app)
 
         # LOAD ""

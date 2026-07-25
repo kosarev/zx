@@ -8,25 +8,23 @@
 
 from __future__ import annotations
 
+import contextlib
 import pathlib
 import tempfile
 import typing
 
+from ._basic import StopAtBreakpoint
+from ._basic import boot_to_prompt
+from ._basic import capture_spectrum48
 from ._core import Core
-from ._core import RunEvents
 from ._data import ByteData
 from ._data import HexData
 from ._data import MachineSnapshot
 from ._data import SnapshotFile
-from ._device import Dispatcher
+from ._device import GetEmulationTime
 from ._error import Error
-from ._keyboard import Keyboard
-from ._keyboard import make_key_strokes
-from ._spectrum48 import Spectrum48CoreSnapshot
-from ._spectrum48 import Spectrum48MemoryBlock
+from ._except import EmulationExit
 from ._spectrum48 import Spectrum48MemoryMapping
-from ._spectrum48 import Spectrum48MemorySnapshot
-from ._spectrum48 import Spectrum48Snapshot
 from ._time import Time
 
 if typing.TYPE_CHECKING:
@@ -89,64 +87,36 @@ class ZXBasicCompilerProgram(SnapshotFile, format_name='ZXB'):
     # may assume: the system variables, the interrupt mode, the USR
     # call frame.
     def to_machine_snapshot(self) -> MachineSnapshot:
-        core = Core()
-        core.install_snapshot(Spectrum48CoreSnapshot())
-        keyboard = Keyboard()
-        devices = Dispatcher([core, keyboard])
+        # The Emulator itself loads files, so file modules sit below
+        # it in the import order and take it at conversion time.
+        from ._emulator import Emulator
 
-        hit_entry_point = False
+        with Emulator(headless=True,
+                      extra_environment=[StopAtBreakpoint()]) as app:
+            core = app.machine.devices['core']
+            assert isinstance(core, Core)
 
-        def run_step() -> RunEvents:
-            nonlocal hit_entry_point
-            events = RunEvents(core._run(devices))
-            if RunEvents.BREAKPOINT_HIT in events:
-                hit_entry_point = True
-            return events
+            boot_to_prompt(app)
 
-        def current_time() -> Time:
-            return Time(core.tick_count,
-                        ticks_per_second=core.ticks_per_second)
+            # CLEAR <entry_point>
+            app.generate_key_strokes('X', self.entry_point, 'ENTER')
 
-        def type_keys(*keys: int | str) -> None:
-            strokes = make_key_strokes(*keys, start=current_time())
-            for stroke in strokes:
-                devices.notify(stroke)
+            core.write(Spectrum48MemoryMapping(), self.entry_point,
+                       self.program_bytes.data)
+            core.set_breakpoint(self.entry_point)
 
-            while not hit_entry_point and current_time() < strokes[-1].time:
-                run_step()
+            # RANDOMIZE USR <entry_point> -- the program may start,
+            # ending the run, before the strokes run out.
+            time = GetEmulationTime()
+            app.notify(time)
+            assert time.floor is not None
+            deadline = time.floor + Time(10, ticks_per_second=1)
+            with contextlib.suppress(EmulationExit):
+                app.generate_key_strokes('T', 'CS+SS', 'L',
+                                         self.entry_point, 'ENTER')
+                app.run(until=deadline)
 
-        # Boot to the BASIC prompt.
-        frames = 0
-        while frames < 90:
-            if RunEvents.END_OF_FRAME in run_step():
-                frames += 1
+            if core.pc != self.entry_point:
+                raise Error('The compiled program did not start.')
 
-        # CLEAR <entry_point>
-        type_keys('X', self.entry_point, 'ENTER')
-
-        core.write(Spectrum48MemoryMapping(), self.entry_point,
-                   self.program_bytes.data)
-        core.set_breakpoint(self.entry_point)
-
-        # RANDOMIZE USR <entry_point>
-        type_keys('T', 'CS+SS', 'L', self.entry_point, 'ENTER')
-
-        for _ in range(500):
-            if hit_entry_point:
-                break
-            run_step()
-        else:
-            raise Error('The compiled program did not start.')
-
-        assert core.pc == self.entry_point
-        captured = core.to_snapshot()
-
-        # We know the machine is a 48K, so give its captured memory
-        # blocks the 48K types.
-        memory = Spectrum48MemorySnapshot(blocks=[
-            Spectrum48MemoryBlock(addr=b.offset, data=b.data)
-            for b in (captured.memory.blocks if captured.memory else None)
-            or []])
-        return Spectrum48Snapshot(
-            core=Spectrum48CoreSnapshot(z80=captured.z80, ula=captured.ula,
-                                        memory=memory))
+            return capture_spectrum48(core)
