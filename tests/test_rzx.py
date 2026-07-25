@@ -49,19 +49,14 @@ def test_basic() -> None:
     assert not playback.is_spin_v05
 
     # Verify samples are consumed correctly from the first frame:
-    # each read defers, and the following collect deals the next
-    # sample at the read's moment.
+    # each collect carrying a deferred read's moment deals the next
+    # sample there.
     player = zx._playback.PlaybackPlayer()
     dispatcher = zx._device.Dispatcher()
     start = zx._device.StartPlayback(playback)
     player.on_event(start, dispatcher)
     rate = mach.ticks_per_second
     for moment, expected in enumerate((0x42, 0xff, 0x00)):
-        read_port = zx._device.ReadPort(
-            0xfe, zx._time.Time(moment, ticks_per_second=rate))
-        player.on_event(read_port, dispatcher)
-        assert read_port.value is None
-
         collect = zx._device.CollectPortReads(
             zx._time.Time(moment, ticks_per_second=rate),
             zx._time.Time(moment + 1, ticks_per_second=rate),

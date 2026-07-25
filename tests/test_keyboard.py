@@ -55,10 +55,9 @@ def at(tenths: int) -> Time:
     return Time(tenths, ticks_per_second=10)
 
 
-def read(devices: Dispatcher, addr: int, tenths: int) -> int | None:
-    port_read = ReadPort(addr, at(tenths))
-    devices.notify(port_read)
-    return port_read.value
+# Queries the matrix directly: the keyboard as a function of time.
+def read(keyboard: Keyboard, addr: int, tenths: int) -> int:
+    return keyboard.read_port(addr, at(tenths))
 
 
 # The port address selecting the key's half-row.
@@ -78,11 +77,11 @@ def test_port_reads() -> None:
     devices.notify(KeyStroke(KEYS['J'], pressed=True, time=at(2)))
     devices.notify(KeyStroke(KEYS['J'], pressed=False, time=at(4)))
 
-    assert read(devices, halfrow_addr('J'), 1) == 0xff
-    assert read(devices, halfrow_addr('J'), 2) == pressed_value('J')
-    assert read(devices, halfrow_addr('J'), 3) == pressed_value('J')
-    assert read(devices, halfrow_addr('A'), 3) == 0xff
-    assert read(devices, halfrow_addr('J'), 4) == 0xff
+    assert read(keyboard, halfrow_addr('J'), 1) == 0xff
+    assert read(keyboard, halfrow_addr('J'), 2) == pressed_value('J')
+    assert read(keyboard, halfrow_addr('J'), 3) == pressed_value('J')
+    assert read(keyboard, halfrow_addr('A'), 3) == 0xff
+    assert read(keyboard, halfrow_addr('J'), 4) == 0xff
 
 
 def test_stroke_at_time_zero() -> None:
@@ -92,7 +91,7 @@ def test_stroke_at_time_zero() -> None:
     # Before the first read, any time is schedulable, the very
     # start of time included.
     devices.notify(KeyStroke(KEYS['J'], pressed=True, time=at(0)))
-    assert read(devices, halfrow_addr('J'), 0) == pressed_value('J')
+    assert read(keyboard, halfrow_addr('J'), 0) == pressed_value('J')
 
 
 def test_stroke_at_quantum_ceiling() -> None:
@@ -246,12 +245,12 @@ def test_keyboard_samples_with_a_co_driver_series() -> None:
 
 def test_disabled_keyboard() -> None:
     # A disabled keyboard is indistinguishable from an absent one:
-    # it does not drive the input lines.
+    # it consumes no strokes, so its matrix stays idle.
     keyboard = Keyboard(disabled=True)
     devices = Dispatcher([keyboard])
 
     devices.notify(KeyStroke(KEYS['J'], pressed=True, time=at(2)))
-    assert read(devices, halfrow_addr('J'), 3) == 0xff
+    assert read(keyboard, halfrow_addr('J'), 3) == 0xff
 
 
 def test_keyboard_snapshot() -> None:
@@ -268,11 +267,11 @@ def test_keyboard_snapshot() -> None:
     # snapshot describes; a pressed key does not survive it.
     devices = Dispatcher([keyboard], devices_by_id={'keyboard': keyboard})
     devices.notify(KeyStroke(KEYS['J'], pressed=True, time=at(2)))
-    assert read(devices, halfrow_addr('J'), 3) == pressed_value('J')
+    assert read(keyboard, halfrow_addr('J'), 3) == pressed_value('J')
 
     devices.notify(InstallDeviceSnapshot(KeyboardSnapshot()),
                    device='keyboard')
-    assert read(devices, halfrow_addr('J'), 1) == 0xff
+    assert read(keyboard, halfrow_addr('J'), 1) == 0xff
 
     devices.notify(InstallDeviceSnapshot(KeyboardSnapshot(disabled=True)),
                    device='keyboard')
