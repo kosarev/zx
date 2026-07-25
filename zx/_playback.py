@@ -119,6 +119,8 @@ frame. Key frame spacing is a critical design parameter.
 
 import typing
 
+import numpy
+
 from ._data import MachinePlayback
 from ._data import MachinePlaybackFrame
 from ._data import MachinePlaybackSegment
@@ -136,6 +138,7 @@ from ._device import StartPlayback
 from ._device import StopPlayback
 from ._error import Error
 from ._except import EmulationExit
+from ._time import Time
 
 
 # TODO: Rework to a time machine interface.
@@ -147,6 +150,14 @@ class PlaybackPlayer(Device):
         self.__frames: typing.Iterator[MachinePlaybackFrame] = iter(())
         self.__sample_values: bytes = b''
         self.__sample_count = 0
+
+        # True when a read has deferred and its sample is yet to be
+        # dealt at the following collect.
+        self.__deferred_read_pending = False
+
+        # The moment of the dealt but not yet confirmed sample;
+        # None when there is no such sample.
+        self.__dealt_time: Time | None = None
 
     @property
     def is_spin_v05(self) -> bool:
@@ -180,6 +191,7 @@ class PlaybackPlayer(Device):
         self.__playback = playback
         self.__segments = iter(playback.segments)
         self.__frames = iter(())
+        self.__deferred_read_pending = False
         self.__get_next_frame(devices)
 
     def __unload(self) -> None:
@@ -188,6 +200,50 @@ class PlaybackPlayer(Device):
         self.__frames = iter(())
         self.__sample_values = b''
         self.__sample_count = 0
+        self.__deferred_read_pending = False
+
+    # A dealt sample counts consumed only on evidence that time
+    # moved past its moment: the deferred read there is the first
+    # thing the retry executes, so a later moment means it read the
+    # sample -- while a read deferring at the same moment again
+    # means another series blocked it, and the same sample is dealt
+    # anew. With no moment given, the evidence is unconditional,
+    # like a frame's fetch limit having been reached.
+    def _confirm_dealt_sample(self, past: Time | None = None) -> None:
+        if self.__dealt_time is None:
+            return
+
+        if past is None or self.__dealt_time < past:
+            self.__sample_count += 1
+            self.__dealt_time = None
+
+    # Deals the recorded samples, one per deferred read, as a
+    # one-tick series at the floor -- the deferred read's moment.
+    # With no read deferred yet, the bare empty series makes the
+    # next read defer first. The all-addresses pattern does double
+    # duty: no read resolves behind the recording's back, and at
+    # the sampled moment the recorded value ANDs with any live
+    # series covering it, exactly as the ReadPort answers combined.
+    def __supply_sample(self, event: CollectPortReads) -> None:
+        self._confirm_dealt_sample(event.floor)
+
+        if (not self.__deferred_read_pending or
+                not self.has_remaining_samples):
+            event.supply(PortReadSeries(addr_mask=0x0000,
+                                        addr_value=0x0000))
+            return
+
+        sample = self.__sample_values[self.__sample_count]
+        self.__deferred_read_pending = False
+        self.__dealt_time = event.floor
+
+        floor_tick = event.floor.count
+        event.supply(PortReadSeries(
+            addr_mask=0x0000, addr_value=0x0000,
+            ticks_per_second=event.floor.ticks_per_second,
+            ticks=numpy.array([floor_tick], dtype=numpy.uint64),
+            values=numpy.array([sample], dtype=numpy.uint64),
+            end_tick=floor_tick + 1))
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, StartPlayback):
@@ -202,23 +258,27 @@ class PlaybackPlayer(Device):
             return
 
         if isinstance(event, CollectPortReads):
-            # Playback owns every read: the recorded samples are
-            # indexed by read order, not time, so no read may
-            # resolve from samples behind ReadPort's back.
-            event.supply(PortReadSeries(addr_mask=0x0000,
-                                        addr_value=0x0000))
+            self.__supply_sample(event)
             return
 
         if isinstance(event, ReadPort):
+            self._confirm_dealt_sample(event.time)
+
             if not self.has_remaining_samples:
                 raise Error('Too few input samples.',
                             id='too_few_input_samples')
-            sample = self.__sample_values[self.__sample_count]
-            self.__sample_count += 1
-            event.supply(sample)
+
+            # The read defers; the next collect deals the sample at
+            # the read's moment, where the retry consumes it.
+            event.value = None
+            self.__deferred_read_pending = True
             return
 
         if isinstance(event, FetchesLimitHit):
+            # Reaching the frame's fetch limit means the run went
+            # past any dealt sample's moment.
+            self._confirm_dealt_sample()
+
             if self.has_remaining_samples:
                 raise Error('Too many input samples.',
                             id='too_many_input_samples')
@@ -238,15 +298,11 @@ class PlaybackRecorder(Device):
         if self.disabled:
             return
 
-        if isinstance(event, CollectPortReads):
-            # Recording needs every read the core executes to go
-            # through ReadPort, where the frames count them.
-            event.supply(PortReadSeries(addr_mask=0x0000,
-                                        addr_value=0x0000))
-
         if isinstance(event, InstallSnapshot):
             self.__segments.append(
                 MachinePlaybackSegment(snapshot=event.snapshot))
 
-        # TODO: Collect frames from OutputFrame events once the C core
-        # exposes port_reads and num_fetches.
+        # TODO: Collect frames from OutputFrame events once the C++
+        # core counts the executed reads and fetches itself -- reads
+        # resolved from samples never reach ReadPort, so the frames
+        # must come from the core's own stream.

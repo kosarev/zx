@@ -7,6 +7,9 @@
 #   Published under the MIT license.
 
 
+import pytest
+
+import zx
 from zx._core import CoreSnapshot
 from zx._core import Z80Snapshot
 from zx._data import MachinePlayback
@@ -16,9 +19,13 @@ from zx._data import MachineSnapshot
 from zx._device import CollectPortReads
 from zx._device import Dispatcher
 from zx._device import InstallSnapshot
+from zx._device import NewPortReads
+from zx._device import RunQuantum
 from zx._device import StartPlayback
+from zx._error import Error
 from zx._playback import PlaybackPlayer
 from zx._playback import PlaybackRecorder
+from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
 
 
@@ -53,22 +60,15 @@ def _collect() -> CollectPortReads:
                             Time(1, ticks_per_second=1))
 
 
-def test_playback_devices_supply_empty_series() -> None:
-    # The recorded samples are indexed by read order, so both
-    # playing and recording need every read on the ReadPort path:
-    # the empty all-addresses series makes every read unresolvable
-    # from samples.
+def test_playback_player_supplies_empty_series() -> None:
+    # With no read deferred, the empty all-addresses series makes
+    # every read unresolvable from samples, so it defers first; the
+    # recorder supplies nothing at all -- it records amendments,
+    # and the executed reads are the core's own stream to report.
     dispatcher = Dispatcher()
 
-    recorder = PlaybackRecorder()
     collect = _collect()
-    recorder.on_event(collect, dispatcher)
-    (series,) = collect.series
-    assert (series.addr_mask, series.addr_value) == (0x0000, 0x0000)
-    assert len(series.ticks) == 0
-
-    collect = _collect()
-    PlaybackRecorder(disabled=True).on_event(collect, dispatcher)
+    PlaybackRecorder().on_event(collect, dispatcher)
     assert collect.series == []
 
     # The player supplies only while a playback is loaded.
@@ -87,3 +87,80 @@ def test_playback_devices_supply_empty_series() -> None:
     (series,) = collect.series
     assert (series.addr_mask, series.addr_value) == (0x0000, 0x0000)
     assert len(series.ticks) == 0
+
+
+def test_playback_reads_defer_and_consume_in_order() -> None:
+    # The player deals the recorded samples one per deferred read:
+    # a read defers, the following collect supplies the next sample
+    # at the read's moment, and the retry consumes it. IN A, (0xfe);
+    # LD C, A; IN A, (0xfe) picks up the two samples in order.
+    core = zx.Core()
+    player = PlaybackPlayer()
+    devices = Dispatcher([core, player])
+
+    core.write(Spectrum48MemoryMapping(), 0x8000,
+               b'\xdb\xfe'   # IN A, (0xfe)
+               b'\x4f'       # LD C, A
+               b'\xdb\xfe'   # IN A, (0xfe)
+               b'\x18\xfe')  # JR $
+    core.pc = 0x8000
+    core.a = 0x12
+
+    playback = MachinePlayback(segments=[MachinePlaybackSegment(
+        snapshot=MachineSnapshot(),
+        frames=[MachinePlaybackFrame(num_fetches=100_000,
+                                     port_samples=b'\x55\x66')])])
+    devices.notify(StartPlayback(playback))
+
+    rate = core.ticks_per_second
+    floor = Time(0, ticks_per_second=rate)
+    for _ in range(3):
+        collect = CollectPortReads(floor,
+                                   Time(1000, ticks_per_second=rate))
+        devices.notify(collect)
+        devices.notify(NewPortReads(floor, collect.series))
+
+        run = RunQuantum()
+        devices.notify(run)
+        assert run.advanced_floor is not None
+        floor = run.advanced_floor
+
+    assert core.bc & 0xff == 0x55
+    assert core.a == 0x66
+
+
+def test_playback_still_raises_on_too_few_samples() -> None:
+    # A read with no samples remaining is an error, detected on the
+    # ReadPort path a deferred read falls back to.
+    core = zx.Core()
+    player = PlaybackPlayer()
+    devices = Dispatcher([core, player])
+
+    core.write(Spectrum48MemoryMapping(), 0x8000,
+               b'\xdb\xfe'   # IN A, (0xfe)
+               b'\x4f'       # LD C, A
+               b'\xdb\xfe'   # IN A, (0xfe)
+               b'\x18\xfe')  # JR $
+    core.pc = 0x8000
+    core.a = 0x12
+
+    playback = MachinePlayback(segments=[MachinePlaybackSegment(
+        snapshot=MachineSnapshot(),
+        frames=[MachinePlaybackFrame(num_fetches=100_000,
+                                     port_samples=b'\x55')])])
+    devices.notify(StartPlayback(playback))
+
+    rate = core.ticks_per_second
+    floor = Time(0, ticks_per_second=rate)
+    with pytest.raises(Error) as exc_info:
+        for _ in range(3):
+            collect = CollectPortReads(floor,
+                                       Time(1000, ticks_per_second=rate))
+            devices.notify(collect)
+            devices.notify(NewPortReads(floor, collect.series))
+
+            run = RunQuantum()
+            devices.notify(run)
+            assert run.advanced_floor is not None
+            floor = run.advanced_floor
+    assert exc_info.value.id == 'too_few_input_samples'

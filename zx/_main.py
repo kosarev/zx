@@ -402,8 +402,10 @@ class _SPINPlaybackPlayer(PlaybackPlayer):
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         # Yield to _SPINPlaybackRecoverer when the trailing IN correction
         # is pending; otherwise PlaybackPlayer raises too_many_input_samples.
-        if isinstance(event, FetchesLimitHit) and self.has_remaining_samples:
-            return
+        if isinstance(event, FetchesLimitHit):
+            self._confirm_dealt_sample()
+            if self.has_remaining_samples:
+                return
         super().on_event(event, devices)
 
 
@@ -433,10 +435,13 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
             self.sp = sp + 2
 
         # SPIN v0.5 doesn't update the fetch counter if the last
-        # instruction in a frame is IN.
-        if (isinstance(event, FetchesLimitHit) and
-                self._player.has_remaining_samples):
-            self.m1_fetches_to_stop = 1
+        # instruction in a frame is IN. The player's dealt sample is
+        # confirmed first, so this check does not depend on whether
+        # the player has seen the event yet.
+        if isinstance(event, FetchesLimitHit):
+            self._player._confirm_dealt_sample()
+            if self._player.has_remaining_samples:
+                self.m1_fetches_to_stop = 1
 
         super().on_event(event, devices)
 
