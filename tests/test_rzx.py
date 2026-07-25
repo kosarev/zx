@@ -64,7 +64,8 @@ def test_basic() -> None:
 
         collect = zx._device.CollectPortReads(
             zx._time.Time(moment, ticks_per_second=rate),
-            zx._time.Time(moment + 1, ticks_per_second=rate))
+            zx._time.Time(moment + 1, ticks_per_second=rate),
+            zx._time.Time(moment, ticks_per_second=rate))
         player.on_event(collect, dispatcher)
         (series,) = collect.series
         assert list(series.ticks) == [moment]

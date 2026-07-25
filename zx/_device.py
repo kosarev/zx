@@ -210,10 +210,16 @@ class NewPortWrites(EmulationEvent):
 # input lines always handles this event, supplying an empty series
 # when it can foretell nothing; the samples live for this quantum
 # only and are collected anew each quantum.
+#
+# When the previous quantum ended on a deferred port read, its
+# moment is carried here; a supplier judges by its own state
+# whether that read is its business to answer.
 class CollectPortReads(DeviceEvent):
-    def __init__(self, floor: Time, limit: Time) -> None:
+    def __init__(self, floor: Time, limit: Time,
+                 deferred_port_read_time: Time | None = None) -> None:
         self.floor = floor
         self.limit = limit
+        self.deferred_port_read_time = deferred_port_read_time
         self.series: list[PortReadSeries] = []
 
     def supply(self, series: PortReadSeries) -> None:
@@ -347,7 +353,7 @@ class RunQuantum(DeviceEvent):
         self.held = held
         self.wake_in = wake_in
 
-        # The round's time limit; devices advancing on this event
+        # The quantum's time limit; devices advancing on this event
         # budget from their own positions in time.
         self.stop_after = stop_after
 
@@ -358,6 +364,10 @@ class RunQuantum(DeviceEvent):
         self.advanced_floor: None | Time = None
         self.advanced_ceiling: None | Time = None
 
+        # The moment of the deferred port read this quantum ended
+        # on, if any; the next quantum's collect step carries it.
+        self.deferred_port_read_time: None | Time = None
+
     # Devices advancing on this event report the position they have
     # advanced to.
     def advanced_to(self, time: Time) -> None:
@@ -365,6 +375,12 @@ class RunQuantum(DeviceEvent):
             self.advanced_floor = time
         if self.advanced_ceiling is None or self.advanced_ceiling < time:
             self.advanced_ceiling = time
+
+    # A core whose quantum ended on a deferred port read reports the
+    # read's moment. One core per machine so far, hence one report.
+    def report_deferred_port_read(self, time: Time) -> None:
+        assert self.deferred_port_read_time is None
+        self.deferred_port_read_time = time
 
 
 # Raised by a device to ask that the current quantum end now (e.g. the

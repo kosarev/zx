@@ -114,9 +114,11 @@ def test_playback_reads_defer_and_consume_in_order() -> None:
 
     rate = core.ticks_per_second
     floor = Time(0, ticks_per_second=rate)
+    deferred = None
     for _ in range(3):
         collect = CollectPortReads(floor,
-                                   Time(1000, ticks_per_second=rate))
+                                   Time(1000, ticks_per_second=rate),
+                                   deferred)
         devices.notify(collect)
         devices.notify(NewPortReads(floor, collect.series))
 
@@ -124,9 +126,60 @@ def test_playback_reads_defer_and_consume_in_order() -> None:
         devices.notify(run)
         assert run.advanced_floor is not None
         floor = run.advanced_floor
+        deferred = run.deferred_port_read_time
 
     assert core.bc & 0xff == 0x55
     assert core.a == 0x66
+
+
+def test_playback_deal_covers_through_the_deferred_moment() -> None:
+    # A laggard device may keep the floor behind the deferred
+    # read's moment; the dealt series covers from the floor through
+    # the moment, so the read still resolves.
+    player = PlaybackPlayer()
+    dispatcher = Dispatcher()
+    playback = MachinePlayback(segments=[MachinePlaybackSegment(
+        snapshot=MachineSnapshot(),
+        frames=[MachinePlaybackFrame(num_fetches=100,
+                                     port_samples=b'\x55')])])
+    player.on_event(StartPlayback(playback), dispatcher)
+
+    collect = CollectPortReads(Time(10, ticks_per_second=100),
+                               Time(1000, ticks_per_second=100),
+                               Time(25, ticks_per_second=100))
+    player.on_event(collect, dispatcher)
+    (series,) = collect.series
+    assert list(series.ticks) == [10]
+    assert list(series.values) == [0x55]
+    assert series.end_tick == 26
+
+
+def test_too_few_samples_detected_at_collect() -> None:
+    # Once ReadPort retires, a deferred read with the samples
+    # exhausted is detected at the collect step. The first collect
+    # deals the last sample; the second, at a later deferred
+    # moment, confirms it consumed and finds nothing left.
+    player = PlaybackPlayer()
+    dispatcher = Dispatcher()
+    playback = MachinePlayback(segments=[MachinePlaybackSegment(
+        snapshot=MachineSnapshot(),
+        frames=[MachinePlaybackFrame(num_fetches=100,
+                                     port_samples=b'\x55')])])
+    player.on_event(StartPlayback(playback), dispatcher)
+
+    collect = CollectPortReads(Time(10, ticks_per_second=100),
+                               Time(1000, ticks_per_second=100),
+                               Time(10, ticks_per_second=100))
+    player.on_event(collect, dispatcher)
+    assert len(collect.series) == 1
+
+    with pytest.raises(Error) as exc_info:
+        player.on_event(
+            CollectPortReads(Time(25, ticks_per_second=100),
+                             Time(1000, ticks_per_second=100),
+                             Time(25, ticks_per_second=100)),
+            dispatcher)
+    assert exc_info.value.id == 'too_few_input_samples'
 
 
 def test_playback_still_raises_on_too_few_samples() -> None:
@@ -152,10 +205,12 @@ def test_playback_still_raises_on_too_few_samples() -> None:
 
     rate = core.ticks_per_second
     floor = Time(0, ticks_per_second=rate)
+    deferred = None
     with pytest.raises(Error) as exc_info:
         for _ in range(3):
             collect = CollectPortReads(floor,
-                                       Time(1000, ticks_per_second=rate))
+                                       Time(1000, ticks_per_second=rate),
+                                       deferred)
             devices.notify(collect)
             devices.notify(NewPortReads(floor, collect.series))
 
@@ -163,4 +218,5 @@ def test_playback_still_raises_on_too_few_samples() -> None:
             devices.notify(run)
             assert run.advanced_floor is not None
             floor = run.advanced_floor
+            deferred = run.deferred_port_read_time
     assert exc_info.value.id == 'too_few_input_samples'

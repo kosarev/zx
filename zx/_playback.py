@@ -151,10 +151,6 @@ class PlaybackPlayer(Device):
         self.__sample_values: bytes = b''
         self.__sample_count = 0
 
-        # True when a read has deferred and its sample is yet to be
-        # dealt at the following collect.
-        self.__deferred_read_pending = False
-
         # The moment of the dealt but not yet confirmed sample;
         # None when there is no such sample.
         self.__dealt_time: Time | None = None
@@ -191,7 +187,7 @@ class PlaybackPlayer(Device):
         self.__playback = playback
         self.__segments = iter(playback.segments)
         self.__frames = iter(())
-        self.__deferred_read_pending = False
+        self.__dealt_time = None
         self.__get_next_frame(devices)
 
     def __unload(self) -> None:
@@ -200,7 +196,7 @@ class PlaybackPlayer(Device):
         self.__frames = iter(())
         self.__sample_values = b''
         self.__sample_count = 0
-        self.__deferred_read_pending = False
+        self.__dealt_time = None
 
     # A dealt sample counts consumed only on evidence that time
     # moved past its moment: the deferred read there is the first
@@ -217,33 +213,46 @@ class PlaybackPlayer(Device):
             self.__sample_count += 1
             self.__dealt_time = None
 
-    # Deals the recorded samples, one per deferred read, as a
-    # one-tick series at the floor -- the deferred read's moment.
-    # With no read deferred yet, the bare empty series makes the
-    # next read defer first. The all-addresses pattern does double
-    # duty: no read resolves behind the recording's back, and at
-    # the sampled moment the recorded value ANDs with any live
-    # series covering it, exactly as the ReadPort answers combined.
+    # Deals the recorded samples, one per deferred read: a series
+    # from the floor through the deferred read's moment, where the
+    # retry consumes it. With no read deferred, the bare empty
+    # series makes the next read defer first. The all-addresses
+    # pattern does double duty: no read resolves behind the
+    # recording's back, and at the sampled moment the recorded
+    # value ANDs with any live series covering it, exactly as the
+    # ReadPort answers combined.
     def __supply_sample(self, event: CollectPortReads) -> None:
-        self._confirm_dealt_sample(event.floor)
+        deferred = event.deferred_port_read_time
+        self._confirm_dealt_sample(
+            deferred if deferred is not None else event.floor)
 
-        if (not self.__deferred_read_pending or
-                not self.has_remaining_samples):
+        if deferred is None:
             event.supply(PortReadSeries(addr_mask=0x0000,
                                         addr_value=0x0000))
             return
 
-        sample = self.__sample_values[self.__sample_count]
-        self.__deferred_read_pending = False
-        self.__dealt_time = event.floor
+        # Dead while ReadPort lives -- the deferring read raises
+        # there first; the live check once ReadPort retires.
+        if not self.has_remaining_samples:
+            raise Error('Too few input samples.',
+                        id='too_few_input_samples')
 
+        sample = self.__sample_values[self.__sample_count]
+        self.__dealt_time = deferred
+
+        # The deferred moment is at or past the floor, which may
+        # lag it, so the coverage runs from the floor through the
+        # moment.
         floor_tick = event.floor.count
+        resolution = event.floor.ticks_per_second
+        end_tick = (-(-deferred.count * resolution //
+                      deferred.ticks_per_second)) + 1
         event.supply(PortReadSeries(
             addr_mask=0x0000, addr_value=0x0000,
-            ticks_per_second=event.floor.ticks_per_second,
+            ticks_per_second=resolution,
             ticks=numpy.array([floor_tick], dtype=numpy.uint64),
             values=numpy.array([sample], dtype=numpy.uint64),
-            end_tick=floor_tick + 1))
+            end_tick=end_tick))
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
         if isinstance(event, StartPlayback):
@@ -271,7 +280,6 @@ class PlaybackPlayer(Device):
             # The read defers; the next collect deals the sample at
             # the read's moment, where the retry consumes it.
             event.value = None
-            self.__deferred_read_pending = True
             return
 
         if isinstance(event, FetchesLimitHit):

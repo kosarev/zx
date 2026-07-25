@@ -202,6 +202,11 @@ class Emulator:
         self.__advanced_floor = Time(0, ticks_per_second=1)
         self.__advanced_ceiling = Time(0, ticks_per_second=1)
 
+        # The moment of the deferred port read the last quantum
+        # ended on, carried to the next collect step; None when the
+        # last quantum ended otherwise.
+        self.__deferred_port_read_time: Time | None = None
+
         if snapshot is not None:
             self.notify(InstallSnapshot(snapshot.to_machine_snapshot()))
 
@@ -290,7 +295,8 @@ class Emulator:
         # Reads of ports no series declares resolve to the open-bus
         # 0xff without dispatching ReadPort.
         collect = CollectPortReads(self.__advanced_floor,
-                                   limit.stop_after_time)
+                                   limit.stop_after_time,
+                                   self.__deferred_port_read_time)
         self.notify(collect)
         self.notify(NewPortReads(self.__advanced_floor, collect.series))
 
@@ -301,6 +307,7 @@ class Emulator:
         self.__advanced_floor = run.advanced_floor
         assert run.advanced_ceiling is not None
         self.__advanced_ceiling = run.advanced_ceiling
+        self.__deferred_port_read_time = run.deferred_port_read_time
 
         # TimeAdvanced goes last: all facts about the elapsed span
         # of time are published by the time its dispatch completes.

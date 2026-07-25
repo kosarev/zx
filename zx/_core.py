@@ -1105,6 +1105,8 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
                 position = self.__deferred_read_time
                 if position is None:
                     position = self.__current_time()
+                else:
+                    event.report_deferred_port_read(position)
                 event.advanced_to(position)
         elif isinstance(event, NewPortReads):
             self.__load_port_read_samples(event)
