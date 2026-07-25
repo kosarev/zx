@@ -22,10 +22,11 @@ import platformdirs
 from ._ay import AYFile
 from ._ay8910 import AY8910
 from ._ay8910 import AYPlayer
+from ._basic import boot_to_prompt
+from ._basic import capture_spectrum48
 from ._binary import Bytes
 from ._core import Core
 from ._core import Profile
-from ._core import RunEvents
 from ._data import AYMusicFile
 from ._data import AYStream
 from ._data import DataRecord
@@ -44,6 +45,7 @@ from ._device import IsTapePlayerStopped
 from ._device import LoadTape
 from ._device import PauseUnpauseTape
 from ._device import RunQuantum
+from ._device import TimeAdvanced
 from ._emulator import Emulator
 from ._emulator import Machine
 from ._error import USER_ERRORS
@@ -53,20 +55,13 @@ from ._except import EmulationExit
 from ._file import detect_file_format
 from ._file import parse_file
 from ._file import parse_file_image
-from ._keyboard import Keyboard
-from ._keyboard import make_key_strokes
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._rzx import RZXFile
 from ._settings import GlobalSettingsManager
 from ._sound import SDLSound
-from ._spectrum48 import Spectrum48CoreSnapshot
-from ._spectrum48 import Spectrum48MemoryBlock
 from ._spectrum48 import Spectrum48MemoryMapping
-from ._spectrum48 import Spectrum48MemorySnapshot
-from ._spectrum48 import Spectrum48Snapshot
 from ._spectrum128 import Spectrum128Snapshot
-from ._tape import TapePlayer
 from ._time import Time
 from ._zx import ZXFile
 
@@ -483,6 +478,24 @@ def fast_forward(args: list[str]) -> None:
             app._run_file(filename, fast_forward=True)
 
 
+# Ends the run as soon as the tape player reports itself stopped.
+# The tape bounds the quanta at the end-of-tape moment, so the run
+# ends right there. An unloaded tape reports stopped too, so this
+# only checks once a tape has been loaded.
+class _StopAtTapeEnd(Device):
+    def __init__(self) -> None:
+        self.__tape_loaded = False
+
+    def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
+        if isinstance(event, LoadTape):
+            self.__tape_loaded = True
+        elif self.__tape_loaded and isinstance(event, TimeAdvanced):
+            stopped = IsTapePlayerStopped()
+            devices.notify(stopped)
+            if stopped.stopped:
+                raise EmulationExit()
+
+
 # Runs a private machine through the ROM's own loading process --
 # boot, type LOAD "", play the tape to its end -- and saves the
 # machine that results.
@@ -492,50 +505,23 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
     assert isinstance(src, SoundFile)
     assert issubclass(dest_format, SnapshotFile), dest_format
 
-    core = Core()
-    core.install_snapshot(Spectrum48CoreSnapshot())
-    devices = Dispatcher([core, Keyboard(), TapePlayer()])
+    with Emulator(headless=True,
+                  extra_environment=[_StopAtTapeEnd()]) as app:
+        boot_to_prompt(app)
 
-    def current_time() -> Time:
-        return Time(core.tick_count,
-                    ticks_per_second=core.ticks_per_second)
+        # LOAD ""
+        app.generate_key_strokes('J', 'SS+P', 'SS+P', 'ENTER')
 
-    # Boot to the BASIC prompt.
-    frames = 0
-    while frames < 90:
-        if RunEvents.END_OF_FRAME in RunEvents(core._run(devices)):
-            frames += 1
+        app.notify(LoadTape(src))
+        app.notify(PauseUnpauseTape(False))
 
-    # LOAD ""
-    strokes = make_key_strokes('J', 'SS+P', 'SS+P', 'ENTER',
-                               start=current_time())
-    for stroke in strokes:
-        devices.notify(stroke)
-    while current_time() < strokes[-1].time:
-        core._run(devices)
+        with contextlib.suppress(EmulationExit):
+            app.run()
 
-    devices.notify(LoadTape(src))
-    devices.notify(PauseUnpauseTape(False))
+        core = app.machine.devices['core']
+        assert isinstance(core, Core)
+        snapshot = capture_spectrum48(core)
 
-    while True:
-        core._run(devices)
-
-        stopped = IsTapePlayerStopped()
-        devices.notify(stopped)
-        if stopped.stopped:
-            break
-
-    captured = core.to_snapshot()
-
-    # We know the machine is a 48K, so give its captured memory
-    # blocks the 48K types.
-    memory = Spectrum48MemorySnapshot(blocks=[
-        Spectrum48MemoryBlock(addr=b.offset, data=b.data)
-        for b in (captured.memory.blocks if captured.memory else None)
-        or []])
-    snapshot = Spectrum48Snapshot(
-        core=Spectrum48CoreSnapshot(z80=captured.z80, ula=captured.ula,
-                                    memory=memory))
     with pathlib.Path(dest_filename).open('wb') as f:
         f.write(dest_format.from_snapshot(snapshot).encode())
 
