@@ -64,8 +64,8 @@ from ._core import Core
 from ._core import Profile
 from ._data import DataRecord
 from ._data import MachineSnapshot
+from ._data import MachineSnapshotFile
 from ._data import PlaybackFile
-from ._data import SnapshotFile
 from ._data import SoundFile
 from ._data import SpectrumModel
 from ._device import CollectPortReads
@@ -125,7 +125,7 @@ class Machine:
                  beeper: Device | Default | None = DEFAULT,
                  model: type[SpectrumModel] | None = None,
                  profile: Profile | None = None,
-                 snapshot: SnapshotFile | Default | None = DEFAULT,
+                 snapshot: MachineSnapshotFile | Default | None = DEFAULT,
                  **extra_devices: Device) -> None:
         if isinstance(core, Default):
             core = Core(model=model, profile=profile)
@@ -157,7 +157,7 @@ class Machine:
     # members the caller does not give are stated to be None, as is
     # the snapshot unless one is given.
     @classmethod
-    def bare(cls, snapshot: SnapshotFile | None = None,
+    def bare(cls, snapshot: MachineSnapshotFile | None = None,
              **devices: Device) -> 'Machine':
         return cls(core=devices.pop('core', None),
                    keyboard=devices.pop('keyboard', None),
@@ -359,7 +359,8 @@ class Emulator:
     # Installing a machine snapshot means every machine device
     # assumes exactly the state the snapshot describes. A device
     # snapshot addressing no machine device is an error.
-    def __install_machine_snapshot(self, snapshot: SnapshotFile) -> None:
+    def __install_machine_snapshot(
+            self, snapshot: MachineSnapshotFile) -> None:
         device_snapshots = dict(snapshot.to_machine_snapshot())
 
         for id in device_snapshots:
@@ -440,11 +441,11 @@ class Emulator:
     # Loading a machine state installs it into the persistent device
     # set: the set is the machine definition's fact, never the
     # snapshot's.
-    def _load_snapshot(self, snapshot: SnapshotFile) -> None:
+    def _load_snapshot(self, snapshot: MachineSnapshotFile) -> None:
         self.notify(InstallSnapshot(snapshot.to_machine_snapshot()))
 
     def _load(self, file: DataRecord) -> None:
-        if isinstance(file, SnapshotFile):
+        if isinstance(file, MachineSnapshotFile):
             self._load_snapshot(file)
             return
 
@@ -473,7 +474,7 @@ class Emulator:
             for id, d in self.machine.devices.items()
             if (snapshot := d.to_snapshot()) is not None})
 
-    def _save_snapshot_file(self, format: type[SnapshotFile],
+    def _save_snapshot_file(self, format: type[MachineSnapshotFile],
                             filename: str) -> None:
         with pathlib.Path(filename).open('wb') as f:
             f.write(format.from_snapshot(

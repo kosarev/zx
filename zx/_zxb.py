@@ -20,7 +20,7 @@ from ._core import Core
 from ._data import ByteData
 from ._data import HexData
 from ._data import MachineSnapshot
-from ._data import SnapshotFile
+from ._data import MachineSnapshotFile
 from ._device import GetEmulationTime
 from ._error import Error
 from ._except import EmulationExit
@@ -33,7 +33,7 @@ if typing.TYPE_CHECKING:
 
 # A compiled program denotes a machine poised to execute it, so this
 # file converts to a machine snapshot.
-class ZXBasicCompilerProgram(SnapshotFile, format_name='ZXB'):
+class ZXBasicCompilerProgram(MachineSnapshotFile, format_name='ZXB'):
     entry_point: int
     program_bytes: ByteData
 

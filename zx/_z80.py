@@ -24,7 +24,7 @@ from ._data import ByteData
 from ._data import DataRecord
 from ._data import HexData
 from ._data import MachineSnapshot
-from ._data import SnapshotFile
+from ._data import MachineSnapshotFile
 from ._error import Error
 from ._spectrum48 import Spectrum48CoreSnapshot
 from ._spectrum48 import Spectrum48MemoryBlock
@@ -189,7 +189,7 @@ class Z80FileV2Header(DataRecord):
             self.v3_header.write(writer)
 
 
-class Z80File(SnapshotFile, format_name='Z80'):
+class Z80File(MachineSnapshotFile, format_name='Z80'):
     # Some snapshots contain zero pages as well.
     __MEMORY_PAGE_ADDRS: typing.ClassVar[dict[int, int]] = {
         0: 0x0000, 4: 0x8000, 5: 0xc000, 8: 0x4000}
@@ -250,7 +250,7 @@ class Z80File(SnapshotFile, format_name='Z80'):
             memory_blocks=memory_blocks)
 
     @classmethod
-    def from_snapshot(cls, snapshot: SnapshotFile) -> Z80File:
+    def from_snapshot(cls, snapshot: MachineSnapshotFile) -> Z80File:
         core = next(
             (d for _, d in snapshot.to_machine_snapshot()
              if isinstance(d, CoreSnapshot)), None)

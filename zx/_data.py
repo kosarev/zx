@@ -362,9 +362,10 @@ class Latin1Data(ByteData):
         return {'data': self.data.decode('latin-1')}
 
 
-class SnapshotFile(DataRecord):
+class MachineSnapshotFile(DataRecord):
     @classmethod
-    def from_snapshot(cls, snapshot: SnapshotFile) -> SnapshotFile:
+    def from_snapshot(
+            cls, snapshot: MachineSnapshotFile) -> MachineSnapshotFile:
         raise NotImplementedError
 
     def to_machine_snapshot(self) -> MachineSnapshot:
@@ -390,7 +391,7 @@ class DeviceSnapshot(DataRecord):
 # their format declares. Each machine's types live in their own
 # module (_spectrum48, _spectrum128) as a capsule of that
 # machine's knowledge.
-class MachineSnapshot(SnapshotFile):
+class MachineSnapshot(MachineSnapshotFile):
     # The model subclasses keyed by their member compositions: a
     # machine's model shows in what devices it is made of.
     __by_members: typing.ClassVar[
@@ -409,7 +410,7 @@ class MachineSnapshot(SnapshotFile):
         super().__init__(**devices)
 
     @classmethod
-    def from_snapshot(cls, snapshot: SnapshotFile) -> MachineSnapshot:
+    def from_snapshot(cls, snapshot: MachineSnapshotFile) -> MachineSnapshot:
         return snapshot.to_machine_snapshot()
 
     def encode(self) -> bytes:

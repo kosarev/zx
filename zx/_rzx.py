@@ -24,8 +24,8 @@ from ._data import MachinePlayback
 from ._data import MachinePlaybackFrame
 from ._data import MachinePlaybackSegment
 from ._data import MachineSnapshot
+from ._data import MachineSnapshotFile
 from ._data import PlaybackFile
-from ._data import SnapshotFile
 from ._data import _InlineJSONDict
 from ._error import Error
 from ._z80 import Z80File
@@ -90,10 +90,10 @@ class RZXInputRecording(RZXChunk):
 class RZXSnapshot(RZXChunk):
     flags: int
     format: ByteData
-    snapshot: SnapshotFile
+    snapshot: MachineSnapshotFile
 
     def __init__(self, *, flags: int = 0, format: Bytes | ByteData,
-                 snapshot: SnapshotFile) -> None:
+                 snapshot: MachineSnapshotFile) -> None:
         super().__init__(flags=flags, format=Latin1Data.wrap(format),
                          snapshot=snapshot)
 

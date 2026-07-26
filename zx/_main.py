@@ -34,8 +34,8 @@ from ._data import AYStream
 from ._data import DataRecord
 from ._data import MachinePlayback
 from ._data import MachineSnapshot
+from ._data import MachineSnapshotFile
 from ._data import PlaybackFile
-from ._data import SnapshotFile
 from ._data import SoundFile
 from ._data import Spectrum128
 from ._device import BreakpointHit
@@ -281,7 +281,7 @@ def unify(args: list[str]) -> None:
     handle_extra_arguments(args)
 
     file = parse_file(src_filename)
-    if isinstance(file, SnapshotFile):
+    if isinstance(file, MachineSnapshotFile):
         unified: DataRecord = file.to_machine_snapshot()
     elif isinstance(file, PlaybackFile):
         unified = file.to_machine_playback()
@@ -386,7 +386,7 @@ def test_file(filename: str, batch_mode: bool,
             image = f.read()
         file = parse_file_image(filename, image)
 
-        if isinstance(file, SnapshotFile):
+        if isinstance(file, MachineSnapshotFile):
             match(image, file.encode())
 
             unified = file.to_machine_snapshot()
@@ -568,7 +568,7 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
                               dest_filename: str,
                               dest_format: type[DataRecord]) -> None:
     assert isinstance(src, SoundFile)
-    assert issubclass(dest_format, SnapshotFile), dest_format
+    assert issubclass(dest_format, MachineSnapshotFile), dest_format
 
     with Emulator(headless=True,
                   extra_environment=[StopAtTapeEnd()]) as app:
@@ -623,8 +623,8 @@ def _convert_snapshot_to_snapshot(src: DataRecord,
                                   src_filename: str,
                                   dest_filename: str,
                                   dest_format: type[DataRecord]) -> None:
-    assert isinstance(src, SnapshotFile)
-    assert issubclass(dest_format, SnapshotFile), dest_format
+    assert isinstance(src, MachineSnapshotFile)
+    assert issubclass(dest_format, MachineSnapshotFile), dest_format
 
     with Emulator(headless=True) as app:
         app._load_snapshot(src)
@@ -647,9 +647,9 @@ def convert_file(src_filename: str, dest_filename: str) -> None:
                              str, type[DataRecord]], None]]] = [
         (SoundFile, SoundFile,
          _convert_tape_to_tape),
-        (SoundFile, SnapshotFile,
+        (SoundFile, MachineSnapshotFile,
          _convert_tape_to_snapshot),
-        (SnapshotFile, SnapshotFile,
+        (MachineSnapshotFile, MachineSnapshotFile,
          _convert_snapshot_to_snapshot),
         (AYMusicFile, AYMusicFile, _convert_ay_music),
         (DataRecord, ZXFile, _convert_any_to_zx),

@@ -19,7 +19,7 @@ from ._core import Z80Snapshot
 from ._data import ByteData
 from ._data import HexData
 from ._data import MachineSnapshot
-from ._data import SnapshotFile
+from ._data import MachineSnapshotFile
 from ._error import Error
 from ._spectrum48 import Spectrum48CoreSnapshot
 from ._spectrum48 import Spectrum48MemoryBlock
@@ -27,7 +27,7 @@ from ._spectrum48 import Spectrum48MemorySnapshot
 from ._spectrum48 import Spectrum48Snapshot
 
 
-class SNAFile(SnapshotFile, format_name='SNA'):
+class SNAFile(MachineSnapshotFile, format_name='SNA'):
     _HEADER: typing.ClassVar[list[str]] = [
         'B:i', '<H:alt_hl', '<H:alt_de', '<H:alt_bc', '<H:alt_af',
         '<H:hl', '<H:de', '<H:bc', '<H:iy', '<H:ix',
@@ -96,7 +96,7 @@ class SNAFile(SnapshotFile, format_name='SNA'):
                                       data=self.memory.data)])))
 
     @classmethod
-    def from_snapshot(cls, snapshot: SnapshotFile) -> 'SNAFile':
+    def from_snapshot(cls, snapshot: MachineSnapshotFile) -> 'SNAFile':
         core = next(
             (d for _, d in snapshot.to_machine_snapshot()
              if isinstance(d, CoreSnapshot)), None)

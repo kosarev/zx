@@ -17,14 +17,14 @@ from ._core import Z80Snapshot
 from ._data import ByteData
 from ._data import HexData
 from ._data import MachineSnapshot
-from ._data import SnapshotFile
+from ._data import MachineSnapshotFile
 from ._spectrum48 import Spectrum48CoreSnapshot
 from ._spectrum48 import Spectrum48MemoryBlock
 from ._spectrum48 import Spectrum48MemorySnapshot
 from ._spectrum48 import Spectrum48Snapshot
 
 
-class _SCRFile(SnapshotFile, format_name='SCR'):
+class _SCRFile(MachineSnapshotFile, format_name='SCR'):
     dot_patterns: ByteData
     colour_attrs: ByteData
 

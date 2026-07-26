@@ -26,7 +26,7 @@ def test_basic() -> None:
     assert 'DataRecord' in rec.dumps()
 
     # Create a snapshot.
-    assert list(zx._data.SnapshotFile()) == []
+    assert list(zx._data.MachineSnapshotFile()) == []
 
     # Machine snapshots convert to themselves.
     snapshot = zx._data.MachineSnapshot()
