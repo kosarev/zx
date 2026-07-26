@@ -287,7 +287,7 @@ def test_stream_player() -> None:
     # TimeAdvanced stamp, and the sound device consumes a published
     # chunk only on the following round -- each up to one quantum
     # long, plus the 0.1s of output the test expects.
-    with zx.Emulator(machine=Machine(ay=AY8910()),
+    with zx.Emulator(machine=Machine.bare(ay=AY8910()),
                      environment=[player, sound]) as app:
         app.run(until=player.get_end_time() +
                 Time(3 * RATE // 10, ticks_per_second=RATE))

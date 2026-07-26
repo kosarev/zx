@@ -286,8 +286,8 @@ def test_converted_song_plays() -> None:
         blocks=[AYFileBlock(address=0x8000, data_offset=0, data=init),
                 AYFileBlock(address=0x9000, data_offset=0, data=play)])
 
-    with Emulator(machine=Machine(core=zx.Core(), ay=AY8910(),
-                                  beeper=Beeper()),
+    with Emulator(machine=Machine.bare(core=zx.Core(), ay=AY8910(),
+                                       beeper=Beeper()),
                   snapshot=ay.to_machine_snapshot(song),
                   environment=[]) as app:
         app.run(duration=0.1)

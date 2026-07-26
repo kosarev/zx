@@ -105,21 +105,48 @@ from ._time import Time
 from ._z80 import Z80File
 
 
+# Marks device parameters where no device is given, telling 'use the
+# default device' (DEFAULT) from 'no device' (None).
+class Default:
+    pass
+
+
+DEFAULT = Default()
+
+
 # The machine's devices, keyed by their ids -- the same ids that key
 # the device snapshots of machine snapshot compositions. The standard
-# members are named parameters; None means the machine has no such
-# member, as with the AY-only player machine.
+# members default to constructed devices, so a bare Machine() is the
+# standard Spectrum machine; None means the machine has no such
+# member.
 class Machine:
-    def __init__(self, core: Core | None = None,
-                 keyboard: Device | None = None,
-                 beeper: Device | None = None,
+    def __init__(self, core: Device | Default | None = DEFAULT,
+                 keyboard: Device | Default | None = DEFAULT,
+                 beeper: Device | Default | None = DEFAULT,
                  **devices: Device) -> None:
+        if isinstance(core, Default):
+            core = Core()
+        if isinstance(keyboard, Default):
+            keyboard = Keyboard()
+        if isinstance(beeper, Default):
+            beeper = Beeper()
+
         self.devices: dict[str, Device] = {}
         standard = ('core', core), ('keyboard', keyboard), ('beeper', beeper)
         for member_id, device in standard:
             if device is not None:
                 self.devices[member_id] = device
         self.devices.update(devices)
+
+    # A machine of exactly the given devices, no standard members
+    # implied -- for rigs such as the AY-only player machine. Standard
+    # members the caller does not give are stated to be None.
+    @classmethod
+    def bare(cls, **devices: Device) -> 'Machine':
+        return cls(core=devices.pop('core', None),
+                   keyboard=devices.pop('keyboard', None),
+                   beeper=devices.pop('beeper', None),
+                   **devices)
 
 
 # A Dispatcher that also passes every event to the Emulator, after
@@ -151,19 +178,18 @@ class Emulator:
     def __init__(self, *,
                  model: type[SpectrumModel] | None = None,
                  snapshot: SnapshotFile | None = None,
-                 screen: Device | None = None,
-                 sound_device: Device | None = None,
-                 playback_player: PlaybackPlayer | None = None,
-                 playback_recorder: PlaybackRecorder | None = None,
+                 screen: Device | Default | None = DEFAULT,
+                 sound_device: Device | Default | None = DEFAULT,
+                 playback_player: PlaybackPlayer | Default | None = DEFAULT,
+                 playback_recorder: (PlaybackRecorder | Default |
+                                     None) = DEFAULT,
                  profile: Profile | None = None,
                  headless: bool = False,
                  machine: Machine | None = None,
                  environment: list[Device] | None = None,
                  extra_environment: list[Device] | None = None):
         if machine is None:
-            machine = Machine(core=Core(model=model, profile=profile),
-                              keyboard=Keyboard(),
-                              beeper=Beeper())
+            machine = Machine(core=Core(model=model, profile=profile))
 
             # The default machine's state defaults to the stock 48K
             # snapshot. A caller-defined machine is defined by the
@@ -172,19 +198,25 @@ class Emulator:
                 snapshot = Spectrum48Snapshot()
 
         if environment is None:
+            if isinstance(playback_player, Default):
+                playback_player = PlaybackPlayer()
+
             # The default set's recorder sits disabled until a
             # feature, such as playback recovery, enables it.
-            environment = [TapePlayer(),
-                           playback_player or PlaybackPlayer(),
-                           playback_recorder or
-                           PlaybackRecorder(disabled=True)]
-            if not headless:
-                if screen is None:
+            if isinstance(playback_recorder, Default):
+                playback_recorder = PlaybackRecorder(disabled=True)
+
+            if headless:
+                screen = sound_device = None
+            else:
+                if isinstance(screen, Default):
                     screen = ScreenWindow(Core.FRAME_SIZE)
-                if sound_device is None:
+                if isinstance(sound_device, Default):
                     sound_device = SDLSound()
 
-                environment.extend([screen, sound_device])
+            members = (TapePlayer(), playback_player, playback_recorder,
+                       screen, sound_device)
+            environment = [d for d in members if d is not None]
 
         # The caller's extra environment devices come last --
         # typically the end-user tool layer adding host-coupling
