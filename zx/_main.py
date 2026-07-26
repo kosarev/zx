@@ -64,7 +64,6 @@ from ._rzx import RZXFile
 from ._settings import GlobalSettingsManager
 from ._sound import SDLSound
 from ._spectrum48 import Spectrum48MemoryMapping
-from ._spectrum48 import Spectrum48Snapshot
 from ._spectrum128 import Spectrum128Snapshot
 from ._time import Time
 from ._zx import ZXFile
@@ -200,10 +199,9 @@ def _play_ay_file(file: AYFile) -> None:
 
 def run(args: list[str]) -> None:
     machine = None
-    snapshot = None
     if pop_option(args, '--128'):
-        machine = Machine(model=Spectrum128)
-        snapshot = Spectrum128Snapshot()
+        machine = Machine(model=Spectrum128,
+                          snapshot=Spectrum128Snapshot())
 
     filename = None
     if args:
@@ -223,7 +221,7 @@ def run(args: list[str]) -> None:
     session_snapshot = get_config_dir() / 'session.zx'
     settings_file = get_config_dir() / 'settings.json'
 
-    with Emulator(machine=machine, snapshot=snapshot, extra_environment=[
+    with Emulator(machine=machine, extra_environment=[
             GlobalSettingsManager(settings_file)]) as app:
         if file is not None:
             app._load(file)
@@ -247,8 +245,7 @@ def profile(args: list[str]) -> None:
     handle_extra_arguments(args)
 
     profile = Profile()
-    with Emulator(machine=Machine(profile=profile),
-                  snapshot=Spectrum48Snapshot()) as app:
+    with Emulator(machine=Machine(profile=profile)) as app:
         app._load_file(file_to_run)
         app.run()
 
@@ -534,7 +531,6 @@ def recover_playback(playback: PlaybackFile) -> MachinePlayback:
     # The recording is loaded after the Emulator has assembled the
     # device set, so the player receives StartPlayback.
     with Emulator(machine=Machine(core=recoverer),
-                  snapshot=Spectrum48Snapshot(),
                   headless=True,
                   playback_player=recoverer._player,
                   playback_recorder=recoverer._recorder) as emu:

@@ -44,8 +44,8 @@ def test_128k_emulator() -> None:
 
     # A 128K emulator constructs with both ROMs in their pages.
     with zx.Emulator(headless=True,
-                     machine=Machine(model=Spectrum128),
-                     snapshot=Spectrum128Snapshot()) as app:
+                     machine=Machine(model=Spectrum128,
+                                     snapshot=Spectrum128Snapshot())) as app:
         core = next(d for d in app.devices if isinstance(d, zx.Core))
         assert core.read(Spectrum128MemoryMapping(rom_page=0),
                          0x0000, 0x4000) == rom[:0x4000]

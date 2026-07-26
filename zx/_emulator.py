@@ -125,12 +125,21 @@ class Machine:
                  beeper: Device | Default | None = DEFAULT,
                  model: type[SpectrumModel] | None = None,
                  profile: Profile | None = None,
+                 snapshot: SnapshotFile | Default | None = DEFAULT,
                  **extra_devices: Device) -> None:
         if isinstance(core, Default):
             core = Core(model=model, profile=profile)
         else:
             # The model and profile parameterise the default core.
             assert model is None and profile is None
+
+        # The machine's state defaults to the stock 48K snapshot;
+        # None means nothing to install, the reset state.
+        # TODO: Find a way to install snapshots using Machine, maybe
+        # via its own on_event(), and drop this field.
+        if isinstance(snapshot, Default):
+            snapshot = Spectrum48Snapshot()
+        self._snapshot = snapshot
         if isinstance(keyboard, Default):
             keyboard = Keyboard()
         if isinstance(beeper, Default):
@@ -145,13 +154,15 @@ class Machine:
 
     # A machine of exactly the given devices, no standard members
     # implied -- for rigs such as the AY-only player machine. Standard
-    # members the caller does not give are stated to be None.
+    # members the caller does not give are stated to be None, as is
+    # the snapshot unless one is given.
     @classmethod
-    def bare(cls, **devices: Device) -> 'Machine':
+    def bare(cls, snapshot: SnapshotFile | None = None,
+             **devices: Device) -> 'Machine':
         return cls(core=devices.pop('core', None),
                    keyboard=devices.pop('keyboard', None),
                    beeper=devices.pop('beeper', None),
-                   model=None, profile=None,
+                   model=None, profile=None, snapshot=snapshot,
                    **devices)
 
 
@@ -182,7 +193,6 @@ class Emulator:
     """
 
     def __init__(self, *,
-                 snapshot: SnapshotFile | None = None,
                  screen: Device | Default | None = DEFAULT,
                  sound_device: Device | Default | None = DEFAULT,
                  playback_player: PlaybackPlayer | Default | None = DEFAULT,
@@ -194,12 +204,6 @@ class Emulator:
                  extra_environment: list[Device] | None = None):
         if machine is None:
             machine = Machine()
-
-            # The default machine's state defaults to the stock 48K
-            # snapshot. A caller-defined machine is defined by the
-            # code that builds it: only a specified snapshot installs.
-            if snapshot is None:
-                snapshot = Spectrum48Snapshot()
 
         if environment is None:
             if isinstance(playback_player, Default):
@@ -244,8 +248,9 @@ class Emulator:
         # last quantum ended otherwise.
         self.__deferred_port_read_time: Time | None = None
 
-        if snapshot is not None:
-            self.notify(InstallSnapshot(snapshot.to_machine_snapshot()))
+        if machine._snapshot is not None:
+            self.notify(InstallSnapshot(
+                machine._snapshot.to_machine_snapshot()))
 
     # All the devices, the machine first, as one dispatch audience.
     @property
