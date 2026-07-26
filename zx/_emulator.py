@@ -123,7 +123,7 @@ class Machine:
     def __init__(self, core: Device | Default | None = DEFAULT,
                  keyboard: Device | Default | None = DEFAULT,
                  beeper: Device | Default | None = DEFAULT,
-                 **devices: Device) -> None:
+                 **extra_devices: Device) -> None:
         if isinstance(core, Default):
             core = Core()
         if isinstance(keyboard, Default):
@@ -131,12 +131,12 @@ class Machine:
         if isinstance(beeper, Default):
             beeper = Beeper()
 
-        self.devices: dict[str, Device] = {}
-        standard = ('core', core), ('keyboard', keyboard), ('beeper', beeper)
-        for member_id, device in standard:
-            if device is not None:
-                self.devices[member_id] = device
-        self.devices.update(devices)
+        devices = {'core': core, 'keyboard': keyboard, 'beeper': beeper}
+        devices.update(extra_devices)
+
+        self.devices: dict[str, Device] = {
+            device_id: device for device_id, device in devices.items()
+            if device is not None}
 
     # A machine of exactly the given devices, no standard members
     # implied -- for rigs such as the AY-only player machine. Standard
