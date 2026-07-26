@@ -22,6 +22,7 @@ from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import InitEmulator
+from zx._emulator import Machine
 from zx._error import Error
 from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
@@ -42,7 +43,8 @@ def test_128k_emulator() -> None:
     rom = (RESOURCES / 'roms' / 'Spectrum128.rom').read_bytes()
 
     # A 128K emulator constructs with both ROMs in their pages.
-    with zx.Emulator(headless=True, model=Spectrum128,
+    with zx.Emulator(headless=True,
+                     machine=Machine(model=Spectrum128),
                      snapshot=Spectrum128Snapshot()) as app:
         core = next(d for d in app.devices if isinstance(d, zx.Core))
         assert core.read(Spectrum128MemoryMapping(rom_page=0),

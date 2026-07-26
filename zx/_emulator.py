@@ -123,9 +123,14 @@ class Machine:
     def __init__(self, core: Device | Default | None = DEFAULT,
                  keyboard: Device | Default | None = DEFAULT,
                  beeper: Device | Default | None = DEFAULT,
+                 model: type[SpectrumModel] | None = None,
+                 profile: Profile | None = None,
                  **extra_devices: Device) -> None:
         if isinstance(core, Default):
-            core = Core()
+            core = Core(model=model, profile=profile)
+        else:
+            # The model and profile parameterise the default core.
+            assert model is None and profile is None
         if isinstance(keyboard, Default):
             keyboard = Keyboard()
         if isinstance(beeper, Default):
@@ -146,6 +151,7 @@ class Machine:
         return cls(core=devices.pop('core', None),
                    keyboard=devices.pop('keyboard', None),
                    beeper=devices.pop('beeper', None),
+                   model=None, profile=None,
                    **devices)
 
 
@@ -176,20 +182,18 @@ class Emulator:
     """
 
     def __init__(self, *,
-                 model: type[SpectrumModel] | None = None,
                  snapshot: SnapshotFile | None = None,
                  screen: Device | Default | None = DEFAULT,
                  sound_device: Device | Default | None = DEFAULT,
                  playback_player: PlaybackPlayer | Default | None = DEFAULT,
                  playback_recorder: (PlaybackRecorder | Default |
                                      None) = DEFAULT,
-                 profile: Profile | None = None,
                  headless: bool = False,
                  machine: Machine | None = None,
                  environment: list[Device] | None = None,
                  extra_environment: list[Device] | None = None):
         if machine is None:
-            machine = Machine(core=Core(model=model, profile=profile))
+            machine = Machine()
 
             # The default machine's state defaults to the stock 48K
             # snapshot. A caller-defined machine is defined by the

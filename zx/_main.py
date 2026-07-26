@@ -199,10 +199,10 @@ def _play_ay_file(file: AYFile) -> None:
 
 
 def run(args: list[str]) -> None:
-    model = None
+    machine = None
     snapshot = None
     if pop_option(args, '--128'):
-        model = Spectrum128
+        machine = Machine(model=Spectrum128)
         snapshot = Spectrum128Snapshot()
 
     filename = None
@@ -223,7 +223,7 @@ def run(args: list[str]) -> None:
     session_snapshot = get_config_dir() / 'session.zx'
     settings_file = get_config_dir() / 'settings.json'
 
-    with Emulator(model=model, snapshot=snapshot, extra_environment=[
+    with Emulator(machine=machine, snapshot=snapshot, extra_environment=[
             GlobalSettingsManager(settings_file)]) as app:
         if file is not None:
             app._load(file)
@@ -247,7 +247,8 @@ def profile(args: list[str]) -> None:
     handle_extra_arguments(args)
 
     profile = Profile()
-    with Emulator(profile=profile) as app:
+    with Emulator(machine=Machine(profile=profile),
+                  snapshot=Spectrum48Snapshot()) as app:
         app._load_file(file_to_run)
         app.run()
 
