@@ -106,10 +106,20 @@ from ._z80 import Z80File
 
 
 # The machine's devices, keyed by their ids -- the same ids that key
-# the device snapshots of machine snapshot compositions.
+# the device snapshots of machine snapshot compositions. The standard
+# members are named parameters; None means the machine has no such
+# member, as with the AY-only player machine.
 class Machine:
-    def __init__(self, **devices: Device) -> None:
-        self.devices = devices
+    def __init__(self, core: Core | None = None,
+                 keyboard: Device | None = None,
+                 beeper: Device | None = None,
+                 **devices: Device) -> None:
+        self.devices: dict[str, Device] = {}
+        standard = ('core', core), ('keyboard', keyboard), ('beeper', beeper)
+        for member_id, device in standard:
+            if device is not None:
+                self.devices[member_id] = device
+        self.devices.update(devices)
 
 
 # A Dispatcher that also passes every event to the Emulator, after
@@ -141,10 +151,7 @@ class Emulator:
     def __init__(self, *,
                  model: type[SpectrumModel] | None = None,
                  snapshot: SnapshotFile | None = None,
-                 core: Core | None = None,
                  screen: Device | None = None,
-                 keyboard: Device | None = None,
-                 beeper: Device | None = None,
                  sound_device: Device | None = None,
                  playback_player: PlaybackPlayer | None = None,
                  playback_recorder: PlaybackRecorder | None = None,
@@ -154,15 +161,9 @@ class Emulator:
                  environment: list[Device] | None = None,
                  extra_environment: list[Device] | None = None):
         if machine is None:
-            if core is None:
-                core = Core(model=model, profile=profile)
-
-            if keyboard is None:
-                keyboard = Keyboard()
-            if beeper is None:
-                beeper = Beeper()
-
-            machine = Machine(core=core, keyboard=keyboard, beeper=beeper)
+            machine = Machine(core=Core(model=model, profile=profile),
+                              keyboard=Keyboard(),
+                              beeper=Beeper())
 
             # The default machine's state defaults to the stock 48K
             # snapshot. A caller-defined machine is defined by the

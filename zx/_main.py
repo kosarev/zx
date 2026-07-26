@@ -58,12 +58,14 @@ from ._except import EmulationExit
 from ._file import detect_file_format
 from ._file import parse_file
 from ._file import parse_file_image
+from ._keyboard import Keyboard
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._rzx import RZXFile
 from ._settings import GlobalSettingsManager
 from ._sound import SDLSound
 from ._spectrum48 import Spectrum48MemoryMapping
+from ._spectrum48 import Spectrum48Snapshot
 from ._spectrum128 import Spectrum128Snapshot
 from ._time import Time
 from ._zx import ZXFile
@@ -531,7 +533,11 @@ def recover_playback(playback: PlaybackFile) -> MachinePlayback:
         else _PlaybackRecoverer())
     # The recording is loaded after the Emulator has assembled the
     # device set, so the player receives StartPlayback.
-    with Emulator(core=recoverer, headless=True,
+    with Emulator(machine=Machine(core=recoverer,
+                                  keyboard=Keyboard(),
+                                  beeper=Beeper()),
+                  snapshot=Spectrum48Snapshot(),
+                  headless=True,
                   playback_player=recoverer._player,
                   playback_recorder=recoverer._recorder) as emu:
         emu._load_input_recording(playback)
