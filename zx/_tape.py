@@ -14,6 +14,7 @@ import typing
 
 import numpy
 
+from ._data import DeviceSnapshot
 from ._data import PortReadSeries
 from ._device import CollectPortReads
 from ._device import Device
@@ -21,6 +22,7 @@ from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import GetQuantumTimeLimit
 from ._device import GetTapePlayerTime
+from ._device import InstallDeviceSnapshot
 from ._device import IsTapePlayerPaused
 from ._device import IsTapePlayerStopped
 from ._device import LoadTape
@@ -121,10 +123,23 @@ def tag_last_pulse(pulses: typing.Iterable[tuple[bool, int,
             yield level, duration, ids
 
 
-class TapePlayer(Device):
+class TapePlayerSnapshot(DeviceSnapshot):
+    disabled: bool | None
+
+    def __init__(self, *, disabled: bool | None = None) -> None:
+        super().__init__(disabled=disabled)
+
+
+class TapePlayer(Device, snapshot_type=TapePlayerSnapshot):
     _pulses: typing.Iterable[tuple[bool, int, tuple[str, ...]]] | None
 
-    def __init__(self) -> None:
+    def __init__(self, *, disabled: bool = False) -> None:
+        super().__init__(disabled=disabled)
+        self.__reset()
+
+    # The construction state: an empty deck, paused, at position
+    # zero.
+    def __reset(self) -> None:
         self._is_paused = True
         self._pulses = None
         self._level = False
@@ -157,6 +172,29 @@ class TapePlayer(Device):
 
         # The stamp up to which sound has been published.
         self.__published_up_to: Time | None = None
+
+    @classmethod
+    def from_snapshot(cls, snapshot: DeviceSnapshot) -> TapePlayer:
+        assert isinstance(snapshot, TapePlayerSnapshot)
+        return cls(disabled=snapshot.disabled is True)
+
+    def to_snapshot(self) -> TapePlayerSnapshot | None:
+        # A disabled tape player is indistinguishable from an absent
+        # one, so there is nothing to capture.
+        # TODO: Capture the mounted media and the position.
+        if self.disabled:
+            return None
+
+        return TapePlayerSnapshot()
+
+    def __install_snapshot(self, s: DeviceSnapshot) -> None:
+        assert isinstance(s, TapePlayerSnapshot)
+
+        # Whatever the snapshot does not mention is at reset: an
+        # empty deck.
+        self.__reset()
+
+        self.disabled = s.disabled is True
 
     def __is_paused(self) -> bool:
         return self._is_paused
@@ -395,6 +433,15 @@ class TapePlayer(Device):
 
     def on_event(self, event: DeviceEvent,
                  dispatcher: Dispatcher) -> None:
+        if isinstance(event, InstallDeviceSnapshot):
+            self.__install_snapshot(event.snapshot)
+            return
+
+        # A disabled tape player is indistinguishable from an absent
+        # one: it drives no signal and plays no tape.
+        if self.disabled:
+            return
+
         if isinstance(event, ResetEmulator):
             # Note that the position keeps advancing across resets —
             # only the transient sound state is discarded.

@@ -117,10 +117,13 @@ Key frames are critical for fast rollback: stepping back one frame from
 frame. Key frame spacing is a critical design parameter.
 """
 
+from __future__ import annotations
+
 import typing
 
 import numpy
 
+from ._data import DeviceSnapshot
 from ._data import MachinePlayback
 from ._data import MachinePlaybackFrame
 from ._data import MachinePlaybackSegment
@@ -131,19 +134,29 @@ from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import EndOfFrame
 from ._device import FetchesLimitHit
+from ._device import InstallDeviceSnapshot
 from ._device import InstallSnapshot
 from ._device import SetFetchesLimit
 from ._device import StartPlayback
 from ._device import StopPlayback
 from ._error import Error
 from ._except import EmulationExit
-from ._time import Time
+
+if typing.TYPE_CHECKING:
+    from ._time import Time
+
+
+class PlaybackPlayerSnapshot(DeviceSnapshot):
+    disabled: bool | None
+
+    def __init__(self, *, disabled: bool | None = None) -> None:
+        super().__init__(disabled=disabled)
 
 
 # TODO: Rework to a time machine interface.
-class PlaybackPlayer(Device):
-    def __init__(self) -> None:
-        super().__init__()
+class PlaybackPlayer(Device, snapshot_type=PlaybackPlayerSnapshot):
+    def __init__(self, *, disabled: bool = False) -> None:
+        super().__init__(disabled=disabled)
         self.__playback: MachinePlayback | None = None
         self.__segments: typing.Iterator[MachinePlaybackSegment] = iter(())
         self.__frames: typing.Iterator[MachinePlaybackFrame] = iter(())
@@ -196,6 +209,28 @@ class PlaybackPlayer(Device):
         self.__sample_values = b''
         self.__sample_count = 0
         self.__dealt_time = None
+
+    @classmethod
+    def from_snapshot(cls, snapshot: DeviceSnapshot) -> PlaybackPlayer:
+        assert isinstance(snapshot, PlaybackPlayerSnapshot)
+        return cls(disabled=snapshot.disabled is True)
+
+    def to_snapshot(self) -> PlaybackPlayerSnapshot | None:
+        # An idle player holds nothing beyond reset.
+        # TODO: Capture the loaded playback and the position.
+        if self.disabled:
+            return None
+
+        return PlaybackPlayerSnapshot()
+
+    def __install_snapshot(self, s: DeviceSnapshot) -> None:
+        assert isinstance(s, PlaybackPlayerSnapshot)
+
+        # Whatever the snapshot does not mention is at reset: no
+        # playback loaded.
+        self.__unload()
+
+        self.disabled = s.disabled is True
 
     # A dealt sample counts consumed only on evidence that time
     # moved past its moment: the deferred read there is the first
@@ -251,6 +286,15 @@ class PlaybackPlayer(Device):
             end_tick=end_tick))
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
+        if isinstance(event, InstallDeviceSnapshot):
+            self.__install_snapshot(event.snapshot)
+            return
+
+        # A disabled player is indistinguishable from an absent one:
+        # it deals no samples and drives no playback.
+        if self.disabled:
+            return
+
         if isinstance(event, StartPlayback):
             self.__load(event.playback, devices)
             return
@@ -278,7 +322,14 @@ class PlaybackPlayer(Device):
             devices.notify(EndOfFrame())
 
 
-class PlaybackRecorder(Device):
+class PlaybackRecorderSnapshot(DeviceSnapshot):
+    disabled: bool | None
+
+    def __init__(self, *, disabled: bool | None = None) -> None:
+        super().__init__(disabled=disabled)
+
+
+class PlaybackRecorder(Device, snapshot_type=PlaybackRecorderSnapshot):
     def __init__(self, *, disabled: bool = False) -> None:
         super().__init__(disabled=disabled)
         self.__segments: list[MachinePlaybackSegment] = []
@@ -286,7 +337,35 @@ class PlaybackRecorder(Device):
     def make_playback(self) -> MachinePlayback:
         return MachinePlayback(segments=self.__segments)
 
+    @classmethod
+    def from_snapshot(cls, snapshot: DeviceSnapshot) -> PlaybackRecorder:
+        assert isinstance(snapshot, PlaybackRecorderSnapshot)
+        return cls(disabled=snapshot.disabled is True)
+
+    def to_snapshot(self) -> PlaybackRecorderSnapshot | None:
+        # An idle recorder holds nothing beyond reset.
+        # TODO: Capture the recording made so far.
+        if self.disabled:
+            return None
+
+        return PlaybackRecorderSnapshot()
+
+    def __install_snapshot(self, s: DeviceSnapshot) -> None:
+        assert isinstance(s, PlaybackRecorderSnapshot)
+
+        # Whatever the snapshot does not mention is at reset: no
+        # recording made.
+        self.__segments = []
+
+        self.disabled = s.disabled is True
+
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
+        # A disabled device still receives the events that
+        # reconfigure it.
+        if isinstance(event, InstallDeviceSnapshot):
+            self.__install_snapshot(event.snapshot)
+            return
+
         if self.disabled:
             return
 
