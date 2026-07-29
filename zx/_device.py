@@ -449,6 +449,10 @@ class Device:
     # Maps snapshot types to the device types declaring them, so a
     # device can be created from any snapshot: Device.from_snapshot()
     # resolves the device type and delegates to its override.
+    # TODO: Delete the from_snapshot machinery -- this registry,
+    # SNAPSHOT_TYPE, the snapshot_type= class keywords and the
+    # per-device overrides: its consumers, creating devices on load
+    # and disabling unmentioned devices on install, are retired.
     __device_types_by_snapshot_type: typing.ClassVar[
         dict[type[DeviceSnapshot], type[Device]]] = {}
 

@@ -59,5 +59,5 @@ class _CoreBase:
     def _reset(self) -> None:
         ...
 
-    def _reset_config(self) -> None:
+    def _reset_roms(self) -> None:
         ...

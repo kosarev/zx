@@ -114,47 +114,16 @@ class Z80Snapshot(DataRecord):
             iff1=iff1, iff2=iff2, int_mode=int_mode)
 
 
-# The ULA chip's state. The ULA divides the crystal into the CPU
-# clock, so the clock is its fact. A chip-version subclass fixes the
-# configuration fields as class keywords, which the base records as
-# class attributes; the subclass reads them off itself. Null fields
-# mean the canonical reset values.
+# The ULA chip's state.
 class ULASnapshot(DataRecord):
-    ticks_per_second: int | None
-    ticks_per_horizontal_retrace: int | None
-    lines_per_vertical_retrace: int | None
-    contention_base: int | None
     ticks_since_int: int | None
     border_colour: int | None
 
-    # A chip-version subclass states its whole wiring as class
-    # keywords, recorded as class attributes.
-    def __init_subclass__(
-            cls, *,
-            ticks_per_second: int,
-            ticks_per_horizontal_retrace: int,
-            lines_per_vertical_retrace: int,
-            contention_base: int,
-            **kwargs: typing.Any) -> None:
-        super().__init_subclass__(**kwargs)
-        cls.ticks_per_second = ticks_per_second
-        cls.ticks_per_horizontal_retrace = ticks_per_horizontal_retrace
-        cls.lines_per_vertical_retrace = lines_per_vertical_retrace
-        cls.contention_base = contention_base
-
     def __init__(
             self, *,
-            ticks_per_second: int | None = None,
-            ticks_per_horizontal_retrace: int | None = None,
-            lines_per_vertical_retrace: int | None = None,
-            contention_base: int | None = None,
             ticks_since_int: int | None = None,
             border_colour: int | None = None):
         super().__init__(
-            ticks_per_second=ticks_per_second,
-            ticks_per_horizontal_retrace=ticks_per_horizontal_retrace,
-            lines_per_vertical_retrace=lines_per_vertical_retrace,
-            contention_base=contention_base,
             ticks_since_int=ticks_since_int,
             border_colour=border_colour)
 
@@ -680,13 +649,6 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
     only for low-level use, otherwise let Emulator create it.
     """
 
-    @classmethod
-    def from_snapshot(cls, snapshot: DeviceSnapshot) -> Core:
-        assert isinstance(snapshot, CoreSnapshot)
-        core = cls()
-        core.install_snapshot(snapshot)
-        return core
-
     # Memory marks.
     __NO_MARKS = 0
     __BREAKPOINT_MARK = 1 << 0
@@ -699,11 +661,20 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
     def __init__(self, *,
                  disabled: bool = False,
                  profile: Profile | None = None,
-                 _paging_supported: bool = False):
+                 _paging_supported: bool,
+                 _ticks_per_second: int,
+                 _ticks_per_horizontal_retrace: int,
+                 _lines_per_vertical_retrace: int,
+                 _contention_base: int):
         CoreState.__init__(self, self._get_state_view())
         Device.__init__(self, disabled=disabled)
 
+        # The wiring the model core classes state.
         self._paging_supported = _paging_supported
+        self.ticks_per_second = _ticks_per_second
+        self.ticks_per_horizontal_retrace = _ticks_per_horizontal_retrace
+        self.lines_per_vertical_retrace = _lines_per_vertical_retrace
+        self.contention_base = _contention_base
 
         self.frame_count = 0
 
@@ -719,6 +690,18 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
 
         self.__paused = False
 
+    @classmethod
+    def from_snapshot(cls, snapshot: DeviceSnapshot) -> Core:
+        assert isinstance(snapshot, CoreSnapshot)
+
+        # Only the model core classes construct with no arguments:
+        # the base Core does not know its wiring.
+        assert cls is not Core
+        core = cls()  # type: ignore[call-arg]
+
+        core.install_snapshot(snapshot)
+        return core
+
     # Capture belongs to the model core classes, which know their
     # machine and produce their typed snapshots; a bare Core states
     # nothing to capture.
@@ -726,10 +709,10 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
     def install_snapshot(self, snapshot: CoreSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset
         # state, so installing one resets first: whatever the snapshot
-        # does not mention, the configuration and the ROMs included,
-        # stays at reset.
+        # does not mention, the ROMs included, stays at reset. The
+        # wiring is the core class's, untouched by installs.
         self._reset()
-        self._reset_config()
+        self._reset_roms()
         self.disabled = False
 
         for field, value in snapshot:

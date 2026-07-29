@@ -74,9 +74,9 @@ struct __attribute__((packed)) processor_state {
 #pragma pack(pop)
 #endif
 
-// The configuration part of the core state: the facts that survive
-// a plain reset and return to these canonical defaults on
-// _reset_config().
+// The configuration part of the core state: the wiring facts that
+// survive resets and installs; the model core classes set them at
+// construction.
 #if defined(_MSC_VER)
 #pragma pack(push, 1)
 struct core_config {
@@ -739,14 +739,13 @@ PyObject *on_reset(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
 }
 
-PyObject *reset_config(PyObject *self, PyObject *args) {
+PyObject *reset_roms(PyObject *self, PyObject *args) {
     auto &emulator = cast_emulator(self);
 
-    // The configuration and the memory image are parts of the state
-    // shared with the Python side directly, so no state marshalling
-    // is needed. The ROM pages are configuration too: their content
-    // is snapshot data, not reset's responsibility.
-    emulator.get_machine_state().config = core_config();
+    // The memory image is part of the state shared with the Python
+    // side directly, so no state marshalling is needed. The ROM
+    // pages' content is snapshot data, not reset's responsibility,
+    // so installs reset them separately.
     emulator.on_get_memory().reset_roms();
     Py_RETURN_NONE;
 }
@@ -788,9 +787,8 @@ PyMethodDef methods[] = {
      "Attempts to initiate a masked interrupt."},
     {"_reset", on_reset, METH_NOARGS,
      "Perform a hard reset of the emulated machine."},
-    {"_reset_config", reset_config, METH_NOARGS,
-     "Return the core configuration, the ROM pages included, to "
-     "the canonical reset defaults."},
+    {"_reset_roms", reset_roms, METH_NOARGS,
+     "Return the ROM pages to the power-up pattern."},
     { nullptr }  // Sentinel.
 };
 

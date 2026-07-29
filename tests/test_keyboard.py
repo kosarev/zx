@@ -7,7 +7,6 @@
 #   Published under the MIT license.
 
 
-from zx._core import Core
 from zx._core import RunEvents
 from zx._data import PortReadSeries
 from zx._device import CollectPortReads
@@ -19,6 +18,7 @@ from zx._keyboard import KEYS
 from zx._keyboard import Keyboard
 from zx._keyboard import KeyboardSnapshot
 from zx._keyboard import KeyStroke
+from zx._spectrum48 import Spectrum48Core
 from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
 
@@ -97,7 +97,7 @@ def test_stroke_at_quantum_ceiling() -> None:
     # so a stroke stamped there must always be admissible — including
     # when the quantum ends on the very instruction that reads the
     # keyboard, which happens when the tick budget expires inside it.
-    core = Core()
+    core = Spectrum48Core()
     keyboard = Keyboard()
     devices = Dispatcher([core, keyboard])
 
@@ -166,7 +166,7 @@ def test_keyboard_stroke_within_the_span() -> None:
 def test_keyboard_read_from_samples() -> None:
     # A read of a half-row resolves from the supplied samples on the
     # C++ side.
-    core = Core()
+    core = Spectrum48Core()
     keyboard = Keyboard()
     devices = Dispatcher([core, keyboard])
 
@@ -194,7 +194,7 @@ def test_keyboard_samples_with_a_co_driver_series() -> None:
     # An empty series for the same reads -- a playing tape's --
     # makes them unresolvable from samples, whatever the keyboard
     # states: the read defers.
-    core = Core()
+    core = Spectrum48Core()
     keyboard = Keyboard()
     devices = Dispatcher([core, keyboard])
 

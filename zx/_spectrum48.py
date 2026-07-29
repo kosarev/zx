@@ -39,30 +39,9 @@ from ._resources import RESOURCES
 from ._tape import TapePlayer
 
 
-# The 48K ULA. The type fixes the wiring as class keywords, so only
-# the volatile fields are constructor parameters.
-class Spectrum48ULASnapshot(ULASnapshot,
-                            ticks_per_second=3_500_000,
-                            ticks_per_horizontal_retrace=48,
-                            lines_per_vertical_retrace=24,
-                            contention_base=14335):
-    def __init__(self, *,
-                 ticks_since_int: int | None = None,
-                 border_colour: int | None = None) -> None:
-        super().__init__(
-            ticks_per_second=self.ticks_per_second,
-            ticks_per_horizontal_retrace=self.ticks_per_horizontal_retrace,
-            lines_per_vertical_retrace=self.lines_per_vertical_retrace,
-            contention_base=self.contention_base,
-            ticks_since_int=ticks_since_int,
-            border_colour=border_colour)
-
-    # The type fixes the wiring, so the node stores only these fields.
-    def to_json(self) -> dict[str, int]:
-        d = super().to_json()
-        return {name: d[name]
-                for name in ('ticks_since_int', 'border_colour')
-                if name in d}
+# The 48K ULA.
+class Spectrum48ULASnapshot(ULASnapshot):
+    pass
 
 
 # The 48K's fixed memory mapping: the whole 64K address space,
@@ -189,7 +168,12 @@ class Spectrum48Snapshot(MachineSnapshot):
 class Spectrum48Core(Core, snapshot_type=Spectrum48CoreSnapshot):
     def __init__(self, *, disabled: bool = False,
                  profile: Profile | None = None) -> None:
-        super().__init__(disabled=disabled, profile=profile)
+        super().__init__(disabled=disabled, profile=profile,
+                         _paging_supported=False,
+                         _ticks_per_second=3_500_000,
+                         _ticks_per_horizontal_retrace=48,
+                         _lines_per_vertical_retrace=24,
+                         _contention_base=14335)
 
     # The capture is typed by construction: the machine is known to
     # be a 48K, so the type is an input, not a discovery. The ROM is

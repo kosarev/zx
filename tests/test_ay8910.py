@@ -21,7 +21,6 @@ import zx
 from zx._ay8910 import AY8910
 from zx._ay8910 import AY8910RegisterWrite
 from zx._ay8910 import AYPlayer
-from zx._core import Core
 from zx._data import AYFrame
 from zx._data import AYStream
 from zx._data import AYWrite
@@ -36,6 +35,7 @@ from zx._device import RunQuantum
 from zx._device import TimeAdvanced
 from zx._machine import Machine
 from zx._sound import SoundDevice
+from zx._spectrum48 import Spectrum48Core
 from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
 
@@ -356,7 +356,7 @@ def test_ay_register_read_on_a_core() -> None:
     # back within the same emulated stretch -- the read defers, the
     # published writes catch the register file up, and the next
     # collect answers with the value at the floor.
-    core = Core()
+    core = Spectrum48Core()
     ay = AY8910()
     devices = Dispatcher([core, ay])
 

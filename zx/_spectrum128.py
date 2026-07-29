@@ -40,23 +40,10 @@ from ._resources import RESOURCES
 from ._tape import TapePlayer
 
 
-# The 128K ULA. The type fixes the wiring as class keywords, so only
-# the volatile fields are constructor parameters.
-class Spectrum128ULASnapshot(ULASnapshot,
-                             ticks_per_second=3_546_900,
-                             ticks_per_horizontal_retrace=52,
-                             lines_per_vertical_retrace=23,
-                             contention_base=14361):
-    def __init__(self, *,
-                 ticks_since_int: int | None = None,
-                 border_colour: int | None = None) -> None:
-        super().__init__(
-            ticks_per_second=self.ticks_per_second,
-            ticks_per_horizontal_retrace=self.ticks_per_horizontal_retrace,
-            lines_per_vertical_retrace=self.lines_per_vertical_retrace,
-            contention_base=self.contention_base,
-            ticks_since_int=ticks_since_int,
-            border_colour=border_colour)
+# The 128K ULA. The 0x7FFD latch registers join as volatile fields
+# with latch capture.
+class Spectrum128ULASnapshot(ULASnapshot):
+    pass
 
 
 # The 128K's memory mapping: rom_page selects the ROM at
@@ -219,7 +206,11 @@ class Spectrum128Core(Core, snapshot_type=Spectrum128CoreSnapshot):
     def __init__(self, *, disabled: bool = False,
                  profile: Profile | None = None) -> None:
         super().__init__(disabled=disabled, profile=profile,
-                         _paging_supported=True)
+                         _paging_supported=True,
+                         _ticks_per_second=3_546_900,
+                         _ticks_per_horizontal_retrace=52,
+                         _lines_per_vertical_retrace=23,
+                         _contention_base=14361)
 
     # TODO: Support 128K capture -- needs the 0x7FFD latch
     # marshalled in the state image.

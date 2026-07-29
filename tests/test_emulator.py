@@ -24,6 +24,7 @@ from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import InitEmulator
 from zx._error import Error
+from zx._spectrum48 import Spectrum48Core
 from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
 
@@ -57,7 +58,7 @@ def test_ticks_limit() -> None:
     # the basis of sub-frame quanta. This also guards the packed-state
     # field alignment that exposes ticks_to_stop. A bare core suffices:
     # the tick limit is a core concern, no device set or container.
-    mach = Core()
+    mach = Spectrum48Core()
     dispatcher = Dispatcher([mach])
     frame_ticks = 69888
 
