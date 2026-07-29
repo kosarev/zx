@@ -20,12 +20,12 @@ import typing
 import platformdirs
 
 from ._ay import AYFile
+from ._ay import AYPlayerMachine
 from ._ay8910 import AY8910
 from ._ay8910 import AYPlayer
 from ._basic import StopAtTapeEnd
 from ._basic import boot_to_prompt
 from ._basic import capture_spectrum48
-from ._beeper import Beeper
 from ._binary import Bytes
 from ._core import Core
 from ._core import Profile
@@ -180,8 +180,7 @@ _DEFAULT_SONG_FRAMES = 3 * 60 * 50
 # gain, so for now the song just ends.
 def _play_ay_file(file: AYFile) -> None:
     watcher = _SilenceWatcher()
-    with (Emulator(machine=Machine(core=Spectrum48Core(), ay=AY8910(),
-                                   beeper=Beeper()),
+    with (Emulator(machine=AYPlayerMachine(),
                    environment=[_HoldWaiter(), watcher,
                                 _make_player_sound()]) as app,
           contextlib.suppress(EmulationExit)):

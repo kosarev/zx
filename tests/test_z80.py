@@ -8,7 +8,6 @@
 
 
 import zx
-from zx._data import MachineSnapshot
 
 
 def test_basic() -> None:
@@ -21,7 +20,7 @@ def test_basic() -> None:
     format = zx._z80.Z80File
     assert format.FORMAT_NAME == 'Z80'
     image = format.from_snapshot(
-        MachineSnapshot(core=mach.to_snapshot())).encode()
+        zx._spectrum48.Spectrum48Snapshot(core=mach.to_snapshot())).encode()
     assert len(image) == 49248
     assert image[4:6] == HL.to_bytes(2, 'little')
 

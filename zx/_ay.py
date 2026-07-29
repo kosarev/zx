@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import typing
 
+from ._ay8910 import AY8910
 from ._ay8910 import AY8910Snapshot
+from ._beeper import Beeper
 from ._beeper import BeeperSnapshot
 from ._core import Z80Snapshot
 from ._data import ByteData
@@ -18,12 +20,16 @@ from ._data import DataRecord
 from ._data import HexData
 from ._data import MachineSnapshot
 from ._error import Error
+from ._machine import Machine
+from ._spectrum48 import Spectrum48Core
 from ._spectrum48 import Spectrum48CoreSnapshot
 from ._spectrum48 import Spectrum48MemoryBlock
 from ._spectrum48 import Spectrum48MemorySnapshot
 
 if typing.TYPE_CHECKING:
     from ._binary import Bytes
+    from ._data import MachineSnapshotFile
+    from ._device import Device
 
 _SIGNATURE = b'ZXAY'
 _EMUL_TYPE = b'EMUL'
@@ -263,6 +269,46 @@ class AYFileGap(DataRecord):
 # record therefore keeps its file offset as ordinary wire content,
 # and encoding places every structure back where it was, giving
 # byte-exact reproduction of any parsed file.
+# The .ay player machine: a flat-48K core with no paging port, the
+# AY at its standard ports, and the beeper -- rips drive it
+# alongside or instead of the AY. Every member exists; a None
+# parameter means the standard device. No snapshot installs by
+# default: the player installs a song snapshot per song.
+class AYPlayerMachineSnapshot(MachineSnapshot):
+    core: Spectrum48CoreSnapshot
+    ay: AY8910Snapshot
+    beeper: BeeperSnapshot
+
+    def __init__(self, *, core: Spectrum48CoreSnapshot | None = None,
+                 ay: AY8910Snapshot | None = None,
+                 beeper: BeeperSnapshot | None = None) -> None:
+        if core is None:
+            core = Spectrum48CoreSnapshot()
+        if ay is None:
+            ay = AY8910Snapshot()
+        if beeper is None:
+            beeper = BeeperSnapshot()
+
+        super().__init__(core=core, ay=ay, beeper=beeper)
+
+
+class AYPlayerMachine(Machine, snapshot_type=AYPlayerMachineSnapshot):
+    def __init__(self, core: Spectrum48Core | None = None,
+                 ay: AY8910 | None = None,
+                 beeper: Beeper | None = None,
+                 snapshot: MachineSnapshotFile | None = None,
+                 **extra_devices: Device) -> None:
+        if core is None:
+            core = Spectrum48Core()
+        if ay is None:
+            ay = AY8910()
+        if beeper is None:
+            beeper = Beeper()
+
+        super().__init__(snapshot=snapshot, core=core, ay=ay,
+                         beeper=beeper, **extra_devices)
+
+
 class AYFile(DataRecord, format_name='AY'):
     file_version: int
     player_version: int
@@ -484,10 +530,7 @@ class AYFile(DataRecord, format_name='AY'):
             image[block.address:end] = data[:end - block.address]
 
         regs = song.z80_regs_value
-        # TODO: Define the AY player machine class and its snapshot
-        # type and return that type here, so the machine is named by
-        # the snapshot's type like any other.
-        return MachineSnapshot(
+        return AYPlayerMachineSnapshot(
             core=Spectrum48CoreSnapshot(
                 z80=Z80Snapshot(
                     af=regs, bc=regs, de=regs, hl=regs,

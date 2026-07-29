@@ -391,15 +391,14 @@ class Emulator:
                    for id, d in self.machine.devices.items()
                    if (snapshot := d.to_snapshot()) is not None}
 
+        # A machine defined by code is defined by that code; saving
+        # one needs a machine class fixing its snapshot type.
         snapshot_type = type(self.machine).SNAPSHOT_TYPE
-        # TODO: Refuse capture for machines that have no snapshot
-        # type -- a machine defined by code is defined by that code,
-        # and saving it needs a machine class.
-        if snapshot_type is not None:
-            typed = snapshot_type(**members)
-            assert isinstance(typed, MachineSnapshot)
-            return typed
-        return MachineSnapshot(**members)
+        assert snapshot_type is not None
+
+        machine_snapshot = snapshot_type(**members)
+        assert isinstance(machine_snapshot, MachineSnapshot)
+        return machine_snapshot
 
     def _save_snapshot_file(self, format: type[MachineSnapshotFile],
                             filename: str) -> None:

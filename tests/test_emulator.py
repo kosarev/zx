@@ -103,7 +103,11 @@ def test_init_and_destroy_emulator_dispatched() -> None:
 
 
 def test_load_installs_snapshot() -> None:
-    snapshot = MachineSnapshot(core=CoreSnapshot(z80=Z80Snapshot(pc=0x1234)))
+    from zx._spectrum48 import Spectrum48CoreSnapshot
+    from zx._spectrum48 import Spectrum48Snapshot
+
+    snapshot = Spectrum48Snapshot(core=Spectrum48CoreSnapshot(
+        z80=Z80Snapshot(pc=0x1234)))
 
     # Loading installs the state into the persistent device set: the
     # set is the machine definition's fact, never the snapshot's.
@@ -119,8 +123,10 @@ def test_load_installs_snapshot() -> None:
         assert isinstance(core, Core)
         assert core.pc == 0x1234
 
-        # An install touches what the snapshot states: the keyboard,
-        # unmentioned, keeps its state and stays enabled.
+        # The 48K snapshot states its keyboard member at reset:
+        # enabled. The equipment, which the snapshot does not
+        # mention, keeps its state -- an install touches what the
+        # snapshot states.
         assert not app.machine.devices['keyboard'].disabled
 
 

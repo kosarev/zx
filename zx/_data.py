@@ -369,9 +369,9 @@ class DeviceSnapshot(DataRecord):
 # capsule of that machine's knowledge.
 # TODO: Eventually no code should create plain MachineSnapshot
 # instances, so that every machine snapshot names its machine by
-# its type: define the AY player machine class and its snapshot
-# type, make the tests install single-device snapshots directly,
-# and refuse capture for machines that have no snapshot type.
+# its type. The remaining creators are test fixtures stating
+# machines defined by code -- the playback rigs and the addressing
+# error -- which await the same-machine install check.
 class MachineSnapshot(MachineSnapshotFile):
     def __init__(self, **devices: DeviceSnapshot):
         super().__init__(**devices)
