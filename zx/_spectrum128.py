@@ -226,23 +226,32 @@ class Spectrum128Snapshot(MachineSnapshot,
         super().__init__(core=core, keyboard=keyboard, beeper=beeper)
 
 
+# The 128K core: the chip family the 128K board wires, expressed as
+# a type and paired with its snapshot type, so the model shows in
+# the device types rather than in a runtime model field. The model
+# parameter it passes down dies with SpectrumModel.
+class Spectrum128Core(Core, snapshot_type=Spectrum128CoreSnapshot):
+    def __init__(self, *, disabled: bool = False,
+                 profile: Profile | None = None) -> None:
+        super().__init__(disabled=disabled, model=Spectrum128Model,
+                         profile=profile)
+
+
 # The standard 128K machine, born with the stock 128K state unless a
 # snapshot is given. Every member exists; a None parameter means the
-# standard device, the equipment included, as on the 48K. The
-# standard core is a 128K-clocked one; its model parameter dies with
-# SpectrumModel.
+# standard device, the equipment included, as on the 48K.
 class Spectrum128(Machine, snapshot_type=Spectrum128Snapshot):
-    def __init__(self, core: Device | None = None,
-                 keyboard: Device | None = None,
-                 beeper: Device | None = None,
-                 tape_player: Device | None = None,
-                 playback_player: Device | None = None,
-                 playback_recorder: Device | None = None,
+    def __init__(self, core: Spectrum128Core | None = None,
+                 keyboard: Keyboard | None = None,
+                 beeper: Beeper | None = None,
+                 tape_player: TapePlayer | None = None,
+                 playback_player: PlaybackPlayer | None = None,
+                 playback_recorder: PlaybackRecorder | None = None,
                  profile: Profile | None = None,
                  snapshot: MachineSnapshotFile | None = None,
                  **extra_devices: Device) -> None:
         if core is None:
-            core = Core(model=Spectrum128Model, profile=profile)
+            core = Spectrum128Core(profile=profile)
         else:
             # The profile parameterises the standard core.
             assert profile is None

@@ -197,23 +197,32 @@ class Spectrum48Snapshot(MachineSnapshot,
         super().__init__(core=core, keyboard=keyboard, beeper=beeper)
 
 
+# The 48K core: the chip family the 48K board wires, expressed as a
+# type and paired with its snapshot type, so the model shows in the
+# device types rather than in a runtime model field.
+class Spectrum48Core(Core, snapshot_type=Spectrum48CoreSnapshot):
+    def __init__(self, *, disabled: bool = False,
+                 profile: Profile | None = None) -> None:
+        super().__init__(disabled=disabled, profile=profile)
+
+
 # The standard 48K machine, born with the stock 48K state unless a
 # snapshot is given. Every member exists; a None parameter means the
 # standard device. The equipment -- the tape player and the playback
 # player and recorder -- is machine-side: deterministic, on the
 # emulated time axis, its state session content.
 class Spectrum48(Machine, snapshot_type=Spectrum48Snapshot):
-    def __init__(self, core: Device | None = None,
-                 keyboard: Device | None = None,
-                 beeper: Device | None = None,
-                 tape_player: Device | None = None,
-                 playback_player: Device | None = None,
-                 playback_recorder: Device | None = None,
+    def __init__(self, core: Spectrum48Core | None = None,
+                 keyboard: Keyboard | None = None,
+                 beeper: Beeper | None = None,
+                 tape_player: TapePlayer | None = None,
+                 playback_player: PlaybackPlayer | None = None,
+                 playback_recorder: PlaybackRecorder | None = None,
                  profile: Profile | None = None,
                  snapshot: MachineSnapshotFile | None = None,
                  **extra_devices: Device) -> None:
         if core is None:
-            core = Core(profile=profile)
+            core = Spectrum48Core(profile=profile)
         else:
             # The profile parameterises the standard core.
             assert profile is None
