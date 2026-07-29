@@ -57,11 +57,6 @@ const memory_marks no_marks           = 0;
 const memory_marks breakpoint_mark    = 1u << 0;
 const memory_marks visited_instr_mark = 1u << 7;
 
-enum class spectrum_model {
-    spectrum_48,
-    spectrum_128,
-};
-
 #if defined(_MSC_VER)
 #pragma pack(push, 1)
 class memory_image {
@@ -495,7 +490,7 @@ public:
 
         // Handle the 0x7ffd port.
         // https://worldofspectrum.org/faq/reference/128kreference.htm
-        if(self().on_get_model() == spectrum_model::spectrum_128 &&
+        if(self().on_is_paging_supported() &&
                (addr & 0x8002) == 0 && !ignore_7ffd_port_writes) {
             unsigned ram_page_n = n & 7;
             ram_page = memory_image::get_ram_page(ram_page_n);

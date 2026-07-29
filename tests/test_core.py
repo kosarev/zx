@@ -14,7 +14,6 @@ import numpy
 import numpy.typing
 import pytest
 
-import zx
 from zx._core import Core
 from zx._core import CoreSnapshot
 from zx._core import MemoryBlock
@@ -43,7 +42,7 @@ def test_on_input_propagates_exception() -> None:
     def raise_on_input(addr: int, devices: Dispatcher) -> int | None:
         raise _PortError()
 
-    mach = zx.Core()
+    mach = Core()
     dispatcher = Dispatcher([mach])
     mach.set_on_input_callback(raise_on_input)
 
@@ -76,7 +75,7 @@ def test_on_output_propagates_exception() -> None:
     def raise_on_output(addr: int, value: int) -> None:
         raise _PortError()
 
-    mach = zx.Core()
+    mach = Core()
     dispatcher = Dispatcher([mach])
     mach.set_on_output_callback(raise_on_output)
 
@@ -105,7 +104,7 @@ def test_deferred_input() -> None:
             self.num_read_attempts += 1
             return 0x5a if self.ready else None
 
-    mach = zx.Core()
+    mach = Core()
     port = _Port()
     dispatcher = Dispatcher([mach])
     mach.set_on_input_callback(port.read)
@@ -176,7 +175,7 @@ def test_from_snapshot() -> None:
 def test_disabled_core() -> None:
     # A disabled core is indistinguishable from an absent one: it
     # runs no quanta.
-    core = zx.Core(disabled=True)
+    core = Core(disabled=True)
     devices = Dispatcher([core])
     rate = core.ticks_per_second
 
@@ -355,8 +354,8 @@ def _sample_entries(
 # port address is 0x12fe and the input cycle's read falls at tick
 # 10. The JR loop then spins to the end of the frame, keeping the
 # power-up memory pattern from executing as code.
-def _make_core_reading_port() -> zx.Core:
-    core = zx.Core()
+def _make_core_reading_port() -> Core:
+    core = Core()
     core.write(Spectrum48MemoryMapping(), 0x8000,
                b'\xdb\xfe'   # IN A, (0xfe)
                b'\x18\xfe')  # JR $
@@ -505,7 +504,7 @@ def test_port_read_samples_progress_with_reads() -> None:
     # Two reads pick their values from the sample series as time
     # progresses: IN A, (0xfe); LD C, A; IN A, (0xfe) reads at
     # ticks 10 and 25, with the sampled value changing at tick 20.
-    core = zx.Core()
+    core = Core()
     core.write(Spectrum48MemoryMapping(), 0x8000,
                b'\xdb\xfe'   # IN A, (0xfe)
                b'\x4f'       # LD C, A
@@ -684,7 +683,7 @@ def test_deferred_read_defers_again_without_coverage() -> None:
 
 
 def test_port_read_samples_validation() -> None:
-    core = zx.Core()
+    core = Core()
     no_entries = numpy.zeros(0, dtype=numpy.uint64)
 
     # The resolution must be positive and fit 32 bits.

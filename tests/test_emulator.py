@@ -13,6 +13,7 @@
 import pytest
 
 import zx
+from zx._core import Core
 from zx._core import CoreSnapshot
 from zx._core import RunEvents
 from zx._core import Z80Snapshot
@@ -42,7 +43,8 @@ def test_128k_emulator() -> None:
 
     # A 128K emulator constructs with both ROMs in their pages.
     with zx.Emulator(headless=True, machine=Spectrum128()) as app:
-        core = next(d for d in app.devices if isinstance(d, zx.Core))
+        core = app.machine.devices['core']
+        assert isinstance(core, Core)
         assert core.read(Spectrum128MemoryMapping(rom_page=0),
                          0x0000, 0x4000) == rom[:0x4000]
         assert core.read(Spectrum128MemoryMapping(rom_page=1),
@@ -55,7 +57,7 @@ def test_ticks_limit() -> None:
     # the basis of sub-frame quanta. This also guards the packed-state
     # field alignment that exposes ticks_to_stop. A bare core suffices:
     # the tick limit is a core concern, no device set or container.
-    mach = zx.Core()
+    mach = Core()
     dispatcher = Dispatcher([mach])
     frame_ticks = 69888
 
@@ -114,7 +116,7 @@ def test_load_installs_snapshot() -> None:
         assert app.environment == old_environment
 
         core = app.machine.devices['core']
-        assert isinstance(core, zx.Core)
+        assert isinstance(core, Core)
         assert core.pc == 0x1234
 
         # An install touches what the snapshot states: the keyboard,
@@ -147,7 +149,7 @@ def test_undriven_port_reads_as_open_bus() -> None:
     # supplies for it.
     with zx.Emulator(headless=True) as app:
         core = app.machine.devices['core']
-        assert isinstance(core, zx.Core)
+        assert isinstance(core, Core)
         core.write(Spectrum48MemoryMapping(), 0x8000,
                    b'\xdb\x1f'   # IN A, (0x1f)
                    b'\x18\xfe')  # JR $

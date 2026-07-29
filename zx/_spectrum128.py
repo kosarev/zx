@@ -30,7 +30,6 @@ from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import HexData
 from ._data import MachineSnapshot
-from ._data import Spectrum128 as Spectrum128Model
 from ._error import Error
 from ._keyboard import Keyboard
 from ._keyboard import KeyboardSnapshot
@@ -215,13 +214,12 @@ class Spectrum128Snapshot(MachineSnapshot):
 
 # The 128K core: the chip family the 128K board wires, expressed as
 # a type and paired with its snapshot type, so the model shows in
-# the device types rather than in a runtime model field. The model
-# parameter it passes down dies with SpectrumModel.
+# the device types rather than in a runtime model field.
 class Spectrum128Core(Core, snapshot_type=Spectrum128CoreSnapshot):
     def __init__(self, *, disabled: bool = False,
                  profile: Profile | None = None) -> None:
-        super().__init__(disabled=disabled, model=Spectrum128Model,
-                         profile=profile)
+        super().__init__(disabled=disabled, profile=profile,
+                         _paging_supported=True)
 
     # TODO: Support 128K capture -- needs the 0x7FFD latch
     # marshalled in the state image.

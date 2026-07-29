@@ -168,24 +168,6 @@ class Metadata(DataRecord):
                 '%Y-%m-%dT%H:%M:%SZ'))
 
 
-class SpectrumModel(type):
-    _MODELS_BY_CXX_CODES: typing.ClassVar[dict[int, type[SpectrumModel]]] = {}
-
-    _CXX_MODEL_CODE: int
-
-    def __init_subclass__(cls, *, cxx_model_code: int):
-        cls._CXX_MODEL_CODE = cxx_model_code
-        SpectrumModel._MODELS_BY_CXX_CODES[cxx_model_code] = cls
-
-
-class Spectrum48(SpectrumModel, cxx_model_code=0):
-    pass
-
-
-class Spectrum128(SpectrumModel, cxx_model_code=1):
-    pass
-
-
 class ArchiveFile(DataRecord):
     @classmethod
     def read_files(cls, image: Bytes) -> (

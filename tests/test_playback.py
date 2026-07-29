@@ -9,7 +9,7 @@
 
 import pytest
 
-import zx
+from zx._core import Core
 from zx._core import CoreSnapshot
 from zx._core import Z80Snapshot
 from zx._data import MachinePlayback
@@ -94,7 +94,7 @@ def test_playback_reads_defer_and_consume_in_order() -> None:
     # a read defers, the following collect supplies the next sample
     # at the read's moment, and the retry consumes it. IN A, (0xfe);
     # LD C, A; IN A, (0xfe) picks up the two samples in order.
-    core = zx.Core()
+    core = Core()
     player = PlaybackPlayer()
     devices = Dispatcher([core, player])
 
@@ -185,7 +185,7 @@ def test_too_few_samples_detected_at_collect() -> None:
 def test_playback_still_raises_on_too_few_samples() -> None:
     # A read with no samples remaining is an error, raised at the
     # collect step carrying the deferred read's moment.
-    core = zx.Core()
+    core = Core()
     player = PlaybackPlayer()
     devices = Dispatcher([core, player])
 

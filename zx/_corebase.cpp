@@ -114,7 +114,7 @@ struct __attribute__((packed)) machine_state {
     least_u8 int_after_ei_allowed = false;
     least_u8 border_colour = 7;
     least_u8 trace_enabled = false;
-    least_u8 model = static_cast<least_u8>(zx::spectrum_model::spectrum_48);
+    least_u8 paging_supported = false;
     least_u8 padding1;
     least_u8 padding2;
     least_u8 padding3;
@@ -373,8 +373,8 @@ protected:
     }
 
 public:
-    zx::spectrum_model on_get_model() const {
-        return static_cast<zx::spectrum_model>(state.model);
+    bool on_is_paging_supported() const {
+        return state.paging_supported;
     }
 
     ticks_type on_get_ticks_per_horizontal_retrace() const {

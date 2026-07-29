@@ -26,8 +26,6 @@ from ._data import DataRecord
 from ._data import DeviceSnapshot
 from ._data import HexData
 from ._data import MachinePlayback
-from ._data import Spectrum48
-from ._data import SpectrumModel
 from ._device import BreakpointHit
 from ._device import Device
 from ._device import DeviceEvent
@@ -498,7 +496,7 @@ class CoreState(Z80State):
         self.__int_after_ei_allowed = p.parse8()
         self.__border_colour = p.parse8()
         self.__trace_enabled = p.parse8()
-        self.__model = p.parse8()
+        self.__paging_supported = p.parse8()
         # Three padding bytes.
         p.parse8()
         p.parse8()
@@ -625,13 +623,15 @@ class CoreState(Z80State):
         self.set('trace_enabled', int(enable))
     '''
 
+    # Whether the board wires the 0x7FFD paging circuit: the model
+    # core classes state it, the C++ port-write handler reads it.
     @property
-    def model(self) -> type[SpectrumModel]:
-        return SpectrumModel._MODELS_BY_CXX_CODES[self.__model[0]]
+    def _paging_supported(self) -> bool:
+        return bool(self.__paging_supported[0])
 
-    @model.setter
-    def model(self, model: type[SpectrumModel]) -> None:
-        self.__model[0] = model._CXX_MODEL_CODE
+    @_paging_supported.setter
+    def _paging_supported(self, value: bool) -> None:
+        self.__paging_supported[0] = int(value)
 
     def _read_image(self, offset: int, size: int) -> bytes:
         assert offset + size <= len(self.__memory)
@@ -698,12 +698,12 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
 
     def __init__(self, *,
                  disabled: bool = False,
-                 model: type[SpectrumModel] | None = None,
-                 profile: Profile | None = None):
+                 profile: Profile | None = None,
+                 _paging_supported: bool = False):
         CoreState.__init__(self, self._get_state_view())
         Device.__init__(self, disabled=disabled)
 
-        self.model = model if model is not None else Spectrum48
+        self._paging_supported = _paging_supported
 
         self.frame_count = 0
 

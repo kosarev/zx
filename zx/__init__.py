@@ -7,7 +7,6 @@
 #   Published under the MIT license.
 
 
-from ._core import Core
 from ._device import Device
 from ._device import NewPortWrites
 from ._emulator import Emulator
@@ -18,7 +17,6 @@ from ._main import main
 __version__ = '0.13.15'
 
 __all__ = [
-    'Core',
     'Device',
     'EmulationExit',
     'Emulator',

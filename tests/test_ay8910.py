@@ -21,6 +21,7 @@ import zx
 from zx._ay8910 import AY8910
 from zx._ay8910 import AY8910RegisterWrite
 from zx._ay8910 import AYPlayer
+from zx._core import Core
 from zx._data import AYFrame
 from zx._data import AYStream
 from zx._data import AYWrite
@@ -355,7 +356,7 @@ def test_ay_register_read_on_a_core() -> None:
     # back within the same emulated stretch -- the read defers, the
     # published writes catch the register file up, and the next
     # collect answers with the value at the floor.
-    core = zx.Core()
+    core = Core()
     ay = AY8910()
     devices = Dispatcher([core, ay])
 

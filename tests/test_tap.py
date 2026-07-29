@@ -8,6 +8,7 @@
 
 
 import zx
+from zx._core import Core
 from zx._device import CollectPortReads
 from zx._device import Dispatcher
 from zx._device import GetQuantumTimeLimit
@@ -208,7 +209,7 @@ def test_tape_read_from_samples() -> None:
 
     with zx.Emulator(headless=True) as app:
         core = app.machine.devices['core']
-        assert isinstance(core, zx.Core)
+        assert isinstance(core, Core)
         core.write(Spectrum48MemoryMapping(), 0x8000,
                    b'\xdb\xfe'   # IN A, (0xfe)
                    b'\x18\xfe')  # JR $
