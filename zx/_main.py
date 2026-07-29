@@ -529,10 +529,11 @@ def recover_playback(playback: PlaybackFile) -> MachinePlayback:
         else _PlaybackRecoverer())
     # The recording is loaded after the Emulator has assembled the
     # device set, so the player receives StartPlayback.
-    with Emulator(machine=Spectrum48(core=recoverer),
-                  headless=True,
-                  playback_player=recoverer._player,
-                  playback_recorder=recoverer._recorder) as emu:
+    with Emulator(machine=Spectrum48(
+                      core=recoverer,
+                      playback_player=recoverer._player,
+                      playback_recorder=recoverer._recorder),
+                  headless=True) as emu:
         emu._load_input_recording(playback)
         with contextlib.suppress(EmulationExit):
             emu.run()

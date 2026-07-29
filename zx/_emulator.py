@@ -92,12 +92,9 @@ from ._error import Error
 from ._file import parse_file
 from ._keyboard import make_key_strokes
 from ._machine import Machine
-from ._playback import PlaybackPlayer
-from ._playback import PlaybackRecorder
 from ._screen import ScreenWindow
 from ._sound import SDLSound
 from ._spectrum48 import Spectrum48
-from ._tape import TapePlayer
 from ._time import Time
 from ._z80 import Z80File
 
@@ -131,8 +128,6 @@ class Emulator:
     def __init__(self, *,
                  screen: Device | None = None,
                  sound_device: Device | None = None,
-                 playback_player: PlaybackPlayer | None = None,
-                 playback_recorder: PlaybackRecorder | None = None,
                  headless: bool = False,
                  machine: Machine | None = None,
                  environment: list[Device] | None = None,
@@ -140,17 +135,11 @@ class Emulator:
         if machine is None:
             machine = Spectrum48()
 
+        # The default environment is the host channels only: the
+        # equipment -- tape player, playback player and recorder --
+        # is the machine's.
         if environment is None:
-            if playback_player is None:
-                playback_player = PlaybackPlayer()
-
-            # The default set's recorder sits disabled until a
-            # feature, such as playback recovery, enables it.
-            if playback_recorder is None:
-                playback_recorder = PlaybackRecorder(disabled=True)
-
-            environment = [TapePlayer(), playback_player,
-                           playback_recorder]
+            environment = []
             if not headless:
                 if screen is None:
                     screen = ScreenWindow(Core.FRAME_SIZE)
@@ -303,17 +292,11 @@ class Emulator:
                     f'not in the machine.',
                     id='unknown_device_in_snapshot')
 
-        for id, device in self.machine.devices.items():
-            device_snapshot = device_snapshots.get(id)
-            if device_snapshot is None:
-                snapshot_type = type(device).SNAPSHOT_TYPE
-                assert snapshot_type is not None
-
-                # A device the snapshot does not mention is not part
-                # of the machine the snapshot describes, so it
-                # installs as disabled.
-                device_snapshot = snapshot_type(disabled=True)
-
+        # An install touches what the snapshot states: devices it
+        # does not mention keep their state. Formats are mute about
+        # devices such as the tape player, and muteness is not a
+        # statement, so a .z80 load must not touch the mounted tape.
+        for id, device_snapshot in device_snapshots.items():
             self.notify(InstallDeviceSnapshot(device_snapshot), device=id)
 
     # Handles the events that concern the Emulator itself, after all

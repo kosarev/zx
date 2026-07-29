@@ -117,9 +117,9 @@ def test_load_installs_snapshot() -> None:
         assert isinstance(core, zx.Core)
         assert core.pc == 0x1234
 
-        # This snapshot does not mention the keyboard, so the
-        # keyboard is not part of the machine it describes: disabled.
-        assert app.machine.devices['keyboard'].disabled
+        # An install touches what the snapshot states: the keyboard,
+        # unmentioned, keeps its state and stays enabled.
+        assert not app.machine.devices['keyboard'].disabled
 
 
 def test_construction_installs_snapshot() -> None:

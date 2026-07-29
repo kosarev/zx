@@ -179,13 +179,10 @@ class TapePlayer(Device, snapshot_type=TapePlayerSnapshot):
         return cls(disabled=snapshot.disabled is True)
 
     def to_snapshot(self) -> TapePlayerSnapshot | None:
-        # A disabled tape player is indistinguishable from an absent
-        # one, so there is nothing to capture.
+        # Nothing to capture until the snapshot can state the
+        # mounted media and the position.
         # TODO: Capture the mounted media and the position.
-        if self.disabled:
-            return None
-
-        return TapePlayerSnapshot()
+        return None
 
     def __install_snapshot(self, s: DeviceSnapshot) -> None:
         assert isinstance(s, TapePlayerSnapshot)

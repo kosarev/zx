@@ -33,7 +33,10 @@ from ._data import MachineSnapshot
 from ._keyboard import Keyboard
 from ._keyboard import KeyboardSnapshot
 from ._machine import Machine
+from ._playback import PlaybackPlayer
+from ._playback import PlaybackRecorder
 from ._resources import RESOURCES
+from ._tape import TapePlayer
 
 
 # The 48K ULA. The type fixes the wiring as class keywords, so only
@@ -196,11 +199,16 @@ class Spectrum48Snapshot(MachineSnapshot,
 
 # The standard 48K machine, born with the stock 48K state unless a
 # snapshot is given. Every member exists; a None parameter means the
-# standard device.
+# standard device. The equipment -- the tape player and the playback
+# player and recorder -- is machine-side: deterministic, on the
+# emulated time axis, its state session content.
 class Spectrum48(Machine, snapshot_type=Spectrum48Snapshot):
     def __init__(self, core: Device | None = None,
                  keyboard: Device | None = None,
                  beeper: Device | None = None,
+                 tape_player: Device | None = None,
+                 playback_player: Device | None = None,
+                 playback_recorder: Device | None = None,
                  profile: Profile | None = None,
                  snapshot: MachineSnapshotFile | None = None,
                  **extra_devices: Device) -> None:
@@ -214,10 +222,22 @@ class Spectrum48(Machine, snapshot_type=Spectrum48Snapshot):
             keyboard = Keyboard()
         if beeper is None:
             beeper = Beeper()
+        if tape_player is None:
+            tape_player = TapePlayer()
+        if playback_player is None:
+            playback_player = PlaybackPlayer()
+
+        # The recorder sits disabled until a feature, such as
+        # playback recovery, enables it.
+        if playback_recorder is None:
+            playback_recorder = PlaybackRecorder(disabled=True)
 
         if snapshot is None:
             snapshot = Spectrum48Snapshot()
 
         super().__init__(snapshot=snapshot, core=core,
                          keyboard=keyboard, beeper=beeper,
+                         tape_player=tape_player,
+                         playback_player=playback_player,
+                         playback_recorder=playback_recorder,
                          **extra_devices)

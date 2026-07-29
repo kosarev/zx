@@ -216,12 +216,10 @@ class PlaybackPlayer(Device, snapshot_type=PlaybackPlayerSnapshot):
         return cls(disabled=snapshot.disabled is True)
 
     def to_snapshot(self) -> PlaybackPlayerSnapshot | None:
-        # An idle player holds nothing beyond reset.
+        # Nothing to capture until the snapshot can state the loaded
+        # playback and the position.
         # TODO: Capture the loaded playback and the position.
-        if self.disabled:
-            return None
-
-        return PlaybackPlayerSnapshot()
+        return None
 
     def __install_snapshot(self, s: DeviceSnapshot) -> None:
         assert isinstance(s, PlaybackPlayerSnapshot)
@@ -343,12 +341,10 @@ class PlaybackRecorder(Device, snapshot_type=PlaybackRecorderSnapshot):
         return cls(disabled=snapshot.disabled is True)
 
     def to_snapshot(self) -> PlaybackRecorderSnapshot | None:
-        # An idle recorder holds nothing beyond reset.
+        # Nothing to capture until the snapshot can state the
+        # recording made so far.
         # TODO: Capture the recording made so far.
-        if self.disabled:
-            return None
-
-        return PlaybackRecorderSnapshot()
+        return None
 
     def __install_snapshot(self, s: DeviceSnapshot) -> None:
         assert isinstance(s, PlaybackRecorderSnapshot)
