@@ -31,6 +31,7 @@ from ._core import Z80Snapshot
 from ._data import HexData
 from ._data import MachineSnapshot
 from ._data import Spectrum128 as Spectrum128Model
+from ._error import Error
 from ._keyboard import Keyboard
 from ._keyboard import KeyboardSnapshot
 from ._machine import Machine
@@ -235,6 +236,12 @@ class Spectrum128Core(Core, snapshot_type=Spectrum128CoreSnapshot):
                  profile: Profile | None = None) -> None:
         super().__init__(disabled=disabled, model=Spectrum128Model,
                          profile=profile)
+
+    # TODO: Support 128K capture -- needs the 0x7FFD latch
+    # marshalled in the state image.
+    def to_snapshot(self) -> Spectrum128CoreSnapshot:
+        raise Error('128K capture is not supported yet.',
+                    id='128k_capture_not_supported')
 
 
 # The standard 128K machine, born with the stock 128K state unless a

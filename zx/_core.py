@@ -804,33 +804,9 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
 
         self.__paused = False
 
-    def to_snapshot(self) -> CoreSnapshot:
-        # TODO: Store all fields.
-        assert self.model is Spectrum48  # TODO: Support 128K.
-        return CoreSnapshot(
-            disabled=True if self.disabled else None,
-            z80=Z80Snapshot(
-                af=self.af, bc=self.bc, de=self.de, hl=self.hl,
-                ix=self.ix, iy=self.iy,
-                alt_af=self.alt_af, alt_bc=self.alt_bc,
-                alt_de=self.alt_de, alt_hl=self.alt_hl,
-                pc=self.pc, sp=self.sp, ir=self.ir,
-                # TODO: wz=self.wz,
-                iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
-                iregp_kind=self.iregp_kind),
-            ula=ULASnapshot(
-                ticks_per_second=self.ticks_per_second,
-                ticks_per_horizontal_retrace=(
-                    self.ticks_per_horizontal_retrace),
-                lines_per_vertical_retrace=self.lines_per_vertical_retrace,
-                contention_base=self.contention_base,
-                ticks_since_int=self.ticks_since_int,
-                border_colour=self.border_colour),
-            memory=MemorySnapshot(
-                image_size=0x10000,
-                blocks=[MemoryBlock(offset=0x0000,
-                                    data=self._read_image(0x0000,
-                                                          0x10000))]))
+    # Capture belongs to the model core classes, which know their
+    # machine and produce their typed snapshots; a bare Core states
+    # nothing to capture.
 
     def install_snapshot(self, snapshot: CoreSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset

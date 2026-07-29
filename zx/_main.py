@@ -180,7 +180,7 @@ _DEFAULT_SONG_FRAMES = 3 * 60 * 50
 # gain, so for now the song just ends.
 def _play_ay_file(file: AYFile) -> None:
     watcher = _SilenceWatcher()
-    with (Emulator(machine=Machine(core=Core(), ay=AY8910(),
+    with (Emulator(machine=Machine(core=Spectrum48Core(), ay=AY8910(),
                                    beeper=Beeper()),
                    environment=[_HoldWaiter(), watcher,
                                 _make_player_sound()]) as app,

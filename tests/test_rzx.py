@@ -15,7 +15,7 @@ from zx._error import Error
 
 def test_basic() -> None:
     # Create a simple RZX with a snapshot of a standard machine.
-    mach = zx.Core()
+    mach = zx._spectrum48.Spectrum48Core()
     mach.install_snapshot(zx._spectrum48.Spectrum48CoreSnapshot())
     mach.pc = 0x0001  # TODO: Null PC is not supported yet.
     snapshot = zx._z80.Z80File.from_snapshot(

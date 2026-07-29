@@ -29,6 +29,7 @@ from zx._emulator import Emulator
 from zx._error import Error
 from zx._file import parse_file_image
 from zx._machine import Machine
+from zx._spectrum48 import Spectrum48Core
 from zx._spectrum48 import Spectrum48CoreSnapshot
 from zx._spectrum48 import Spectrum48MemoryMapping
 
@@ -286,7 +287,7 @@ def test_converted_song_plays() -> None:
         blocks=[AYFileBlock(address=0x8000, data_offset=0, data=init),
                 AYFileBlock(address=0x9000, data_offset=0, data=play)])
 
-    with Emulator(machine=Machine(core=zx.Core(), ay=AY8910(),
+    with Emulator(machine=Machine(core=Spectrum48Core(), ay=AY8910(),
                                   beeper=Beeper(),
                                   snapshot=ay.to_machine_snapshot(song)),
                   environment=[]) as app:

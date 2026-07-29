@@ -27,8 +27,6 @@ from ._device import LoadTape
 from ._device import TimeAdvanced
 from ._except import EmulationExit
 from ._spectrum48 import Spectrum48CoreSnapshot
-from ._spectrum48 import Spectrum48MemoryBlock
-from ._spectrum48 import Spectrum48MemorySnapshot
 from ._spectrum48 import Spectrum48Snapshot
 from ._time import Time
 
@@ -79,15 +77,10 @@ class StopAtTapeEnd(Device):
                 raise EmulationExit()
 
 
-# Captures the machine as a 48K snapshot: the caller knows the
-# machine is a 48K, so the captured memory blocks get the 48K
-# types.
+# Captures the machine as a 48K snapshot: the core's capture is
+# typed by construction, so this only wraps it into the machine
+# composition.
 def capture_spectrum48(core: Core) -> Spectrum48Snapshot:
     captured = core.to_snapshot()
-    memory = Spectrum48MemorySnapshot(blocks=[
-        Spectrum48MemoryBlock(addr=b.offset, data=b.data)
-        for b in (captured.memory.blocks if captured.memory else None)
-        or []])
-    return Spectrum48Snapshot(
-        core=Spectrum48CoreSnapshot(z80=captured.z80, ula=captured.ula,
-                                    memory=memory))
+    assert isinstance(captured, Spectrum48CoreSnapshot)
+    return Spectrum48Snapshot(core=captured)

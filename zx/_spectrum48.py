@@ -205,6 +205,34 @@ class Spectrum48Core(Core, snapshot_type=Spectrum48CoreSnapshot):
                  profile: Profile | None = None) -> None:
         super().__init__(disabled=disabled, profile=profile)
 
+    # The capture is typed by construction: the machine is known to
+    # be a 48K, so the type is an input, not a discovery. The ROM is
+    # stated only where the socket deviates from the class's image.
+    # TODO: Store all fields.
+    def to_snapshot(self) -> Spectrum48CoreSnapshot:
+        blocks = []
+        rom = self._read_image(0x0000, 0x4000)
+        if rom != Spectrum48ROM().data.data:
+            blocks.append(Spectrum48MemoryBlock(addr=0x0000, data=rom))
+        blocks.append(Spectrum48MemoryBlock(
+            addr=0x4000, data=self._read_image(0x4000, 0xc000)))
+
+        return Spectrum48CoreSnapshot(
+            disabled=True if self.disabled else None,
+            z80=Z80Snapshot(
+                af=self.af, bc=self.bc, de=self.de, hl=self.hl,
+                ix=self.ix, iy=self.iy,
+                alt_af=self.alt_af, alt_bc=self.alt_bc,
+                alt_de=self.alt_de, alt_hl=self.alt_hl,
+                pc=self.pc, sp=self.sp, ir=self.ir,
+                # TODO: wz=self.wz,
+                iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
+                iregp_kind=self.iregp_kind),
+            ula=Spectrum48ULASnapshot(
+                ticks_since_int=self.ticks_since_int,
+                border_colour=self.border_colour),
+            memory=Spectrum48MemorySnapshot(blocks=blocks))
+
 
 # The standard 48K machine, born with the stock 48K state unless a
 # snapshot is given. Every member exists; a None parameter means the

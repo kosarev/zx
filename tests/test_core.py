@@ -157,7 +157,9 @@ def test_deferred_input() -> None:
 
 
 def test_from_snapshot() -> None:
-    mach = zx.Core()
+    from zx._spectrum48 import Spectrum48Core
+
+    mach = Spectrum48Core()
     mach.pc = 0x1234
     mach.hl = 0xbeef
     core_snapshot = mach.to_snapshot()
@@ -190,9 +192,11 @@ def test_disabled_core() -> None:
 
 
 def test_core_disabled_in_snapshots() -> None:
+    from zx._spectrum48 import Spectrum48Core
+
     # The disabled flag is captured as the difference from the reset
     # state and applied by snapshot installs.
-    core = zx.Core()
+    core = Spectrum48Core()
     assert 'disabled' not in core.to_snapshot().to_json()
 
     core.disabled = True
@@ -210,7 +214,9 @@ def test_install_snapshot() -> None:
     # snapshot describes: the canonical reset state amended by what
     # the snapshot mentions. An empty snapshot means the canonical
     # reset state itself.
-    mach = zx.Core()
+    from zx._spectrum48 import Spectrum48Core
+
+    mach = Spectrum48Core()
     canonical = mach.to_snapshot().to_json()
 
     mach.pc = 0x8000
@@ -229,15 +235,15 @@ def test_install_snapshot() -> None:
 
 
 def test_ula_lift() -> None:
-    from zx._spectrum48 import Spectrum48CoreSnapshot
     from zx._spectrum48 import Spectrum48ULASnapshot
 
-    # A captured record is plain, and lift recognises its
-    # configuration as the 48K chip while preserving all its fields.
-    core = zx.Core()
-    core.install_snapshot(Spectrum48CoreSnapshot())
-    core.border_colour = 3
-    ula = core.to_snapshot().ula
+    # Lift recognises a plain record's configuration as the 48K
+    # chip while preserving all its fields.
+    ula = ULASnapshot(ticks_per_second=3_500_000,
+                      ticks_per_horizontal_retrace=48,
+                      lines_per_vertical_retrace=24,
+                      contention_base=14335,
+                      border_colour=3)
     assert type(ula) is ULASnapshot
 
     lifted = ula.lift()
@@ -338,30 +344,37 @@ def test_memory_lift() -> None:
     assert unsized.lift() is unsized
 
 
-def test_core_lift() -> None:
+def test_typed_capture() -> None:
+    from zx._spectrum48 import Spectrum48Core
     from zx._spectrum48 import Spectrum48CoreSnapshot
     from zx._spectrum48 import Spectrum48MemorySnapshot
+    from zx._spectrum48 import Spectrum48ROM
     from zx._spectrum48 import Spectrum48ULASnapshot
 
-    core = zx.Core()
+    # The capture is typed by construction, its members included,
+    # so there is nothing left for lift to do.
+    core = Spectrum48Core()
     core.install_snapshot(Spectrum48CoreSnapshot())
     captured = core.to_snapshot()
-    assert type(captured) is CoreSnapshot
+    assert type(captured) is Spectrum48CoreSnapshot
+    assert isinstance(captured.ula, Spectrum48ULASnapshot)
+    assert isinstance(captured.memory, Spectrum48MemorySnapshot)
+    assert captured.lift() is captured
 
-    # A captured stock 48K board recognises as the model core once
-    # its members do.
-    lifted = captured.lift()
-    assert isinstance(lifted, Spectrum48CoreSnapshot)
-    assert isinstance(lifted.ula, Spectrum48ULASnapshot)
-    assert isinstance(lifted.memory, Spectrum48MemorySnapshot)
-    assert lifted.z80 is captured.z80
+    # The stock ROM captures as its bare-tag node, a deviation
+    # explicitly.
+    blocks = captured.memory.blocks or []
+    assert isinstance(blocks[0], Spectrum48ROM)
+    core.write(Spectrum48MemoryMapping(), 0x0000, b'\x12\x34')
+    deviated = core.to_snapshot()
+    assert isinstance(deviated, Spectrum48CoreSnapshot)
+    blocks = deviated.memory.blocks or []
+    assert not isinstance(blocks[0], Spectrum48ROM)
+    assert blocks[0].data.data[:2] == b'\x12\x34'
 
-    # The disabled flag is ordinary content: it passes through the
-    # lift unchanged.
+    # The disabled flag is ordinary captured content.
     core.disabled = True
-    disabled = core.to_snapshot().lift()
-    assert isinstance(disabled, Spectrum48CoreSnapshot)
-    assert disabled.disabled is True
+    assert core.to_snapshot().disabled is True
 
 
 # The core's resolution: the CPU clock of the default 48K core.

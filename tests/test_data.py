@@ -36,10 +36,11 @@ def test_basic() -> None:
 def test_machine_lift() -> None:
     from zx._beeper import BeeperSnapshot
     from zx._keyboard import KeyboardSnapshot
+    from zx._spectrum48 import Spectrum48Core
     from zx._spectrum48 import Spectrum48CoreSnapshot
     from zx._spectrum48 import Spectrum48Snapshot
 
-    core = zx.Core()
+    core = Spectrum48Core()
     core.install_snapshot(Spectrum48CoreSnapshot())
 
     # A saved default machine recognises as the stock 48K.
