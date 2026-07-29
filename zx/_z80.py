@@ -30,6 +30,7 @@ from ._spectrum48 import Spectrum48CoreSnapshot
 from ._spectrum48 import Spectrum48MemoryBlock
 from ._spectrum48 import Spectrum48MemorySnapshot
 from ._spectrum48 import Spectrum48Snapshot
+from ._spectrum48 import Spectrum48ULASnapshot
 from ._utils import get_high8
 from ._utils import get_low8
 from ._utils import make16
@@ -458,7 +459,7 @@ class Z80File(MachineSnapshotFile, format_name='Z80'):
                 iff1=0 if self.iff1 == 0 else 1,
                 iff2=0 if self.iff2 == 0 else 1,
                 int_mode=int_mode),
-            ula=ULASnapshot(
+            ula=Spectrum48ULASnapshot(
                 ticks_since_int=ticks_since_int,
                 border_colour=(flags1 >> 1) & 0x7),
             memory=Spectrum48MemorySnapshot(blocks=memory_blocks)))

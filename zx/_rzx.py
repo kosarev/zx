@@ -15,7 +15,6 @@ from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
 from ._core import CoreSnapshot
-from ._core import ULASnapshot
 from ._data import ByteData
 from ._data import DataRecord
 from ._data import HexData
@@ -23,7 +22,6 @@ from ._data import Latin1Data
 from ._data import MachinePlayback
 from ._data import MachinePlaybackFrame
 from ._data import MachinePlaybackSegment
-from ._data import MachineSnapshot
 from ._data import MachineSnapshotFile
 from ._data import PlaybackFile
 from ._data import _InlineJSONDict
@@ -349,10 +347,12 @@ class RZXFile(PlaybackFile, format_name='RZX'):
                 core = next((d for _, d in s.snapshot
                              if isinstance(d, CoreSnapshot)), None)
                 if core is None:
-                    core = CoreSnapshot()
-                    s.snapshot = MachineSnapshot(core=core)
-                if core.ula is None:
-                    core.ula = ULASnapshot()
+                    raise Error(
+                        'Input recording with no core in its snapshot.',
+                        id='rzx_snapshot_without_core')
+                # The model core snapshots always carry their typed
+                # ULA member.
+                assert core.ula is not None
                 core.ula.ticks_since_int = chunk.first_tick
                 s.frames.extend(
                     MachinePlaybackFrame(num_fetches=f.num_fetches,

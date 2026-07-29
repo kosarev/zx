@@ -25,6 +25,7 @@ from ._spectrum48 import Spectrum48CoreSnapshot
 from ._spectrum48 import Spectrum48MemoryBlock
 from ._spectrum48 import Spectrum48MemorySnapshot
 from ._spectrum48 import Spectrum48Snapshot
+from ._spectrum48 import Spectrum48ULASnapshot
 
 
 class SNAFile(MachineSnapshotFile, format_name='SNA'):
@@ -90,7 +91,7 @@ class SNAFile(MachineSnapshotFile, format_name='SNA'):
                 ir=(self.i << 8) | (self.r & 0x7f),
                 iff1=iff, iff2=iff,
                 int_mode=self.int_mode),
-            ula=ULASnapshot(border_colour=self.border_colour),
+            ula=Spectrum48ULASnapshot(border_colour=self.border_colour),
             memory=Spectrum48MemorySnapshot(blocks=[
                 Spectrum48MemoryBlock(addr=0x4000,
                                       data=self.memory.data)])))

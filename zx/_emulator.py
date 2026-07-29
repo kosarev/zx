@@ -383,18 +383,29 @@ class Emulator:
         self.run(fast_forward=fast_forward)
 
     # The machine's state: a device snapshot per machine device that
-    # has state to capture, keyed by device id.
+    # has state to capture, keyed by device id. A machine class that
+    # fixes its snapshot type captures as that type by construction;
+    # a plain Machine captures as a plain MachineSnapshot.
     def __make_machine_snapshot(self) -> MachineSnapshot:
-        return MachineSnapshot(**{
-            id: snapshot
-            for id, d in self.machine.devices.items()
-            if (snapshot := d.to_snapshot()) is not None})
+        members = {id: snapshot
+                   for id, d in self.machine.devices.items()
+                   if (snapshot := d.to_snapshot()) is not None}
+
+        snapshot_type = type(self.machine).SNAPSHOT_TYPE
+        # TODO: Refuse capture for machines that have no snapshot
+        # type -- a machine defined by code is defined by that code,
+        # and saving it needs a machine class.
+        if snapshot_type is not None:
+            typed = snapshot_type(**members)
+            assert isinstance(typed, MachineSnapshot)
+            return typed
+        return MachineSnapshot(**members)
 
     def _save_snapshot_file(self, format: type[MachineSnapshotFile],
                             filename: str) -> None:
         with pathlib.Path(filename).open('wb') as f:
             f.write(format.from_snapshot(
-                self.__make_machine_snapshot().lift()).encode())
+                self.__make_machine_snapshot()).encode())
 
     def notify(self, event: DeviceEvent, *,
                device: str | None = None) -> None:

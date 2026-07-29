@@ -375,37 +375,22 @@ class MachineSnapshotFile(DataRecord):
 # A device's captured state: what a machine snapshot is composed
 # of. Each device type defines its own snapshot type.
 class DeviceSnapshot(DataRecord):
-    # If a more specific type fits this snapshot, return it as that
-    # type; otherwise return the snapshot unchanged. Subclasses that
-    # can identify themselves override this.
-    def lift(self) -> DeviceSnapshot:
-        return self
+    pass
 
 
 # The native machine snapshot: a composition of per-device
-# snapshots, keyed by device id. A device absent from the
-# composition is not part of the machine the snapshot describes,
-# so installing the snapshot disables it.
-# A model is a stock snapshot installed like any other; converters
-# compose their output over the stock snapshot of the machine
-# their format declares. Each machine's types live in their own
-# module (_spectrum48, _spectrum128) as a capsule of that
-# machine's knowledge.
+# snapshots, keyed by device id. A machine snapshot describes a
+# whole machine; a statement about a single device is that device's
+# snapshot, installed targeted. An install touches the devices the
+# composition mentions and leaves the rest alone. Each machine's
+# types live in their own module (_spectrum48, _spectrum128) as a
+# capsule of that machine's knowledge.
+# TODO: Eventually no code should create plain MachineSnapshot
+# instances, so that every machine snapshot names its machine by
+# its type: define the AY player machine class and its snapshot
+# type, make the tests install single-device snapshots directly,
+# and refuse capture for machines that have no snapshot type.
 class MachineSnapshot(MachineSnapshotFile):
-    # The model subclasses keyed by their member compositions: a
-    # machine's model shows in what devices it is made of.
-    __by_members: typing.ClassVar[
-        dict[tuple[tuple[str, type[DeviceSnapshot]], ...],
-             type[MachineSnapshot]]] = {}
-
-    # A model subclass states its members' types as class keywords.
-    def __init_subclass__(cls,
-                          **member_types: type[DeviceSnapshot]) -> None:
-        super().__init_subclass__()
-        members = tuple(sorted(member_types.items()))
-        assert members not in MachineSnapshot.__by_members
-        MachineSnapshot.__by_members[members] = cls
-
     def __init__(self, **devices: DeviceSnapshot):
         super().__init__(**devices)
 
@@ -418,20 +403,6 @@ class MachineSnapshot(MachineSnapshotFile):
 
     def to_machine_snapshot(self) -> MachineSnapshot:
         return self
-
-    # Returns the most specific known version of this machine
-    # snapshot.
-    def lift(self) -> MachineSnapshot:
-        if type(self) is not MachineSnapshot:
-            return self
-
-        members = {id: d.lift() for id, d in self}
-        key = tuple(sorted((id, type(d)) for id, d in members.items()))
-        cls = MachineSnapshot.__by_members.get(key)
-        if cls is None:
-            return MachineSnapshot(**members)
-
-        return cls(**members)
 
 
 class PlaybackFile(DataRecord):

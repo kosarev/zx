@@ -176,38 +176,24 @@ class Spectrum128MemorySnapshot(MemorySnapshot, image_size=0x28000):
 # remaining 128K facts, the clock and the paging, still ride the
 # core's model parameter; they become core config fields as the 128K
 # work proceeds.
-class Spectrum128CoreSnapshot(CoreSnapshot,
-                              ula=Spectrum128ULASnapshot,
-                              memory=Spectrum128MemorySnapshot):
+class Spectrum128CoreSnapshot(CoreSnapshot):
     ula: Spectrum128ULASnapshot
     memory: Spectrum128MemorySnapshot
 
     def __init__(self, *,
                  disabled: bool | None = None,
                  z80: Z80Snapshot | None = None,
-                 ula: ULASnapshot | None = None,
+                 ula: Spectrum128ULASnapshot | None = None,
                  memory: Spectrum128MemorySnapshot | None = None) -> None:
-        # Lift the ULA facts to the model's type: nothing a given
-        # plain record states may disagree with the stock values.
         if ula is None:
-            ula = ULASnapshot()
-        if not isinstance(ula, Spectrum128ULASnapshot):
-            lifted = Spectrum128ULASnapshot(
-                ticks_since_int=ula.ticks_since_int,
-                border_colour=ula.border_colour)
-            assert all(getattr(lifted, f) == v for f, v in ula)
-            ula = lifted
-
+            ula = Spectrum128ULASnapshot()
         if memory is None:
             memory = Spectrum128MemorySnapshot()
 
         super().__init__(disabled=disabled, z80=z80, ula=ula, memory=memory)
 
 
-class Spectrum128Snapshot(MachineSnapshot,
-                          core=Spectrum128CoreSnapshot,
-                          keyboard=KeyboardSnapshot,
-                          beeper=BeeperSnapshot):
+class Spectrum128Snapshot(MachineSnapshot):
     core: Spectrum128CoreSnapshot
     keyboard: KeyboardSnapshot
     beeper: BeeperSnapshot

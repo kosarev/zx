@@ -78,12 +78,28 @@ def test_input_recording_without_snapshot() -> None:
     assert exc_info.value.id == 'input_recording_without_snapshot'
 
 
+def test_snapshot_without_core() -> None:
+    # A segment snapshot with no core member describes no machine to
+    # play against; no playable real-world file has one.
+    rzx = zx._rzx.RZXFile(chunks=[
+        zx._rzx.RZXSnapshot(format=b'Z80\x00',
+                            snapshot=zx._data.MachineSnapshot()),
+        zx._rzx.RZXInputRecording(first_tick=0, frames=[])])
+
+    with pytest.raises(Error) as exc_info:
+        rzx.to_machine_playback()
+    assert exc_info.value.id == 'rzx_snapshot_without_core'
+
+
 def test_consecutive_input_recordings() -> None:
+    from zx._spectrum48 import Spectrum48CoreSnapshot
+
     # Several input recordings per snapshot would each rebase the tick
     # counter mid-segment; no playable real-world file has them.
     rzx = zx._rzx.RZXFile(chunks=[
         zx._rzx.RZXSnapshot(format=b'Z80\x00',
-                            snapshot=zx._data.MachineSnapshot()),
+                            snapshot=zx._data.MachineSnapshot(
+                                core=Spectrum48CoreSnapshot())),
         zx._rzx.RZXInputRecording(
             first_tick=0,
             frames=[zx._rzx.RZXFrame(num_fetches=1, samples=b'')]),

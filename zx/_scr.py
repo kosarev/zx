@@ -12,7 +12,6 @@ import typing
 
 from ._binary import BinaryParser
 from ._binary import Bytes
-from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import ByteData
 from ._data import HexData
@@ -22,6 +21,7 @@ from ._spectrum48 import Spectrum48CoreSnapshot
 from ._spectrum48 import Spectrum48MemoryBlock
 from ._spectrum48 import Spectrum48MemorySnapshot
 from ._spectrum48 import Spectrum48Snapshot
+from ._spectrum48 import Spectrum48ULASnapshot
 
 
 class _SCRFile(MachineSnapshotFile, format_name='SCR'):
@@ -52,7 +52,7 @@ class _SCRFile(MachineSnapshotFile, format_name='SCR'):
                 pc=LOOP_ADDR,
                 iff1=0,
                 iff2=0),
-            ula=ULASnapshot(border_colour=0),
+            ula=Spectrum48ULASnapshot(border_colour=0),
             memory=Spectrum48MemorySnapshot(blocks=memory_blocks)))
 
     # TODO: Refine.

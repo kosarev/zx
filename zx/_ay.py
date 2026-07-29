@@ -484,6 +484,9 @@ class AYFile(DataRecord, format_name='AY'):
             image[block.address:end] = data[:end - block.address]
 
         regs = song.z80_regs_value
+        # TODO: Define the AY player machine class and its snapshot
+        # type and return that type here, so the machine is named by
+        # the snapshot's type like any other.
         return MachineSnapshot(
             core=Spectrum48CoreSnapshot(
                 z80=Z80Snapshot(

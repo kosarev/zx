@@ -20,7 +20,6 @@ from zx._core import CoreSnapshot
 from zx._core import MemoryBlock
 from zx._core import MemorySnapshot
 from zx._core import RunEvents
-from zx._core import ULASnapshot
 from zx._core import Z80Snapshot
 from zx._data import PortReadSeries
 from zx._device import CollectPortReads
@@ -234,30 +233,6 @@ def test_install_snapshot() -> None:
     assert state == canonical
 
 
-def test_ula_lift() -> None:
-    from zx._spectrum48 import Spectrum48ULASnapshot
-
-    # Lift recognises a plain record's configuration as the 48K
-    # chip while preserving all its fields.
-    ula = ULASnapshot(ticks_per_second=3_500_000,
-                      ticks_per_horizontal_retrace=48,
-                      lines_per_vertical_retrace=24,
-                      contention_base=14335,
-                      border_colour=3)
-    assert type(ula) is ULASnapshot
-
-    lifted = ula.lift()
-    assert isinstance(lifted, Spectrum48ULASnapshot)
-    assert dict(lifted) == dict(ula)
-
-    # Lift is idempotent: an already-typed record is returned as is.
-    assert lifted.lift() is lifted
-
-    # An unrecognised configuration stays plain.
-    odd = ULASnapshot(ticks_per_second=1)
-    assert odd.lift() is odd
-
-
 def test_memory_match() -> None:
     memory = MemorySnapshot(blocks=[
         MemoryBlock(offset=0x4000, data=b'\x01\x02'),
@@ -308,7 +283,7 @@ def test_memory_image_size() -> None:
     assert plain.to_json()['image_size'] == 0x10000
 
 
-def test_memory_lift() -> None:
+def test_48k_memory() -> None:
     from zx._spectrum48 import Spectrum48MemoryBlock
     from zx._spectrum48 import Spectrum48MemorySnapshot
     from zx._spectrum48 import Spectrum48ROM
@@ -316,32 +291,21 @@ def test_memory_lift() -> None:
     rom = Spectrum48ROM().data.data
     ram = bytes(range(256)) * 192
 
-    # A capture-shaped record with the stock ROM in place lifts to
-    # the 48K memory: the ROM node plus the retyped RAM content.
-    plain = MemorySnapshot(image_size=0x10000, blocks=[
-        MemoryBlock(offset=0x0000, data=rom + ram)])
-    lifted = plain.lift()
-    assert isinstance(lifted, Spectrum48MemorySnapshot)
-    rom_block, ram_block = lifted.blocks or []
+    # A 48K memory with no block below 0x4000 carries the stock ROM
+    # as its bare-tag node.
+    memory = Spectrum48MemorySnapshot(blocks=[
+        Spectrum48MemoryBlock(addr=0x4000, data=ram)])
+    rom_block, ram_block = memory.blocks or []
     assert isinstance(rom_block, Spectrum48ROM)
     assert type(ram_block) is Spectrum48MemoryBlock
     assert ram_block.offset == 0x4000
-    assert ram_block.data.data == ram
+    assert memory.match(Spectrum48MemoryMapping(), 0x0000, rom + ram)
 
-    # Lift preserves meaning: the lifted record states the same
-    # bytes.
-    assert lifted.match(Spectrum48MemoryMapping(), 0x0000, rom + ram)
-
-    # Lift is idempotent.
-    assert lifted.lift() is lifted
-
-    # A custom ROM stays plain, as do records with no stated size.
-    custom = MemorySnapshot(image_size=0x10000, blocks=[
-        MemoryBlock(offset=0x0000, data=bytes(0x4000) + ram)])
-    assert custom.lift() is custom
-
-    unsized = MemorySnapshot(blocks=[MemoryBlock(offset=0x0000, data=rom)])
-    assert unsized.lift() is unsized
+    # A stated ROM block replaces the stock one.
+    custom = Spectrum48MemorySnapshot(blocks=[
+        Spectrum48MemoryBlock(addr=0x0000, data=bytes(0x4000))])
+    blocks = custom.blocks or []
+    assert not isinstance(blocks[0], Spectrum48ROM)
 
 
 def test_typed_capture() -> None:
@@ -359,7 +323,6 @@ def test_typed_capture() -> None:
     assert type(captured) is Spectrum48CoreSnapshot
     assert isinstance(captured.ula, Spectrum48ULASnapshot)
     assert isinstance(captured.memory, Spectrum48MemorySnapshot)
-    assert captured.lift() is captured
 
     # The stock ROM captures as its bare-tag node, a deviation
     # explicitly.

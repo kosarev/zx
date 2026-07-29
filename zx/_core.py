@@ -129,13 +129,8 @@ class ULASnapshot(DataRecord):
     ticks_since_int: int | None
     border_colour: int | None
 
-    # The chip-version subclasses keyed by their fixed configuration,
-    # so a plain record can be recognised as one of them.
-    __by_config: typing.ClassVar[
-        dict[tuple[int | None, ...], type[ULASnapshot]]] = {}
-
     # A chip-version subclass states its whole wiring as class
-    # keywords, recorded as class attributes and keyed for recognition.
+    # keywords, recorded as class attributes.
     def __init_subclass__(
             cls, *,
             ticks_per_second: int,
@@ -148,11 +143,6 @@ class ULASnapshot(DataRecord):
         cls.ticks_per_horizontal_retrace = ticks_per_horizontal_retrace
         cls.lines_per_vertical_retrace = lines_per_vertical_retrace
         cls.contention_base = contention_base
-
-        config = (ticks_per_second, ticks_per_horizontal_retrace,
-                  lines_per_vertical_retrace, contention_base)
-        assert config not in ULASnapshot.__by_config
-        ULASnapshot.__by_config[config] = cls
 
     def __init__(
             self, *,
@@ -169,20 +159,6 @@ class ULASnapshot(DataRecord):
             contention_base=contention_base,
             ticks_since_int=ticks_since_int,
             border_colour=border_colour)
-
-    # Recognise a plain record as its chip-version type by looking its
-    # configuration up. An already-typed record and an unrecognised
-    # one are returned unchanged.
-    def lift(self) -> ULASnapshot:
-        if type(self) is not ULASnapshot:
-            return self
-        config = (self.ticks_per_second, self.ticks_per_horizontal_retrace,
-                  self.lines_per_vertical_retrace, self.contention_base)
-        cls = self.__by_config.get(config)
-        if cls is None:
-            return self
-        return cls(ticks_since_int=self.ticks_since_int,
-                   border_colour=self.border_colour)
 
 
 # A concrete selection of memory pages within the machine's
@@ -219,17 +195,10 @@ class MemorySnapshot(DataRecord):
     image_size: int | None
     blocks: list[MemoryBlock] | None
 
-    # The model subclasses keyed by their fixed configuration, so a
-    # plain record can be recognised as one of them.
-    __by_config: typing.ClassVar[dict[int, type[MemorySnapshot]]] = {}
-
     def __init_subclass__(cls, *, image_size: int,
                           **kwargs: typing.Any) -> None:
         super().__init_subclass__(**kwargs)
         cls.image_size = image_size
-
-        assert image_size not in MemorySnapshot.__by_config
-        MemorySnapshot.__by_config[image_size] = cls
 
     def __init__(
             self, *, image_size: int | None = None,
@@ -243,25 +212,6 @@ class MemorySnapshot(DataRecord):
                 assert a.end_offset <= b.offset
 
         super().__init__(image_size=image_size, blocks=blocks)
-
-    # Recognise a plain record as a model type by looking its
-    # configuration up. An already-typed record and an unrecognised
-    # one are returned unchanged.
-    def lift(self) -> MemorySnapshot:
-        if type(self) is not MemorySnapshot:
-            return self
-        if self.image_size is None:
-            return self
-        cls = self.__by_config.get(self.image_size)
-        if cls is None:
-            return self
-        return cls._lift(self)
-
-    # The model subclasses recognise the plain record's content for
-    # themselves; without a recogniser the record stays plain.
-    @classmethod
-    def _lift(cls, plain: MemorySnapshot) -> MemorySnapshot:
-        return plain
 
     # Tells whether the memory holds the given content at the given
     # address, acting as if the given mapping was applied. A byte no
@@ -298,22 +248,6 @@ class CoreSnapshot(DeviceSnapshot):
     ula: ULASnapshot | None
     memory: MemorySnapshot | None
 
-    # The model subclasses keyed by their members' types: the board
-    # has no configuration of its own, so its model shows in what
-    # its chips are.
-    __by_members: typing.ClassVar[
-        dict[tuple[type[ULASnapshot], type[MemorySnapshot]],
-             type[CoreSnapshot]]] = {}
-
-    # A model subclass states its members' types as class keywords.
-    def __init_subclass__(cls, *, ula: type[ULASnapshot],
-                          memory: type[MemorySnapshot],
-                          **kwargs: typing.Any) -> None:
-        super().__init_subclass__(**kwargs)
-        members = (ula, memory)
-        assert members not in CoreSnapshot.__by_members
-        CoreSnapshot.__by_members[members] = cls
-
     def __init__(
             self,
             disabled: bool | None = None,
@@ -325,25 +259,6 @@ class CoreSnapshot(DeviceSnapshot):
             z80=z80,
             ula=ula,
             memory=memory)
-
-    # Returns the most specific known version of this core
-    # snapshot.
-    def lift(self) -> CoreSnapshot:
-        if type(self) is not CoreSnapshot:
-            return self
-
-        ula = self.ula.lift() if self.ula is not None else None
-        memory = self.memory.lift() if self.memory is not None else None
-
-        cls = None
-        if ula is not None and memory is not None:
-            cls = self.__by_members.get((type(ula), type(memory)))
-        if cls is None:
-            return CoreSnapshot(disabled=self.disabled, z80=self.z80,
-                                ula=ula, memory=memory)
-
-        return cls(disabled=self.disabled, z80=self.z80,
-                   ula=ula, memory=memory)
 
 
 class StateParser:

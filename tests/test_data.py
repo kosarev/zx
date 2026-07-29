@@ -33,32 +33,19 @@ def test_basic() -> None:
     assert snapshot.to_machine_snapshot() is snapshot
 
 
-def test_machine_lift() -> None:
-    from zx._beeper import BeeperSnapshot
-    from zx._keyboard import KeyboardSnapshot
+def test_plain_machine_snapshot() -> None:
     from zx._spectrum48 import Spectrum48Core
     from zx._spectrum48 import Spectrum48CoreSnapshot
-    from zx._spectrum48 import Spectrum48Snapshot
 
     core = Spectrum48Core()
     core.install_snapshot(Spectrum48CoreSnapshot())
 
-    # A saved default machine recognises as the stock 48K.
-    machine = zx._data.MachineSnapshot(
-        core=core.to_snapshot(),
-        keyboard=KeyboardSnapshot(),
-        beeper=BeeperSnapshot())
-    lifted = machine.lift()
-    assert isinstance(lifted, Spectrum48Snapshot)
-    assert isinstance(lifted.core, Spectrum48CoreSnapshot)
-
-    # A composition that is no known machine stays plain, its
-    # members still lifted.
+    # A plain MachineSnapshot states no model and keeps its typed
+    # members as given: the form for machines defined by code.
     partial = zx._data.MachineSnapshot(core=core.to_snapshot())
-    lifted_partial = partial.lift()
-    assert type(lifted_partial) is zx._data.MachineSnapshot
+    assert type(partial) is zx._data.MachineSnapshot
     # getattr so mypy accepts access to the dynamic fields.
-    assert isinstance(getattr(lifted_partial, 'core'),  # noqa: B009
+    assert isinstance(getattr(partial, 'core'),  # noqa: B009
                       Spectrum48CoreSnapshot)
 
 

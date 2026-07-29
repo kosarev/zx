@@ -146,38 +146,24 @@ class Spectrum48MemorySnapshot(MemorySnapshot, image_size=0x10000):
 
 
 # The 48K core: members not specified take their stock values.
-class Spectrum48CoreSnapshot(CoreSnapshot,
-                             ula=Spectrum48ULASnapshot,
-                             memory=Spectrum48MemorySnapshot):
+class Spectrum48CoreSnapshot(CoreSnapshot):
     ula: Spectrum48ULASnapshot
     memory: Spectrum48MemorySnapshot
 
     def __init__(self, *,
                  disabled: bool | None = None,
                  z80: Z80Snapshot | None = None,
-                 ula: ULASnapshot | None = None,
+                 ula: Spectrum48ULASnapshot | None = None,
                  memory: Spectrum48MemorySnapshot | None = None) -> None:
-        # Lift the ULA facts to the model's type: nothing a given
-        # plain record states may disagree with the stock values.
         if ula is None:
-            ula = ULASnapshot()
-        if not isinstance(ula, Spectrum48ULASnapshot):
-            lifted = Spectrum48ULASnapshot(
-                ticks_since_int=ula.ticks_since_int,
-                border_colour=ula.border_colour)
-            assert all(getattr(lifted, f) == v for f, v in ula)
-            ula = lifted
-
+            ula = Spectrum48ULASnapshot()
         if memory is None:
             memory = Spectrum48MemorySnapshot()
 
         super().__init__(disabled=disabled, z80=z80, ula=ula, memory=memory)
 
 
-class Spectrum48Snapshot(MachineSnapshot,
-                         core=Spectrum48CoreSnapshot,
-                         keyboard=KeyboardSnapshot,
-                         beeper=BeeperSnapshot):
+class Spectrum48Snapshot(MachineSnapshot):
     core: Spectrum48CoreSnapshot
     keyboard: KeyboardSnapshot
     beeper: BeeperSnapshot
