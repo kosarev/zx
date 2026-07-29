@@ -33,7 +33,7 @@ from zx._device import NewPortWrites
 from zx._device import NewSoundPulses
 from zx._device import RunQuantum
 from zx._device import TimeAdvanced
-from zx._emulator import Machine
+from zx._machine import Machine
 from zx._sound import SoundDevice
 from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time

@@ -50,7 +50,6 @@ from ._device import PauseUnpauseTape
 from ._device import RunQuantum
 from ._device import TimeAdvanced
 from ._emulator import Emulator
-from ._emulator import Machine
 from ._error import USER_ERRORS
 from ._error import Error
 from ._error import verbalize_error
@@ -58,6 +57,7 @@ from ._except import EmulationExit
 from ._file import detect_file_format
 from ._file import parse_file
 from ._file import parse_file_image
+from ._machine import Machine
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._rzx import RZXFile

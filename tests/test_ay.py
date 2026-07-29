@@ -26,9 +26,9 @@ from zx._beeper import Beeper
 from zx._beeper import BeeperSnapshot
 from zx._data import DataRecord
 from zx._emulator import Emulator
-from zx._emulator import Machine
 from zx._error import Error
 from zx._file import parse_file_image
+from zx._machine import Machine
 from zx._spectrum48 import Spectrum48CoreSnapshot
 from zx._spectrum48 import Spectrum48MemoryMapping
 

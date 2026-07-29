@@ -22,8 +22,8 @@ from zx._device import Device
 from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import InitEmulator
-from zx._emulator import Machine
 from zx._error import Error
+from zx._machine import Machine
 from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
 
