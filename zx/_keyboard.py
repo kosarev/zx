@@ -101,7 +101,7 @@ class KeyboardSnapshot(DeviceSnapshot):
         super().__init__(disabled=disabled)
 
 
-class Keyboard(Device, snapshot_type=KeyboardSnapshot):
+class Keyboard(Device):
     """The keyboard matrix as a function of time.
 
     A port read at time T returns the matrix state at T: all
@@ -120,11 +120,6 @@ class Keyboard(Device, snapshot_type=KeyboardSnapshot):
 
         # Strokes not yet in effect, in time order.
         self.__pending: list[KeyStroke] = []
-
-    @classmethod
-    def from_snapshot(cls, snapshot: DeviceSnapshot) -> Keyboard:
-        assert isinstance(snapshot, KeyboardSnapshot)
-        return cls(disabled=snapshot.disabled is True)
 
     def to_snapshot(self) -> KeyboardSnapshot | None:
         # A disabled keyboard is indistinguishable from an absent

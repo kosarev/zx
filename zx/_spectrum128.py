@@ -202,7 +202,7 @@ class Spectrum128Snapshot(MachineSnapshot):
 # The 128K core: the chip family the 128K board wires, expressed as
 # a type and paired with its snapshot type, so the model shows in
 # the device types rather than in a runtime model field.
-class Spectrum128Core(Core, snapshot_type=Spectrum128CoreSnapshot):
+class Spectrum128Core(Core):
     def __init__(self, *, disabled: bool = False,
                  profile: Profile | None = None) -> None:
         super().__init__(disabled=disabled, profile=profile,

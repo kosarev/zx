@@ -35,7 +35,7 @@ class BeeperSnapshot(DeviceSnapshot):
         super().__init__(disabled=disabled)
 
 
-class Beeper(Device, snapshot_type=BeeperSnapshot):
+class Beeper(Device):
 
     def __init__(self, *, disabled: bool = False) -> None:
         super().__init__(disabled=disabled)
@@ -50,11 +50,6 @@ class Beeper(Device, snapshot_type=BeeperSnapshot):
         # free-running tick stamps.
         self.__levels: list[numpy.typing.NDArray[numpy.float64]] = []
         self.__ticks: list[numpy.typing.NDArray[numpy.uint32]] = []
-
-    @classmethod
-    def from_snapshot(cls, snapshot: DeviceSnapshot) -> Beeper:
-        assert isinstance(snapshot, BeeperSnapshot)
-        return cls(disabled=snapshot.disabled is True)
 
     def to_snapshot(self) -> BeeperSnapshot | None:
         # A disabled beeper is indistinguishable from an absent

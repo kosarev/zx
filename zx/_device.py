@@ -446,20 +446,6 @@ class NewSoundPulses(DeviceEvent):
 
 
 class Device:
-    # Maps snapshot types to the device types declaring them, so a
-    # device can be created from any snapshot: Device.from_snapshot()
-    # resolves the device type and delegates to its override.
-    # TODO: Delete the from_snapshot machinery -- this registry,
-    # SNAPSHOT_TYPE, the snapshot_type= class keywords and the
-    # per-device overrides: its consumers, creating devices on load
-    # and disabling unmentioned devices on install, are retired.
-    __device_types_by_snapshot_type: typing.ClassVar[
-        dict[type[DeviceSnapshot], type[Device]]] = {}
-
-    # The type of the device's snapshots; None where the device has
-    # no state to describe.
-    SNAPSHOT_TYPE: typing.ClassVar[type[DeviceSnapshot] | None] = None
-
     # Whether the device is excluded from the machine's operation. A
     # disabled device is indistinguishable from an absent one to the
     # emulated machine, but still receives the events that can
@@ -469,22 +455,6 @@ class Device:
 
     def __init__(self, *, disabled: bool = False) -> None:
         self.disabled = disabled
-
-    def __init_subclass__(
-            cls, *,
-            snapshot_type: type[DeviceSnapshot] | None = None) -> None:
-        if snapshot_type is not None:
-            cls.SNAPSHOT_TYPE = snapshot_type
-
-            types = Device.__device_types_by_snapshot_type
-            assert snapshot_type not in types
-            types[snapshot_type] = cls
-
-    @classmethod
-    def from_snapshot(cls, snapshot: DeviceSnapshot) -> Device:
-        device_type = Device.__device_types_by_snapshot_type[type(snapshot)]
-        assert device_type is not cls
-        return device_type.from_snapshot(snapshot)
 
     # Captures the device's state. The default says the device holds
     # nothing beyond its canonical reset state, so there is nothing

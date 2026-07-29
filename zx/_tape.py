@@ -130,7 +130,7 @@ class TapePlayerSnapshot(DeviceSnapshot):
         super().__init__(disabled=disabled)
 
 
-class TapePlayer(Device, snapshot_type=TapePlayerSnapshot):
+class TapePlayer(Device):
     _pulses: typing.Iterable[tuple[bool, int, tuple[str, ...]]] | None
 
     def __init__(self, *, disabled: bool = False) -> None:
@@ -172,11 +172,6 @@ class TapePlayer(Device, snapshot_type=TapePlayerSnapshot):
 
         # The stamp up to which sound has been published.
         self.__published_up_to: Time | None = None
-
-    @classmethod
-    def from_snapshot(cls, snapshot: DeviceSnapshot) -> TapePlayer:
-        assert isinstance(snapshot, TapePlayerSnapshot)
-        return cls(disabled=snapshot.disabled is True)
 
     def to_snapshot(self) -> TapePlayerSnapshot | None:
         # Nothing to capture until the snapshot can state the

@@ -154,7 +154,7 @@ class PlaybackPlayerSnapshot(DeviceSnapshot):
 
 
 # TODO: Rework to a time machine interface.
-class PlaybackPlayer(Device, snapshot_type=PlaybackPlayerSnapshot):
+class PlaybackPlayer(Device):
     def __init__(self, *, disabled: bool = False) -> None:
         super().__init__(disabled=disabled)
         self.__playback: MachinePlayback | None = None
@@ -209,11 +209,6 @@ class PlaybackPlayer(Device, snapshot_type=PlaybackPlayerSnapshot):
         self.__sample_values = b''
         self.__sample_count = 0
         self.__dealt_time = None
-
-    @classmethod
-    def from_snapshot(cls, snapshot: DeviceSnapshot) -> PlaybackPlayer:
-        assert isinstance(snapshot, PlaybackPlayerSnapshot)
-        return cls(disabled=snapshot.disabled is True)
 
     def to_snapshot(self) -> PlaybackPlayerSnapshot | None:
         # Nothing to capture until the snapshot can state the loaded
@@ -327,18 +322,13 @@ class PlaybackRecorderSnapshot(DeviceSnapshot):
         super().__init__(disabled=disabled)
 
 
-class PlaybackRecorder(Device, snapshot_type=PlaybackRecorderSnapshot):
+class PlaybackRecorder(Device):
     def __init__(self, *, disabled: bool = False) -> None:
         super().__init__(disabled=disabled)
         self.__segments: list[MachinePlaybackSegment] = []
 
     def make_playback(self) -> MachinePlayback:
         return MachinePlayback(segments=self.__segments)
-
-    @classmethod
-    def from_snapshot(cls, snapshot: DeviceSnapshot) -> PlaybackRecorder:
-        assert isinstance(snapshot, PlaybackRecorderSnapshot)
-        return cls(disabled=snapshot.disabled is True)
 
     def to_snapshot(self) -> PlaybackRecorderSnapshot | None:
         # Nothing to capture until the snapshot can state the

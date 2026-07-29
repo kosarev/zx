@@ -642,7 +642,7 @@ class Profile:
             yield addr, self._annots[addr]
 
 
-class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
+class Core(_CoreBase, CoreState, Device):
     """The CPU, memory and ULA of an emulated machine, as one device.
 
     Holds their state and steps the emulation. Construct it directly
@@ -689,18 +689,6 @@ class Core(_CoreBase, CoreState, Device, snapshot_type=CoreSnapshot):
             self.set_breakpoints(0, 0x10000)
 
         self.__paused = False
-
-    @classmethod
-    def from_snapshot(cls, snapshot: DeviceSnapshot) -> Core:
-        assert isinstance(snapshot, CoreSnapshot)
-
-        # Only the model core classes construct with no arguments:
-        # the base Core does not know its wiring.
-        assert cls is not Core
-        core = cls()  # type: ignore[call-arg]
-
-        core.install_snapshot(snapshot)
-        return core
 
     # Capture belongs to the model core classes, which know their
     # machine and produce their typed snapshots; a bare Core states

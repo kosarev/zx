@@ -165,7 +165,7 @@ class Spectrum48Snapshot(MachineSnapshot):
 # The 48K core: the chip family the 48K board wires, expressed as a
 # type and paired with its snapshot type, so the model shows in the
 # device types rather than in a runtime model field.
-class Spectrum48Core(Core, snapshot_type=Spectrum48CoreSnapshot):
+class Spectrum48Core(Core):
     def __init__(self, *, disabled: bool = False,
                  profile: Profile | None = None) -> None:
         super().__init__(disabled=disabled, profile=profile,

@@ -71,7 +71,7 @@ class AY8910Snapshot(DeviceSnapshot):
         super().__init__(disabled=disabled)
 
 
-class AY8910(Device, snapshot_type=AY8910Snapshot):
+class AY8910(Device):
     """The AY-3-8910 sound generator.
 
     The synthesiser is a pure function of a stamped register-write
@@ -115,11 +115,6 @@ class AY8910(Device, snapshot_type=AY8910Snapshot):
         self.__published_up_to: Time | None = None
         self.__pending: list[AY8910RegisterWrite] = []
         self.__reset_state()
-
-    @classmethod
-    def from_snapshot(cls, snapshot: DeviceSnapshot) -> AY8910:
-        assert isinstance(snapshot, AY8910Snapshot)
-        return cls(disabled=snapshot.disabled is True)
 
     def to_snapshot(self) -> AY8910Snapshot | None:
         # A disabled AY is indistinguishable from an absent one, so

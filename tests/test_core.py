@@ -155,24 +155,6 @@ def test_deferred_input() -> None:
     assert mach.a == 0x5a
 
 
-def test_from_snapshot() -> None:
-    from zx._spectrum48 import Spectrum48Core
-
-    mach = Spectrum48Core()
-    mach.pc = 0x1234
-    mach.hl = 0xbeef
-    core_snapshot = mach.to_snapshot()
-
-    clone = Spectrum48Core.from_snapshot(core_snapshot)
-    assert (clone.pc, clone.hl) == (0x1234, 0xbeef)
-
-    # The generic entry resolves the device type by the snapshot
-    # type.
-    device = Device.from_snapshot(core_snapshot)
-    assert isinstance(device, Core)
-    assert device.pc == 0x1234
-
-
 def test_disabled_core() -> None:
     # A disabled core is indistinguishable from an absent one: it
     # runs no quanta.
