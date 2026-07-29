@@ -91,8 +91,6 @@ from ._device import ToggleTapePause
 from ._error import Error
 from ._file import parse_file
 from ._keyboard import make_key_strokes
-from ._machine import DEFAULT
-from ._machine import Default
 from ._machine import Machine
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
@@ -131,11 +129,10 @@ class Emulator:
     """
 
     def __init__(self, *,
-                 screen: Device | Default | None = DEFAULT,
-                 sound_device: Device | Default | None = DEFAULT,
-                 playback_player: PlaybackPlayer | Default | None = DEFAULT,
-                 playback_recorder: (PlaybackRecorder | Default |
-                                     None) = DEFAULT,
+                 screen: Device | None = None,
+                 sound_device: Device | None = None,
+                 playback_player: PlaybackPlayer | None = None,
+                 playback_recorder: PlaybackRecorder | None = None,
                  headless: bool = False,
                  machine: Machine | None = None,
                  environment: list[Device] | None = None,
@@ -144,25 +141,23 @@ class Emulator:
             machine = Spectrum48()
 
         if environment is None:
-            if isinstance(playback_player, Default):
+            if playback_player is None:
                 playback_player = PlaybackPlayer()
 
             # The default set's recorder sits disabled until a
             # feature, such as playback recovery, enables it.
-            if isinstance(playback_recorder, Default):
+            if playback_recorder is None:
                 playback_recorder = PlaybackRecorder(disabled=True)
 
-            if headless:
-                screen = sound_device = None
-            else:
-                if isinstance(screen, Default):
+            environment = [TapePlayer(), playback_player,
+                           playback_recorder]
+            if not headless:
+                if screen is None:
                     screen = ScreenWindow(Core.FRAME_SIZE)
-                if isinstance(sound_device, Default):
+                if sound_device is None:
                     sound_device = SDLSound()
 
-            members = (TapePlayer(), playback_player, playback_recorder,
-                       screen, sound_device)
-            environment = [d for d in members if d is not None]
+                environment.extend([screen, sound_device])
 
         # The caller's extra environment devices come last --
         # typically the end-user tool layer adding host-coupling

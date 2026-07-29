@@ -19,6 +19,7 @@ if typing.TYPE_CHECKING:
     from ._data import MachineSnapshotFile
     from ._device import Device
 
+from ._beeper import Beeper
 from ._beeper import BeeperSnapshot
 from ._core import Core
 from ._core import CoreSnapshot
@@ -30,9 +31,8 @@ from ._core import Z80Snapshot
 from ._data import HexData
 from ._data import MachineSnapshot
 from ._data import Spectrum128 as Spectrum128Model
+from ._keyboard import Keyboard
 from ._keyboard import KeyboardSnapshot
-from ._machine import DEFAULT
-from ._machine import Default
 from ._machine import Machine
 from ._resources import RESOURCES
 
@@ -224,24 +224,30 @@ class Spectrum128Snapshot(MachineSnapshot,
 
 
 # The standard 128K machine, born with the stock 128K state unless a
-# snapshot is given. The core defaults to a 128K-clocked one; the
+# snapshot is given. Every member exists; a None parameter means the
+# standard device. The standard core is a 128K-clocked one; its
 # model parameter dies with SpectrumModel.
 class Spectrum128(Machine, snapshot_type=Spectrum128Snapshot):
-    def __init__(self, core: Device | Default | None = DEFAULT,
-                 keyboard: Device | Default | None = DEFAULT,
-                 beeper: Device | Default | None = DEFAULT,
+    def __init__(self, core: Device | None = None,
+                 keyboard: Device | None = None,
+                 beeper: Device | None = None,
                  profile: Profile | None = None,
                  snapshot: MachineSnapshotFile | None = None,
                  **extra_devices: Device) -> None:
-        if isinstance(core, Default):
+        if core is None:
             core = Core(model=Spectrum128Model, profile=profile)
         else:
-            # The profile parameterises the default core.
+            # The profile parameterises the standard core.
             assert profile is None
+
+        if keyboard is None:
+            keyboard = Keyboard()
+        if beeper is None:
+            beeper = Beeper()
 
         if snapshot is None:
             snapshot = Spectrum128Snapshot()
 
-        super().__init__(core=core, keyboard=keyboard, beeper=beeper,
-                         model=None, profile=None, snapshot=snapshot,
+        super().__init__(snapshot=snapshot, core=core,
+                         keyboard=keyboard, beeper=beeper,
                          **extra_devices)

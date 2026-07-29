@@ -115,7 +115,7 @@ def _make_player_sound() -> SDLSound:
 def _play_ay_stream(stream: AYStream) -> None:
     player = AYPlayer(stream)
 
-    with Emulator(machine=Machine.bare(ay=AY8910()),
+    with Emulator(machine=Machine(ay=AY8910()),
                   environment=[player, _HoldWaiter(),
                                _make_player_sound()]) as app:
         # Give the last notes a second to ring out.
@@ -179,8 +179,8 @@ _DEFAULT_SONG_FRAMES = 3 * 60 * 50
 # gain, so for now the song just ends.
 def _play_ay_file(file: AYFile) -> None:
     watcher = _SilenceWatcher()
-    with (Emulator(machine=Machine.bare(core=Core(), ay=AY8910(),
-                                        beeper=Beeper()),
+    with (Emulator(machine=Machine(core=Core(), ay=AY8910(),
+                                   beeper=Beeper()),
                    environment=[_HoldWaiter(), watcher,
                                 _make_player_sound()]) as app,
           contextlib.suppress(EmulationExit)):

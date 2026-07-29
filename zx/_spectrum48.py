@@ -19,7 +19,9 @@ if typing.TYPE_CHECKING:
     from ._data import MachineSnapshotFile
     from ._device import Device
 
+from ._beeper import Beeper
 from ._beeper import BeeperSnapshot
+from ._core import Core
 from ._core import CoreSnapshot
 from ._core import MemoryBlock
 from ._core import MemoryMapping
@@ -28,9 +30,8 @@ from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import HexData
 from ._data import MachineSnapshot
+from ._keyboard import Keyboard
 from ._keyboard import KeyboardSnapshot
-from ._machine import DEFAULT
-from ._machine import Default
 from ._machine import Machine
 from ._resources import RESOURCES
 
@@ -194,17 +195,29 @@ class Spectrum48Snapshot(MachineSnapshot,
 
 
 # The standard 48K machine, born with the stock 48K state unless a
-# snapshot is given.
+# snapshot is given. Every member exists; a None parameter means the
+# standard device.
 class Spectrum48(Machine, snapshot_type=Spectrum48Snapshot):
-    def __init__(self, core: Device | Default | None = DEFAULT,
-                 keyboard: Device | Default | None = DEFAULT,
-                 beeper: Device | Default | None = DEFAULT,
+    def __init__(self, core: Device | None = None,
+                 keyboard: Device | None = None,
+                 beeper: Device | None = None,
                  profile: Profile | None = None,
                  snapshot: MachineSnapshotFile | None = None,
                  **extra_devices: Device) -> None:
+        if core is None:
+            core = Core(profile=profile)
+        else:
+            # The profile parameterises the standard core.
+            assert profile is None
+
+        if keyboard is None:
+            keyboard = Keyboard()
+        if beeper is None:
+            beeper = Beeper()
+
         if snapshot is None:
             snapshot = Spectrum48Snapshot()
 
-        super().__init__(core=core, keyboard=keyboard, beeper=beeper,
-                         model=None, profile=profile, snapshot=snapshot,
+        super().__init__(snapshot=snapshot, core=core,
+                         keyboard=keyboard, beeper=beeper,
                          **extra_devices)
