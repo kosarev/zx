@@ -6,7 +6,7 @@
 #
 #   Published under the MIT license.
 
-"""What the 128K Spectrum is, as snapshot types."""
+"""What the 128K Spectrum is, as its machine and snapshot types."""
 
 from __future__ import annotations
 
@@ -14,9 +14,13 @@ import typing
 
 if typing.TYPE_CHECKING:
     from ._binary import Bytes
+    from ._core import Profile
     from ._data import ByteData
+    from ._data import MachineSnapshotFile
+    from ._device import Device
 
 from ._beeper import BeeperSnapshot
+from ._core import Core
 from ._core import CoreSnapshot
 from ._core import MemoryBlock
 from ._core import MemoryMapping
@@ -25,7 +29,11 @@ from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import HexData
 from ._data import MachineSnapshot
+from ._data import Spectrum128 as Spectrum128Model
 from ._keyboard import KeyboardSnapshot
+from ._machine import DEFAULT
+from ._machine import Default
+from ._machine import Machine
 from ._resources import RESOURCES
 
 
@@ -213,3 +221,27 @@ class Spectrum128Snapshot(MachineSnapshot,
             beeper = BeeperSnapshot()
 
         super().__init__(core=core, keyboard=keyboard, beeper=beeper)
+
+
+# The standard 128K machine, born with the stock 128K state unless a
+# snapshot is given. The core defaults to a 128K-clocked one; the
+# model parameter dies with SpectrumModel.
+class Spectrum128(Machine, snapshot_type=Spectrum128Snapshot):
+    def __init__(self, core: Device | Default | None = DEFAULT,
+                 keyboard: Device | Default | None = DEFAULT,
+                 beeper: Device | Default | None = DEFAULT,
+                 profile: Profile | None = None,
+                 snapshot: MachineSnapshotFile | None = None,
+                 **extra_devices: Device) -> None:
+        if isinstance(core, Default):
+            core = Core(model=Spectrum128Model, profile=profile)
+        else:
+            # The profile parameterises the default core.
+            assert profile is None
+
+        if snapshot is None:
+            snapshot = Spectrum128Snapshot()
+
+        super().__init__(core=core, keyboard=keyboard, beeper=beeper,
+                         model=None, profile=None, snapshot=snapshot,
+                         **extra_devices)

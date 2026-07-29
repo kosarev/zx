@@ -15,7 +15,6 @@ from ._beeper import Beeper
 from ._core import Core
 from ._core import Profile
 from ._keyboard import Keyboard
-from ._spectrum48 import Spectrum48Snapshot
 
 if typing.TYPE_CHECKING:
     from ._data import MachineSnapshotFile
@@ -34,16 +33,28 @@ DEFAULT = Default()
 
 # The machine's devices, keyed by their ids -- the same ids that key
 # the device snapshots of machine snapshot compositions. The standard
-# members default to constructed devices, so a bare Machine() is the
-# standard Spectrum machine; None means the machine has no such
-# member.
+# members default to constructed devices; None means the machine has
+# no such member. The model classes (Spectrum48, Spectrum128) fix
+# their snapshot types and default their states to the stock
+# snapshots; a plain Machine states no model and installs nothing
+# unless a snapshot is given.
 class Machine:
+    # The type of the machine's snapshots; None where the machine
+    # type does not fix one.
+    SNAPSHOT_TYPE: typing.ClassVar[type[MachineSnapshotFile] | None] = None
+
+    def __init_subclass__(
+            cls, *,
+            snapshot_type: type[MachineSnapshotFile] | None = None) -> None:
+        if snapshot_type is not None:
+            cls.SNAPSHOT_TYPE = snapshot_type
+
     def __init__(self, core: Device | Default | None = DEFAULT,
                  keyboard: Device | Default | None = DEFAULT,
                  beeper: Device | Default | None = DEFAULT,
                  model: type[SpectrumModel] | None = None,
                  profile: Profile | None = None,
-                 snapshot: MachineSnapshotFile | Default | None = DEFAULT,
+                 snapshot: MachineSnapshotFile | None = None,
                  **extra_devices: Device) -> None:
         if isinstance(core, Default):
             core = Core(model=model, profile=profile)
@@ -51,12 +62,10 @@ class Machine:
             # The model and profile parameterise the default core.
             assert model is None and profile is None
 
-        # The machine's state defaults to the stock 48K snapshot;
-        # None means nothing to install, the reset state.
+        # The machine's state to install; None means nothing to
+        # install, the reset state.
         # TODO: Find a way to install snapshots using Machine, maybe
         # via its own on_event(), and drop this field.
-        if isinstance(snapshot, Default):
-            snapshot = Spectrum48Snapshot()
         self._snapshot = snapshot
         if isinstance(keyboard, Default):
             keyboard = Keyboard()

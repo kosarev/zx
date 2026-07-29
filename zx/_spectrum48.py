@@ -6,7 +6,7 @@
 #
 #   Published under the MIT license.
 
-"""What the 48K Spectrum is, as snapshot types."""
+"""What the 48K Spectrum is, as its machine and snapshot types."""
 
 from __future__ import annotations
 
@@ -14,7 +14,10 @@ import typing
 
 if typing.TYPE_CHECKING:
     from ._binary import Bytes
+    from ._core import Profile
     from ._data import ByteData
+    from ._data import MachineSnapshotFile
+    from ._device import Device
 
 from ._beeper import BeeperSnapshot
 from ._core import CoreSnapshot
@@ -26,6 +29,9 @@ from ._core import Z80Snapshot
 from ._data import HexData
 from ._data import MachineSnapshot
 from ._keyboard import KeyboardSnapshot
+from ._machine import DEFAULT
+from ._machine import Default
+from ._machine import Machine
 from ._resources import RESOURCES
 
 
@@ -185,3 +191,20 @@ class Spectrum48Snapshot(MachineSnapshot,
             beeper = BeeperSnapshot()
 
         super().__init__(core=core, keyboard=keyboard, beeper=beeper)
+
+
+# The standard 48K machine, born with the stock 48K state unless a
+# snapshot is given.
+class Spectrum48(Machine, snapshot_type=Spectrum48Snapshot):
+    def __init__(self, core: Device | Default | None = DEFAULT,
+                 keyboard: Device | Default | None = DEFAULT,
+                 beeper: Device | Default | None = DEFAULT,
+                 profile: Profile | None = None,
+                 snapshot: MachineSnapshotFile | None = None,
+                 **extra_devices: Device) -> None:
+        if snapshot is None:
+            snapshot = Spectrum48Snapshot()
+
+        super().__init__(core=core, keyboard=keyboard, beeper=beeper,
+                         model=None, profile=profile, snapshot=snapshot,
+                         **extra_devices)
