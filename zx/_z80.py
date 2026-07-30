@@ -293,8 +293,8 @@ class Z80File(MachineSnapshotFile, format_name='Z80'):
             for block in core.memory.blocks or []:
                 # Plain blocks speak image offsets, which within the
                 # first 64K equal 48K addresses. TODO: Make this a
-                # pure type test once lift() promotes captured
-                # blocks.
+                # pure type test once plain blocks can no longer
+                # occur in 48K snapshots.
                 if not isinstance(block, Spectrum48MemoryBlock):
                     assert block.end_offset <= 0x10000
                 image[block.offset:block.end_offset] = (

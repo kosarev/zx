@@ -297,8 +297,7 @@ def test_typed_capture() -> None:
     from zx._spectrum48 import Spectrum48ROM
     from zx._spectrum48 import Spectrum48ULASnapshot
 
-    # The capture is typed by construction, its members included,
-    # so there is nothing left for lift to do.
+    # The capture is typed by construction, its members included.
     core = Spectrum48Core()
     core.install_snapshot(Spectrum48CoreSnapshot())
     captured = core.take_snapshot()
