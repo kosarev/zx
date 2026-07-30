@@ -328,15 +328,12 @@ class Emulator:
     def _load_input_recording(self, file: PlaybackFile) -> None:
         self.notify(StartPlayback(file.to_machine_playback()))
 
-    # Loading a machine state installs it into the persistent device
-    # set: the set is the machine definition's fact, never the
-    # snapshot's.
-    def _load_snapshot(self, snapshot: MachineSnapshot) -> None:
+    def _install_snapshot(self, snapshot: MachineSnapshot) -> None:
         self.notify(InstallSnapshot(snapshot))
 
     def _load(self, file: DataRecord) -> None:
         if isinstance(file, MachineSnapshotFile):
-            self._load_snapshot(file.to_machine_snapshot())
+            self._install_snapshot(file.to_machine_snapshot())
             return
 
         self.notify(ResetEmulator())

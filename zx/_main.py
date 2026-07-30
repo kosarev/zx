@@ -624,7 +624,7 @@ def _convert_snapshot_to_snapshot(src: DataRecord,
     assert issubclass(dest_format, MachineSnapshotFile), dest_format
 
     with Emulator(headless=True) as app:
-        app._load_snapshot(src.to_machine_snapshot())
+        app._install_snapshot(src.to_machine_snapshot())
         app._save_snapshot_file(dest_format, dest_filename)
 
 

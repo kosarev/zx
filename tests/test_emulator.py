@@ -116,7 +116,7 @@ def test_load_installs_snapshot() -> None:
     with zx.Emulator(headless=True, machine=machine) as app:
         old_devices = dict(machine.devices)
         old_environment = list(app.environment)
-        app._load_snapshot(snapshot)
+        app._install_snapshot(snapshot)
 
         assert machine.devices == old_devices
         assert app.environment == old_environment
@@ -144,7 +144,7 @@ def test_snapshot_addressing() -> None:
     # machine is a load error.
     with zx.Emulator(headless=True) as app:
         with pytest.raises(Error) as exc_info:
-            app._load_snapshot(MachineSnapshot(core2=CoreSnapshot()))
+            app._install_snapshot(MachineSnapshot(core2=CoreSnapshot()))
         assert exc_info.value.id == 'unknown_device_in_snapshot'
 
 
