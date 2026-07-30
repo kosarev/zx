@@ -23,7 +23,6 @@ from ._beeper import BeeperSnapshot
 from ._core import Core
 from ._core import CoreSnapshot
 from ._core import MemoryBlock
-from ._core import MemoryMapping
 from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
@@ -45,48 +44,47 @@ class Spectrum128ULASnapshot(ULASnapshot):
     pass
 
 
-# The 128K's memory mapping: rom_page selects the ROM at
-# 0x0000-0x3FFF and ram_page the RAM page at 0xC000-0xFFFF;
-# 0x4000-0xBFFF always holds ram5 and ram2.
-class Spectrum128MemoryMapping(MemoryMapping):
-    __PAGE_SIZE = 0x4000
+_PAGE_SIZE = 0x4000
 
-    # Where the 128K's pages sit in the internal memory image. This
-    # statement is the published convention, which the C++ side
-    # follows.
-    __ROM_PAGE_IMAGE_OFFSETS: typing.ClassVar[dict[int, int]] = {
-        0: 0 * __PAGE_SIZE,
-        1: 4 * __PAGE_SIZE}
-    __RAM_PAGE_IMAGE_OFFSETS: typing.ClassVar[dict[int, int]] = {
-        5: 1 * __PAGE_SIZE,
-        2: 2 * __PAGE_SIZE,
-        0: 3 * __PAGE_SIZE,
-        1: 5 * __PAGE_SIZE,
-        3: 6 * __PAGE_SIZE,
-        4: 7 * __PAGE_SIZE,
-        6: 8 * __PAGE_SIZE,
-        7: 9 * __PAGE_SIZE}
+# Where the 128K's pages sit in the internal memory image. This
+# statement is the published convention, which the C++ side
+# follows.
+_ROM_PAGE_IMAGE_OFFSETS = {
+    0: 0 * _PAGE_SIZE,
+    1: 4 * _PAGE_SIZE}
+_RAM_PAGE_IMAGE_OFFSETS = {
+    5: 1 * _PAGE_SIZE,
+    2: 2 * _PAGE_SIZE,
+    0: 3 * _PAGE_SIZE,
+    1: 5 * _PAGE_SIZE,
+    3: 6 * _PAGE_SIZE,
+    4: 7 * _PAGE_SIZE,
+    6: 8 * _PAGE_SIZE,
+    7: 9 * _PAGE_SIZE}
 
-    def __init__(self, *, rom_page: int | None = None,
-                 ram_page: int | None = None) -> None:
-        self.rom_page = rom_page
-        self.ram_page = ram_page
 
-    def get_offset(self, addr: int, size: int) -> int:
-        end_addr = addr + size
-        assert addr >= 0 and end_addr <= 0x10000
+# Tells where the bytes of the given 128K address range live in the
+# internal memory image: rom_page selects the ROM at 0x0000-0x3FFF
+# and ram_page the RAM page at 0xC000-0xFFFF; 0x4000-0xBFFF always
+# holds ram5 and ram2. A range never crosses from one page to
+# another; content that would is handled piecewise.
+def _image_offset(addr: int, size: int, *,
+                  rom_page: int | None = None,
+                  ram_page: int | None = None) -> int:
+    end_addr = addr + size
+    assert addr >= 0 and end_addr <= 0x10000
 
-        if addr < 0x4000:
-            assert end_addr <= 0x4000
-            assert self.rom_page is not None
-            return self.__ROM_PAGE_IMAGE_OFFSETS[self.rom_page] + addr
+    if addr < 0x4000:
+        assert end_addr <= 0x4000
+        assert rom_page is not None
+        return _ROM_PAGE_IMAGE_OFFSETS[rom_page] + addr
 
-        if addr < 0xc000:
-            assert end_addr <= 0xc000
-            return addr
+    if addr < 0xc000:
+        assert end_addr <= 0xc000
+        return addr
 
-        assert self.ram_page is not None
-        return self.__RAM_PAGE_IMAGE_OFFSETS[self.ram_page] + (addr - 0xc000)
+    assert ram_page is not None
+    return _RAM_PAGE_IMAGE_OFFSETS[ram_page] + (addr - 0xc000)
 
 
 # A block in the 128K's paged address space: the Z80 address plus
@@ -96,9 +94,9 @@ class Spectrum128MemoryBlock(MemoryBlock):
                  ram_page: int | None = None,
                  data: Bytes | ByteData) -> None:
         data = HexData.wrap(data)
-        mapping = Spectrum128MemoryMapping(rom_page=rom_page,
-                                           ram_page=ram_page)
-        super().__init__(offset=mapping.get_offset(addr, len(data.data)),
+        super().__init__(offset=_image_offset(addr, len(data.data),
+                                              rom_page=rom_page,
+                                              ram_page=ram_page),
                          data=data)
         self.__addr = addr
         self.__rom_page = rom_page
@@ -134,8 +132,8 @@ class Spectrum128MemorySnapshot(MemorySnapshot, image_size=0x28000):
         def starts_in_rom(block: Spectrum128MemoryBlock) -> bool:
             ROM_SIZE = 0x4000
             for rom_page in (0, 1):
-                rom_offset = Spectrum128MemoryMapping(
-                    rom_page=rom_page).get_offset(0x0000, ROM_SIZE)
+                rom_offset = _image_offset(0x0000, ROM_SIZE,
+                                           rom_page=rom_page)
                 if rom_offset <= block.offset < rom_offset + ROM_SIZE:
                     return True
             return False
@@ -218,16 +216,16 @@ class Spectrum128Core(Core):
     def read(self, addr: int, size: int, *,
              rom_page: int | None = None,
              ram_page: int | None = None) -> bytes:
-        mapping = Spectrum128MemoryMapping(rom_page=rom_page,
-                                           ram_page=ram_page)
-        return self._read_image(mapping.get_offset(addr, size), size)
+        return self._read_image(
+            _image_offset(addr, size, rom_page=rom_page,
+                          ram_page=ram_page), size)
 
     def write(self, addr: int, block: bytes, *,
               rom_page: int | None = None,
               ram_page: int | None = None) -> None:
-        mapping = Spectrum128MemoryMapping(rom_page=rom_page,
-                                           ram_page=ram_page)
-        self._write_image(mapping.get_offset(addr, len(block)), block)
+        self._write_image(
+            _image_offset(addr, len(block), rom_page=rom_page,
+                          ram_page=ram_page), block)
 
     # TODO: Support 128K capture -- needs the 0x7FFD latch
     # marshalled in the state image.

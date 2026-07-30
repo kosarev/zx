@@ -23,7 +23,6 @@ from ._beeper import BeeperSnapshot
 from ._core import Core
 from ._core import CoreSnapshot
 from ._core import MemoryBlock
-from ._core import MemoryMapping
 from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
@@ -43,21 +42,20 @@ class Spectrum48ULASnapshot(ULASnapshot):
     pass
 
 
-# The 48K's fixed memory mapping: the whole 64K address space,
-# one-to-one onto the leading 64K of the internal memory image.
-class Spectrum48MemoryMapping(MemoryMapping):
-    def get_offset(self, addr: int, size: int) -> int:
-        assert addr >= 0 and addr + size <= 0x10000
-        return addr
+# Tells where the bytes of the given 48K address range live in the
+# internal memory image: the whole 64K address space, one-to-one
+# onto the leading 64K.
+def _image_offset(addr: int, size: int) -> int:
+    assert addr >= 0 and addr + size <= 0x10000
+    return addr
 
 
 # A block in the 48K's flat address space.
 class Spectrum48MemoryBlock(MemoryBlock):
     def __init__(self, *, addr: int, data: Bytes | ByteData) -> None:
         data = HexData.wrap(data)
-        offset = Spectrum48MemoryMapping().get_offset(
-            addr, len(data.data))
-        super().__init__(offset=offset, data=data)
+        super().__init__(offset=_image_offset(addr, len(data.data)),
+                         data=data)
 
     # The node speaks the 48K vocabulary.
     def to_json(self) -> dict[str, typing.Any]:
@@ -150,12 +148,10 @@ class Spectrum48Core(Core):
 
     # Reads and writes speak the 48K's flat 64K address space.
     def read(self, addr: int, size: int) -> bytes:
-        return self._read_image(
-            Spectrum48MemoryMapping().get_offset(addr, size), size)
+        return self._read_image(_image_offset(addr, size), size)
 
     def write(self, addr: int, block: bytes) -> None:
-        self._write_image(
-            Spectrum48MemoryMapping().get_offset(addr, len(block)), block)
+        self._write_image(_image_offset(addr, len(block)), block)
 
     def read8(self, addr: int) -> int:
         return self.read(addr, 1)[0]

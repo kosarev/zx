@@ -128,18 +128,6 @@ class ULASnapshot(DataRecord):
             border_colour=border_colour)
 
 
-# A concrete selection of memory pages within the machine's
-# address space, translating each address to its place in the
-# internal memory image. The model core and snapshot types use it;
-# no public API takes a mapping.
-class MemoryMapping:
-    # Tells where the bytes of the given address range live in the
-    # internal memory image. A range never crosses from one page to
-    # another; content that would is handled piecewise.
-    def get_offset(self, addr: int, size: int) -> int:
-        raise NotImplementedError
-
-
 # A block of memory content: data at an offset of the contiguous
 # memory image.
 class MemoryBlock(DataRecord):
