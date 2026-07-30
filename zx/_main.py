@@ -21,7 +21,7 @@ import platformdirs
 
 from ._ay import AYFile
 from ._ay import AYPlayerMachine
-from ._ay8910 import AY8910
+from ._ay8910 import AY8910Machine
 from ._ay8910 import AYPlayer
 from ._basic import StopAtTapeEnd
 from ._basic import boot_to_prompt
@@ -55,7 +55,6 @@ from ._except import EmulationExit
 from ._file import detect_file_format
 from ._file import parse_file
 from ._file import parse_file_image
-from ._machine import Machine
 from ._playback import PlaybackPlayer
 from ._playback import PlaybackRecorder
 from ._rzx import RZXFile
@@ -115,7 +114,7 @@ def _make_player_sound() -> SDLSound:
 def _play_ay_stream(stream: AYStream) -> None:
     player = AYPlayer(stream)
 
-    with Emulator(machine=Machine(ay=AY8910()),
+    with Emulator(machine=AY8910Machine(),
                   environment=[player, _HoldWaiter(),
                                _make_player_sound()]) as app:
         # Give the last notes a second to ring out.

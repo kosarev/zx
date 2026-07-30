@@ -19,6 +19,7 @@ import numpy
 
 import zx
 from zx._ay8910 import AY8910
+from zx._ay8910 import AY8910Machine
 from zx._ay8910 import AY8910RegisterWrite
 from zx._ay8910 import AYPlayer
 from zx._data import AYFrame
@@ -33,7 +34,6 @@ from zx._device import NewPortWrites
 from zx._device import NewSoundPulses
 from zx._device import RunQuantum
 from zx._device import TimeAdvanced
-from zx._machine import Machine
 from zx._sound import SoundDevice
 from zx._spectrum48 import Spectrum48Core
 from zx._spectrum48 import Spectrum48MemoryMapping
@@ -288,7 +288,7 @@ def test_stream_player() -> None:
     # TimeAdvanced stamp, and the sound device consumes a published
     # chunk only on the following round -- each up to one quantum
     # long, plus the 0.1s of output the test expects.
-    with zx.Emulator(machine=Machine(ay=AY8910()),
+    with zx.Emulator(machine=AY8910Machine(),
                      environment=[player, sound]) as app:
         app.run(until=player.get_end_time() +
                 Time(3 * RATE // 10, ticks_per_second=RATE))

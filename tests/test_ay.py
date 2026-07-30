@@ -19,16 +19,14 @@ import pytest
 from zx._ay import AYFile
 from zx._ay import AYFileBlock
 from zx._ay import AYFileSong
-from zx._ay8910 import AY8910
+from zx._ay import AYPlayerMachine
 from zx._ay8910 import AY8910Snapshot
-from zx._beeper import Beeper
 from zx._beeper import BeeperSnapshot
 from zx._data import DataRecord
 from zx._device import InstallSnapshot
 from zx._emulator import Emulator
 from zx._error import Error
 from zx._file import parse_file_image
-from zx._machine import Machine
 from zx._spectrum48 import Spectrum48Core
 from zx._spectrum48 import Spectrum48CoreSnapshot
 from zx._spectrum48 import Spectrum48MemoryMapping
@@ -288,8 +286,7 @@ def test_converted_song_plays() -> None:
                 AYFileBlock(address=0x9000, data_offset=0, data=play)])
 
     core = Spectrum48Core()
-    with Emulator(machine=Machine(core=core, ay=AY8910(),
-                                  beeper=Beeper()),
+    with Emulator(machine=AYPlayerMachine(core=core),
                   environment=[]) as app:
         app.notify(InstallSnapshot(ay.to_machine_snapshot(song)))
         app.run(duration=0.1)

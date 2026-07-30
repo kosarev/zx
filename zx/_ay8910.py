@@ -15,6 +15,7 @@ import typing
 import numpy
 
 from ._data import DeviceSnapshot
+from ._data import MachineSnapshot
 from ._data import PortReadSeries
 from ._data import SoundPulses
 from ._device import CollectPortReads
@@ -27,6 +28,7 @@ from ._device import NewSoundPulses
 from ._device import ResetEmulator
 from ._device import RunQuantum
 from ._device import TimeAdvanced
+from ._machine import Machine
 from ._time import Time
 
 if typing.TYPE_CHECKING:
@@ -439,6 +441,29 @@ class AY8910(Device):
             self.__supply_register_value(event)
         elif isinstance(event, TimeAdvanced):
             self.__publish(event.time, dispatcher)
+
+
+class AY8910MachineSnapshot(MachineSnapshot):
+    ay: AY8910Snapshot
+
+    def __init__(self, *, ay: AY8910Snapshot | None = None) -> None:
+        if ay is None:
+            ay = AY8910Snapshot()
+
+        super().__init__(ay=ay)
+
+
+# The AY chip alone on a bus: the machine of the stream player
+# sessions.
+class AY8910Machine(Machine, snapshot_type=AY8910MachineSnapshot):
+    ay: AY8910
+
+    def __init__(self, ay: AY8910 | None = None,
+                 **extra_devices: Device) -> None:
+        if ay is None:
+            ay = AY8910()
+
+        super().__init__(ay=ay, **extra_devices)
 
 
 class AYPlayer(Device):
