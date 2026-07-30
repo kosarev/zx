@@ -696,6 +696,24 @@ class Core(_CoreBase, CoreState, Device):
     # machine and produce their typed snapshots; a bare Core states
     # nothing to capture.
 
+    # The Z80 is the same chip on every machine, so its snapshots
+    # are taken and installed here on the base, and the model core
+    # classes only deal with the parts their machines vary.
+    def _take_z80_snapshot(self) -> Z80Snapshot:
+        return Z80Snapshot(
+            af=self.af, bc=self.bc, de=self.de, hl=self.hl,
+            ix=self.ix, iy=self.iy,
+            alt_af=self.alt_af, alt_bc=self.alt_bc,
+            alt_de=self.alt_de, alt_hl=self.alt_hl,
+            pc=self.pc, sp=self.sp, ir=self.ir,
+            # TODO: wz=self.wz,
+            iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
+            iregp_kind=self.iregp_kind)
+
+    def _install_z80_snapshot(self, z80: Z80Snapshot) -> None:
+        for field, value in z80:
+            setattr(self, field, value)
+
     def install_snapshot(self, snapshot: CoreSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset
         # state, so installing one resets first: whatever the snapshot
@@ -706,7 +724,9 @@ class Core(_CoreBase, CoreState, Device):
         self.disabled = False
 
         for field, value in snapshot:
-            if field in ('z80', 'ula'):
+            if field == 'z80':
+                self._install_z80_snapshot(value)
+            elif field == 'ula':
                 for chip_field, chip_value in value:
                     setattr(self, chip_field, chip_value)
             elif field == 'memory':

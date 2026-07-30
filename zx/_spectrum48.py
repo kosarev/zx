@@ -188,15 +188,7 @@ class Spectrum48Core(Core):
 
         return Spectrum48CoreSnapshot(
             disabled=True if self.disabled else None,
-            z80=Z80Snapshot(
-                af=self.af, bc=self.bc, de=self.de, hl=self.hl,
-                ix=self.ix, iy=self.iy,
-                alt_af=self.alt_af, alt_bc=self.alt_bc,
-                alt_de=self.alt_de, alt_hl=self.alt_hl,
-                pc=self.pc, sp=self.sp, ir=self.ir,
-                # TODO: wz=self.wz,
-                iff1=self.iff1, iff2=self.iff2, int_mode=self.int_mode,
-                iregp_kind=self.iregp_kind),
+            z80=self._take_z80_snapshot(),
             ula=Spectrum48ULASnapshot(
                 ticks_since_int=self.ticks_since_int,
                 border_colour=self.border_colour),
