@@ -331,12 +331,12 @@ class Emulator:
     # Loading a machine state installs it into the persistent device
     # set: the set is the machine definition's fact, never the
     # snapshot's.
-    def _load_snapshot(self, snapshot: MachineSnapshotFile) -> None:
-        self.notify(InstallSnapshot(snapshot.to_machine_snapshot()))
+    def _load_snapshot(self, snapshot: MachineSnapshot) -> None:
+        self.notify(InstallSnapshot(snapshot))
 
     def _load(self, file: DataRecord) -> None:
         if isinstance(file, MachineSnapshotFile):
-            self._load_snapshot(file)
+            self._load_snapshot(file.to_machine_snapshot())
             return
 
         self.notify(ResetEmulator())

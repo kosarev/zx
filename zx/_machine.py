@@ -16,7 +16,7 @@ from ._device import InstallDeviceSnapshot
 from ._error import Error
 
 if typing.TYPE_CHECKING:
-    from ._data import MachineSnapshotFile
+    from ._data import MachineSnapshot
     from ._device import Device
 
 
@@ -31,14 +31,14 @@ if typing.TYPE_CHECKING:
 # by an install into the constructed machine.
 class Machine:
     # The type of the machine's snapshots.
-    SNAPSHOT_TYPE: typing.ClassVar[type[MachineSnapshotFile] | None] = None
+    SNAPSHOT_TYPE: typing.ClassVar[type[MachineSnapshot] | None] = None
 
     # A machine class and its snapshot type pair one-to-one: the
     # snapshot type is the machine's persisted identity, so every
     # machine class states its own.
     def __init_subclass__(
             cls, *,
-            snapshot_type: type[MachineSnapshotFile]) -> None:
+            snapshot_type: type[MachineSnapshot]) -> None:
         cls.SNAPSHOT_TYPE = snapshot_type
 
     def __init__(self, **devices: Device) -> None:
@@ -70,8 +70,8 @@ class Machine:
     # formats are mute about devices such as the tape player, and
     # muteness is not a statement, so a .z80 load must not touch the
     # mounted tape.
-    def _install_snapshot(self, snapshot: MachineSnapshotFile) -> None:
-        device_snapshots = dict(snapshot.to_machine_snapshot())
+    def _install_snapshot(self, snapshot: MachineSnapshot) -> None:
+        device_snapshots = dict(snapshot)
 
         # A device snapshot addressing no machine device is an
         # error.
