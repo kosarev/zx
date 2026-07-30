@@ -51,10 +51,10 @@ def test_disabled_beeper() -> None:
 def test_beeper_snapshot() -> None:
     # A disabled beeper is indistinguishable from an absent one, so
     # it captures as nothing.
-    assert Beeper(disabled=True).to_snapshot() is None
+    assert Beeper(disabled=True).take_snapshot() is None
 
     beeper = Beeper()
-    snapshot = beeper.to_snapshot()
+    snapshot = beeper.take_snapshot()
     assert snapshot is not None
     assert snapshot.disabled is None
 

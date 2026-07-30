@@ -363,7 +363,7 @@ class Emulator:
     def __make_machine_snapshot(self) -> MachineSnapshot:
         members = {id: snapshot
                    for id, d in self.machine.devices.items()
-                   if (snapshot := d.to_snapshot()) is not None}
+                   if (snapshot := d.take_snapshot()) is not None}
 
         # A machine defined by code is defined by that code; saving
         # one needs a machine class fixing its snapshot type.

@@ -42,7 +42,7 @@ def test_plain_machine_snapshot() -> None:
 
     # A plain MachineSnapshot states no model and keeps its typed
     # members as given: the form for machines defined by code.
-    partial = zx._data.MachineSnapshot(core=core.to_snapshot())
+    partial = zx._data.MachineSnapshot(core=core.take_snapshot())
     assert type(partial) is zx._data.MachineSnapshot
     # getattr so mypy accepts access to the dynamic fields.
     assert isinstance(getattr(partial, 'core'),  # noqa: B009

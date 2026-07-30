@@ -82,6 +82,6 @@ class StopAtTapeEnd(Device):
 # typed by construction, so this only wraps it into the machine
 # composition.
 def capture_spectrum48(core: Core) -> Spectrum48Snapshot:
-    captured = core.to_snapshot()
+    captured = core.take_snapshot()
     assert isinstance(captured, Spectrum48CoreSnapshot)
     return Spectrum48Snapshot(core=captured)

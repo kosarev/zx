@@ -118,7 +118,7 @@ class AY8910(Device):
         self.__pending: list[AY8910RegisterWrite] = []
         self.__reset_state()
 
-    def to_snapshot(self) -> AY8910Snapshot | None:
+    def take_snapshot(self) -> AY8910Snapshot | None:
         # A disabled AY is indistinguishable from an absent one, so
         # there is nothing to capture.
         if self.disabled:

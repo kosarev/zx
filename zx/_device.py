@@ -459,7 +459,7 @@ class Device:
     # Captures the device's state. The default says the device holds
     # nothing beyond its canonical reset state, so there is nothing
     # to capture.
-    def to_snapshot(self) -> DeviceSnapshot | None:
+    def take_snapshot(self) -> DeviceSnapshot | None:
         return None
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:

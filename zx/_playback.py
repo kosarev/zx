@@ -210,7 +210,7 @@ class PlaybackPlayer(Device):
         self.__sample_count = 0
         self.__dealt_time = None
 
-    def to_snapshot(self) -> PlaybackPlayerSnapshot | None:
+    def take_snapshot(self) -> PlaybackPlayerSnapshot | None:
         # Nothing to capture until the snapshot can state the loaded
         # playback and the position.
         # TODO: Capture the loaded playback and the position.
@@ -330,7 +330,7 @@ class PlaybackRecorder(Device):
     def make_playback(self) -> MachinePlayback:
         return MachinePlayback(segments=self.__segments)
 
-    def to_snapshot(self) -> PlaybackRecorderSnapshot | None:
+    def take_snapshot(self) -> PlaybackRecorderSnapshot | None:
         # Nothing to capture until the snapshot can state the
         # recording made so far.
         # TODO: Capture the recording made so far.

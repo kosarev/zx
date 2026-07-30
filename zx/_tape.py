@@ -173,7 +173,7 @@ class TapePlayer(Device):
         # The stamp up to which sound has been published.
         self.__published_up_to: Time | None = None
 
-    def to_snapshot(self) -> TapePlayerSnapshot | None:
+    def take_snapshot(self) -> TapePlayerSnapshot | None:
         # Nothing to capture until the snapshot can state the
         # mounted media and the position.
         # TODO: Capture the mounted media and the position.

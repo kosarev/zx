@@ -121,7 +121,7 @@ class Keyboard(Device):
         # Strokes not yet in effect, in time order.
         self.__pending: list[KeyStroke] = []
 
-    def to_snapshot(self) -> KeyboardSnapshot | None:
+    def take_snapshot(self) -> KeyboardSnapshot | None:
         # A disabled keyboard is indistinguishable from an absent
         # one, so there is nothing to capture.
         if self.disabled:

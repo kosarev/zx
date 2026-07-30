@@ -51,7 +51,7 @@ class Beeper(Device):
         self.__levels: list[numpy.typing.NDArray[numpy.float64]] = []
         self.__ticks: list[numpy.typing.NDArray[numpy.uint32]] = []
 
-    def to_snapshot(self) -> BeeperSnapshot | None:
+    def take_snapshot(self) -> BeeperSnapshot | None:
         # A disabled beeper is indistinguishable from an absent
         # one, so there is nothing to capture.
         if self.disabled:

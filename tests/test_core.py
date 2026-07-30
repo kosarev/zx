@@ -178,10 +178,10 @@ def test_core_disabled_in_snapshots() -> None:
     # The disabled flag is captured as the difference from the reset
     # state and applied by snapshot installs.
     core = Spectrum48Core()
-    assert 'disabled' not in core.to_snapshot().to_json()
+    assert 'disabled' not in core.take_snapshot().to_json()
 
     core.disabled = True
-    assert core.to_snapshot().to_json()['disabled'] is True
+    assert core.take_snapshot().to_json()['disabled'] is True
 
     core.install_snapshot(CoreSnapshot(disabled=True))
     assert core.disabled
@@ -198,18 +198,18 @@ def test_install_snapshot() -> None:
     from zx._spectrum48 import Spectrum48Core
 
     mach = Spectrum48Core()
-    canonical = mach.to_snapshot().to_json()
+    canonical = mach.take_snapshot().to_json()
 
     mach.pc = 0x8000
     mach.bc = 0x1234
     mach.border_colour = 5
     mach.write(Spectrum48MemoryMapping(), 0x8000, b'\x01\x02\x03')
     mach.install_snapshot(CoreSnapshot())
-    assert mach.to_snapshot().to_json() == canonical
+    assert mach.take_snapshot().to_json() == canonical
 
     mach.bc = 0x1234
     mach.install_snapshot(CoreSnapshot(z80=Z80Snapshot(pc=0x8000)))
-    state = mach.to_snapshot().to_json()
+    state = mach.take_snapshot().to_json()
     assert state['z80']['pc'] == 0x8000
     state['z80']['pc'] = canonical['z80']['pc']
     assert state == canonical
@@ -301,7 +301,7 @@ def test_typed_capture() -> None:
     # so there is nothing left for lift to do.
     core = Spectrum48Core()
     core.install_snapshot(Spectrum48CoreSnapshot())
-    captured = core.to_snapshot()
+    captured = core.take_snapshot()
     assert type(captured) is Spectrum48CoreSnapshot
     assert isinstance(captured.ula, Spectrum48ULASnapshot)
     assert isinstance(captured.memory, Spectrum48MemorySnapshot)
@@ -311,7 +311,7 @@ def test_typed_capture() -> None:
     blocks = captured.memory.blocks or []
     assert isinstance(blocks[0], Spectrum48ROM)
     core.write(Spectrum48MemoryMapping(), 0x0000, b'\x12\x34')
-    deviated = core.to_snapshot()
+    deviated = core.take_snapshot()
     assert isinstance(deviated, Spectrum48CoreSnapshot)
     blocks = deviated.memory.blocks or []
     assert not isinstance(blocks[0], Spectrum48ROM)
@@ -319,7 +319,7 @@ def test_typed_capture() -> None:
 
     # The disabled flag is ordinary captured content.
     core.disabled = True
-    assert core.to_snapshot().disabled is True
+    assert core.take_snapshot().disabled is True
 
 
 # The core's resolution: the CPU clock of the default 48K core.

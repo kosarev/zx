@@ -232,10 +232,10 @@ def test_disabled_keyboard() -> None:
 def test_keyboard_snapshot() -> None:
     # A disabled keyboard is indistinguishable from an absent one,
     # so it captures as nothing.
-    assert Keyboard(disabled=True).to_snapshot() is None
+    assert Keyboard(disabled=True).take_snapshot() is None
 
     keyboard = Keyboard()
-    snapshot = keyboard.to_snapshot()
+    snapshot = keyboard.take_snapshot()
     assert snapshot is not None
     assert snapshot.disabled is None
 

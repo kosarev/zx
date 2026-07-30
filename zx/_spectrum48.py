@@ -178,7 +178,7 @@ class Spectrum48Core(Core):
     # be a 48K, so the type is an input, not a discovery. The ROM is
     # stated only where the socket deviates from the class's image.
     # TODO: Store all fields.
-    def to_snapshot(self) -> Spectrum48CoreSnapshot:
+    def take_snapshot(self) -> Spectrum48CoreSnapshot:
         blocks = []
         rom = self._read_image(0x0000, 0x4000)
         if rom != Spectrum48ROM().data.data:

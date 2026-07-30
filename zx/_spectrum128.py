@@ -213,7 +213,7 @@ class Spectrum128Core(Core):
 
     # TODO: Support 128K capture -- needs the 0x7FFD latch
     # marshalled in the state image.
-    def to_snapshot(self) -> Spectrum128CoreSnapshot:
+    def take_snapshot(self) -> Spectrum128CoreSnapshot:
         raise Error('128K capture is not supported yet.',
                     id='128k_capture_not_supported')
 
