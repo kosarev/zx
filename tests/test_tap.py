@@ -220,5 +220,5 @@ def test_tape_read_from_samples() -> None:
         app.notify(PauseUnpauseTape(False))
 
         app.run(until=Time(1000,
-                           ticks_per_second=core.ticks_per_second))
+                           ticks_per_second=core._ticks_per_second))
         assert core.a == (0xff if first_level else 0xbf)

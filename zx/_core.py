@@ -544,39 +544,41 @@ class CoreState(Z80State):
     def tick_count(self) -> int:
         return int.from_bytes(self.__tick_count, 'little')
 
-    # The CPU clock, in Hz.
+    # The CPU clock, in Hz. The board wiring the model core classes
+    # state, like the retrace and contention fields below -- not
+    # amendable state, so no public access.
     @property
-    def ticks_per_second(self) -> int:
+    def _ticks_per_second(self) -> int:
         return int.from_bytes(self.__ticks_per_second, 'little')
 
-    @ticks_per_second.setter
-    def ticks_per_second(self, value: int) -> None:
+    @_ticks_per_second.setter
+    def _ticks_per_second(self, value: int) -> None:
         self.__ticks_per_second[:] = value.to_bytes(4, 'little')
 
     @property
-    def ticks_per_horizontal_retrace(self) -> int:
+    def _ticks_per_horizontal_retrace(self) -> int:
         return int.from_bytes(self.__ticks_per_horizontal_retrace, 'little')
 
-    @ticks_per_horizontal_retrace.setter
-    def ticks_per_horizontal_retrace(self, value: int) -> None:
+    @_ticks_per_horizontal_retrace.setter
+    def _ticks_per_horizontal_retrace(self, value: int) -> None:
         self.__ticks_per_horizontal_retrace[:] = value.to_bytes(4, 'little')
 
     @property
-    def lines_per_vertical_retrace(self) -> int:
+    def _lines_per_vertical_retrace(self) -> int:
         return int.from_bytes(self.__lines_per_vertical_retrace, 'little')
 
-    @lines_per_vertical_retrace.setter
-    def lines_per_vertical_retrace(self, value: int) -> None:
+    @_lines_per_vertical_retrace.setter
+    def _lines_per_vertical_retrace(self, value: int) -> None:
         self.__lines_per_vertical_retrace[:] = value.to_bytes(4, 'little')
 
     # The tick, counted from the start of INT, at which contention
     # first applies, one tick before the top-left screen pixel.
     @property
-    def contention_base(self) -> int:
+    def _contention_base(self) -> int:
         return int.from_bytes(self.__contention_base, 'little')
 
-    @contention_base.setter
-    def contention_base(self, value: int) -> None:
+    @_contention_base.setter
+    def _contention_base(self, value: int) -> None:
         self.__contention_base[:] = value.to_bytes(4, 'little')
 
     @property
@@ -671,10 +673,10 @@ class Core(_CoreBase, CoreState, Device):
 
         # The wiring the model core classes state.
         self._paging_supported = _paging_supported
-        self.ticks_per_second = _ticks_per_second
-        self.ticks_per_horizontal_retrace = _ticks_per_horizontal_retrace
-        self.lines_per_vertical_retrace = _lines_per_vertical_retrace
-        self.contention_base = _contention_base
+        self._ticks_per_second = _ticks_per_second
+        self._ticks_per_horizontal_retrace = _ticks_per_horizontal_retrace
+        self._lines_per_vertical_retrace = _lines_per_vertical_retrace
+        self._contention_base = _contention_base
 
         self.frame_count = 0
 
@@ -715,7 +717,7 @@ class Core(_CoreBase, CoreState, Device):
 
     def __current_time(self) -> Time:
         return Time(self.tick_count,
-                    ticks_per_second=self.ticks_per_second)
+                    ticks_per_second=self._ticks_per_second)
 
     # Loads the C++-side sample table from the published stream:
     # this device's copy of it. Each series' ticks, counted on its
@@ -728,7 +730,7 @@ class Core(_CoreBase, CoreState, Device):
     def __load_port_read_samples(self, event: NewPortReads) -> None:
         self._clear_port_read_samples()
 
-        core_resolution = self.ticks_per_second
+        core_resolution = self._ticks_per_second
         floor = event.time
         floor_core_tick = (floor.count * core_resolution //
                            floor.ticks_per_second)
@@ -854,7 +856,7 @@ class Core(_CoreBase, CoreState, Device):
             tick = self._get_deferred_port_read_tick()
             if tick is not None:
                 self.__deferred_read_time = Time(
-                    tick, ticks_per_second=self.ticks_per_second)
+                    tick, ticks_per_second=self._ticks_per_second)
 
         # The run traps at a marked instruction without executing it,
         # so running again would just trap there anew. Report the

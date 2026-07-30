@@ -71,7 +71,7 @@ def main() -> None:
         assert time.floor is not None
         app.run(until=time.floor + Time(
             100 * _TICKS_PER_FRAME,
-            ticks_per_second=core.ticks_per_second))
+            ticks_per_second=core._ticks_per_second))
 
         pixels = numpy.frombuffer(core.get_frame_pixels(),
                                   dtype=numpy.uint32).copy()

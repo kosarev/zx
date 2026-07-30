@@ -105,7 +105,7 @@ def test_stroke_at_quantum_ceiling() -> None:
     core.pc = 0x8000
     core.write(Spectrum48MemoryMapping(), 0x8000, b'\xdb\xfe\x18\xfc')
 
-    ticks_per_second = core.ticks_per_second
+    ticks_per_second = core._ticks_per_second
 
     # A budget expiring inside the 11-tick IN stops the quantum right
     # at its boundary, with the port read as the last thing committed.
@@ -178,7 +178,7 @@ def test_keyboard_read_from_samples() -> None:
     core.pc = 0x8000
     core.a = 0xfd
 
-    rate = core.ticks_per_second
+    rate = core._ticks_per_second
     floor = Time(0, ticks_per_second=rate)
     devices.notify(KeyStroke(KEYS['A'], pressed=True, time=floor))
 
@@ -204,7 +204,7 @@ def test_keyboard_samples_with_a_co_driver_series() -> None:
     core.pc = 0x8000
     core.a = 0xfd
 
-    rate = core.ticks_per_second
+    rate = core._ticks_per_second
     floor = Time(0, ticks_per_second=rate)
     devices.notify(KeyStroke(KEYS['A'], pressed=True, time=floor))
 

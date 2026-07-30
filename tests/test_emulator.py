@@ -163,5 +163,5 @@ def test_undriven_port_reads_as_open_bus() -> None:
         core.a = 0x12
 
         app.run(until=Time(1000,
-                           ticks_per_second=core.ticks_per_second))
+                           ticks_per_second=core._ticks_per_second))
         assert core.a == 0xff

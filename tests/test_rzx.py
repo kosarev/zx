@@ -55,7 +55,7 @@ def test_basic() -> None:
     dispatcher = zx._device.Dispatcher()
     start = zx._device.StartPlayback(playback)
     player.on_event(start, dispatcher)
-    rate = mach.ticks_per_second
+    rate = mach._ticks_per_second
     for moment, expected in enumerate((0x42, 0xff, 0x00)):
         collect = zx._device.CollectPortReads(
             zx._time.Time(moment, ticks_per_second=rate),

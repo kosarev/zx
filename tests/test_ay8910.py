@@ -362,7 +362,7 @@ def test_ay_register_read_on_a_core() -> None:
 
     # An AY rig runs at the 128K clock, which the chip's clock
     # divides evenly.
-    core.ticks_per_second = RATE
+    core._ticks_per_second = RATE
 
     core.write(Spectrum48MemoryMapping(), 0x8000,
                b'\x01\xfd\xff'   # LD BC, 0xfffd

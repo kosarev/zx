@@ -46,7 +46,7 @@ def boot_to_prompt(app: Emulator) -> None:
     machine = app.machine
     assert isinstance(machine, Spectrum48)
     app.run(until=Time(_BOOT_FRAMES * _TICKS_PER_FRAME,
-                       ticks_per_second=machine.core.ticks_per_second))
+                       ticks_per_second=machine.core._ticks_per_second))
 
 
 # Ends the run at a breakpoint, with PC still at the marked

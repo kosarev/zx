@@ -112,7 +112,7 @@ def test_playback_reads_defer_and_consume_in_order() -> None:
                                      port_samples=b'\x55\x66')])])
     devices.notify(StartPlayback(playback))
 
-    rate = core.ticks_per_second
+    rate = core._ticks_per_second
     floor = Time(0, ticks_per_second=rate)
     deferred = None
     for _ in range(3):
@@ -203,7 +203,7 @@ def test_playback_still_raises_on_too_few_samples() -> None:
                                      port_samples=b'\x55')])])
     devices.notify(StartPlayback(playback))
 
-    rate = core.ticks_per_second
+    rate = core._ticks_per_second
     floor = Time(0, ticks_per_second=rate)
     deferred = None
     with pytest.raises(Error) as exc_info:

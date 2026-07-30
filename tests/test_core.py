@@ -160,7 +160,7 @@ def test_disabled_core() -> None:
     # runs no quanta.
     core = Spectrum48Core(disabled=True)
     devices = Dispatcher([core])
-    rate = core.ticks_per_second
+    rate = core._ticks_per_second
 
     quantum = RunQuantum(stop_after=Time(1000, ticks_per_second=rate))
     devices.notify(quantum)
