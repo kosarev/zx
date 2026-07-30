@@ -170,9 +170,15 @@ class Emulator:
         # last quantum ended otherwise.
         self.__deferred_port_read_time: Time | None = None
 
-        if machine._snapshot is not None:
+        # A model machine starts at its canonical state: the class's
+        # empty stock snapshot, installed at construction. Any
+        # caller-supplied state arrives by an ordinary install
+        # afterwards -- creating a machine and installing a snapshot
+        # are distinct operations.
+        snapshot_type = type(machine).SNAPSHOT_TYPE
+        if snapshot_type is not None:
             self.notify(InstallSnapshot(
-                machine._snapshot.to_machine_snapshot()))
+                snapshot_type().to_machine_snapshot()))
 
     # All the devices, the machine first, as one dispatch audience.
     @property

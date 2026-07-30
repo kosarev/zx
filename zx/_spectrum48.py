@@ -16,7 +16,6 @@ if typing.TYPE_CHECKING:
     from ._binary import Bytes
     from ._core import Profile
     from ._data import ByteData
-    from ._data import MachineSnapshotFile
     from ._device import Device
 
 from ._beeper import Beeper
@@ -204,11 +203,11 @@ class Spectrum48Core(Core):
             memory=Spectrum48MemorySnapshot(blocks=blocks))
 
 
-# The standard 48K machine, born with the stock 48K state unless a
-# snapshot is given. Every member exists; a None parameter means the
-# standard device. The equipment -- the tape player and the playback
-# player and recorder -- is machine-side: deterministic, on the
-# emulated time axis, its state session content.
+# The standard 48K machine. Every member exists; a None parameter
+# means the standard device. The equipment -- the tape player and
+# the playback player and recorder -- is machine-side:
+# deterministic, on the emulated time axis, its state session
+# content.
 class Spectrum48(Machine, snapshot_type=Spectrum48Snapshot):
     core: Spectrum48Core
     keyboard: Keyboard
@@ -224,7 +223,6 @@ class Spectrum48(Machine, snapshot_type=Spectrum48Snapshot):
                  playback_player: PlaybackPlayer | None = None,
                  playback_recorder: PlaybackRecorder | None = None,
                  profile: Profile | None = None,
-                 snapshot: MachineSnapshotFile | None = None,
                  **extra_devices: Device) -> None:
         if core is None:
             core = Spectrum48Core(profile=profile)
@@ -246,10 +244,7 @@ class Spectrum48(Machine, snapshot_type=Spectrum48Snapshot):
         if playback_recorder is None:
             playback_recorder = PlaybackRecorder(disabled=True)
 
-        if snapshot is None:
-            snapshot = Spectrum48Snapshot()
-
-        super().__init__(snapshot=snapshot, core=core,
+        super().__init__(core=core,
                          keyboard=keyboard, beeper=beeper,
                          tape_player=tape_player,
                          playback_player=playback_player,

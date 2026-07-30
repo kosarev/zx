@@ -24,6 +24,7 @@ from zx._ay8910 import AY8910Snapshot
 from zx._beeper import Beeper
 from zx._beeper import BeeperSnapshot
 from zx._data import DataRecord
+from zx._device import InstallSnapshot
 from zx._emulator import Emulator
 from zx._error import Error
 from zx._file import parse_file_image
@@ -288,9 +289,9 @@ def test_converted_song_plays() -> None:
 
     core = Spectrum48Core()
     with Emulator(machine=Machine(core=core, ay=AY8910(),
-                                  beeper=Beeper(),
-                                  snapshot=ay.to_machine_snapshot(song)),
+                                  beeper=Beeper()),
                   environment=[]) as app:
+        app.notify(InstallSnapshot(ay.to_machine_snapshot(song)))
         app.run(duration=0.1)
 
         mapping = Spectrum48MemoryMapping()

@@ -28,7 +28,6 @@ from ._spectrum48 import Spectrum48MemorySnapshot
 
 if typing.TYPE_CHECKING:
     from ._binary import Bytes
-    from ._data import MachineSnapshotFile
     from ._device import Device
 
 _SIGNATURE = b'ZXAY'
@@ -300,7 +299,6 @@ class AYPlayerMachine(Machine, snapshot_type=AYPlayerMachineSnapshot):
     def __init__(self, core: Spectrum48Core | None = None,
                  ay: AY8910 | None = None,
                  beeper: Beeper | None = None,
-                 snapshot: MachineSnapshotFile | None = None,
                  **extra_devices: Device) -> None:
         if core is None:
             core = Spectrum48Core()
@@ -309,7 +307,7 @@ class AYPlayerMachine(Machine, snapshot_type=AYPlayerMachineSnapshot):
         if beeper is None:
             beeper = Beeper()
 
-        super().__init__(snapshot=snapshot, core=core, ay=ay,
+        super().__init__(core=core, ay=ay,
                          beeper=beeper, **extra_devices)
 
 

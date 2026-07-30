@@ -16,7 +16,6 @@ if typing.TYPE_CHECKING:
     from ._binary import Bytes
     from ._core import Profile
     from ._data import ByteData
-    from ._data import MachineSnapshotFile
     from ._device import Device
 
 from ._beeper import Beeper
@@ -219,9 +218,8 @@ class Spectrum128Core(Core):
                     id='128k_capture_not_supported')
 
 
-# The standard 128K machine, born with the stock 128K state unless a
-# snapshot is given. Every member exists; a None parameter means the
-# standard device, the equipment included, as on the 48K.
+# The standard 128K machine. Every member exists; a None parameter
+# means the standard device, the equipment included, as on the 48K.
 class Spectrum128(Machine, snapshot_type=Spectrum128Snapshot):
     core: Spectrum128Core
     keyboard: Keyboard
@@ -237,7 +235,6 @@ class Spectrum128(Machine, snapshot_type=Spectrum128Snapshot):
                  playback_player: PlaybackPlayer | None = None,
                  playback_recorder: PlaybackRecorder | None = None,
                  profile: Profile | None = None,
-                 snapshot: MachineSnapshotFile | None = None,
                  **extra_devices: Device) -> None:
         if core is None:
             core = Spectrum128Core(profile=profile)
@@ -259,10 +256,7 @@ class Spectrum128(Machine, snapshot_type=Spectrum128Snapshot):
         if playback_recorder is None:
             playback_recorder = PlaybackRecorder(disabled=True)
 
-        if snapshot is None:
-            snapshot = Spectrum128Snapshot()
-
-        super().__init__(snapshot=snapshot, core=core,
+        super().__init__(core=core,
                          keyboard=keyboard, beeper=beeper,
                          tape_player=tape_player,
                          playback_player=playback_player,

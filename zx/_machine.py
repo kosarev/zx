@@ -20,9 +20,12 @@ if typing.TYPE_CHECKING:
 # the device snapshots of machine snapshot compositions. A plain
 # Machine is a machine of exactly the given devices -- the form for
 # rigs such as the AY-only player machine. The model classes
-# (Spectrum48, Spectrum128) fix their snapshot types, construct
-# their standard members and default their states to the stock
-# snapshots.
+# (Spectrum48, Spectrum128) fix their snapshot types and construct
+# their standard members.
+#
+# Creating a machine and installing a snapshot are distinct
+# operations: construction defines the set, and any state arrives
+# by an install into the constructed machine.
 class Machine:
     # The type of the machine's snapshots; None where the machine
     # type does not fix one.
@@ -34,14 +37,7 @@ class Machine:
         if snapshot_type is not None:
             cls.SNAPSHOT_TYPE = snapshot_type
 
-    def __init__(self, snapshot: MachineSnapshotFile | None = None,
-                 **devices: Device) -> None:
-        # The machine's state to install; None means nothing to
-        # install, the reset state.
-        # TODO: Find a way to install snapshots using Machine, maybe
-        # via its own on_event(), and drop this field.
-        self._snapshot = snapshot
-
+    def __init__(self, **devices: Device) -> None:
         self.devices: dict[str, Device] = dict(devices)
 
         # Every device is also a field named by its id, so
