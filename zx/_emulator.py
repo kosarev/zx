@@ -74,7 +74,6 @@ from ._device import GetEmulationTime
 from ._device import GetHoldState
 from ._device import GetQuantumTimeLimit
 from ._device import InitEmulator
-from ._device import InstallDeviceSnapshot
 from ._device import InstallSnapshot
 from ._device import IsTapePlayerPaused
 from ._device import LoadFile
@@ -169,16 +168,6 @@ class Emulator:
         # ended on, carried to the next collect step; None when the
         # last quantum ended otherwise.
         self.__deferred_port_read_time: Time | None = None
-
-        # A model machine starts at its canonical state: the class's
-        # empty stock snapshot, installed at construction. Any
-        # caller-supplied state arrives by an ordinary install
-        # afterwards -- creating a machine and installing a snapshot
-        # are distinct operations.
-        snapshot_type = type(machine).SNAPSHOT_TYPE
-        if snapshot_type is not None:
-            self.notify(InstallSnapshot(
-                snapshot_type().to_machine_snapshot()))
 
     # All the devices, the machine first, as one dispatch audience.
     @property
@@ -284,27 +273,6 @@ class Emulator:
         # of time are published by the time its dispatch completes.
         self.notify(TimeAdvanced(run.advanced_floor))
 
-    # Installing a machine snapshot means every machine device
-    # assumes exactly the state the snapshot describes. A device
-    # snapshot addressing no machine device is an error.
-    def __install_machine_snapshot(
-            self, snapshot: MachineSnapshotFile) -> None:
-        device_snapshots = dict(snapshot.to_machine_snapshot())
-
-        for id in device_snapshots:
-            if id not in self.machine.devices:
-                raise Error(
-                    f"The snapshot addresses a device '{id}' that is "
-                    f'not in the machine.',
-                    id='unknown_device_in_snapshot')
-
-        # An install touches what the snapshot states: devices it
-        # does not mention keep their state. Formats are mute about
-        # devices such as the tape player, and muteness is not a
-        # statement, so a .z80 load must not touch the mounted tape.
-        for id, device_snapshot in device_snapshots.items():
-            self.notify(InstallDeviceSnapshot(device_snapshot), device=id)
-
     # Handles the events that concern the Emulator itself, after all
     # the devices have seen them.
     def _on_event(self, event: DeviceEvent) -> None:
@@ -315,7 +283,7 @@ class Emulator:
             event.floor = self.__advanced_floor
             event.ceiling = self.__advanced_ceiling
         elif isinstance(event, InstallSnapshot):
-            self.__install_machine_snapshot(event.snapshot)
+            self.machine._install_snapshot(event.snapshot)
         elif isinstance(event, LoadFile):
             self._load_file(event.filename)
         elif isinstance(event, SaveSnapshot):

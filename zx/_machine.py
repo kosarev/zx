@@ -11,6 +11,10 @@ from __future__ import annotations
 
 import typing
 
+from ._device import Dispatcher
+from ._device import InstallDeviceSnapshot
+from ._error import Error
+
 if typing.TYPE_CHECKING:
     from ._data import MachineSnapshotFile
     from ._device import Device
@@ -48,3 +52,33 @@ class Machine:
                 raise ValueError(
                     f'device id {id!r} clashes with an existing attribute')
             setattr(self, id, device)
+
+        # A model machine constructs at its canonical state: the
+        # class's empty stock snapshot, installed locally -- the
+        # definition realised, not observable history, so no event
+        # radiates beyond the machine's own devices.
+        if self.SNAPSHOT_TYPE is not None:
+            self._install_snapshot(self.SNAPSHOT_TYPE())
+
+    # Installing a machine snapshot means every mentioned device
+    # assumes exactly the state its device snapshot describes.
+    # Devices the snapshot does not mention keep their state:
+    # formats are mute about devices such as the tape player, and
+    # muteness is not a statement, so a .z80 load must not touch the
+    # mounted tape.
+    def _install_snapshot(self, snapshot: MachineSnapshotFile) -> None:
+        device_snapshots = dict(snapshot.to_machine_snapshot())
+
+        # A device snapshot addressing no machine device is an
+        # error.
+        for id in device_snapshots:
+            if id not in self.devices:
+                raise Error(
+                    f"The snapshot addresses a device '{id}' that is "
+                    f'not in the machine.',
+                    id='unknown_device_in_snapshot')
+
+        dispatcher = Dispatcher(devices_by_id=self.devices)
+        for id, device_snapshot in device_snapshots.items():
+            dispatcher.notify(InstallDeviceSnapshot(device_snapshot),
+                              device=id)
