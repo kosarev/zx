@@ -218,9 +218,8 @@ class Spectrum128Core(Core):
             _image_offset(addr, len(block), rom_page=rom_page,
                           ram_page=ram_page), block)
 
-    def _install_memory_snapshot(self, memory: MemorySnapshot) -> None:
-        assert isinstance(memory, Spectrum128MemorySnapshot)
-
+    def _install_memory_snapshot(
+            self, memory: Spectrum128MemorySnapshot) -> None:
         for page_no, rom in enumerate((memory.rom0, memory.rom1)):
             if rom is None:
                 rom = Spectrum128ROM0() if page_no == 0 else Spectrum128ROM1()
@@ -232,6 +231,22 @@ class Spectrum128Core(Core):
                                        memory.ram6, memory.ram7)):
             if ram is not None:
                 self._write_image(_RAM_PAGE_IMAGE_OFFSETS[page_no], ram.data)
+
+    def install_snapshot(self, snapshot: CoreSnapshot) -> None:
+        assert isinstance(snapshot, Spectrum128CoreSnapshot)
+
+        # A snapshot describes the difference from the canonical
+        # reset state, so installing one resets first: whatever it
+        # does not state stays at reset. The wiring is the class's,
+        # untouched by installs.
+        self._reset()
+        self._reset_roms()
+
+        self.disabled = bool(snapshot.disabled)
+        if snapshot.z80 is not None:
+            self._install_z80_snapshot(snapshot.z80)
+        self._install_ula_snapshot(snapshot.ula)
+        self._install_memory_snapshot(snapshot.memory)
 
     # TODO: Support 128K capture -- needs the 0x7FFD latch
     # marshalled in the state image.

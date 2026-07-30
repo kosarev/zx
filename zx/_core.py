@@ -619,29 +619,14 @@ class Core(_CoreBase, CoreState, Device):
         for field, value in z80:
             setattr(self, field, value)
 
-    # Each model core class applies its own memory fields.
-    def _install_memory_snapshot(self, memory: MemorySnapshot) -> None:
-        raise NotImplementedError
+    def _install_ula_snapshot(self, ula: ULASnapshot) -> None:
+        for field, value in ula:
+            setattr(self, field, value)
 
+    # A snapshot describes the difference from the canonical reset
+    # state. Each model core class installs its own snapshot type.
     def install_snapshot(self, snapshot: CoreSnapshot) -> None:
-        # A snapshot describes the difference from the canonical reset
-        # state, so installing one resets first: whatever the snapshot
-        # does not mention, the ROMs included, stays at reset. The
-        # wiring is the core class's, untouched by installs.
-        self._reset()
-        self._reset_roms()
-        self.disabled = False
-
-        for field, value in snapshot:
-            if field == 'z80':
-                self._install_z80_snapshot(value)
-            elif field == 'ula':
-                for chip_field, chip_value in value:
-                    setattr(self, chip_field, chip_value)
-            elif field == 'memory':
-                self._install_memory_snapshot(value)
-            else:
-                setattr(self, field, value)
+        raise NotImplementedError
 
     def __current_time(self) -> Time:
         return Time(self.tick_count,

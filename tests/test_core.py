@@ -15,7 +15,6 @@ import numpy.typing
 import pytest
 
 from zx._core import Core
-from zx._core import CoreSnapshot
 from zx._core import RunEvents
 from zx._core import Z80Snapshot
 from zx._data import PortReadSeries
@@ -26,6 +25,7 @@ from zx._device import Dispatcher
 from zx._device import NewPortReads
 from zx._device import RunQuantum
 from zx._spectrum48 import Spectrum48Core
+from zx._spectrum48 import Spectrum48CoreSnapshot
 from zx._time import Time
 
 
@@ -180,36 +180,38 @@ def test_core_disabled_in_snapshots() -> None:
     core.disabled = True
     assert core.take_snapshot().to_json()['disabled'] is True
 
-    core.install_snapshot(CoreSnapshot(disabled=True))
+    core.install_snapshot(Spectrum48CoreSnapshot(disabled=True))
     assert core.disabled
 
-    core.install_snapshot(CoreSnapshot())
+    core.install_snapshot(Spectrum48CoreSnapshot())
     assert not core.disabled
 
 
 def test_install_snapshot() -> None:
     # Installing a snapshot brings the core exactly to the state the
-    # snapshot describes: the canonical reset state amended by what
-    # the snapshot mentions. An empty snapshot means the canonical
-    # reset state itself.
+    # snapshot describes: the stock state amended by what the
+    # snapshot mentions. An empty snapshot means the stock state
+    # itself.
     from zx._spectrum48 import Spectrum48Core
 
     mach = Spectrum48Core()
-    canonical = mach.take_snapshot().to_json()
+    mach.install_snapshot(Spectrum48CoreSnapshot())
+    stock = mach.take_snapshot().to_json()
 
     mach.pc = 0x8000
     mach.bc = 0x1234
     mach.border_colour = 5
     mach.write(0x8000, b'\x01\x02\x03')
-    mach.install_snapshot(CoreSnapshot())
-    assert mach.take_snapshot().to_json() == canonical
+    mach.install_snapshot(Spectrum48CoreSnapshot())
+    assert mach.take_snapshot().to_json() == stock
 
     mach.bc = 0x1234
-    mach.install_snapshot(CoreSnapshot(z80=Z80Snapshot(pc=0x8000)))
+    mach.install_snapshot(Spectrum48CoreSnapshot(
+        z80=Z80Snapshot(pc=0x8000)))
     state = mach.take_snapshot().to_json()
     assert state['z80']['pc'] == 0x8000
-    state['z80']['pc'] = canonical['z80']['pc']
-    assert state == canonical
+    state['z80']['pc'] = stock['z80']['pc']
+    assert state == stock
 
 
 def test_stock_rom() -> None:

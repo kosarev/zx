@@ -144,13 +144,28 @@ class Spectrum48Core(Core):
     def read16(self, addr: int) -> int:
         return int.from_bytes(self.read(addr, 2), 'little')
 
-    def _install_memory_snapshot(self, memory: MemorySnapshot) -> None:
-        assert isinstance(memory, Spectrum48MemorySnapshot)
-
+    def _install_memory_snapshot(
+            self, memory: Spectrum48MemorySnapshot) -> None:
         rom = memory.rom if memory.rom is not None else Spectrum48ROM()
         self._write_image(0x0000, rom.data)
         if memory.ram is not None:
             self._write_image(0x4000, memory.ram.data)
+
+    def install_snapshot(self, snapshot: CoreSnapshot) -> None:
+        assert isinstance(snapshot, Spectrum48CoreSnapshot)
+
+        # A snapshot describes the difference from the canonical
+        # reset state, so installing one resets first: whatever it
+        # does not state stays at reset. The wiring is the class's,
+        # untouched by installs.
+        self._reset()
+        self._reset_roms()
+
+        self.disabled = bool(snapshot.disabled)
+        if snapshot.z80 is not None:
+            self._install_z80_snapshot(snapshot.z80)
+        self._install_ula_snapshot(snapshot.ula)
+        self._install_memory_snapshot(snapshot.memory)
 
     # The capture is typed by construction: the machine is known to
     # be a 48K, so the type is an input, not a discovery. The ROM is
