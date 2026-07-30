@@ -494,10 +494,10 @@ class _SPINPlaybackRecoverer(_PlaybackRecoverer):
         # No known recording relies on the patch so far, so it is not
         # applied; we'll get back to it when investigating non-working
         # RZX files. When a reproducer is found, apply the patch here
-        # and, once the recorder exists, capture the ROM difference as
-        # a MemoryBlock(addr=0x1f47, rom_page=0, ...) in the key-frame
-        # snapshots, so that the recovered playback carries its own
-        # ROM difference and plays on a strictly conforming emulator
+        # and, once the recorder exists, state the patched ROM image
+        # in the key-frame snapshots, so that the recovered playback
+        # carries its own ROM difference and plays on a strictly
+        # conforming emulator
         # with no quirk knowledge.
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:

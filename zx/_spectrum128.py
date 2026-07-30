@@ -25,7 +25,6 @@ from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import ByteData
-from ._data import DataRecord
 from ._data import HexData
 from ._data import MachineSnapshot
 from ._error import Error
@@ -111,7 +110,7 @@ class Spectrum128ROM1(HexData):
 # The 128K's memory: the full images of the two ROM pages and the
 # eight RAM pages. An unstated ROM page means the stock one; an
 # unstated RAM page means the reset content.
-class Spectrum128MemorySnapshot(MemorySnapshot, image_size=0x28000):
+class Spectrum128MemorySnapshot(MemorySnapshot):
     rom0: ByteData | None
     rom1: ByteData | None
     ram0: ByteData | None
@@ -144,10 +143,7 @@ class Spectrum128MemorySnapshot(MemorySnapshot, image_size=0x28000):
                 assert len(page.data) == _PAGE_SIZE
             pages[name] = page
 
-        # The model type states whole page images; the plain base's
-        # block vocabulary does not apply, so the fields go straight
-        # to DataRecord.
-        DataRecord.__init__(self, **pages)
+        super().__init__(**pages)
 
 
 # The 128K core: members not specified take their stock values. The
@@ -223,9 +219,7 @@ class Spectrum128Core(Core):
                           ram_page=ram_page), block)
 
     def _install_memory_snapshot(self, memory: MemorySnapshot) -> None:
-        if not isinstance(memory, Spectrum128MemorySnapshot):
-            super()._install_memory_snapshot(memory)
-            return
+        assert isinstance(memory, Spectrum128MemorySnapshot)
 
         for page_no, rom in enumerate((memory.rom0, memory.rom1)):
             if rom is None:

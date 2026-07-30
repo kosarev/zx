@@ -25,7 +25,6 @@ from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import ByteData
-from ._data import DataRecord
 from ._data import HexData
 from ._data import MachineSnapshot
 from ._keyboard import Keyboard
@@ -65,7 +64,7 @@ class Spectrum48ROM(HexData):
 # The 48K's memory: the full images of the ROM socket and the RAM.
 # An unstated ROM means the stock one; an unstated RAM means the
 # reset content.
-class Spectrum48MemorySnapshot(MemorySnapshot, image_size=0x10000):
+class Spectrum48MemorySnapshot(MemorySnapshot):
     rom: ByteData | None
     ram: ByteData | None
 
@@ -78,10 +77,7 @@ class Spectrum48MemorySnapshot(MemorySnapshot, image_size=0x10000):
             ram = HexData.wrap(ram)
             assert len(ram.data) == 0xc000
 
-        # The model type states whole chip images; the plain base's
-        # block vocabulary does not apply, so the fields go straight
-        # to DataRecord.
-        DataRecord.__init__(self, rom=rom, ram=ram)
+        super().__init__(rom=rom, ram=ram)
 
 
 # The 48K core: members not specified take their stock values.
@@ -149,9 +145,7 @@ class Spectrum48Core(Core):
         return int.from_bytes(self.read(addr, 2), 'little')
 
     def _install_memory_snapshot(self, memory: MemorySnapshot) -> None:
-        if not isinstance(memory, Spectrum48MemorySnapshot):
-            super()._install_memory_snapshot(memory)
-            return
+        assert isinstance(memory, Spectrum48MemorySnapshot)
 
         rom = memory.rom if memory.rom is not None else Spectrum48ROM()
         self._write_image(0x0000, rom.data)

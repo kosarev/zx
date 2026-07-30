@@ -12,19 +12,13 @@ from __future__ import annotations
 
 # TODO: Remove unused imports.
 import enum
-import itertools
 import typing
 
 import numpy
 
-if typing.TYPE_CHECKING:
-    from ._binary import Bytes
-
 from ._corebase import _CoreBase
-from ._data import ByteData
 from ._data import DataRecord
 from ._data import DeviceSnapshot
-from ._data import HexData
 from ._data import MachinePlayback
 from ._device import BreakpointHit
 from ._device import Device
@@ -128,46 +122,10 @@ class ULASnapshot(DataRecord):
             border_colour=border_colour)
 
 
-# A block of memory content: data at an offset of the contiguous
-# memory image.
-class MemoryBlock(DataRecord):
-    offset: int
-    data: ByteData
-
-    @property
-    def end_offset(self) -> int:
-        return self.offset + len(self.data.data)
-
-    def __init__(self, *, offset: int, data: Bytes | ByteData):
-        super().__init__(offset=offset, data=HexData.wrap(data))
-
-
-# The memory chips' state: the contents as blocks, and the total
-# size of the machine's memory as its configuration. A model
-# subclass fixes the configuration as a class keyword, which the
-# base records as a class attribute. Null fields mean the canonical
-# reset values.
+# The memory chips' state. Each model core's snapshot type states
+# its own image fields.
 class MemorySnapshot(DataRecord):
-    image_size: int | None
-    blocks: list[MemoryBlock] | None
-
-    def __init_subclass__(cls, *, image_size: int,
-                          **kwargs: typing.Any) -> None:
-        super().__init_subclass__(**kwargs)
-        cls.image_size = image_size
-
-    def __init__(
-            self, *, image_size: int | None = None,
-            blocks: typing.Sequence[MemoryBlock] | None = None):
-        if blocks is not None:
-            blocks = sorted(blocks, key=lambda b: b.offset)
-
-            # Blocks never overlap, so their order carries no
-            # meaning and sorting them loses nothing.
-            for a, b in itertools.pairwise(blocks):
-                assert a.end_offset <= b.offset
-
-        super().__init__(image_size=image_size, blocks=blocks)
+    pass
 
 
 # The core device's slice of a machine snapshot. Null fields mean
@@ -661,11 +619,9 @@ class Core(_CoreBase, CoreState, Device):
         for field, value in z80:
             setattr(self, field, value)
 
-    # Applies a memory record of the plain block form; a model core
-    # class overrides this for its own memory vocabulary.
+    # Each model core class applies its own memory fields.
     def _install_memory_snapshot(self, memory: MemorySnapshot) -> None:
-        for block in memory.blocks or []:
-            self._write_image(block.offset, block.data.data)
+        raise NotImplementedError
 
     def install_snapshot(self, snapshot: CoreSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset

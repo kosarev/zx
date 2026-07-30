@@ -16,7 +16,6 @@ import pytest
 
 from zx._core import Core
 from zx._core import CoreSnapshot
-from zx._core import MemorySnapshot
 from zx._core import RunEvents
 from zx._core import Z80Snapshot
 from zx._data import PortReadSeries
@@ -226,17 +225,6 @@ def test_stock_rom() -> None:
     loaded = DataRecord.from_json({'type': 'Spectrum48ROM'})
     assert isinstance(loaded, Spectrum48ROM)
     assert loaded.data == rom.data
-
-
-def test_memory_image_size() -> None:
-    from zx._spectrum48 import Spectrum48MemorySnapshot
-
-    # The model type fixes the configuration, so its node does not
-    # store it; a plain record states it as an ordinary field.
-    assert Spectrum48MemorySnapshot.image_size == 0x10000
-    assert 'image_size' not in Spectrum48MemorySnapshot().to_json()
-    plain = MemorySnapshot(image_size=0x10000)
-    assert plain.to_json()['image_size'] == 0x10000
 
 
 def test_48k_memory() -> None:
