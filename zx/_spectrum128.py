@@ -15,17 +15,17 @@ import typing
 if typing.TYPE_CHECKING:
     from ._binary import Bytes
     from ._core import Profile
-    from ._data import ByteData
     from ._device import Device
 
 from ._beeper import Beeper
 from ._beeper import BeeperSnapshot
 from ._core import Core
 from ._core import CoreSnapshot
-from ._core import MemoryBlock
 from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
+from ._data import ByteData
+from ._data import DataRecord
 from ._data import HexData
 from ._data import MachineSnapshot
 from ._error import Error
@@ -87,72 +87,67 @@ def _image_offset(addr: int, size: int, *,
     return _RAM_PAGE_IMAGE_OFFSETS[ram_page] + (addr - 0xc000)
 
 
-# A block in the 128K's paged address space: the Z80 address plus
-# the page selectors of the mapping the address is meant under.
-class Spectrum128MemoryBlock(MemoryBlock):
-    def __init__(self, *, addr: int, rom_page: int | None = None,
-                 ram_page: int | None = None,
-                 data: Bytes | ByteData) -> None:
-        data = HexData.wrap(data)
-        super().__init__(offset=_image_offset(addr, len(data.data),
-                                              rom_page=rom_page,
-                                              ram_page=ram_page),
-                         data=data)
-        self.__addr = addr
-        self.__rom_page = rom_page
-        self.__ram_page = ram_page
+# The stock 128K ROM pages: the 128K editor in page 0, the 48K
+# BASIC variant in page 1, halves of one resource image. The types
+# alone determine the content, so their nodes store nothing.
+class Spectrum128ROM0(HexData):
+    def __init__(self) -> None:
+        super().__init__((RESOURCES / 'roms' /
+                          'Spectrum128.rom').read_bytes()[:_PAGE_SIZE])
 
-    # The node speaks the 128K vocabulary the block was constructed
-    # in.
-    def to_json(self) -> dict[str, typing.Any]:
-        d = super().to_json()
-
-        node: dict[str, typing.Any] = {'addr': self.__addr}
-        if self.__rom_page is not None:
-            node['rom_page'] = self.__rom_page
-        if self.__ram_page is not None:
-            node['ram_page'] = self.__ram_page
-        node['data'] = d['data']
-        return node
+    def to_json(self) -> dict[str, str | list[str]]:
+        return {}
 
 
-# The 128K's memory: a collection of blocks in the 128K's paged
-# address space. The given blocks amend the stock ROMs -- blocks
-# carrying ROM content replace them.
+class Spectrum128ROM1(HexData):
+    def __init__(self) -> None:
+        super().__init__((RESOURCES / 'roms' /
+                          'Spectrum128.rom').read_bytes()[_PAGE_SIZE:])
+
+    def to_json(self) -> dict[str, str | list[str]]:
+        return {}
+
+
+# The 128K's memory: the full images of the two ROM pages and the
+# eight RAM pages. An unstated ROM page means the stock one; an
+# unstated RAM page means the reset content.
 class Spectrum128MemorySnapshot(MemorySnapshot, image_size=0x28000):
-    def __init__(
-            self, *,
-            blocks: typing.Sequence[Spectrum128MemoryBlock] | None = None,
-            ) -> None:
-        blocks = list(blocks or [])
+    rom0: ByteData | None
+    rom1: ByteData | None
+    ram0: ByteData | None
+    ram1: ByteData | None
+    ram2: ByteData | None
+    ram3: ByteData | None
+    ram4: ByteData | None
+    ram5: ByteData | None
+    ram6: ByteData | None
+    ram7: ByteData | None
 
-        # A block starting in either ROM replaces the stock ROMs.
-        # TODO: Replace with ROM recognition over the canonical
-        # block list.
-        def starts_in_rom(block: Spectrum128MemoryBlock) -> bool:
-            ROM_SIZE = 0x4000
-            for rom_page in (0, 1):
-                rom_offset = _image_offset(0x0000, ROM_SIZE,
-                                           rom_page=rom_page)
-                if rom_offset <= block.offset < rom_offset + ROM_SIZE:
-                    return True
-            return False
+    def __init__(self, *, rom0: Bytes | ByteData | None = None,
+                 rom1: Bytes | ByteData | None = None,
+                 ram0: Bytes | ByteData | None = None,
+                 ram1: Bytes | ByteData | None = None,
+                 ram2: Bytes | ByteData | None = None,
+                 ram3: Bytes | ByteData | None = None,
+                 ram4: Bytes | ByteData | None = None,
+                 ram5: Bytes | ByteData | None = None,
+                 ram6: Bytes | ByteData | None = None,
+                 ram7: Bytes | ByteData | None = None) -> None:
+        pages = {}
+        for name, page in (('rom0', rom0), ('rom1', rom1),
+                           ('ram0', ram0), ('ram1', ram1),
+                           ('ram2', ram2), ('ram3', ram3),
+                           ('ram4', ram4), ('ram5', ram5),
+                           ('ram6', ram6), ('ram7', ram7)):
+            if page is not None:
+                page = HexData.wrap(page)
+                assert len(page.data) == _PAGE_SIZE
+            pages[name] = page
 
-        if not any(starts_in_rom(b) for b in blocks):
-            rom = (RESOURCES / 'roms' / 'Spectrum128.rom').read_bytes()
-            blocks = [Spectrum128MemoryBlock(addr=0x0000, rom_page=0,
-                                             data=rom[:0x4000]),
-                      Spectrum128MemoryBlock(addr=0x0000, rom_page=1,
-                                             data=rom[0x4000:]),
-                      *blocks]
-
-        super().__init__(image_size=self.image_size, blocks=blocks)
-
-    # The type fixes the configuration, so the node stores only the
-    # blocks.
-    def to_json(self) -> dict[str, typing.Any]:
-        d = super().to_json()
-        return {name: d[name] for name in ('blocks',) if name in d}
+        # The model type states whole page images; the plain base's
+        # block vocabulary does not apply, so the fields go straight
+        # to DataRecord.
+        DataRecord.__init__(self, **pages)
 
 
 # The 128K core: members not specified take their stock values. The
@@ -226,6 +221,23 @@ class Spectrum128Core(Core):
         self._write_image(
             _image_offset(addr, len(block), rom_page=rom_page,
                           ram_page=ram_page), block)
+
+    def _install_memory_snapshot(self, memory: MemorySnapshot) -> None:
+        if not isinstance(memory, Spectrum128MemorySnapshot):
+            super()._install_memory_snapshot(memory)
+            return
+
+        for page_no, rom in enumerate((memory.rom0, memory.rom1)):
+            if rom is None:
+                rom = Spectrum128ROM0() if page_no == 0 else Spectrum128ROM1()
+            self._write_image(_ROM_PAGE_IMAGE_OFFSETS[page_no], rom.data)
+
+        for page_no, ram in enumerate((memory.ram0, memory.ram1,
+                                       memory.ram2, memory.ram3,
+                                       memory.ram4, memory.ram5,
+                                       memory.ram6, memory.ram7)):
+            if ram is not None:
+                self._write_image(_RAM_PAGE_IMAGE_OFFSETS[page_no], ram.data)
 
     # TODO: Support 128K capture -- needs the 0x7FFD latch
     # marshalled in the state image.
