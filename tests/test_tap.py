@@ -16,7 +16,6 @@ from zx._device import LoadTape
 from zx._device import PauseUnpauseTape
 from zx._device import TimeAdvanced
 from zx._spectrum48 import Spectrum48
-from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._tape import TapePlayer
 from zx._time import Time
 
@@ -210,7 +209,7 @@ def test_tape_read_from_samples() -> None:
     machine = Spectrum48()
     with zx.Emulator(headless=True, machine=machine) as app:
         core = machine.core
-        core.write(Spectrum48MemoryMapping(), 0x8000,
+        core.write(0x8000,
                    b'\xdb\xfe'   # IN A, (0xfe)
                    b'\x18\xfe')  # JR $
         core.pc = 0x8000

@@ -36,7 +36,6 @@ from zx._device import RunQuantum
 from zx._device import TimeAdvanced
 from zx._sound import SoundDevice
 from zx._spectrum48 import Spectrum48Core
-from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
 
 if typing.TYPE_CHECKING:
@@ -364,7 +363,7 @@ def test_ay_register_read_on_a_core() -> None:
     # divides evenly.
     core._ticks_per_second = RATE
 
-    core.write(Spectrum48MemoryMapping(), 0x8000,
+    core.write(0x8000,
                b'\x01\xfd\xff'   # LD BC, 0xfffd
                b'\x3e\x02'       # LD A, 2
                b'\xed\x79'       # OUT (C), A

@@ -29,7 +29,6 @@ from zx._error import Error
 from zx._file import parse_file_image
 from zx._spectrum48 import Spectrum48Core
 from zx._spectrum48 import Spectrum48CoreSnapshot
-from zx._spectrum48 import Spectrum48MemoryMapping
 
 
 def be(value: int) -> bytes:
@@ -200,17 +199,16 @@ def test_to_machine_snapshot() -> None:
     # spec's EI over the fill's RET.
     assert z80.int_mode == 2
 
-    memory = core.memory
-    mapping = Spectrum48MemoryMapping()
-    assert memory.match(mapping, 0x0000,
-                        bytes((0xcd, 0x00, 0x80,      # CALL 0x8000
-                               0xfb, 0x76,            # EI; HALT
-                               0x18, 0xfc,            # JR $-2
-                               0xc9)))                # the fill
-    assert memory.match(mapping, 0x0038, b'\xfb\xc9')
-    assert memory.match(mapping, 0x00ff, b'\xc9\xff\xff')
-    assert memory.match(mapping, 0x3fff, b'\xff\x00\x00')
-    assert memory.match(mapping, 0x8000, b'\xaa\xbb\xcc\x00')
+    mach = Spectrum48Core()
+    mach.install_snapshot(core)
+    assert mach.read(0x0000, 8) == bytes((0xcd, 0x00, 0x80,  # CALL 0x8000
+                                          0xfb, 0x76,        # EI; HALT
+                                          0x18, 0xfc,        # JR $-2
+                                          0xc9))             # the fill
+    assert mach.read(0x0038, 2) == b'\xfb\xc9'
+    assert mach.read(0x00ff, 3) == b'\xc9\xff\xff'
+    assert mach.read(0x3fff, 3) == b'\xff\x00\x00'
+    assert mach.read(0x8000, 4) == b'\xaa\xbb\xcc\x00'
 
 
 def test_to_machine_snapshot_play_routine_and_seeds() -> None:
@@ -234,10 +232,10 @@ def test_to_machine_snapshot_play_routine_and_seeds() -> None:
     assert z80.sp == 0xfff0
     assert z80.int_mode == 1
 
-    mapping = Spectrum48MemoryMapping()
-    assert core.memory.match(mapping, 0x0038,
-                             bytes((0xcd, 0x00, 0x90,  # CALL 0x9000
-                                    0xc9)))            # the fill
+    mach = Spectrum48Core()
+    mach.install_snapshot(core)
+    assert mach.read(0x0038, 4) == bytes((0xcd, 0x00, 0x90,  # CALL 0x9000
+                                          0xc9))             # the fill
 
 
 def test_to_machine_snapshot_block_placement() -> None:
@@ -258,12 +256,12 @@ def test_to_machine_snapshot_block_placement() -> None:
     z80 = core.z80
     assert z80 is not None
 
-    mapping = Spectrum48MemoryMapping()
-    assert core.memory.match(mapping, 0x0000,
-                             bytes((0xcd, 0x05, 0x00,  # CALL 0x0005
-                                    0xfb, 0x76,
-                                    0x11, 0x22)))
-    assert core.memory.match(mapping, 0xfffe, b'\x33\x44')
+    mach = Spectrum48Core()
+    mach.install_snapshot(core)
+    assert mach.read(0x0000, 7) == bytes((0xcd, 0x05, 0x00,  # CALL 0x0005
+                                          0xfb, 0x76,
+                                          0x11, 0x22))
+    assert mach.read(0xfffe, 2) == b'\x33\x44'
 
 
 def test_converted_song_plays() -> None:
@@ -291,9 +289,8 @@ def test_converted_song_plays() -> None:
         app.notify(InstallSnapshot(ay.to_machine_snapshot(song)))
         app.run(duration=0.1)
 
-        mapping = Spectrum48MemoryMapping()
-        assert core.read8(mapping, 0xc000) == 0x5a
-        assert core.read8(mapping, 0xc001) >= 3
+        assert core.read8(0xc000) == 0x5a
+        assert core.read8(0xc001) >= 3
 
 
 def test_to_machine_snapshot_no_entry() -> None:

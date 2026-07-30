@@ -148,6 +148,21 @@ class Spectrum48Core(Core):
                          _lines_per_vertical_retrace=24,
                          _contention_base=14335)
 
+    # Reads and writes speak the 48K's flat 64K address space.
+    def read(self, addr: int, size: int) -> bytes:
+        return self._read_image(
+            Spectrum48MemoryMapping().get_offset(addr, size), size)
+
+    def write(self, addr: int, block: bytes) -> None:
+        self._write_image(
+            Spectrum48MemoryMapping().get_offset(addr, len(block)), block)
+
+    def read8(self, addr: int) -> int:
+        return self.read(addr, 1)[0]
+
+    def read16(self, addr: int) -> int:
+        return int.from_bytes(self.read(addr, 2), 'little')
+
     # The capture is typed by construction: the machine is known to
     # be a 48K, so the type is an input, not a discovery. The ROM is
     # stated only where the socket deviates from the class's image.

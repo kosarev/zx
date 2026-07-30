@@ -25,7 +25,6 @@ from zx._device import InitEmulator
 from zx._error import Error
 from zx._spectrum48 import Spectrum48
 from zx._spectrum48 import Spectrum48Core
-from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
 
 
@@ -38,7 +37,6 @@ def test_basic() -> None:
 def test_128k_emulator() -> None:
     from zx._resources import RESOURCES
     from zx._spectrum128 import Spectrum128
-    from zx._spectrum128 import Spectrum128MemoryMapping
 
     rom = (RESOURCES / 'roms' / 'Spectrum128.rom').read_bytes()
 
@@ -46,10 +44,8 @@ def test_128k_emulator() -> None:
     machine = Spectrum128()
     with zx.Emulator(headless=True, machine=machine):
         core = machine.core
-        assert core.read(Spectrum128MemoryMapping(rom_page=0),
-                         0x0000, 0x4000) == rom[:0x4000]
-        assert core.read(Spectrum128MemoryMapping(rom_page=1),
-                         0x0000, 0x4000) == rom[0x4000:]
+        assert core.read(0x0000, 0x4000, rom_page=0) == rom[:0x4000]
+        assert core.read(0x0000, 0x4000, rom_page=1) == rom[0x4000:]
 
 
 def test_ticks_limit() -> None:
@@ -156,7 +152,7 @@ def test_undriven_port_reads_as_open_bus() -> None:
     machine = Spectrum48()
     with zx.Emulator(headless=True, machine=machine) as app:
         core = machine.core
-        core.write(Spectrum48MemoryMapping(), 0x8000,
+        core.write(0x8000,
                    b'\xdb\x1f'   # IN A, (0x1f)
                    b'\x18\xfe')  # JR $
         core.pc = 0x8000

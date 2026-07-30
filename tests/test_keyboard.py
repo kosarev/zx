@@ -19,7 +19,6 @@ from zx._keyboard import Keyboard
 from zx._keyboard import KeyboardSnapshot
 from zx._keyboard import KeyStroke
 from zx._spectrum48 import Spectrum48Core
-from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
 
 # The documented port map: address line -> keys, lowest bit first.
@@ -103,7 +102,7 @@ def test_stroke_at_quantum_ceiling() -> None:
 
     # IN A,(0xFE); JR $-2 -- an endless keyboard read loop.
     core.pc = 0x8000
-    core.write(Spectrum48MemoryMapping(), 0x8000, b'\xdb\xfe\x18\xfc')
+    core.write(0x8000, b'\xdb\xfe\x18\xfc')
 
     ticks_per_second = core._ticks_per_second
 
@@ -172,7 +171,7 @@ def test_keyboard_read_from_samples() -> None:
 
     # Select the A9 half-row: IN A, (0xfe) with A = 0xfd, reading
     # port 0xfdfe at tick 10.
-    core.write(Spectrum48MemoryMapping(), 0x8000,
+    core.write(0x8000,
                b'\xdb\xfe'   # IN A, (0xfe)
                b'\x18\xfe')  # JR $
     core.pc = 0x8000
@@ -198,7 +197,7 @@ def test_keyboard_samples_with_a_co_driver_series() -> None:
     keyboard = Keyboard()
     devices = Dispatcher([core, keyboard])
 
-    core.write(Spectrum48MemoryMapping(), 0x8000,
+    core.write(0x8000,
                b'\xdb\xfe'   # IN A, (0xfe)
                b'\x18\xfe')  # JR $
     core.pc = 0x8000

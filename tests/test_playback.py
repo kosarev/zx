@@ -25,7 +25,6 @@ from zx._error import Error
 from zx._playback import PlaybackPlayer
 from zx._playback import PlaybackRecorder
 from zx._spectrum48 import Spectrum48Core
-from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
 
 
@@ -98,7 +97,7 @@ def test_playback_reads_defer_and_consume_in_order() -> None:
     player = PlaybackPlayer()
     devices = Dispatcher([core, player])
 
-    core.write(Spectrum48MemoryMapping(), 0x8000,
+    core.write(0x8000,
                b'\xdb\xfe'   # IN A, (0xfe)
                b'\x4f'       # LD C, A
                b'\xdb\xfe'   # IN A, (0xfe)
@@ -189,7 +188,7 @@ def test_playback_still_raises_on_too_few_samples() -> None:
     player = PlaybackPlayer()
     devices = Dispatcher([core, player])
 
-    core.write(Spectrum48MemoryMapping(), 0x8000,
+    core.write(0x8000,
                b'\xdb\xfe'   # IN A, (0xfe)
                b'\x4f'       # LD C, A
                b'\xdb\xfe'   # IN A, (0xfe)

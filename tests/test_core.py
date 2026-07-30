@@ -16,7 +16,6 @@ import pytest
 
 from zx._core import Core
 from zx._core import CoreSnapshot
-from zx._core import MemoryBlock
 from zx._core import MemorySnapshot
 from zx._core import RunEvents
 from zx._core import Z80Snapshot
@@ -28,7 +27,6 @@ from zx._device import Dispatcher
 from zx._device import NewPortReads
 from zx._device import RunQuantum
 from zx._spectrum48 import Spectrum48Core
-from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
 
 
@@ -52,7 +50,7 @@ def test_on_input_propagates_exception() -> None:
     mach._add_port_read_samples(0, 1, 0, 0x0000, 0x0000, 0,
                                 numpy.zeros(0, dtype=numpy.uint64))
 
-    mach.write(Spectrum48MemoryMapping(), 0x8000,
+    mach.write(0x8000,
                b'\xdb\xfe')  # IN A, (0xfe)
     mach.pc = 0x8000
     mach.a = 0x12
@@ -80,7 +78,7 @@ def test_on_output_propagates_exception() -> None:
     dispatcher = Dispatcher([mach])
     mach.set_on_output_callback(raise_on_output)
 
-    mach.write(Spectrum48MemoryMapping(), 0x8000,
+    mach.write(0x8000,
                b'\xd3\xfe')  # OUT (0xfe), A
     mach.pc = 0x8000
 
@@ -115,7 +113,7 @@ def test_deferred_input() -> None:
     mach._add_port_read_samples(0, 1, 0, 0x0000, 0x0000, 0,
                                 numpy.zeros(0, dtype=numpy.uint64))
 
-    mach.write(Spectrum48MemoryMapping(), 0x8000,
+    mach.write(0x8000,
                b'\xdb\xfe')  # IN A, (0xfe)
     mach.pc = 0x8000
     mach.a = 0x12
@@ -203,7 +201,7 @@ def test_install_snapshot() -> None:
     mach.pc = 0x8000
     mach.bc = 0x1234
     mach.border_colour = 5
-    mach.write(Spectrum48MemoryMapping(), 0x8000, b'\x01\x02\x03')
+    mach.write(0x8000, b'\x01\x02\x03')
     mach.install_snapshot(CoreSnapshot())
     assert mach.take_snapshot().to_json() == canonical
 
@@ -213,29 +211,6 @@ def test_install_snapshot() -> None:
     assert state['z80']['pc'] == 0x8000
     state['z80']['pc'] = canonical['z80']['pc']
     assert state == canonical
-
-
-def test_memory_match() -> None:
-    memory = MemorySnapshot(blocks=[
-        MemoryBlock(offset=0x4000, data=b'\x01\x02'),
-        MemoryBlock(offset=0x4002, data=b'\x03\x04'),
-        MemoryBlock(offset=0x5000, data=b'\x05')])
-    mapping = Spectrum48MemoryMapping()
-
-    # Within one block.
-    assert memory.match(mapping, 0x4000, b'\x01\x02')
-
-    # Stitched across adjacent blocks.
-    assert memory.match(mapping, 0x4001, b'\x02\x03')
-
-    # A byte mismatch.
-    assert not memory.match(mapping, 0x4000, b'\x01\xff')
-
-    # A gap between blocks.
-    assert not memory.match(mapping, 0x4003, b'\x04\x00')
-
-    # Past the stated content.
-    assert not memory.match(mapping, 0x5000, b'\x05\x06')
 
 
 def test_stock_rom_block() -> None:
@@ -266,6 +241,8 @@ def test_memory_image_size() -> None:
 
 
 def test_48k_memory() -> None:
+    from zx._spectrum48 import Spectrum48Core
+    from zx._spectrum48 import Spectrum48CoreSnapshot
     from zx._spectrum48 import Spectrum48MemoryBlock
     from zx._spectrum48 import Spectrum48MemorySnapshot
     from zx._spectrum48 import Spectrum48ROM
@@ -281,7 +258,10 @@ def test_48k_memory() -> None:
     assert isinstance(rom_block, Spectrum48ROM)
     assert type(ram_block) is Spectrum48MemoryBlock
     assert ram_block.offset == 0x4000
-    assert memory.match(Spectrum48MemoryMapping(), 0x0000, rom + ram)
+
+    mach = Spectrum48Core()
+    mach.install_snapshot(Spectrum48CoreSnapshot(memory=memory))
+    assert mach.read(0x0000, 0x10000) == rom + ram
 
     # A stated ROM block replaces the stock one.
     custom = Spectrum48MemorySnapshot(blocks=[
@@ -309,7 +289,7 @@ def test_typed_capture() -> None:
     # explicitly.
     blocks = captured.memory.blocks or []
     assert isinstance(blocks[0], Spectrum48ROM)
-    core.write(Spectrum48MemoryMapping(), 0x0000, b'\x12\x34')
+    core.write(0x0000, b'\x12\x34')
     deviated = core.take_snapshot()
     assert isinstance(deviated, Spectrum48CoreSnapshot)
     blocks = deviated.memory.blocks or []
@@ -338,7 +318,7 @@ def _sample_entries(
 # power-up memory pattern from executing as code.
 def _make_core_reading_port() -> Core:
     core = Spectrum48Core()
-    core.write(Spectrum48MemoryMapping(), 0x8000,
+    core.write(0x8000,
                b'\xdb\xfe'   # IN A, (0xfe)
                b'\x18\xfe')  # JR $
     core.pc = 0x8000
@@ -487,7 +467,7 @@ def test_port_read_samples_progress_with_reads() -> None:
     # progresses: IN A, (0xfe); LD C, A; IN A, (0xfe) reads at
     # ticks 10 and 25, with the sampled value changing at tick 20.
     core = Spectrum48Core()
-    core.write(Spectrum48MemoryMapping(), 0x8000,
+    core.write(0x8000,
                b'\xdb\xfe'   # IN A, (0xfe)
                b'\x4f'       # LD C, A
                b'\xdb\xfe'   # IN A, (0xfe)

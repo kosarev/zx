@@ -211,6 +211,24 @@ class Spectrum128Core(Core):
                          _lines_per_vertical_retrace=23,
                          _contention_base=14361)
 
+    # Reads and writes speak the 128K's paged address space: the Z80
+    # address plus the page selection it is meant under.
+    # TODO: Default omitted pages to the live 0x7FFD latch once it
+    # is marshalled in the state image.
+    def read(self, addr: int, size: int, *,
+             rom_page: int | None = None,
+             ram_page: int | None = None) -> bytes:
+        mapping = Spectrum128MemoryMapping(rom_page=rom_page,
+                                           ram_page=ram_page)
+        return self._read_image(mapping.get_offset(addr, size), size)
+
+    def write(self, addr: int, block: bytes, *,
+              rom_page: int | None = None,
+              ram_page: int | None = None) -> None:
+        mapping = Spectrum128MemoryMapping(rom_page=rom_page,
+                                           ram_page=ram_page)
+        self._write_image(mapping.get_offset(addr, len(block)), block)
+
     # TODO: Support 128K capture -- needs the 0x7FFD latch
     # marshalled in the state image.
     def take_snapshot(self) -> Spectrum128CoreSnapshot:

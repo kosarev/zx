@@ -24,7 +24,6 @@ from ._device import GetEmulationTime
 from ._error import Error
 from ._except import EmulationExit
 from ._spectrum48 import Spectrum48
-from ._spectrum48 import Spectrum48MemoryMapping
 from ._time import Time
 
 if typing.TYPE_CHECKING:
@@ -101,8 +100,7 @@ class ZXBasicCompilerProgram(MachineSnapshotFile, format_name='ZXB'):
             # CLEAR <entry_point>
             app.generate_key_strokes('X', self.entry_point, 'ENTER')
 
-            core.write(Spectrum48MemoryMapping(), self.entry_point,
-                       self.program_bytes.data)
+            core.write(self.entry_point, self.program_bytes.data)
             core.set_breakpoint(self.entry_point)
 
             # RANDOMIZE USR <entry_point> -- the program may start,
