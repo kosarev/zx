@@ -16,9 +16,7 @@ import numpy
 from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
-from ._core import CoreSnapshot
 from ._core import MemoryBlock
-from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import ByteData
 from ._data import DataRecord
@@ -252,13 +250,15 @@ class Z80File(MachineSnapshotFile, format_name='Z80'):
 
     @classmethod
     def from_snapshot(cls, snapshot: MachineSnapshot) -> Z80File:
-        core = next(
-            (d for _, d in snapshot
-             if isinstance(d, CoreSnapshot)), None)
-        if core is None:
-            core = CoreSnapshot()
+        # The encoder handles 48K machines only; the 128K joins with
+        # the full 128K support.
+        if not isinstance(snapshot, Spectrum48Snapshot):
+            raise Error(
+                f'Cannot convert this machine to a {cls.FORMAT_NAME} file.')
+
+        core = snapshot.core
         z80 = core.z80 or Z80Snapshot()
-        ula = core.ula or ULASnapshot()
+        ula = core.ula
 
         # TODO: The z80 format cannot represent processor states in
         #       the middle of IX- and IY-prefixed instructions, so

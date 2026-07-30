@@ -12,9 +12,6 @@ import typing
 from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
-from ._core import CoreSnapshot
-from ._core import MemorySnapshot
-from ._core import ULASnapshot
 from ._core import Z80Snapshot
 from ._data import ByteData
 from ._data import HexData
@@ -98,15 +95,16 @@ class SNAFile(MachineSnapshotFile, format_name='SNA'):
 
     @classmethod
     def from_snapshot(cls, snapshot: MachineSnapshot) -> 'SNAFile':
-        core = next(
-            (d for _, d in snapshot
-             if isinstance(d, CoreSnapshot)), None)
-        if core is None:
-            core = CoreSnapshot()
-        z80 = core.z80 or Z80Snapshot()
-        ula = core.ula or ULASnapshot()
+        # The format states 48K machines only.
+        if not isinstance(snapshot, Spectrum48Snapshot):
+            raise Error(
+                f'Cannot convert this machine to a {cls.FORMAT_NAME} file.')
 
-        blocks = (core.memory or MemorySnapshot()).blocks or []
+        core = snapshot.core
+        z80 = core.z80 or Z80Snapshot()
+        ula = core.ula
+
+        blocks = core.memory.blocks or []
 
         memory = bytearray(0x10000)
         for block in blocks:
