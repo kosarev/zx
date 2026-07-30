@@ -16,7 +16,6 @@ import numpy
 from ._binary import BinaryParser
 from ._binary import BinaryWriter
 from ._binary import Bytes
-from ._core import MemoryBlock
 from ._core import Z80Snapshot
 from ._data import ByteData
 from ._data import DataRecord
@@ -25,8 +24,8 @@ from ._data import MachineSnapshot
 from ._data import MachineSnapshotFile
 from ._error import Error
 from ._spectrum48 import Spectrum48CoreSnapshot
-from ._spectrum48 import Spectrum48MemoryBlock
 from ._spectrum48 import Spectrum48MemorySnapshot
+from ._spectrum48 import Spectrum48ROM
 from ._spectrum48 import Spectrum48Snapshot
 from ._spectrum48 import Spectrum48ULASnapshot
 from ._utils import get_high8
@@ -284,40 +283,24 @@ class Z80File(MachineSnapshotFile, format_name='Z80'):
         assert int_mode in [0, 1, 2]  # TODO
         flags2 |= int_mode
 
-        # Build full memory image.
-        # TODO: Frobid any data below address 0x4000.
+        # The format's canonical machine has the standard ROM, so
+        # the ROM page is stored only when the snapshot states one.
         memory_blocks = []
-        if core.memory is not None:
-            RAM_SIZE = 0x10000
-            image: list[int | None] = [None] * RAM_SIZE
-            for block in core.memory.blocks or []:
-                # Plain blocks speak image offsets, which within the
-                # first 64K equal 48K addresses. TODO: Make this a
-                # pure type test once plain blocks can no longer
-                # occur in 48K snapshots.
-                if not isinstance(block, Spectrum48MemoryBlock):
-                    assert block.end_offset <= 0x10000
-                image[block.offset:block.end_offset] = (
-                    list(block.data.data))
+        memory = core.memory
+        if memory.rom is not None:
+            memory_blocks.append(Z80MemoryBlock(
+                page_no=0, compressed_size=0xffff, data=memory.rom.data))
 
-            [stock_rom] = Spectrum48CoreSnapshot().memory.blocks or []
-
-            PAGE_SIZE = 0x4000
-            EMPTY_PAGE = [None] * PAGE_SIZE
+        PAGE_SIZE = 0x4000
+        if memory.ram is not None:
+            ram = memory.ram.data
             for page_no, addr in cls.__MEMORY_PAGE_ADDRS.items():
-                page = image[addr:addr+PAGE_SIZE]
-                if page != EMPTY_PAGE:
-                    page_image = bytes(0 if b is None else b for b in page)
-
-                    # The format's canonical machine has the standard
-                    # ROM; the ROM page is stored only when it
-                    # differs.
-                    if addr < 0x4000 and page_image == stock_rom.data.data:
-                        continue
-
-                    memory_blocks.append(Z80MemoryBlock(
-                        page_no=page_no, compressed_size=0xffff,
-                        data=page_image))
+                if addr < 0x4000:
+                    continue
+                begin = addr - 0x4000
+                memory_blocks.append(Z80MemoryBlock(
+                    page_no=page_no, compressed_size=0xffff,
+                    data=ram[begin:begin + PAGE_SIZE]))
 
         # https://worldofspectrum.org/faq/reference/z80format.htm
         # The hi T state counter counts up modulo 4. Just after the ULA
@@ -399,8 +382,11 @@ class Z80File(MachineSnapshotFile, format_name='Z80'):
                 raise Error('Unsupported type of emulated machine.',
                             id='unsupported_machine')
 
-        # Handle memory blocks.
-        memory_blocks: list[MemoryBlock] = []
+        # Assemble the ROM and RAM images. The format's canonical
+        # machine has the standard ROM: a stated ROM page equal to
+        # the stock image decays to the stock ROM.
+        rom: bytes | None = None
+        ram = bytearray(0xc000)
         if self.memory_image is not None:
             assert self.memory_blocks is None
 
@@ -416,13 +402,7 @@ class Z80File(MachineSnapshotFile, format_name='Z80'):
                                 'no end marker.',
                                 id='z80_snapshot_no_end_marker')
                 memory_image = self.__uncompress(memory_image[:-4], 48 * 1024)
-            memory_blocks.extend([
-                Spectrum48MemoryBlock(addr=0x4000,
-                                      data=memory_image[0x0000:0x4000]),
-                Spectrum48MemoryBlock(addr=0x8000,
-                                      data=memory_image[0x4000:0x8000]),
-                Spectrum48MemoryBlock(addr=0xc000,
-                                      data=memory_image[0x8000:0xc000])])
+            ram[:] = memory_image
         else:
             assert machine_kind == 'ZX Spectrum 48K', machine_kind  # TODO
 
@@ -433,9 +413,12 @@ class Z80File(MachineSnapshotFile, format_name='Z80'):
                     assert len(image) == block.compressed_size
                     image = self.__uncompress(image, BLOCK_SIZE)
 
-                memory_blocks.append(Spectrum48MemoryBlock(
-                    addr=self.__MEMORY_PAGE_ADDRS[block.page_no],
-                    data=image))
+                addr = self.__MEMORY_PAGE_ADDRS[block.page_no]
+                if addr < 0x4000:
+                    rom = (None if image == Spectrum48ROM().data
+                           else bytes(image))
+                else:
+                    ram[addr - 0x4000:addr - 0x4000 + BLOCK_SIZE] = image
 
         # The file describes a 48K machine. TODO: 128K per the v2/v3
         # hardware mode.
@@ -462,7 +445,7 @@ class Z80File(MachineSnapshotFile, format_name='Z80'):
             ula=Spectrum48ULASnapshot(
                 ticks_since_int=ticks_since_int,
                 border_colour=(flags1 >> 1) & 0x7),
-            memory=Spectrum48MemorySnapshot(blocks=memory_blocks)))
+            memory=Spectrum48MemorySnapshot(rom=rom, ram=ram)))
 
     __V1_HEADER: typing.ClassVar[list[str]] = [
         'B:a', 'B:f', '<H:bc', '<H:hl', '<H:pc', '<H:sp', 'B:i', 'B:r',

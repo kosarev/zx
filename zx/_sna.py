@@ -19,7 +19,6 @@ from ._data import MachineSnapshot
 from ._data import MachineSnapshotFile
 from ._error import Error
 from ._spectrum48 import Spectrum48CoreSnapshot
-from ._spectrum48 import Spectrum48MemoryBlock
 from ._spectrum48 import Spectrum48MemorySnapshot
 from ._spectrum48 import Spectrum48Snapshot
 from ._spectrum48 import Spectrum48ULASnapshot
@@ -89,9 +88,7 @@ class SNAFile(MachineSnapshotFile, format_name='SNA'):
                 iff1=iff, iff2=iff,
                 int_mode=self.int_mode),
             ula=Spectrum48ULASnapshot(border_colour=self.border_colour),
-            memory=Spectrum48MemorySnapshot(blocks=[
-                Spectrum48MemoryBlock(addr=0x4000,
-                                      data=self.memory.data)])))
+            memory=Spectrum48MemorySnapshot(ram=self.memory.data)))
 
     @classmethod
     def from_snapshot(cls, snapshot: MachineSnapshot) -> 'SNAFile':
@@ -104,11 +101,10 @@ class SNAFile(MachineSnapshotFile, format_name='SNA'):
         z80 = core.z80 or Z80Snapshot()
         ula = core.ula
 
-        blocks = core.memory.blocks or []
-
+        ram = core.memory.ram
         memory = bytearray(0x10000)
-        for block in blocks:
-            memory[block.offset:block.end_offset] = block.data.data
+        if ram is not None:
+            memory[0x4000:] = ram.data
 
         sp = z80.sp or 0
         pc = z80.pc or 0

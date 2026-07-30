@@ -18,7 +18,6 @@ from ._data import HexData
 from ._data import MachineSnapshot
 from ._data import MachineSnapshotFile
 from ._spectrum48 import Spectrum48CoreSnapshot
-from ._spectrum48 import Spectrum48MemoryBlock
 from ._spectrum48 import Spectrum48MemorySnapshot
 from ._spectrum48 import Spectrum48Snapshot
 from ._spectrum48 import Spectrum48ULASnapshot
@@ -34,18 +33,14 @@ class _SCRFile(MachineSnapshotFile, format_name='SCR'):
                          colour_attrs=HexData.wrap(colour_attrs))
 
     def to_machine_snapshot(self) -> MachineSnapshot:
-        # The address of the endless loop.
-        memory_blocks = []
-        memory_blocks.extend([
-            Spectrum48MemoryBlock(addr=0x4000, data=self.dot_patterns),
-            Spectrum48MemoryBlock(addr=0x4000 + 6144,
-                                  data=self.colour_attrs)])
+        ram = bytearray(0xc000)
+        ram[0:6144] = self.dot_patterns.data
+        ram[6144:6912] = self.colour_attrs.data
 
         # LOOP_ADDR: jp LOOP_ADDR
         LOOP_ADDR = 0x8000
         loop_instr = b'\xc3' + LOOP_ADDR.to_bytes(2, 'little')
-        memory_blocks.append(Spectrum48MemoryBlock(
-            addr=LOOP_ADDR, data=loop_instr))
+        ram[LOOP_ADDR - 0x4000:LOOP_ADDR - 0x4000 + 3] = loop_instr
 
         return Spectrum48Snapshot(core=Spectrum48CoreSnapshot(
             z80=Z80Snapshot(
@@ -53,7 +48,7 @@ class _SCRFile(MachineSnapshotFile, format_name='SCR'):
                 iff1=0,
                 iff2=0),
             ula=Spectrum48ULASnapshot(border_colour=0),
-            memory=Spectrum48MemorySnapshot(blocks=memory_blocks)))
+            memory=Spectrum48MemorySnapshot(ram=ram)))
 
     # TODO: Refine.
     def x_encode(self) -> bytes:

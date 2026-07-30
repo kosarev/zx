@@ -23,7 +23,6 @@ from ._error import Error
 from ._machine import Machine
 from ._spectrum48 import Spectrum48Core
 from ._spectrum48 import Spectrum48CoreSnapshot
-from ._spectrum48 import Spectrum48MemoryBlock
 from ._spectrum48 import Spectrum48MemorySnapshot
 
 if typing.TYPE_CHECKING:
@@ -541,8 +540,8 @@ class AYFile(DataRecord, format_name='AY'):
                     alt_de=regs, alt_hl=regs,
                     pc=0x0000, sp=song.sp,
                     int_mode=1 if play else 2),
-                memory=Spectrum48MemorySnapshot(blocks=[
-                    Spectrum48MemoryBlock(addr=0x0000,
-                                          data=bytes(image))])),
+                memory=Spectrum48MemorySnapshot(
+                    rom=bytes(image[:0x4000]),
+                    ram=bytes(image[0x4000:]))),
             ay=AY8910Snapshot(),
             beeper=BeeperSnapshot())

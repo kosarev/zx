@@ -661,6 +661,12 @@ class Core(_CoreBase, CoreState, Device):
         for field, value in z80:
             setattr(self, field, value)
 
+    # Applies a memory record of the plain block form; a model core
+    # class overrides this for its own memory vocabulary.
+    def _install_memory_snapshot(self, memory: MemorySnapshot) -> None:
+        for block in memory.blocks or []:
+            self._write_image(block.offset, block.data.data)
+
     def install_snapshot(self, snapshot: CoreSnapshot) -> None:
         # A snapshot describes the difference from the canonical reset
         # state, so installing one resets first: whatever the snapshot
@@ -677,8 +683,7 @@ class Core(_CoreBase, CoreState, Device):
                 for chip_field, chip_value in value:
                     setattr(self, chip_field, chip_value)
             elif field == 'memory':
-                for block in value.blocks or []:
-                    self._write_image(block.offset, block.data.data)
+                self._install_memory_snapshot(value)
             else:
                 setattr(self, field, value)
 

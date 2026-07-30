@@ -213,20 +213,19 @@ def test_install_snapshot() -> None:
     assert state == canonical
 
 
-def test_stock_rom_block() -> None:
+def test_stock_rom() -> None:
     from zx._data import DataRecord
     from zx._spectrum48 import Spectrum48ROM
 
     rom = Spectrum48ROM()
-    assert rom.offset == 0
-    assert len(rom.data.data) == 0x4000
+    assert len(rom.data) == 0x4000
 
     # The type alone determines the content, so the node stores
     # nothing and loads back from the bare tag.
     assert rom.to_json() == {}
     loaded = DataRecord.from_json({'type': 'Spectrum48ROM'})
     assert isinstance(loaded, Spectrum48ROM)
-    assert loaded.data.data == rom.data.data
+    assert loaded.data == rom.data
 
 
 def test_memory_image_size() -> None:
@@ -243,38 +242,27 @@ def test_memory_image_size() -> None:
 def test_48k_memory() -> None:
     from zx._spectrum48 import Spectrum48Core
     from zx._spectrum48 import Spectrum48CoreSnapshot
-    from zx._spectrum48 import Spectrum48MemoryBlock
     from zx._spectrum48 import Spectrum48MemorySnapshot
     from zx._spectrum48 import Spectrum48ROM
 
-    rom = Spectrum48ROM().data.data
     ram = bytes(range(256)) * 192
 
-    # A 48K memory with no block below 0x4000 carries the stock ROM
-    # as its bare-tag node.
-    memory = Spectrum48MemorySnapshot(blocks=[
-        Spectrum48MemoryBlock(addr=0x4000, data=ram)])
-    rom_block, ram_block = memory.blocks or []
-    assert isinstance(rom_block, Spectrum48ROM)
-    assert type(ram_block) is Spectrum48MemoryBlock
-    assert ram_block.offset == 0x4000
-
+    # An unstated ROM means the stock one.
     mach = Spectrum48Core()
-    mach.install_snapshot(Spectrum48CoreSnapshot(memory=memory))
-    assert mach.read(0x0000, 0x10000) == rom + ram
+    mach.install_snapshot(Spectrum48CoreSnapshot(
+        memory=Spectrum48MemorySnapshot(ram=ram)))
+    assert mach.read(0x0000, 0x10000) == Spectrum48ROM().data + ram
 
-    # A stated ROM block replaces the stock one.
-    custom = Spectrum48MemorySnapshot(blocks=[
-        Spectrum48MemoryBlock(addr=0x0000, data=bytes(0x4000))])
-    blocks = custom.blocks or []
-    assert not isinstance(blocks[0], Spectrum48ROM)
+    # A stated ROM replaces the stock one.
+    mach.install_snapshot(Spectrum48CoreSnapshot(
+        memory=Spectrum48MemorySnapshot(rom=bytes(0x4000), ram=ram)))
+    assert mach.read(0x0000, 0x10000) == bytes(0x4000) + ram
 
 
 def test_typed_capture() -> None:
     from zx._spectrum48 import Spectrum48Core
     from zx._spectrum48 import Spectrum48CoreSnapshot
     from zx._spectrum48 import Spectrum48MemorySnapshot
-    from zx._spectrum48 import Spectrum48ROM
     from zx._spectrum48 import Spectrum48ULASnapshot
 
     # The capture is typed by construction, its members included.
@@ -285,16 +273,15 @@ def test_typed_capture() -> None:
     assert isinstance(captured.ula, Spectrum48ULASnapshot)
     assert isinstance(captured.memory, Spectrum48MemorySnapshot)
 
-    # The stock ROM captures as its bare-tag node, a deviation
+    # The stock ROM captures as absence, a deviated socket
     # explicitly.
-    blocks = captured.memory.blocks or []
-    assert isinstance(blocks[0], Spectrum48ROM)
+    assert captured.memory.rom is None
     core.write(0x0000, b'\x12\x34')
     deviated = core.take_snapshot()
     assert isinstance(deviated, Spectrum48CoreSnapshot)
-    blocks = deviated.memory.blocks or []
-    assert not isinstance(blocks[0], Spectrum48ROM)
-    assert blocks[0].data.data[:2] == b'\x12\x34'
+    rom = deviated.memory.rom
+    assert rom is not None
+    assert rom.data[:2] == b'\x12\x34'
 
     # The disabled flag is ordinary captured content.
     core.disabled = True

@@ -15,17 +15,17 @@ import typing
 if typing.TYPE_CHECKING:
     from ._binary import Bytes
     from ._core import Profile
-    from ._data import ByteData
     from ._device import Device
 
 from ._beeper import Beeper
 from ._beeper import BeeperSnapshot
 from ._core import Core
 from ._core import CoreSnapshot
-from ._core import MemoryBlock
 from ._core import MemorySnapshot
 from ._core import ULASnapshot
 from ._core import Z80Snapshot
+from ._data import ByteData
+from ._data import DataRecord
 from ._data import HexData
 from ._data import MachineSnapshot
 from ._keyboard import Keyboard
@@ -50,49 +50,38 @@ def _image_offset(addr: int, size: int) -> int:
     return addr
 
 
-# A block in the 48K's flat address space.
-class Spectrum48MemoryBlock(MemoryBlock):
-    def __init__(self, *, addr: int, data: Bytes | ByteData) -> None:
-        data = HexData.wrap(data)
-        super().__init__(offset=_image_offset(addr, len(data.data)),
-                         data=data)
-
-    # The node speaks the 48K vocabulary.
-    def to_json(self) -> dict[str, typing.Any]:
-        d = super().to_json()
-        return {'addr': self.offset, 'data': d['data']}
-
-
-# The stock 48K ROM at address 0. The type alone determines the
-# content, so its node stores nothing.
-class Spectrum48ROM(Spectrum48MemoryBlock):
+# The stock 48K ROM. The type alone determines the content, so its
+# node stores nothing; known ROM images are represented by types
+# like this.
+class Spectrum48ROM(HexData):
     def __init__(self) -> None:
-        rom = (RESOURCES / 'roms' / 'Spectrum48.rom').read_bytes()
-        super().__init__(addr=0x0000, data=rom)
+        super().__init__(
+            (RESOURCES / 'roms' / 'Spectrum48.rom').read_bytes())
 
-    def to_json(self) -> dict[str, typing.Any]:
+    def to_json(self) -> dict[str, str | list[str]]:
         return {}
 
 
-# The 48K's memory: a collection of blocks in the 48K's flat
-# address space. The given blocks amend the stock ROM -- a block
-# carrying ROM content replaces it.
+# The 48K's memory: the full images of the ROM socket and the RAM.
+# An unstated ROM means the stock one; an unstated RAM means the
+# reset content.
 class Spectrum48MemorySnapshot(MemorySnapshot, image_size=0x10000):
-    def __init__(
-            self, *,
-            blocks: typing.Sequence[Spectrum48MemoryBlock] | None = None,
-            ) -> None:
-        blocks = list(blocks or [])
-        if not any(b.offset < 0x4000 for b in blocks):
-            blocks = [Spectrum48ROM(), *blocks]
+    rom: ByteData | None
+    ram: ByteData | None
 
-        super().__init__(image_size=self.image_size, blocks=blocks)
+    def __init__(self, *, rom: Bytes | ByteData | None = None,
+                 ram: Bytes | ByteData | None = None) -> None:
+        if rom is not None:
+            rom = HexData.wrap(rom)
+            assert len(rom.data) == 0x4000
+        if ram is not None:
+            ram = HexData.wrap(ram)
+            assert len(ram.data) == 0xc000
 
-    # The type fixes the configuration, so the node stores only the
-    # blocks.
-    def to_json(self) -> dict[str, typing.Any]:
-        d = super().to_json()
-        return {name: d[name] for name in ('blocks',) if name in d}
+        # The model type states whole chip images; the plain base's
+        # block vocabulary does not apply, so the fields go straight
+        # to DataRecord.
+        DataRecord.__init__(self, rom=rom, ram=ram)
 
 
 # The 48K core: members not specified take their stock values.
@@ -159,17 +148,22 @@ class Spectrum48Core(Core):
     def read16(self, addr: int) -> int:
         return int.from_bytes(self.read(addr, 2), 'little')
 
+    def _install_memory_snapshot(self, memory: MemorySnapshot) -> None:
+        if not isinstance(memory, Spectrum48MemorySnapshot):
+            super()._install_memory_snapshot(memory)
+            return
+
+        rom = memory.rom if memory.rom is not None else Spectrum48ROM()
+        self._write_image(0x0000, rom.data)
+        if memory.ram is not None:
+            self._write_image(0x4000, memory.ram.data)
+
     # The capture is typed by construction: the machine is known to
     # be a 48K, so the type is an input, not a discovery. The ROM is
     # stated only where the socket deviates from the class's image.
     # TODO: Store all fields.
     def take_snapshot(self) -> Spectrum48CoreSnapshot:
-        blocks = []
         rom = self._read_image(0x0000, 0x4000)
-        if rom != Spectrum48ROM().data.data:
-            blocks.append(Spectrum48MemoryBlock(addr=0x0000, data=rom))
-        blocks.append(Spectrum48MemoryBlock(
-            addr=0x4000, data=self._read_image(0x4000, 0xc000)))
 
         return Spectrum48CoreSnapshot(
             disabled=True if self.disabled else None,
@@ -177,7 +171,9 @@ class Spectrum48Core(Core):
             ula=Spectrum48ULASnapshot(
                 ticks_since_int=self.ticks_since_int,
                 border_colour=self.border_colour),
-            memory=Spectrum48MemorySnapshot(blocks=blocks))
+            memory=Spectrum48MemorySnapshot(
+                rom=None if rom == Spectrum48ROM().data else rom,
+                ram=self._read_image(0x4000, 0xc000)))
 
 
 # The standard 48K machine. Every member exists; a None parameter
