@@ -251,9 +251,9 @@ class Z80File(MachineSnapshotFile, format_name='Z80'):
             memory_blocks=memory_blocks)
 
     @classmethod
-    def from_snapshot(cls, snapshot: MachineSnapshotFile) -> Z80File:
+    def from_snapshot(cls, snapshot: MachineSnapshot) -> Z80File:
         core = next(
-            (d for _, d in snapshot.to_machine_snapshot()
+            (d for _, d in snapshot
              if isinstance(d, CoreSnapshot)), None)
         if core is None:
             core = CoreSnapshot()

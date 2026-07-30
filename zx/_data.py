@@ -347,7 +347,7 @@ class Latin1Data(ByteData):
 class MachineSnapshotFile(DataRecord):
     @classmethod
     def from_snapshot(
-            cls, snapshot: MachineSnapshotFile) -> MachineSnapshotFile:
+            cls, snapshot: MachineSnapshot) -> MachineSnapshotFile:
         raise NotImplementedError
 
     def to_machine_snapshot(self) -> MachineSnapshot:
@@ -377,8 +377,8 @@ class MachineSnapshot(MachineSnapshotFile):
         super().__init__(**devices)
 
     @classmethod
-    def from_snapshot(cls, snapshot: MachineSnapshotFile) -> MachineSnapshot:
-        return snapshot.to_machine_snapshot()
+    def from_snapshot(cls, snapshot: MachineSnapshot) -> MachineSnapshot:
+        return snapshot
 
     def encode(self) -> bytes:
         return (self.dumps() + '\n').encode('utf-8')

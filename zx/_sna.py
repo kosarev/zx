@@ -97,9 +97,9 @@ class SNAFile(MachineSnapshotFile, format_name='SNA'):
                                       data=self.memory.data)])))
 
     @classmethod
-    def from_snapshot(cls, snapshot: MachineSnapshotFile) -> 'SNAFile':
+    def from_snapshot(cls, snapshot: MachineSnapshot) -> 'SNAFile':
         core = next(
-            (d for _, d in snapshot.to_machine_snapshot()
+            (d for _, d in snapshot
              if isinstance(d, CoreSnapshot)), None)
         if core is None:
             core = CoreSnapshot()
