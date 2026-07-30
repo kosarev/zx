@@ -8,7 +8,6 @@
 
 
 import zx
-from zx._core import Core
 from zx._device import CollectPortReads
 from zx._device import Dispatcher
 from zx._device import GetQuantumTimeLimit
@@ -16,6 +15,7 @@ from zx._device import IsTapePlayerStopped
 from zx._device import LoadTape
 from zx._device import PauseUnpauseTape
 from zx._device import TimeAdvanced
+from zx._spectrum48 import Spectrum48
 from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._tape import TapePlayer
 from zx._time import Time
@@ -207,9 +207,9 @@ def test_tape_read_from_samples() -> None:
     tap = _make_test_tape()
     first_level = next(iter(tap.get_pulses()))[0]
 
-    with zx.Emulator(headless=True) as app:
-        core = app.machine.devices['core']
-        assert isinstance(core, Core)
+    machine = Spectrum48()
+    with zx.Emulator(headless=True, machine=machine) as app:
+        core = machine.core
         core.write(Spectrum48MemoryMapping(), 0x8000,
                    b'\xdb\xfe'   # IN A, (0xfe)
                    b'\x18\xfe')  # JR $

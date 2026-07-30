@@ -13,7 +13,6 @@
 import pytest
 
 import zx
-from zx._core import Core
 from zx._core import CoreSnapshot
 from zx._core import RunEvents
 from zx._core import Z80Snapshot
@@ -24,6 +23,7 @@ from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import InitEmulator
 from zx._error import Error
+from zx._spectrum48 import Spectrum48
 from zx._spectrum48 import Spectrum48Core
 from zx._spectrum48 import Spectrum48MemoryMapping
 from zx._time import Time
@@ -43,9 +43,9 @@ def test_128k_emulator() -> None:
     rom = (RESOURCES / 'roms' / 'Spectrum128.rom').read_bytes()
 
     # A 128K emulator constructs with both ROMs in their pages.
-    with zx.Emulator(headless=True, machine=Spectrum128()) as app:
-        core = app.machine.devices['core']
-        assert isinstance(core, Core)
+    machine = Spectrum128()
+    with zx.Emulator(headless=True, machine=machine):
+        core = machine.core
         assert core.read(Spectrum128MemoryMapping(rom_page=0),
                          0x0000, 0x4000) == rom[:0x4000]
         assert core.read(Spectrum128MemoryMapping(rom_page=1),
@@ -112,23 +112,22 @@ def test_load_installs_snapshot() -> None:
 
     # Loading installs the state into the persistent device set: the
     # set is the machine definition's fact, never the snapshot's.
-    with zx.Emulator(headless=True) as app:
-        old_devices = dict(app.machine.devices)
+    machine = Spectrum48()
+    with zx.Emulator(headless=True, machine=machine) as app:
+        old_devices = dict(machine.devices)
         old_environment = list(app.environment)
         app._load_snapshot(snapshot)
 
-        assert app.machine.devices == old_devices
+        assert machine.devices == old_devices
         assert app.environment == old_environment
 
-        core = app.machine.devices['core']
-        assert isinstance(core, Core)
-        assert core.pc == 0x1234
+        assert machine.core.pc == 0x1234
 
         # The 48K snapshot states its keyboard member at reset:
         # enabled. The equipment, which the snapshot does not
         # mention, keeps its state -- an install touches what the
         # snapshot states.
-        assert not app.machine.devices['keyboard'].disabled
+        assert not machine.keyboard.disabled
 
 
 def test_construction_installs_snapshot() -> None:
@@ -154,9 +153,9 @@ def test_undriven_port_reads_as_open_bus() -> None:
     # it: the input lines all read high, resolved on the C++ side.
     # Port 0x121f has A0 high, so neither the keyboard nor the tape
     # supplies for it.
-    with zx.Emulator(headless=True) as app:
-        core = app.machine.devices['core']
-        assert isinstance(core, Core)
+    machine = Spectrum48()
+    with zx.Emulator(headless=True, machine=machine) as app:
+        core = machine.core
         core.write(Spectrum48MemoryMapping(), 0x8000,
                    b'\xdb\x1f'   # IN A, (0x1f)
                    b'\x18\xfe')  # JR $

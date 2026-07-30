@@ -23,7 +23,6 @@ from zx._ay8910 import AY8910
 from zx._ay8910 import AY8910Snapshot
 from zx._beeper import Beeper
 from zx._beeper import BeeperSnapshot
-from zx._core import Core
 from zx._data import DataRecord
 from zx._emulator import Emulator
 from zx._error import Error
@@ -287,14 +286,13 @@ def test_converted_song_plays() -> None:
         blocks=[AYFileBlock(address=0x8000, data_offset=0, data=init),
                 AYFileBlock(address=0x9000, data_offset=0, data=play)])
 
-    with Emulator(machine=Machine(core=Spectrum48Core(), ay=AY8910(),
+    core = Spectrum48Core()
+    with Emulator(machine=Machine(core=core, ay=AY8910(),
                                   beeper=Beeper(),
                                   snapshot=ay.to_machine_snapshot(song)),
                   environment=[]) as app:
         app.run(duration=0.1)
 
-        core = app.machine.devices['core']
-        assert isinstance(core, Core)
         mapping = Spectrum48MemoryMapping()
         assert core.read8(mapping, 0xc000) == 0x5a
         assert core.read8(mapping, 0xc001) >= 3

@@ -16,7 +16,6 @@ import typing
 from ._basic import StopAtBreakpoint
 from ._basic import boot_to_prompt
 from ._basic import capture_spectrum48
-from ._core import Core
 from ._data import ByteData
 from ._data import HexData
 from ._data import MachineSnapshot
@@ -24,6 +23,7 @@ from ._data import MachineSnapshotFile
 from ._device import GetEmulationTime
 from ._error import Error
 from ._except import EmulationExit
+from ._spectrum48 import Spectrum48
 from ._spectrum48 import Spectrum48MemoryMapping
 from ._time import Time
 
@@ -91,10 +91,10 @@ class ZXBasicCompilerProgram(MachineSnapshotFile, format_name='ZXB'):
         # it in the import order and take it at conversion time.
         from ._emulator import Emulator
 
-        with Emulator(headless=True,
+        machine = Spectrum48()
+        with Emulator(machine=machine, headless=True,
                       extra_environment=[StopAtBreakpoint()]) as app:
-            core = app.machine.devices['core']
-            assert isinstance(core, Core)
+            core = machine.core
 
             boot_to_prompt(app)
 

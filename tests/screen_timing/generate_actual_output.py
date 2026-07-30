@@ -31,6 +31,7 @@ from zx._device import LoadTape
 from zx._device import PauseUnpauseTape
 from zx._except import EmulationExit
 from zx._file import parse_file
+from zx._spectrum48 import Spectrum48
 from zx._time import Time
 
 # The 48K frame, in ticks.
@@ -41,10 +42,10 @@ def main() -> None:
     tape_filename = (sys.argv[1] if len(sys.argv) > 1
                      else 'screen_timing_early.tap')
 
-    with zx.Emulator(headless=True,
+    machine = Spectrum48()
+    with zx.Emulator(machine=machine, headless=True,
                      extra_environment=[StopAtTapeEnd()]) as app:
-        core = app.machine.devices['core']
-        assert isinstance(core, Core)
+        core = machine.core
 
         boot_to_prompt(app)
 

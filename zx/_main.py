@@ -27,7 +27,6 @@ from ._basic import StopAtTapeEnd
 from ._basic import boot_to_prompt
 from ._basic import capture_spectrum48
 from ._binary import Bytes
-from ._core import Core
 from ._core import Profile
 from ._data import AYMusicFile
 from ._data import AYStream
@@ -570,7 +569,8 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
     assert isinstance(src, SoundFile)
     assert issubclass(dest_format, MachineSnapshotFile), dest_format
 
-    with Emulator(headless=True,
+    machine = Spectrum48()
+    with Emulator(machine=machine, headless=True,
                   extra_environment=[StopAtTapeEnd()]) as app:
         boot_to_prompt(app)
 
@@ -583,9 +583,7 @@ def _convert_tape_to_snapshot(src: DataRecord, src_filename: str,
         with contextlib.suppress(EmulationExit):
             app.run()
 
-        core = app.machine.devices['core']
-        assert isinstance(core, Core)
-        snapshot = capture_spectrum48(core)
+        snapshot = capture_spectrum48(machine.core)
 
     with pathlib.Path(dest_filename).open('wb') as f:
         f.write(dest_format.from_snapshot(snapshot).encode())

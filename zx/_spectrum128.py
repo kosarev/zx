@@ -223,6 +223,13 @@ class Spectrum128Core(Core):
 # snapshot is given. Every member exists; a None parameter means the
 # standard device, the equipment included, as on the 48K.
 class Spectrum128(Machine, snapshot_type=Spectrum128Snapshot):
+    core: Spectrum128Core
+    keyboard: Keyboard
+    beeper: Beeper
+    tape_player: TapePlayer
+    playback_player: PlaybackPlayer
+    playback_recorder: PlaybackRecorder
+
     def __init__(self, core: Spectrum128Core | None = None,
                  keyboard: Keyboard | None = None,
                  beeper: Beeper | None = None,

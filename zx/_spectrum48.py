@@ -210,6 +210,13 @@ class Spectrum48Core(Core):
 # player and recorder -- is machine-side: deterministic, on the
 # emulated time axis, its state session content.
 class Spectrum48(Machine, snapshot_type=Spectrum48Snapshot):
+    core: Spectrum48Core
+    keyboard: Keyboard
+    beeper: Beeper
+    tape_player: TapePlayer
+    playback_player: PlaybackPlayer
+    playback_recorder: PlaybackRecorder
+
     def __init__(self, core: Spectrum48Core | None = None,
                  keyboard: Keyboard | None = None,
                  beeper: Beeper | None = None,

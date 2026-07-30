@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import typing
 
-from ._core import Core
 from ._device import BreakpointHit
 from ._device import Device
 from ._device import DeviceEvent
@@ -26,11 +25,13 @@ from ._device import IsTapePlayerStopped
 from ._device import LoadTape
 from ._device import TimeAdvanced
 from ._except import EmulationExit
+from ._spectrum48 import Spectrum48
 from ._spectrum48 import Spectrum48CoreSnapshot
 from ._spectrum48 import Spectrum48Snapshot
 from ._time import Time
 
 if typing.TYPE_CHECKING:
+    from ._core import Core
     from ._emulator import Emulator
 
 # The 48K boot settles at the BASIC prompt well within this many
@@ -42,10 +43,10 @@ _TICKS_PER_FRAME = 69888
 # Runs a freshly constructed 48K machine from power-up to the BASIC
 # prompt.
 def boot_to_prompt(app: Emulator) -> None:
-    core = app.machine.devices['core']
-    assert isinstance(core, Core)
+    machine = app.machine
+    assert isinstance(machine, Spectrum48)
     app.run(until=Time(_BOOT_FRAMES * _TICKS_PER_FRAME,
-                       ticks_per_second=core.ticks_per_second))
+                       ticks_per_second=machine.core.ticks_per_second))
 
 
 # Ends the run at a breakpoint, with PC still at the marked

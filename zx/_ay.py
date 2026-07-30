@@ -293,6 +293,10 @@ class AYPlayerMachineSnapshot(MachineSnapshot):
 
 
 class AYPlayerMachine(Machine, snapshot_type=AYPlayerMachineSnapshot):
+    core: Spectrum48Core
+    ay: AY8910
+    beeper: Beeper
+
     def __init__(self, core: Spectrum48Core | None = None,
                  ay: AY8910 | None = None,
                  beeper: Beeper | None = None,

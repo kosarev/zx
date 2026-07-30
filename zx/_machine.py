@@ -43,3 +43,12 @@ class Machine:
         self._snapshot = snapshot
 
         self.devices: dict[str, Device] = dict(devices)
+
+        # Every device is also a field named by its id, so
+        # machine.core is machine.devices['core']. The model classes
+        # declare the types of their fixed members.
+        for id, device in self.devices.items():
+            if id in dir(self):
+                raise ValueError(
+                    f'device id {id!r} clashes with an existing attribute')
+            setattr(self, id, device)
