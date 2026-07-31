@@ -283,7 +283,7 @@ class Emulator:
             event.floor = self.__advanced_floor
             event.ceiling = self.__advanced_ceiling
         elif isinstance(event, InstallSnapshot):
-            self.machine._install_snapshot(event.snapshot)
+            self.machine.install_snapshot(event.snapshot)
         elif isinstance(event, LoadFile):
             self._load_file(event.filename)
         elif isinstance(event, SaveSnapshot):

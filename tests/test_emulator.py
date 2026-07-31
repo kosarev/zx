@@ -23,6 +23,7 @@ from zx._device import DeviceEvent
 from zx._device import Dispatcher
 from zx._device import InitEmulator
 from zx._error import Error
+from zx._machine import Machine
 from zx._spectrum48 import Spectrum48
 from zx._spectrum48 import Spectrum48Core
 from zx._time import Time
@@ -135,13 +136,32 @@ def test_construction_installs_snapshot() -> None:
         assert not app.machine.devices['keyboard'].disabled
 
 
+def test_wrong_machine_snapshot() -> None:
+    # A snapshot only installs into the kind of machine it
+    # describes.
+    machine = Spectrum48()
+    with pytest.raises(Error) as exc_info:
+        machine.install_snapshot(MachineSnapshot())
+    assert exc_info.value.id == 'wrong_machine_snapshot'
+
+
 def test_snapshot_addressing() -> None:
     # A machine snapshot addressing a device that is not in the
-    # machine is a load error.
-    with zx.Emulator(headless=True) as app:
-        with pytest.raises(Error) as exc_info:
-            app._install_snapshot(MachineSnapshot(core2=CoreSnapshot()))
-        assert exc_info.value.id == 'unknown_device_in_snapshot'
+    # machine is a load error. The model snapshot types only state
+    # their machines' devices, so the rig is a machine class whose
+    # snapshot type keeps the base's openness to arbitrary members.
+    class CoreOnlyMachineSnapshot(MachineSnapshot):
+        pass
+
+    class CoreOnlyMachine(Machine, snapshot_type=CoreOnlyMachineSnapshot):
+        def __init__(self) -> None:
+            super().__init__(core=Spectrum48Core())
+
+    machine = CoreOnlyMachine()
+    with pytest.raises(Error) as exc_info:
+        machine.install_snapshot(
+            CoreOnlyMachineSnapshot(core2=CoreSnapshot()))
+    assert exc_info.value.id == 'unknown_device_in_snapshot'
 
 
 def test_undriven_port_reads_as_open_bus() -> None:

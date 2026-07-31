@@ -62,15 +62,18 @@ class Machine:
         # empty stock snapshot, installed locally -- the definition
         # realised, not observable history, so no event radiates
         # beyond the machine's own devices.
-        self._install_snapshot(self.SNAPSHOT_TYPE())
+        self.install_snapshot(self.SNAPSHOT_TYPE())
 
-    # Installing a machine snapshot means every mentioned device
-    # assumes exactly the state its device snapshot describes.
-    # Devices the snapshot does not mention keep their state:
-    # formats are mute about devices such as the tape player, and
-    # muteness is not a statement, so a .z80 load must not touch the
-    # mounted tape.
-    def _install_snapshot(self, snapshot: MachineSnapshot) -> None:
+    def install_snapshot(self, snapshot: MachineSnapshot) -> None:
+        # A snapshot only installs into the kind of machine it
+        # describes.
+        assert self.SNAPSHOT_TYPE is not None
+        if not isinstance(snapshot, self.SNAPSHOT_TYPE):
+            raise Error(
+                f'Cannot install a {type(snapshot).__name__} into a '
+                f'{type(self).__name__} machine.',
+                id='wrong_machine_snapshot')
+
         device_snapshots = dict(snapshot)
 
         # A device snapshot addressing no machine device is an
