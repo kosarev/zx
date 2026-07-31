@@ -86,3 +86,11 @@ class Machine:
         for id, device_snapshot in device_snapshots.items():
             dispatcher.notify(InstallDeviceSnapshot(device_snapshot),
                               device=id)
+
+    def take_snapshot(self) -> MachineSnapshot:
+        members = {id: snapshot
+                   for id, device in self.devices.items()
+                   if (snapshot := device.take_snapshot()) is not None}
+
+        assert self.SNAPSHOT_TYPE is not None
+        return self.SNAPSHOT_TYPE(**members)
