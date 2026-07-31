@@ -137,10 +137,7 @@ class SetFetchesLimit(DeviceEvent):
         self.num_fetches = num_fetches
 
 
-# The machine-level install, spoken by the environment and handled at
-# the Emulator level, which splits it into per-device installs.
-# Devices never handle this event.
-class InstallSnapshot(DeviceEvent):
+class InstallMachineSnapshot(DeviceEvent):
     def __init__(self, snapshot: MachineSnapshot) -> None:
         self.snapshot = snapshot
 

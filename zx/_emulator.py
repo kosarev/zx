@@ -74,7 +74,7 @@ from ._device import GetEmulationTime
 from ._device import GetHoldState
 from ._device import GetQuantumTimeLimit
 from ._device import InitEmulator
-from ._device import InstallSnapshot
+from ._device import InstallMachineSnapshot
 from ._device import IsTapePlayerPaused
 from ._device import LoadFile
 from ._device import LoadTape
@@ -282,7 +282,7 @@ class Emulator:
             # has reached yet.
             event.floor = self.__advanced_floor
             event.ceiling = self.__advanced_ceiling
-        elif isinstance(event, InstallSnapshot):
+        elif isinstance(event, InstallMachineSnapshot):
             self.machine.install_snapshot(event.snapshot)
         elif isinstance(event, LoadFile):
             self._load_file(event.filename)
@@ -329,7 +329,7 @@ class Emulator:
         self.notify(StartPlayback(file.to_machine_playback()))
 
     def _install_snapshot(self, snapshot: MachineSnapshot) -> None:
-        self.notify(InstallSnapshot(snapshot))
+        self.notify(InstallMachineSnapshot(snapshot))
 
     def _load(self, file: DataRecord) -> None:
         if isinstance(file, MachineSnapshotFile):

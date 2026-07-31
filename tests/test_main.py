@@ -13,7 +13,7 @@ import numpy
 from zx._data import MachineSnapshot
 from zx._data import SoundPulses
 from zx._device import Dispatcher
-from zx._device import InstallSnapshot
+from zx._device import InstallMachineSnapshot
 from zx._device import NewSoundPulses
 from zx._device import TimeAdvanced
 from zx._main import _SilenceWatcher
@@ -61,7 +61,7 @@ def test_silence_watcher() -> None:
 
     # Installing a snapshot restarts the watch: the next song
     # starts with a clean slate.
-    watcher.on_event(InstallSnapshot(MachineSnapshot()), Dispatcher())
+    watcher.on_event(InstallMachineSnapshot(MachineSnapshot()), Dispatcher())
     assert not watcher.is_silent_for(6)
     _stamp(watcher, 11)
     _stamp(watcher, 16)

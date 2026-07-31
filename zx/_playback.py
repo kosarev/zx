@@ -135,7 +135,7 @@ from ._device import Dispatcher
 from ._device import EndOfFrame
 from ._device import FetchesLimitHit
 from ._device import InstallDeviceSnapshot
-from ._device import InstallSnapshot
+from ._device import InstallMachineSnapshot
 from ._device import SetFetchesLimit
 from ._device import StartPlayback
 from ._device import StopPlayback
@@ -181,7 +181,7 @@ class PlaybackPlayer(Device):
             devices.notify(StopPlayback())
             raise EmulationExit()
 
-        devices.notify(InstallSnapshot(seg.snapshot))
+        devices.notify(InstallMachineSnapshot(seg.snapshot))
         self.__frames = iter(seg.frames)
 
     def __get_next_frame(self, devices: Dispatcher) -> None:
@@ -355,7 +355,7 @@ class PlaybackRecorder(Device):
         if self.disabled:
             return
 
-        if isinstance(event, InstallSnapshot):
+        if isinstance(event, InstallMachineSnapshot):
             self.__segments.append(
                 MachinePlaybackSegment(snapshot=event.snapshot))
 

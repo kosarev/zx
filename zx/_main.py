@@ -41,7 +41,7 @@ from ._device import Device
 from ._device import DeviceEvent
 from ._device import Dispatcher
 from ._device import FetchesLimitHit
-from ._device import InstallSnapshot
+from ._device import InstallMachineSnapshot
 from ._device import LoadTape
 from ._device import NewSoundPulses
 from ._device import PauseUnpauseTape
@@ -146,7 +146,7 @@ class _SilenceWatcher(Device):
                     Time(seconds, ticks_per_second=1))
 
     def on_event(self, event: DeviceEvent, devices: Dispatcher) -> None:
-        if isinstance(event, InstallSnapshot):
+        if isinstance(event, InstallMachineSnapshot):
             self.__restart()
         elif isinstance(event, NewSoundPulses):
             if len(event.pulses.ticks) > 1:
@@ -182,7 +182,7 @@ def _play_ay_file(file: AYFile) -> None:
                                 _make_player_sound()]) as app,
           contextlib.suppress(EmulationExit)):
         for song in file.songs:
-            app.notify(InstallSnapshot(file.to_machine_snapshot(song)))
+            app.notify(InstallMachineSnapshot(file.to_machine_snapshot(song)))
 
             if song.frames_per_song:
                 app.run(duration=song.frames_per_song / 50)

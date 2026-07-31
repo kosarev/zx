@@ -23,7 +23,7 @@ from zx._ay import AYPlayerMachine
 from zx._ay8910 import AY8910Snapshot
 from zx._beeper import BeeperSnapshot
 from zx._data import DataRecord
-from zx._device import InstallSnapshot
+from zx._device import InstallMachineSnapshot
 from zx._emulator import Emulator
 from zx._error import Error
 from zx._file import parse_file_image
@@ -286,7 +286,7 @@ def test_converted_song_plays() -> None:
     core = Spectrum48Core()
     with Emulator(machine=AYPlayerMachine(core=core),
                   environment=[]) as app:
-        app.notify(InstallSnapshot(ay.to_machine_snapshot(song)))
+        app.notify(InstallMachineSnapshot(ay.to_machine_snapshot(song)))
         app.run(duration=0.1)
 
         assert core.read8(0xc000) == 0x5a

@@ -17,7 +17,7 @@ from zx._data import MachinePlaybackSegment
 from zx._data import MachineSnapshot
 from zx._device import CollectPortReads
 from zx._device import Dispatcher
-from zx._device import InstallSnapshot
+from zx._device import InstallMachineSnapshot
 from zx._device import NewPortReads
 from zx._device import RunQuantum
 from zx._device import StartPlayback
@@ -35,14 +35,14 @@ def test_playback_recorder() -> None:
 
     # A disabled recorder ignores events.
     recorder = PlaybackRecorder(disabled=True)
-    recorder.on_event(InstallSnapshot(snapshot1), dispatcher)
+    recorder.on_event(InstallMachineSnapshot(snapshot1), dispatcher)
     assert recorder.make_playback().segments == []
 
     # The recorder starts a new segment per installed snapshot, in
     # order.
     recorder = PlaybackRecorder()
-    recorder.on_event(InstallSnapshot(snapshot1), dispatcher)
-    recorder.on_event(InstallSnapshot(snapshot2), dispatcher)
+    recorder.on_event(InstallMachineSnapshot(snapshot1), dispatcher)
+    recorder.on_event(InstallMachineSnapshot(snapshot2), dispatcher)
 
     playback = recorder.make_playback()
     assert [seg.snapshot for seg in playback.segments] == [
