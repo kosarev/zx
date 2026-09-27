@@ -16,6 +16,7 @@ import pathlib
 import sys
 import time
 import typing
+import warnings
 
 import platformdirs
 
@@ -745,6 +746,12 @@ def main(args: list[str] | None = None) -> None:
     """
     if args is None:
         args = sys.argv[1:]
+
+    # PySDL2 warns that it takes SDL from the pysdl2-dll package,
+    # which is exactly where zx means it to come from.
+    warnings.filterwarnings(
+        'ignore', category=UserWarning,
+        message='Using SDL2 binaries from pysdl2-dll')
 
     try:
         handle_command_line(args)
