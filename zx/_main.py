@@ -170,12 +170,32 @@ _SILENCE_ENDS_SONG_SECONDS = 6
 _DEFAULT_SONG_FRAMES = 3 * 60 * 50
 
 
+# Prints the file's author and notes and the list of its songs, so
+# the listener knows what is to come.
+def _print_ay_songs(file: AYFile) -> None:
+    if file.author:
+        print(f'Author: {file.author}')
+    if file.misc:
+        print(f'Notes: {file.misc}')
+
+    print(f'Songs: {len(file.songs)}')
+    for i, song in enumerate(file.songs, start=1):
+        if song.frames_per_song:
+            minutes, seconds = divmod(round(song.frames_per_song / 50), 60)
+            length = f'{minutes}:{seconds:02}'
+        else:
+            length = 'no stated length'
+        print(f'  {i}. {song.name} ({length})')
+
+
 # Plays the songs of a .ay file in order, then quits. Playing a
 # song is installing its snapshot into the player machine, a 48K
 # core with the AY and the beeper; the song's stated duration says
 # how long it runs. The fade-out that should follow needs mixer
 # gain, so for now the song just ends.
 def _play_ay_file(file: AYFile) -> None:
+    _print_ay_songs(file)
+
     watcher = _SilenceWatcher()
     with (Emulator(machine=AYPlayerMachine(),
                    environment=[_HoldWaiter(), watcher,
